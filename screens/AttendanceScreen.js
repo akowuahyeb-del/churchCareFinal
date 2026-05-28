@@ -7,11 +7,21 @@ import {
 
 export default function AttendanceScreen() {
 
+  /* ✅ DATA */
   const [services, setServices] = useState(["Sunday", "Midweek"]);
   const [types, setTypes] = useState(["First", "Second"]);
 
   const [selectedService, setSelectedService] = useState("Sunday");
   const [selectedType, setSelectedType] = useState("First");
+
+  const [serviceModal, setServiceModal] = useState(false);
+  const [typeModal, setTypeModal] = useState(false);
+
+  const [searchService, setSearchService] = useState("");
+  const [searchType, setSearchType] = useState("");
+
+  const [newService, setNewService] = useState("");
+  const [newType, setNewType] = useState("");
 
   const [members, setMembers] = useState([
     { id: "1", name: "Grace Mensah", attendance: [] },
@@ -20,27 +30,66 @@ export default function AttendanceScreen() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const toggle = (member) => {
+  /* ✅ ADD SERVICE */
+  const addService = () => {
+    if (!newService) return;
+    setServices([...services, newService]);
+    setSelectedService(newService);
+    setNewService("");
+    setServiceModal(false);
+  };
+
+  /* ✅ ADD TYPE */
+  const addType = () => {
+    if (!newType) return;
+    setTypes([...types, newType]);
+    setSelectedType(newType);
+    setNewType("");
+    setTypeModal(false);
+  };
+
+  /* ✅ REMOVE */
+  const removeAttendance = (id) => {
+    const updated = members.map(m => {
+      if (m.id !== id) return m;
+
+      return {
+        ...m,
+        attendance: m.attendance.filter(
+          a => !(a.date === today &&
+                 a.service === selectedService &&
+                 a.type === selectedType)
+        )
+      };
+    });
+
+    setMembers(updated);
+  };
+
+  /* ✅ TOGGLE */
+  const toggleAttendance = (member, status) => {
+
+    const exists = member.attendance.find(
+      a => a.date === today &&
+           a.service === selectedService &&
+           a.type === selectedType
+    );
+
+    if (exists) {
+      /* ✅ CONFIRM */
+      Alert.alert(
+        "Undo Attendance?",
+        `Remove attendance for ${member.name}?`,
+        [
+          { text: "Cancel" },
+          { text: "Yes", onPress: () => removeAttendance(member.id) }
+        ]
+      );
+      return;
+    }
 
     const updated = members.map(m => {
       if (m.id !== member.id) return m;
-
-      const exists = m.attendance.find(
-        a => a.date === today &&
-             a.service === selectedService &&
-             a.type === selectedType
-      );
-
-      if (exists) {
-        Alert.alert("Undo?", "Remove attendance?", [
-          { text: "Cancel" },
-          {
-            text: "OK",
-            onPress: () => remove(member.id)
-          }
-        ]);
-        return m;
-      }
 
       return {
         ...m,
@@ -49,8 +98,8 @@ export default function AttendanceScreen() {
           {
             service: selectedService,
             type: selectedType,
-            date: today,
-            status: "present"
+            status,
+            date: today
           }
         ]
       };
@@ -59,72 +108,240 @@ export default function AttendanceScreen() {
     setMembers(updated);
   };
 
-  const remove = (id) => {
-    const updated = members.map(m => {
-      if (m.id !== id) return m;
-
-      return {
-        ...m,
-        attendance: m.attendance.filter(
-          a =>
-            !(a.date === today &&
-              a.service === selectedService &&
-              a.type === selectedType)
-        )
-      };
-    });
-
-    setMembers(updated);
+  /* ✅ CHECK STATUS */
+  const getStatus = (m) => {
+    const rec = m.attendance.find(
+      a => a.date === today &&
+           a.service === selectedService &&
+           a.type === selectedType
+    );
+    return rec ? rec.status : null;
   };
+
+  /* ✅ SUMMARY */
+  const summary = members.reduce(
+    (acc, m) => {
+      const s = getStatus(m);
+      if (s === "present") acc.present++;
+      if (s === "absent") acc.absent++;
+      return acc;
+    },
+    { present: 0, absent: 0 }
+  );
+
+  summary.total = members.length;
 
   return (
     <View style={styles.container}>
 
-      <Text style={styles.title}>Attendance</Text>
+      <Text style={styles.header}>Attendance</Text>
 
-      <Text>{selectedService} - {selectedType}</Text>
+      {/* ✅ SERVICE COMBO */}
+      <TouchableOpacity style={styles.combo} onPress={() => setServiceModal(true)}>
+        <Text>{selectedService}</Text>
+      </TouchableOpacity>
 
+      {/* ✅ TYPE COMBO */}
+      <TouchableOpacity style={styles.combo} onPress={() => setTypeModal(true)}>
+        <Text>{selectedType}</Text>
+      </TouchableOpacity>
+
+      {/* ✅ SUMMARY */}
+      <View style={styles.summary}>
+        <Text>Present: {summary.present}</Text>
+        <Text>Absent: {summary.absent}</Text>
+        <Text>Total: {summary.total}</Text>
+      </View>
+
+      {/* ✅ MEMBERS */}
       <FlatList
         data={members}
         keyExtractor={i => i.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
+        renderItem={({ item }) => {
 
-            <Text>{item.name}</Text>
+          const status = getStatus(item);
 
-            <TouchableOpacity
-              style={styles.btn}
-              onPress={() => toggle(item)}
-            >
-              <Text style={{ color: "#fff" }}>Mark</Text>
+          return (
+            <View style={styles.card}>
+
+              <Text>{item.name}</Text>
+
+              <View style={styles.row}>
+
+                <TouchableOpacity
+                  style={[styles.present, status && styles.disabled]}
+                  onPress={() => toggleAttendance(item, "present")}
+                >
+                  <Text style={styles.btnText}>Present</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.absent, status && styles.disabled]}
+                  onPress={() => toggleAttendance(item, "absent")}
+                >
+                  <Text style={styles.btnText}>Absent</Text>
+                </TouchableOpacity>
+
+                {status && (
+                  <TouchableOpacity
+                    style={styles.undo}
+                    onPress={() => toggleAttendance(item)}
+                  >
+                    <Text style={styles.btnText}>Undo</Text>
+                  </TouchableOpacity>
+                )}
+
+              </View>
+
+            </View>
+          );
+        }}
+      />
+
+      {/* ✅ SERVICE MODAL */}
+      <Modal visible={serviceModal} transparent animationType="slide">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+
+            <TextInput
+              placeholder="Search service"
+              value={searchService}
+              onChangeText={setSearchService}
+              style={styles.input}
+            />
+
+            {services
+              .filter(s => s.toLowerCase().includes(searchService.toLowerCase()))
+              .map((s, i) => (
+                <TouchableOpacity key={i} onPress={() => {
+                  setSelectedService(s);
+                  setServiceModal(false);
+                }}>
+                  <Text style={styles.item}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+
+            <TextInput
+              placeholder="Add new service"
+              value={newService}
+              onChangeText={setNewService}
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.addBtn} onPress={addService}>
+              <Text style={{ color: "#fff" }}>Add</Text>
             </TouchableOpacity>
 
           </View>
-        )}
-      />
+        </View>
+      </Modal>
+
+      {/* ✅ TYPE MODAL */}
+      <Modal visible={typeModal} transparent animationType="slide">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+
+            <TextInput
+              placeholder="Search type"
+              value={searchType}
+              onChangeText={setSearchType}
+              style={styles.input}
+            />
+
+            {types
+              .filter(t => t.toLowerCase().includes(searchType.toLowerCase()))
+              .map((t, i) => (
+                <TouchableOpacity key={i} onPress={() => {
+                  setSelectedType(t);
+                  setTypeModal(false);
+                }}>
+                  <Text style={styles.item}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+
+            <TextInput
+              placeholder="Add new type"
+              value={newType}
+              onChangeText={setNewType}
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.addBtn} onPress={addType}>
+              <Text style={{ color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
 }
 
+/* ✅ STYLES */
 const styles = StyleSheet.create({
 
   container: { flex: 1, padding: 20 },
 
-  title: { fontSize: 18, marginBottom: 10 },
+  header: { fontSize: 18, marginBottom: 10 },
+
+  combo: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10
+  },
+
+  summary: {
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10
+  },
 
   card: {
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 12,
     marginBottom: 10,
     borderRadius: 8
   },
 
-  btn: {
-    backgroundColor: "#4B3F72",
+  row: { flexDirection: "row", marginTop: 10 },
+
+  present: { backgroundColor: "green", padding: 8, marginRight: 8 },
+  absent: { backgroundColor: "red", padding: 8, marginRight: 8 },
+  undo: { backgroundColor: "#555", padding: 8 },
+
+  disabled: { opacity: 0.4 },
+
+  btnText: { color: "#fff" },
+
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "#0007"
+  },
+
+  modal: {
+    backgroundColor: "#fff",
+    margin: 20,
+    padding: 20,
+    borderRadius: 10
+  },
+
+  input: {
+    borderWidth: 1,
     padding: 8,
-    marginTop: 5,
-    borderRadius: 6
+    borderRadius: 6,
+    marginBottom: 10
+  },
+
+  item: { padding: 10 },
+
+  addBtn: {
+    backgroundColor: "#4B3F72",
+    padding: 10,
+    alignItems: "center"
   }
 
 });
