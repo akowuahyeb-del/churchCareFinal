@@ -8,11 +8,16 @@ import {
 export default function AttendanceScreen() {
 
   /* ✅ DATA */
-  const [services, setServices] = useState(["Sunday", "Midweek"]);
-  const [types, setTypes] = useState(["First", "Second"]);
+  const [services, setServices] = useState([
+    "Sunday Service", "Midweek", "Choir"
+  ]);
 
-  const [selectedService, setSelectedService] = useState("Sunday");
-  const [selectedType, setSelectedType] = useState("First");
+  const [types, setTypes] = useState([
+    "First Service", "Second Service", "Wedding"
+  ]);
+
+  const [selectedService, setSelectedService] = useState("Sunday Service");
+  const [selectedType, setSelectedType] = useState("First Service");
 
   const [serviceModal, setServiceModal] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
@@ -32,7 +37,7 @@ export default function AttendanceScreen() {
 
   /* ✅ ADD SERVICE */
   const addService = () => {
-    if (!newService) return;
+    if (!newService.trim()) return;
     setServices([...services, newService]);
     setSelectedService(newService);
     setNewService("");
@@ -41,7 +46,7 @@ export default function AttendanceScreen() {
 
   /* ✅ ADD TYPE */
   const addType = () => {
-    if (!newType) return;
+    if (!newType.trim()) return;
     setTypes([...types, newType]);
     setSelectedType(newType);
     setNewType("");
@@ -56,9 +61,10 @@ export default function AttendanceScreen() {
       return {
         ...m,
         attendance: m.attendance.filter(
-          a => !(a.date === today &&
-                 a.service === selectedService &&
-                 a.type === selectedType)
+          a =>
+            !(a.date === today &&
+              a.service === selectedService &&
+              a.type === selectedType)
         )
       };
     });
@@ -70,13 +76,13 @@ export default function AttendanceScreen() {
   const toggleAttendance = (member, status) => {
 
     const exists = member.attendance.find(
-      a => a.date === today &&
-           a.service === selectedService &&
-           a.type === selectedType
+      a =>
+        a.date === today &&
+        a.service === selectedService &&
+        a.type === selectedType
     );
 
     if (exists) {
-      /* ✅ CONFIRM */
       Alert.alert(
         "Undo Attendance?",
         `Remove attendance for ${member.name}?`,
@@ -108,12 +114,13 @@ export default function AttendanceScreen() {
     setMembers(updated);
   };
 
-  /* ✅ CHECK STATUS */
+  /* ✅ GET STATUS */
   const getStatus = (m) => {
     const rec = m.attendance.find(
-      a => a.date === today &&
-           a.service === selectedService &&
-           a.type === selectedType
+      a =>
+        a.date === today &&
+        a.service === selectedService &&
+        a.type === selectedType
     );
     return rec ? rec.status : null;
   };
@@ -203,8 +210,10 @@ export default function AttendanceScreen() {
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
+            <Text style={styles.modalTitle}>Service</Text>
+
             <TextInput
-              placeholder="Search service"
+              placeholder="Service"
               value={searchService}
               onChangeText={setSearchService}
               style={styles.input}
@@ -222,7 +231,7 @@ export default function AttendanceScreen() {
               ))}
 
             <TextInput
-              placeholder="Add new service"
+              placeholder="New Service"
               value={newService}
               onChangeText={setNewService}
               style={styles.input}
@@ -230,6 +239,13 @@ export default function AttendanceScreen() {
 
             <TouchableOpacity style={styles.addBtn} onPress={addService}>
               <Text style={{ color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setServiceModal(false)}
+              style={styles.cancelBtn}
+            >
+              <Text>Cancel</Text>
             </TouchableOpacity>
 
           </View>
@@ -241,8 +257,10 @@ export default function AttendanceScreen() {
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
+            <Text style={styles.modalTitle}>Type</Text>
+
             <TextInput
-              placeholder="Search type"
+              placeholder="Type"
               value={searchType}
               onChangeText={setSearchType}
               style={styles.input}
@@ -260,7 +278,7 @@ export default function AttendanceScreen() {
               ))}
 
             <TextInput
-              placeholder="Add new type"
+              placeholder="New Type"
               value={newType}
               onChangeText={setNewType}
               style={styles.input}
@@ -268,6 +286,13 @@ export default function AttendanceScreen() {
 
             <TouchableOpacity style={styles.addBtn} onPress={addType}>
               <Text style={{ color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setTypeModal(false)}
+              style={styles.cancelBtn}
+            >
+              <Text>Cancel</Text>
             </TouchableOpacity>
 
           </View>
@@ -279,6 +304,7 @@ export default function AttendanceScreen() {
 }
 
 /* ✅ STYLES */
+
 const styles = StyleSheet.create({
 
   container: { flex: 1, padding: 20 },
@@ -329,6 +355,11 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
 
+  modalTitle: {
+    fontWeight: "600",
+    marginBottom: 10
+  },
+
   input: {
     borderWidth: 1,
     padding: 8,
@@ -341,6 +372,11 @@ const styles = StyleSheet.create({
   addBtn: {
     backgroundColor: "#4B3F72",
     padding: 10,
+    alignItems: "center"
+  },
+
+  cancelBtn: {
+    marginTop: 10,
     alignItems: "center"
   }
 
