@@ -1,206 +1,324 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  FlatList,
-  TouchableOpacity
+  View, Text, StyleSheet,
+  FlatList, TouchableOpacity,
+  TextInput, Modal
 } from "react-native";
-
-import { Feather } from "@expo/vector-icons";
 
 export default function AttendanceScreen() {
 
-  const [search, setSearch] = useState("");
+  /* ✅ SERVICES */
+  const [services, setServices] = useState([
+    "Sunday Service", "Midweek", "Choir"
+  ]);
 
-  /* ✅ MOCK DATA (we connect Firebase later) */
-  const recent = [
-    { id: "1", name: "Grace Mensah", time: "9:15 AM" },
-    { id: "2", name: "Kofi Agyeman", time: "9:14 AM" }
-  ];
+  const [types, setTypes] = useState([
+    "First Service", "Second Service", "Wedding"
+  ]);
+
+  const [selectedService, setSelectedService] = useState("Sunday Service");
+  const [selectedType, setSelectedType] = useState("First Service");
+
+  const [serviceModal, setServiceModal] = useState(false);
+  const [typeModal, setTypeModal] = useState(false);
+
+  const [newService, setNewService] = useState("");
+  const [newType, setNewType] = useState("");
+
+  const [members, setMembers] = useState([
+    { id: "1", name: "Grace Mensah", attendance: [] },
+    { id: "2", name: "Kofi Agyeman", attendance: [] }
+  ]);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  /* ✅ ADD SERVICE */
+  const addService = () => {
+    if (!newService) return;
+    setServices([...services, newService]);
+    setSelectedService(newService);
+    setNewService("");
+    setServiceModal(false);
+  };
+
+  /* ✅ ADD TYPE */
+  const addType = () => {
+    if (!newType) return;
+    setTypes([...types, newType]);
+    setSelectedType(newType);
+    setNewType("");
+    setTypeModal(false);
+  };
+
+  /* ✅ TOGGLE ATTENDANCE */
+  const toggleAttendance = (id, status) => {
+
+    const updated = members.map(m => {
+
+      if (m.id !== id) return m;
+
+      const existingIndex = m.attendance.findIndex(
+        a =>
+          a.service === selectedService &&
+          a.type === selectedType &&
+          a.date === today
+      );
+
+      let updatedAttendance = [...m.attendance];
+
+      if (existingIndex !== -1) {
+        // ✅ TOGGLE (undo)
+        updatedAttendance.splice(existingIndex, 1);
+      } else {
+        updatedAttendance.push({
+          service: selectedService,
+          type: selectedType,
+          status,
+          date: today
+        });
+      }
+
+      return {
+        ...m,
+        attendance: updatedAttendance
+      };
+    });
+
+    setMembers(updated);
+  };
+
+  /* ✅ CHECK STATUS */
+  const getStatus = (member) => {
+
+    const rec = member.attendance.find(
+      a =>
+        a.service === selectedService &&
+        a.type === selectedType &&
+        a.date === today
+    );
+
+    return rec ? rec.status : null;
+  };
 
   return (
     <View style={styles.container}>
 
       {/* ✅ HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Attendance Check‑in</Text>
-      </View>
+      <Text style={styles.header}>Attendance Check-in</Text>
 
-      {/* ✅ CONTENT */}
-      <View style={styles.content}>
+      {/* ✅ COMBO SERVICE */}
+      <TouchableOpacity style={styles.combo} onPress={() => setServiceModal(true)}>
+        <Text>{selectedService}</Text>
+      </TouchableOpacity>
 
-        {/* ✅ SERVICE SELECT */}
-        <Text style={styles.label}>Select Service / Event</Text>
+      {/* ✅ COMBO TYPE */}
+      <TouchableOpacity style={styles.combo} onPress={() => setTypeModal(true)}>
+        <Text>{selectedType}</Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity style={styles.dropdown}>
-          <Text>Sunday Service - 12 May 2024</Text>
-          <Feather name="chevron-down" size={18} />
-        </TouchableOpacity>
+      {/* ✅ MEMBER LIST */}
+      <FlatList
+        data={members}
+        keyExtractor={i => i.id}
+        renderItem={({ item }) => {
 
-        {/* ✅ QR AREA */}
-        <View style={styles.qrBox}>
-          <View style={styles.qrPlaceholder}>
-            <Text style={{ color: "#999" }}>QR Code Area</Text>
-          </View>
+          const status = getStatus(item);
 
-          <Text style={styles.qrText}>
-            Scan member QR code to mark attendance
-          </Text>
-        </View>
+          return (
+            <View style={styles.card}>
 
-        {/* ✅ DIVIDER */}
-        <Text style={styles.or}>OR</Text>
+              <Text style={styles.name}>{item.name}</Text>
 
-        {/* ✅ SEARCH */}
-        <View style={styles.searchBox}>
-          <Feather name="search" size={16} color="#888" />
-          <TextInput
-            placeholder="Search member by name or phone"
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+              <View style={styles.row}>
 
-        {/* ✅ RECENT CHECK-INS */}
-        <Text style={styles.section}>Recent Check-ins</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.present,
+                    status && styles.disabled
+                  ]}
+                  onPress={() => toggleAttendance(item.id, "present")}
+                >
+                  <Text style={styles.btnText}>Present</Text>
+                </TouchableOpacity>
 
-        <FlatList
-          data={recent}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
+                <TouchableOpacity
+                  style={[
+                    styles.absent,
+                    status && styles.disabled
+                  ]}
+                  onPress={() => toggleAttendance(item.id, "absent")}
+                >
+                  <Text style={styles.btnText}>Absent</Text>
+                </TouchableOpacity>
 
-              <View>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.time}>{item.time}</Text>
+                {/* ✅ UNDO */}
+                {status && (
+                  <TouchableOpacity
+                    style={styles.undo}
+                    onPress={() => toggleAttendance(item.id)}
+                  >
+                    <Text style={styles.btnText}>Undo</Text>
+                  </TouchableOpacity>
+                )}
+
               </View>
 
-              <Feather name="check-circle" size={18} color="green" />
             </View>
-          )}
-        />
+          );
+        }}
+      />
 
-      </View>
+      {/* ✅ SERVICE MODAL */}
+      <Modal visible={serviceModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+
+            <Text style={styles.modalTitle}>Select Service</Text>
+
+            {services.map((s, i) => (
+              <TouchableOpacity key={i} onPress={() => {
+                setSelectedService(s);
+                setServiceModal(false);
+              }}>
+                <Text style={styles.modalItem}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TextInput
+              placeholder="Add new service"
+              value={newService}
+              onChangeText={setNewService}
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.addBtn} onPress={addService}>
+              <Text style={{ color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ TYPE MODAL */}
+      <Modal visible={typeModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+
+            <Text style={styles.modalTitle}>Select Type</Text>
+
+            {types.map((t, i) => (
+              <TouchableOpacity key={i} onPress={() => {
+                setSelectedType(t);
+                setTypeModal(false);
+              }}>
+                <Text style={styles.modalItem}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TextInput
+              placeholder="Add new type"
+              value={newType}
+              onChangeText={setNewType}
+              style={styles.input}
+            />
+
+            <TouchableOpacity style={styles.addBtn} onPress={addType}>
+              <Text style={{ color: "#fff" }}>Add</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
 }
 
 /* ✅ STYLES */
-
 const styles = StyleSheet.create({
 
-  container: {
-    flex: 1,
-    backgroundColor: "#4B3F72"
-  },
+  container: { flex: 1, padding: 20 },
 
-  header: {
-    paddingTop: 55,
-    paddingBottom: 15,
-    paddingHorizontal: 20
-  },
+  header: { fontSize: 18, marginBottom: 10 },
 
-  headerTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600"
-  },
-
-  content: {
-    flex: 1,
-    backgroundColor: "#f7f8fb",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 18
-  },
-
-  label: {
-    marginBottom: 6,
-    fontWeight: "500"
-  },
-
-  dropdown: {
+  combo: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15
-  },
-
-  qrBox: {
-    alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 10
   },
 
-  qrPlaceholder: {
-    width: 160,
-    height: 160,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd"
-  },
-
-  qrText: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 10,
-    textAlign: "center"
-  },
-
-  or: {
-    textAlign: "center",
-    marginVertical: 10,
-    color: "#888"
-  },
-
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
+  card: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginBottom: 15
+    marginBottom: 10,
+    borderRadius: 8
   },
 
-  searchInput: {
-    marginLeft: 8,
-    flex: 1
+  name: { fontWeight: "600", marginBottom: 10 },
+
+  row: { flexDirection: "row" },
+
+  present: {
+    backgroundColor: "green",
+    padding: 8,
+    borderRadius: 6,
+    marginRight: 8
   },
 
-  section: {
+  absent: {
+    backgroundColor: "red",
+    padding: 8,
+    borderRadius: 6,
+    marginRight: 8
+  },
+
+  undo: {
+    backgroundColor: "#555",
+    padding: 8,
+    borderRadius: 6
+  },
+
+  disabled: {
+    opacity: 0.4
+  },
+
+  btnText: { color: "#fff" },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "#0007"
+  },
+
+  modal: {
+    backgroundColor: "#fff",
+    margin: 20,
+    padding: 20,
+    borderRadius: 10
+  },
+
+  modalTitle: {
     fontWeight: "600",
     marginBottom: 10
   },
 
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10
+  modalItem: {
+    padding: 10
   },
 
-  name: {
-    fontWeight: "500"
+  input: {
+    borderWidth: 1,
+    marginTop: 10,
+    padding: 8,
+    borderRadius: 6
   },
 
-  time: {
-    fontSize: 12,
-    color: "#777"
+  addBtn: {
+    marginTop: 10,
+    backgroundColor: "#4B3F72",
+    padding: 10,
+    alignItems: "center"
   }
 
 });
