@@ -1,9 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet,
   FlatList, TouchableOpacity,
   TextInput, Modal, Alert
 } from "react-native";
+
+/* ✅ FIREBASE IMPORT */
+import { db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  getDocs
+} from "firebase/firestore";
 
 export default function AttendanceScreen() {
 
@@ -27,36 +35,51 @@ export default function AttendanceScreen() {
   const [searchService, setSearchService] = useState("");
   const [searchType, setSearchType] = useState("");
 
-  /* ✅ ADD INPUT */
+  /* ✅ ADD NEW */
   const [newService, setNewService] = useState("");
   const [newType, setNewType] = useState("");
 
-  /* ✅ MEMBERS */
-  const [members, setMembers] = useState([
-    { id: "1", name: "Grace Mensah", attendance: [] },
-    { id: "2", name: "Kofi Agyeman", attendance: [] }
-  ]);
+  /* ✅ MEMBERS (FROM FIREBASE) */
+  const [members, setMembers] = useState([]);
 
   const today = new Date().toISOString().split("T")[0];
 
-  /* ✅ ✅ ADD SERVICE (FIXED ERROR HERE) */
+  /* ✅ LOAD MEMBERS FROM FIREBASE */
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
+  const loadMembers = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "members"));
+
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        attendance: []
+      }));
+
+      setMembers(data);
+
+    } catch (error) {
+      console.log("❌ Error loading members:", error);
+    }
+  };
+
+  /* ✅ ADD SERVICE */
   const addService = () => {
     if (!newService.trim()) return;
-
     setServices(prev => [...prev, newService]);
     setSelectedService(newService);
-
     setNewService("");
     setServiceModal(false);
   };
 
-  /* ✅ ✅ ADD TYPE */
+  /* ✅ ADD TYPE */
   const addType = () => {
     if (!newType.trim()) return;
-
     setTypes(prev => [...prev, newType]);
     setSelectedType(newType);
-
     setNewType("");
     setTypeModal(false);
   };
@@ -66,75 +89,37 @@ export default function AttendanceScreen() {
     m.name.toLowerCase().includes(searchMember.toLowerCase())
   );
 
-  /* ✅ REMOVE */
-  const removeAttendance = (id) => {
-    setMembers(prev =>
-      prev.map(m => {
-        if (m.id !== id) return m;
-        return {
-          ...m,
-          attendance: m.attendance.filter(
-            a =>
-              !(a.date === today &&
-                a.service === selectedService &&
-                a.type === selectedType)
-          )
-        };
-      })
-    );
+  /* ✅ SAVE ATTENDANCE TO FIREBASE */
+  const saveAttendance = async (member, status) => {
+    try {
+      await addDoc(collection(db, "attendance"), {
+        memberId: member.id,
+        name: member.name,
+        service: selectedService,
+        type: selectedType,
+        status: status,
+        date: today,
+        createdAt: new Date()
+      });
+
+      Alert.alert("✅ Saved", "Attendance recorded");
+
+    } catch (error) {
+      console.log("❌ Error saving:", error);
+    }
   };
 
   /* ✅ TOGGLE */
   const toggleAttendance = (member, status) => {
 
-    const exists = member.attendance.find(
-      a =>
-        a.date === today &&
-        a.service === selectedService &&
-        a.type === selectedType
+    Alert.alert(
+      "Confirm",
+      `${status === "present" ? "Mark Present" : "Mark Absent"} for ${member.name}?`,
+      [
+        { text: "Cancel" },
+        { text: "Yes", onPress: () => saveAttendance(member, status) }
+      ]
     );
-
-    if (exists) {
-      Alert.alert(
-        "Undo Attendance",
-        `Remove attendance for ${member.name}?`,
-        [
-          { text: "Cancel" },
-          { text: "Yes", onPress: () => removeAttendance(member.id) }
-        ]
-      );
-      return;
-    }
-
-    setMembers(prev =>
-      prev.map(m => {
-        if (m.id !== member.id) return m;
-
-        return {
-          ...m,
-          attendance: [
-            ...m.attendance,
-            {
-              service: selectedService,
-              type: selectedType,
-              status,
-              date: today
-            }
-          ]
-        };
-      })
-    );
-  };
-
-  /* ✅ STATUS */
-  const getStatus = (m) => {
-    const rec = m.attendance.find(
-      a =>
-        a.date === today &&
-        a.service === selectedService &&
-        a.type === selectedType
-    );
-    return rec ? rec.status : null;
   };
 
   return (
@@ -142,23 +127,17 @@ export default function AttendanceScreen() {
 
       <Text style={styles.header}>Attendance</Text>
 
-      {/* ✅ SERVICE SELECT */}
-      <TouchableOpacity
-        style={styles.combo}
-        onPress={() => setServiceModal(true)}
-      >
+      {/* ✅ SERVICE */}
+      <TouchableOpacity style={styles.combo} onPress={() => setServiceModal(true)}>
         <Text>{selectedService}</Text>
       </TouchableOpacity>
 
-      {/* ✅ TYPE SELECT */}
-      <TouchableOpacity
-        style={styles.combo}
-        onPress={() => setTypeModal(true)}
-      >
+      {/* ✅ TYPE */}
+      <TouchableOpacity style={styles.combo} onPress={() => setTypeModal(true)}>
         <Text>{selectedType}</Text>
       </TouchableOpacity>
 
-      {/* ✅ SEARCH MEMBER */}
+      {/* ✅ SEARCH */}
       <TextInput
         placeholder="Search member..."
         value={searchMember}
@@ -166,49 +145,35 @@ export default function AttendanceScreen() {
         style={styles.searchInput}
       />
 
-      {/* ✅ MEMBERS */}
+      {/* ✅ MEMBER LIST */}
       <FlatList
         data={filteredMembers}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => {
+        renderItem={({ item }) => (
+          <View style={styles.card}>
 
-          const status = getStatus(item);
+            <Text style={styles.name}>{item.name}</Text>
 
-          return (
-            <View style={styles.card}>
+            <View style={styles.row}>
 
-              <Text style={styles.name}>{item.name}</Text>
+              <TouchableOpacity
+                style={styles.present}
+                onPress={() => toggleAttendance(item, "present")}
+              >
+                <Text style={styles.btnText}>Present</Text>
+              </TouchableOpacity>
 
-              <View style={styles.row}>
-
-                <TouchableOpacity
-                  style={[styles.present, status && styles.disabled]}
-                  onPress={() => toggleAttendance(item, "present")}
-                >
-                  <Text style={styles.btnText}>Present</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.absent, status && styles.disabled]}
-                  onPress={() => toggleAttendance(item, "absent")}
-                >
-                  <Text style={styles.btnText}>Absent</Text>
-                </TouchableOpacity>
-
-                {status && (
-                  <TouchableOpacity
-                    style={styles.undo}
-                    onPress={() => toggleAttendance(item)}
-                  >
-                    <Text style={styles.btnText}>Undo</Text>
-                  </TouchableOpacity>
-                )}
-
-              </View>
+              <TouchableOpacity
+                style={styles.absent}
+                onPress={() => toggleAttendance(item, "absent")}
+              >
+                <Text style={styles.btnText}>Absent</Text>
+              </TouchableOpacity>
 
             </View>
-          );
-        }}
+
+          </View>
+        )}
       />
 
       {/* ✅ SERVICE MODAL */}
@@ -225,28 +190,14 @@ export default function AttendanceScreen() {
 
             {services
               .filter(s => s.toLowerCase().includes(searchService.toLowerCase()))
-              .map((s, i) => {
-
-                const selected = s === selectedService;
-
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[
-                      styles.itemBox,
-                      selected && styles.selectedItem
-                    ]}
-                    onPress={() => {
-                      setSelectedService(s);
-                      setServiceModal(false);
-                    }}
-                  >
-                    <Text style={selected && styles.selectedText}>
-                      {s}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              .map((s, i) => (
+                <TouchableOpacity key={i} onPress={() => {
+                  setSelectedService(s);
+                  setServiceModal(false);
+                }}>
+                  <Text style={styles.item}>{s}</Text>
+                </TouchableOpacity>
+              ))}
 
             <TextInput
               placeholder="New Service"
@@ -256,10 +207,10 @@ export default function AttendanceScreen() {
             />
 
             <TouchableOpacity style={styles.addBtn} onPress={addService}>
-              <Text style={styles.addText}>Add</Text>
+              <Text style={{ color: "#fff" }}>Add</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setServiceModal(false)} style={styles.cancelBtn}>
+            <TouchableOpacity onPress={() => setServiceModal(false)}>
               <Text>Cancel</Text>
             </TouchableOpacity>
 
@@ -281,28 +232,14 @@ export default function AttendanceScreen() {
 
             {types
               .filter(t => t.toLowerCase().includes(searchType.toLowerCase()))
-              .map((t, i) => {
-
-                const selected = t === selectedType;
-
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    style={[
-                      styles.itemBox,
-                      selected && styles.selectedItem
-                    ]}
-                    onPress={() => {
-                      setSelectedType(t);
-                      setTypeModal(false);
-                    }}
-                  >
-                    <Text style={selected && styles.selectedText}>
-                      {t}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+              .map((t, i) => (
+                <TouchableOpacity key={i} onPress={() => {
+                  setSelectedType(t);
+                  setTypeModal(false);
+                }}>
+                  <Text style={styles.item}>{t}</Text>
+                </TouchableOpacity>
+              ))}
 
             <TextInput
               placeholder="New Type"
@@ -312,10 +249,10 @@ export default function AttendanceScreen() {
             />
 
             <TouchableOpacity style={styles.addBtn} onPress={addType}>
-              <Text style={styles.addText}>Add</Text>
+              <Text style={{ color: "#fff" }}>Add</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setTypeModal(false)} style={styles.cancelBtn}>
+            <TouchableOpacity onPress={() => setTypeModal(false)}>
               <Text>Cancel</Text>
             </TouchableOpacity>
 
@@ -329,16 +266,14 @@ export default function AttendanceScreen() {
 
 /* ✅ STYLES */
 const styles = StyleSheet.create({
-
   container: { flex: 1, padding: 20 },
-
   header: { fontSize: 18, marginBottom: 10 },
 
   combo: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 10
+    marginBottom: 10,
+    borderRadius: 8
   },
 
   searchInput: {
@@ -360,14 +295,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row" },
 
   present: { backgroundColor: "#27ae60", padding: 8, marginRight: 8 },
-  absent: { backgroundColor: "#e74c3c", padding: 8, marginRight: 8 },
-  undo: { backgroundColor: "#555", padding: 8 },
+  absent: { backgroundColor: "#e74c3c", padding: 8 },
 
-  disabled: { opacity: 0.4 },
+  btnText: { color: "#fff" },
 
-  btnText: { color: "#fff", fontSize: 12 },
-
-  overlay: { flex: 1, justifyContent: "center", backgroundColor: "#0007" },
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "#0007"
+  },
 
   modal: {
     backgroundColor: "#fff",
@@ -379,35 +315,15 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     padding: 8,
-    borderRadius: 6,
-    marginBottom: 10
+    marginBottom: 10,
+    borderRadius: 6
   },
 
-  itemBox: { padding: 10, borderRadius: 6 },
-
-  selectedItem: {
-    backgroundColor: "#E6DFFD",
-    borderWidth: 1,
-    borderColor: "#4B3F72"
-  },
-
-  selectedText: {
-    fontWeight: "600",
-    color: "#4B3F72"
-  },
+  item: { padding: 10 },
 
   addBtn: {
     backgroundColor: "#4B3F72",
     padding: 10,
-    alignItems: "center",
-    marginTop: 5
-  },
-
-  addText: { color: "#fff" },
-
-  cancelBtn: {
-    marginTop: 10,
     alignItems: "center"
   }
-
 });
