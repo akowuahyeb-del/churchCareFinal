@@ -22,9 +22,12 @@ export default function AttendanceScreen() {
   const [serviceModal, setServiceModal] = useState(false);
   const [typeModal, setTypeModal] = useState(false);
 
+  /* ✅ SEARCH */
+  const [searchMember, setSearchMember] = useState("");
   const [searchService, setSearchService] = useState("");
   const [searchType, setSearchType] = useState("");
 
+  /* ✅ ADD INPUT */
   const [newService, setNewService] = useState("");
   const [newType, setNewType] = useState("");
 
@@ -36,13 +39,16 @@ export default function AttendanceScreen() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  /* ✅ FILTER MEMBERS */
+  const filteredMembers = members.filter(m =>
+    m.name.toLowerCase().includes(searchMember.toLowerCase())
+  );
+
   /* ✅ ADD SERVICE */
   const addService = () => {
     if (!newService.trim()) return;
-
     setServices([...services, newService]);
     setSelectedService(newService);
-
     setNewService("");
     setServiceModal(false);
   };
@@ -50,15 +56,13 @@ export default function AttendanceScreen() {
   /* ✅ ADD TYPE */
   const addType = () => {
     if (!newType.trim()) return;
-
     setTypes([...types, newType]);
     setSelectedType(newType);
-
     setNewType("");
     setTypeModal(false);
   };
 
-  /* ✅ REMOVE ATTENDANCE */
+  /* ✅ REMOVE */
   const removeAttendance = (id) => {
     setMembers(members.map(m => {
       if (m.id !== id) return m;
@@ -66,9 +70,10 @@ export default function AttendanceScreen() {
       return {
         ...m,
         attendance: m.attendance.filter(
-          a => !(a.date === today &&
-                 a.service === selectedService &&
-                 a.type === selectedType)
+          a =>
+            !(a.date === today &&
+              a.service === selectedService &&
+              a.type === selectedType)
         )
       };
     }));
@@ -113,7 +118,7 @@ export default function AttendanceScreen() {
     }));
   };
 
-  /* ✅ STATUS CHECK */
+  /* ✅ STATUS */
   const getStatus = (m) => {
     const rec = m.attendance.find(
       a => a.date === today &&
@@ -123,25 +128,12 @@ export default function AttendanceScreen() {
     return rec ? rec.status : null;
   };
 
-  /* ✅ SUMMARY */
-  const summary = members.reduce(
-    (acc, m) => {
-      const s = getStatus(m);
-      if (s === "present") acc.present++;
-      if (s === "absent") acc.absent++;
-      return acc;
-    },
-    { present: 0, absent: 0 }
-  );
-
-  summary.total = members.length;
-
   return (
     <View style={styles.container}>
 
       <Text style={styles.header}>Attendance</Text>
 
-      {/* ✅ SERVICE COMBO */}
+      {/* ✅ SERVICE */}
       <TouchableOpacity
         style={styles.combo}
         onPress={() => setServiceModal(true)}
@@ -149,7 +141,7 @@ export default function AttendanceScreen() {
         <Text>{selectedService}</Text>
       </TouchableOpacity>
 
-      {/* ✅ TYPE COMBO */}
+      {/* ✅ TYPE */}
       <TouchableOpacity
         style={styles.combo}
         onPress={() => setTypeModal(true)}
@@ -157,16 +149,17 @@ export default function AttendanceScreen() {
         <Text>{selectedType}</Text>
       </TouchableOpacity>
 
-      {/* ✅ SUMMARY */}
-      <View style={styles.summary}>
-        <Text>Present: {summary.present}</Text>
-        <Text>Absent: {summary.absent}</Text>
-        <Text>Total: {summary.total}</Text>
-      </View>
+      {/* ✅ MEMBER SEARCH */}
+      <TextInput
+        placeholder="Search member..."
+        value={searchMember}
+        onChangeText={setSearchMember}
+        style={styles.searchInput}
+      />
 
       {/* ✅ MEMBERS */}
       <FlatList
-        data={members}
+        data={filteredMembers}
         keyExtractor={i => i.id}
         renderItem={({ item }) => {
 
@@ -181,10 +174,7 @@ export default function AttendanceScreen() {
 
                 {/* PRESENT */}
                 <TouchableOpacity
-                  style={[
-                    styles.present,
-                    status && styles.disabled
-                  ]}
+                  style={[styles.present, status && styles.disabled]}
                   onPress={() => toggleAttendance(item, "present")}
                 >
                   <Text style={styles.btnText}>Present</Text>
@@ -192,10 +182,7 @@ export default function AttendanceScreen() {
 
                 {/* ABSENT */}
                 <TouchableOpacity
-                  style={[
-                    styles.absent,
-                    status && styles.disabled
-                  ]}
+                  style={[styles.absent, status && styles.disabled]}
                   onPress={() => toggleAttendance(item, "absent")}
                 >
                   <Text style={styles.btnText}>Absent</Text>
@@ -223,8 +210,6 @@ export default function AttendanceScreen() {
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
-            <Text style={styles.modalTitle}>Service</Text>
-
             <TextInput
               placeholder="Service"
               value={searchService}
@@ -236,6 +221,7 @@ export default function AttendanceScreen() {
               .filter(s => s.toLowerCase().includes(searchService.toLowerCase()))
               .map((s, i) => {
                 const selected = s === selectedService;
+
                 return (
                   <TouchableOpacity
                     key={i}
@@ -248,14 +234,12 @@ export default function AttendanceScreen() {
                       setServiceModal(false);
                     }}
                   >
-                    <Text style={{ fontWeight: selected ? "600" : "400" }}>
-                      {s}
-                    </Text>
+                    <Text style={selected && styles.selectedText}>{s}</Text>
                   </TouchableOpacity>
                 );
               })}
 
-            {/* ADD NEW */}
+            {/* ADD */}
             <TextInput
               placeholder="New Service"
               value={newService}
@@ -283,8 +267,6 @@ export default function AttendanceScreen() {
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
-            <Text style={styles.modalTitle}>Type</Text>
-
             <TextInput
               placeholder="Type"
               value={searchType}
@@ -296,6 +278,7 @@ export default function AttendanceScreen() {
               .filter(t => t.toLowerCase().includes(searchType.toLowerCase()))
               .map((t, i) => {
                 const selected = t === selectedType;
+
                 return (
                   <TouchableOpacity
                     key={i}
@@ -308,14 +291,12 @@ export default function AttendanceScreen() {
                       setTypeModal(false);
                     }}
                   >
-                    <Text style={{ fontWeight: selected ? "600" : "400" }}>
-                      {t}
-                    </Text>
+                    <Text style={selected && styles.selectedText}>{t}</Text>
                   </TouchableOpacity>
                 );
               })}
 
-            {/* ADD NEW */}
+            {/* ADD */}
             <TextInput
               placeholder="New Type"
               value={newType}
@@ -356,9 +337,9 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
 
-  summary: {
+  searchInput: {
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 10
   },
@@ -374,25 +355,9 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: "row" },
 
-  present: {
-    backgroundColor: "#27ae60",
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8
-  },
-
-  absent: {
-    backgroundColor: "#e74c3c",
-    padding: 8,
-    borderRadius: 6,
-    marginRight: 8
-  },
-
-  undo: {
-    backgroundColor: "#555",
-    padding: 8,
-    borderRadius: 6
-  },
+  present: { backgroundColor: "#27ae60", padding: 8, marginRight: 8 },
+  absent: { backgroundColor: "#e74c3c", padding: 8, marginRight: 8 },
+  undo: { backgroundColor: "#555", padding: 8 },
 
   disabled: { opacity: 0.4 },
 
@@ -409,11 +374,6 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 20,
     borderRadius: 10
-  },
-
-  modalTitle: {
-    fontWeight: "600",
-    marginBottom: 10
   },
 
   input: {
@@ -434,11 +394,15 @@ const styles = StyleSheet.create({
     borderColor: "#4B3F72"
   },
 
+  selectedText: {
+    fontWeight: "600",
+    color: "#4B3F72"
+  },
+
   addBtn: {
     backgroundColor: "#4B3F72",
     padding: 10,
     alignItems: "center",
-    borderRadius: 6,
     marginTop: 5
   },
 
