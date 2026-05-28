@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Animated
+  StyleSheet
 } from "react-native";
 
 import { Feather, AntDesign } from "@expo/vector-icons";
@@ -16,39 +15,34 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  /* ✅ SIMPLE FADE-IN ANIMATION */
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true
-    }).start();
-  }, []);
-
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+    <View style={styles.container}>
 
-      {/* ✅ TITLE */}
-      <Text style={styles.title}>Login</Text>
+      {/* ✅ HEADER TEXT */}
+      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.subtitle}>
+        Sign in to continue
+      </Text>
 
-      {/* ✅ INPUTS */}
+      {/* ✅ EMAIL FIELD */}
       <TextInput
-        placeholder="Email or Phone"
+        placeholder="Email / Phone"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
+        placeholderTextColor="#999"
       />
 
-      {/* ✅ PASSWORD WITH TOGGLE */}
+      {/* ✅ PASSWORD FIELD WITH TOGGLE */}
       <View style={styles.passwordBox}>
+
         <TextInput
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
           style={styles.passwordInput}
+          placeholderTextColor="#999"
         />
 
         <TouchableOpacity
@@ -60,6 +54,7 @@ export default function LoginScreen({ navigation }) {
             color="#555"
           />
         </TouchableOpacity>
+
       </View>
 
       {/* ✅ LOGIN BUTTON */}
@@ -78,10 +73,7 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       {/* ✅ GOOGLE BUTTON */}
-      <TouchableOpacity style={styles.socialBtn} onPress={() => {
-        console.log("Google login clicked");
-        // ✅ Placeholder for Firebase Google login
-      }}>
+      <TouchableOpacity style={styles.socialBtn}>
         <AntDesign name="google" size={18} color="#DB4437" />
         <Text style={styles.socialText}>Continue with Google</Text>
       </TouchableOpacity>
@@ -94,13 +86,15 @@ export default function LoginScreen({ navigation }) {
 
       {/* ✅ FOOTER */}
       <View style={styles.footer}>
-        <Text>Don't have an account? </Text>
+        <Text style={{ color: "#555" }}>Don't have an account? </Text>
         <Text style={styles.register}>Register</Text>
       </View>
 
-    </Animated.View>
+    </View>
   );
 }
+
+/* ✅ STYLES */
 
 const styles = StyleSheet.create({
 
@@ -108,23 +102,29 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: "center",
-    backgroundColor: "#f4f6f8"
+    backgroundColor: "#f7f8fb"
   },
 
   title: {
     fontSize: 22,
     fontWeight: "600",
-    marginBottom: 20,
-    textAlign: "center"
+    marginBottom: 5,
+    color: "#222"
+  },
+
+  subtitle: {
+    fontSize: 13,
+    color: "#777",
+    marginBottom: 20
   },
 
   input: {
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 10,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#ddd"
+    borderColor: "#e0e0e0"
   },
 
   /* ✅ PASSWORD FIELD */
@@ -132,11 +132,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e0e0e0",
     paddingHorizontal: 10,
-    marginBottom: 10
+    marginBottom: 12
   },
 
   passwordInput: {
@@ -144,25 +144,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12
   },
 
-  /* ✅ LOGIN BUTTON */
+  /* ✅ LOGIN BUTTON (MATCH DASHBOARD PURPLE) */
   loginBtn: {
-    backgroundColor: "#5B3CC4",
+    backgroundColor: "#4B3F72",
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
-    marginTop: 10
+    marginTop: 5
   },
 
   loginText: {
     color: "#fff",
-    fontWeight: "600"
+    fontWeight: "600",
+    fontSize: 14
   },
 
   /* ✅ DIVIDER */
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 15
+    marginVertical: 18
   },
 
   line: {
@@ -174,24 +175,24 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 8,
     fontSize: 12,
-    color: "#777"
+    color: "#888"
   },
 
-  /* ✅ SOCIAL BUTTON */
+  /* ✅ SOCIAL BUTTONS */
   socialBtn: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#ddd"
+    borderColor: "#e0e0e0"
   },
 
   socialText: {
-    marginLeft: 10,
-    fontWeight: "500",
+    marginLeft: 12,
+    fontSize: 13,
     color: "#333"
   },
 
@@ -203,9 +204,8 @@ const styles = StyleSheet.create({
   },
 
   register: {
-    color: "#5B3CC4",
+    color: "#4B3F72",
     fontWeight: "600"
   }
 
 });
-``

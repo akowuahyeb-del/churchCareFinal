@@ -3,73 +3,110 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView
+  ScrollView,
+  SafeAreaView
 } from "react-native";
+
+import { Feather, MaterialIcons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
 
-      {/* ✅ HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Good Morning 👋</Text>
-        <Text style={styles.name}>Pastor John</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
 
-      {/* ✅ OVERVIEW */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Overview</Text>
+        {/* ✅ HEADER */}
+        <View style={styles.header}>
 
-        <View style={styles.row}>
+          <View>
+            <Text style={styles.greeting}>Good Morning 👋</Text>
+            <Text style={styles.name}>Pastor John</Text>
+          </View>
 
-          <StatCard number="186" label="Attendance" />
-          <StatCard number="12" label="New Members" />
-          <StatCard number="05" label="Events" />
+          {/* ✅ Notification bell with red dot */}
+          <View style={{ position: "relative" }}>
+            <Feather name="bell" size={22} color="#fff" />
+            <View style={styles.notificationDot} />
+          </View>
 
         </View>
-      </View>
 
-      {/* ✅ QUICK ACTIONS */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        {/* ✅ CONTENT */}
+        <View style={styles.content}>
 
-        <View style={styles.row}>
-          <ActionCard label="Attendance" />
-          <ActionCard label="Members" />
-          <ActionCard label="Reports" />
-          <ActionCard label="Notify" />
+          {/* ✅ OVERVIEW */}
+          <Text style={styles.sectionTitle}>Today's Overview</Text>
+          <Text style={styles.subDate}>Sunday, 12 May 2024</Text>
+
+          <View style={styles.statsRow}>
+            <StatCard value="186" label="Today's Attendance" />
+            <StatCard value="12" label="New Members" />
+            <StatCard value="05" label="Upcoming Events" />
+          </View>
+
+          {/* ✅ QUICK ACTIONS */}
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+          <View style={styles.actionRow}>
+            <ActionCard icon="phone" label="Check Attendance" />
+            <ActionCard icon="users" label="Members" />
+            <ActionCard icon="file-text" label="Reports" />
+            <ActionCard icon="bell" label="Send Notification" />
+          </View>
+
+          {/* ✅ EVENT HEADER */}
+          <View style={styles.eventHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Event</Text>
+            <Text style={styles.viewAll}>View All</Text>
+          </View>
+
+          {/* ✅ EVENT CARD */}
+          <View style={styles.eventCard}>
+
+            <MaterialIcons name="event" size={22} color="#4B3F72" />
+
+            <View style={{ marginLeft: 12 }}>
+              <Text style={styles.eventTitle}>Youth Service</Text>
+              <Text style={styles.eventDetails}>
+                Sat, 11 May 2024 • 4:00 PM
+              </Text>
+              <Text style={styles.eventDetails}>
+                Main Auditorium
+              </Text>
+            </View>
+
+          </View>
+
+          {/* ✅ SMALL BOTTOM SPACE (NOT EMPTY GAP) */}
+          <View style={{ height: 20 }} />
+
         </View>
 
-      </View>
-
-      {/* ✅ UPCOMING EVENT */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Upcoming Event</Text>
-
-        <View style={styles.eventCard}>
-          <Text style={styles.eventTitle}>Youth Service</Text>
-          <Text>Sat, 11 May • 4:00 PM</Text>
-          <Text>Main Auditorium</Text>
-        </View>
-      </View>
-
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-/* ✅ SMALL COMPONENTS */
+/* ✅ COMPONENTS */
 
-const StatCard = ({ number, label }) => (
+const StatCard = ({ value, label }) => (
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>{number}</Text>
+    <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
-const ActionCard = ({ label }) => (
+const ActionCard = ({ icon, label }) => (
   <View style={styles.actionCard}>
-    <Text>{label}</Text>
+
+    {/* ✅ ICON FIXED */}
+    <View style={styles.iconBox}>
+      <Feather name={icon} size={18} color="#4B3F72" />
+    </View>
+
+    <Text style={styles.actionText}>{label}</Text>
+
   </View>
 );
 
@@ -77,21 +114,28 @@ const ActionCard = ({ label }) => (
 
 const styles = StyleSheet.create({
 
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#f4f6f8"
+    backgroundColor: "#4B3F72"
   },
 
+  scrollContent: {
+    flexGrow: 1
+  },
+
+  /* ✅ HEADER */
   header: {
-    backgroundColor: "#4B3F72",
-    padding: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 55,
+    paddingBottom: 20,
+    paddingHorizontal: 20
   },
 
   greeting: {
     color: "#fff",
-    fontSize: 16
+    fontSize: 14
   },
 
   name: {
@@ -100,55 +144,124 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
 
-  section: {
-    padding: 15
+  notificationDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "red"
+  },
+
+  /* ✅ CONTENT */
+  content: {
+    flex: 1,
+    backgroundColor: "#f7f8fb",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 18
   },
 
   sectionTitle: {
     fontWeight: "600",
-    marginBottom: 10
+    marginTop: 14
   },
 
-  row: {
+  subDate: {
+    fontSize: 11,
+    color: "#888",
+    marginBottom: 12
+  },
+
+  /* ✅ STATS */
+  statsRow: {
     flexDirection: "row",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    marginBottom: 16
   },
 
   statCard: {
     backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 8,
     width: "30%",
-    alignItems: "center"
+    paddingVertical: 18,
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 1
   },
 
-  statNumber: {
+  statValue: {
     fontSize: 18,
-    fontWeight: "600"
+    fontWeight: "700",
+    color: "#4B3F72"
   },
 
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    textAlign: "center",
     color: "#555"
+  },
+
+  /* ✅ ACTIONS */
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 18
   },
 
   actionCard: {
     backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    width: "22%",
+    width: "23%",
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: "center",
+    elevation: 1
+  },
+
+  /* ✅ ICON BOX FIXED VISIBILITY */
+  iconBox: {
+    backgroundColor: "#E6DFFD",
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 8
+  },
+
+  actionText: {
+    fontSize: 11,
+    textAlign: "center",
+    color: "#222"
+  },
+
+  /* ✅ EVENT */
+  eventHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center"
   },
 
+  viewAll: {
+    color: "#4B3F72",
+    fontSize: 11,
+    fontWeight: "500"
+  },
+
   eventCard: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10
+    padding: 16,
+    borderRadius: 10,
+    marginTop: 6,
+    elevation: 1
   },
 
   eventTitle: {
-    fontWeight: "600",
-    marginBottom: 5
+    fontWeight: "600"
+  },
+
+  eventDetails: {
+    fontSize: 11,
+    color: "#666"
   }
 
 });
