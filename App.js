@@ -9,17 +9,10 @@ import { Feather } from "@expo/vector-icons";
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
+import AttendanceScreen from "./screens/AttendanceScreen";
 
-// ✅ Placeholder screens (we build later)
+// ✅ Temporary placeholders (we will build later)
 import { View, Text } from "react-native";
-
-function AttendanceScreen() {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Attendance Screen</Text>
-    </View>
-  );
-}
 
 function MembersScreen() {
   return (
@@ -122,7 +115,7 @@ function MainTabs() {
   );
 }
 
-/* ✅ MAIN NAVIGATION */
+/* ✅ ROOT NAVIGATION */
 export default function App() {
   return (
     <NavigationContainer>
@@ -132,7 +125,7 @@ export default function App() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
 
-        {/* ✅ CRITICAL: This loads bottom nav */}
+        {/* ✅ CRITICAL: loads your dashboard + tabs */}
         <Stack.Screen name="Home" component={MainTabs} />
 
       </Stack.Navigator>
@@ -140,4 +133,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-``

@@ -24,8 +24,8 @@ export default function HomeScreen() {
             <Text style={styles.name}>Pastor John</Text>
           </View>
 
-          {/* ✅ Notification bell with red dot */}
-          <View style={{ position: "relative" }}>
+          {/* ✅ Bell with notification dot */}
+          <View style={styles.bellContainer}>
             <Feather name="bell" size={22} color="#fff" />
             <View style={styles.notificationDot} />
           </View>
@@ -61,7 +61,7 @@ export default function HomeScreen() {
             <Text style={styles.viewAll}>View All</Text>
           </View>
 
-          {/* ✅ EVENT CARD */}
+          {/* ✅ EVENT */}
           <View style={styles.eventCard}>
 
             <MaterialIcons name="event" size={22} color="#4B3F72" />
@@ -78,8 +78,8 @@ export default function HomeScreen() {
 
           </View>
 
-          {/* ✅ SMALL BOTTOM SPACE (NOT EMPTY GAP) */}
-          <View style={{ height: 20 }} />
+          {/* ✅ FIXED SMALL SPACING (NO LARGE GAP) */}
+          <View style={{ height: 10 }} />
 
         </View>
 
@@ -100,7 +100,6 @@ const StatCard = ({ value, label }) => (
 const ActionCard = ({ icon, label }) => (
   <View style={styles.actionCard}>
 
-    {/* ✅ ICON FIXED */}
     <View style={styles.iconBox}>
       <Feather name={icon} size={18} color="#4B3F72" />
     </View>
@@ -142,6 +141,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 20,
     fontWeight: "600"
+  },
+
+  bellContainer: {
+    position: "relative"
   },
 
   notificationDot: {
@@ -202,11 +205,11 @@ const styles = StyleSheet.create({
     color: "#555"
   },
 
-  /* ✅ ACTIONS */
+  /* ✅ ACTIONS — FIXED */
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 18
+    marginBottom: 16
   },
 
   actionCard: {
@@ -218,9 +221,8 @@ const styles = StyleSheet.create({
     elevation: 1
   },
 
-  /* ✅ ICON BOX FIXED VISIBILITY */
   iconBox: {
-    backgroundColor: "#E6DFFD",
+    backgroundColor: "#E6DFFD", // ✅ strong visible background
     padding: 10,
     borderRadius: 12,
     marginBottom: 8
