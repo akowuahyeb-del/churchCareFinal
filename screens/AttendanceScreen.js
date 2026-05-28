@@ -39,58 +39,64 @@ export default function AttendanceScreen() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  /* ✅ ✅ ADD SERVICE (FIXED ERROR HERE) */
+  const addService = () => {
+    if (!newService.trim()) return;
+
+    setServices(prev => [...prev, newService]);
+    setSelectedService(newService);
+
+    setNewService("");
+    setServiceModal(false);
+  };
+
+  /* ✅ ✅ ADD TYPE */
+  const addType = () => {
+    if (!newType.trim()) return;
+
+    setTypes(prev => [...prev, newType]);
+    setSelectedType(newType);
+
+    setNewType("");
+    setTypeModal(false);
+  };
+
   /* ✅ FILTER MEMBERS */
   const filteredMembers = members.filter(m =>
     m.name.toLowerCase().includes(searchMember.toLowerCase())
   );
 
-  /* ✅ ADD SERVICE */
-  const addService = () => {
-    if (!newService.trim()) return;
-    setServices([...services, newService]);
-    setSelectedService(newService);
-    setNewService("");
-    setServiceModal(false);
-  };
-
-  /* ✅ ADD TYPE */
-  const addType = () => {
-    if (!newType.trim()) return;
-    setTypes([...types, newType]);
-    setSelectedType(newType);
-    setNewType("");
-    setTypeModal(false);
-  };
-
   /* ✅ REMOVE */
   const removeAttendance = (id) => {
-    setMembers(members.map(m => {
-      if (m.id !== id) return m;
-
-      return {
-        ...m,
-        attendance: m.attendance.filter(
-          a =>
-            !(a.date === today &&
-              a.service === selectedService &&
-              a.type === selectedType)
-        )
-      };
-    }));
+    setMembers(prev =>
+      prev.map(m => {
+        if (m.id !== id) return m;
+        return {
+          ...m,
+          attendance: m.attendance.filter(
+            a =>
+              !(a.date === today &&
+                a.service === selectedService &&
+                a.type === selectedType)
+          )
+        };
+      })
+    );
   };
 
   /* ✅ TOGGLE */
   const toggleAttendance = (member, status) => {
 
     const exists = member.attendance.find(
-      a => a.date === today &&
-           a.service === selectedService &&
-           a.type === selectedType
+      a =>
+        a.date === today &&
+        a.service === selectedService &&
+        a.type === selectedType
     );
 
     if (exists) {
       Alert.alert(
-        "Undo Attendance?",
+        "Undo Attendance",
         `Remove attendance for ${member.name}?`,
         [
           { text: "Cancel" },
@@ -100,30 +106,33 @@ export default function AttendanceScreen() {
       return;
     }
 
-    setMembers(members.map(m => {
-      if (m.id !== member.id) return m;
+    setMembers(prev =>
+      prev.map(m => {
+        if (m.id !== member.id) return m;
 
-      return {
-        ...m,
-        attendance: [
-          ...m.attendance,
-          {
-            service: selectedService,
-            type: selectedType,
-            status,
-            date: today
-          }
-        ]
-      };
-    }));
+        return {
+          ...m,
+          attendance: [
+            ...m.attendance,
+            {
+              service: selectedService,
+              type: selectedType,
+              status,
+              date: today
+            }
+          ]
+        };
+      })
+    );
   };
 
   /* ✅ STATUS */
   const getStatus = (m) => {
     const rec = m.attendance.find(
-      a => a.date === today &&
-           a.service === selectedService &&
-           a.type === selectedType
+      a =>
+        a.date === today &&
+        a.service === selectedService &&
+        a.type === selectedType
     );
     return rec ? rec.status : null;
   };
@@ -133,7 +142,7 @@ export default function AttendanceScreen() {
 
       <Text style={styles.header}>Attendance</Text>
 
-      {/* ✅ SERVICE */}
+      {/* ✅ SERVICE SELECT */}
       <TouchableOpacity
         style={styles.combo}
         onPress={() => setServiceModal(true)}
@@ -141,7 +150,7 @@ export default function AttendanceScreen() {
         <Text>{selectedService}</Text>
       </TouchableOpacity>
 
-      {/* ✅ TYPE */}
+      {/* ✅ TYPE SELECT */}
       <TouchableOpacity
         style={styles.combo}
         onPress={() => setTypeModal(true)}
@@ -149,7 +158,7 @@ export default function AttendanceScreen() {
         <Text>{selectedType}</Text>
       </TouchableOpacity>
 
-      {/* ✅ MEMBER SEARCH */}
+      {/* ✅ SEARCH MEMBER */}
       <TextInput
         placeholder="Search member..."
         value={searchMember}
@@ -160,7 +169,7 @@ export default function AttendanceScreen() {
       {/* ✅ MEMBERS */}
       <FlatList
         data={filteredMembers}
-        keyExtractor={i => i.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => {
 
           const status = getStatus(item);
@@ -172,7 +181,6 @@ export default function AttendanceScreen() {
 
               <View style={styles.row}>
 
-                {/* PRESENT */}
                 <TouchableOpacity
                   style={[styles.present, status && styles.disabled]}
                   onPress={() => toggleAttendance(item, "present")}
@@ -180,7 +188,6 @@ export default function AttendanceScreen() {
                   <Text style={styles.btnText}>Present</Text>
                 </TouchableOpacity>
 
-                {/* ABSENT */}
                 <TouchableOpacity
                   style={[styles.absent, status && styles.disabled]}
                   onPress={() => toggleAttendance(item, "absent")}
@@ -188,7 +195,6 @@ export default function AttendanceScreen() {
                   <Text style={styles.btnText}>Absent</Text>
                 </TouchableOpacity>
 
-                {/* UNDO */}
                 {status && (
                   <TouchableOpacity
                     style={styles.undo}
@@ -206,7 +212,7 @@ export default function AttendanceScreen() {
       />
 
       {/* ✅ SERVICE MODAL */}
-      <Modal visible={serviceModal} transparent animationType="slide">
+      <Modal visible={serviceModal} transparent>
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
@@ -220,6 +226,7 @@ export default function AttendanceScreen() {
             {services
               .filter(s => s.toLowerCase().includes(searchService.toLowerCase()))
               .map((s, i) => {
+
                 const selected = s === selectedService;
 
                 return (
@@ -234,12 +241,13 @@ export default function AttendanceScreen() {
                       setServiceModal(false);
                     }}
                   >
-                    <Text style={selected && styles.selectedText}>{s}</Text>
+                    <Text style={selected && styles.selectedText}>
+                      {s}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
 
-            {/* ADD */}
             <TextInput
               placeholder="New Service"
               value={newService}
@@ -251,10 +259,7 @@ export default function AttendanceScreen() {
               <Text style={styles.addText}>Add</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setServiceModal(false)}
-              style={styles.cancelBtn}
-            >
+            <TouchableOpacity onPress={() => setServiceModal(false)} style={styles.cancelBtn}>
               <Text>Cancel</Text>
             </TouchableOpacity>
 
@@ -263,7 +268,7 @@ export default function AttendanceScreen() {
       </Modal>
 
       {/* ✅ TYPE MODAL */}
-      <Modal visible={typeModal} transparent animationType="slide">
+      <Modal visible={typeModal} transparent>
         <View style={styles.overlay}>
           <View style={styles.modal}>
 
@@ -277,6 +282,7 @@ export default function AttendanceScreen() {
             {types
               .filter(t => t.toLowerCase().includes(searchType.toLowerCase()))
               .map((t, i) => {
+
                 const selected = t === selectedType;
 
                 return (
@@ -291,12 +297,13 @@ export default function AttendanceScreen() {
                       setTypeModal(false);
                     }}
                   >
-                    <Text style={selected && styles.selectedText}>{t}</Text>
+                    <Text style={selected && styles.selectedText}>
+                      {t}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
 
-            {/* ADD */}
             <TextInput
               placeholder="New Type"
               value={newType}
@@ -308,10 +315,7 @@ export default function AttendanceScreen() {
               <Text style={styles.addText}>Add</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setTypeModal(false)}
-              style={styles.cancelBtn}
-            >
+            <TouchableOpacity onPress={() => setTypeModal(false)} style={styles.cancelBtn}>
               <Text>Cancel</Text>
             </TouchableOpacity>
 
@@ -363,11 +367,7 @@ const styles = StyleSheet.create({
 
   btnText: { color: "#fff", fontSize: 12 },
 
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    backgroundColor: "#0007"
-  },
+  overlay: { flex: 1, justifyContent: "center", backgroundColor: "#0007" },
 
   modal: {
     backgroundColor: "#fff",
@@ -383,10 +383,7 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
 
-  itemBox: {
-    padding: 10,
-    borderRadius: 6
-  },
+  itemBox: { padding: 10, borderRadius: 6 },
 
   selectedItem: {
     backgroundColor: "#E6DFFD",
