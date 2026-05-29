@@ -30,12 +30,14 @@ const baptismOptions = [
 ];
 
 /* ✅ DEFAULT FORM */
+/* ✅ ONLY ADDITION → ministries (NO REMOVAL) */
 const defaultState = {
   name: "",
   phone: "",
   address: "",
   occupation: "",
-  ministry: "",
+  ministry: "",          // 🔵 kept (NO CHANGE)
+  ministries: [],        // ✅ added (multi-select)
   baptismStatus: "",
   emergencyContact: "",
   membershipDuration: ""
@@ -43,6 +45,9 @@ const defaultState = {
 
 const [member, setMember] = useState(defaultState);
 const [image, setImage] = useState(null);
+
+/* ✅ NEW (PHOTO MENU CONTROL) */
+const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
 const [members, setMembers] = useState([]);
 const [search, setSearch] = useState("");
@@ -63,16 +68,44 @@ const loadMembers = async () => {
   setMembers(data);
 };
 
-/* ✅ IMAGE PICK */
+/* ✅ IMAGE PICK (UNCHANGED, just close menu added) */
 const pickImage = async () => {
   const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
+
+  setShowPhotoOptions(false); // ✅ close menu
+
   if (!res.canceled) setImage(res.assets[0].uri);
 };
 
-/* ✅ CAMERA */
+/* ✅ CAMERA FIXED ✅ */
 const takePhoto = async () => {
+
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+  if (!permission.granted) {
+    Alert.alert("Permission Required", "Please allow camera access");
+    return;
+  }
+
   const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+
+  setShowPhotoOptions(false);
+
   if (!res.canceled) setImage(res.assets[0].uri);
+};
+
+/* ✅ MULTI-MINISTRY TOGGLE (ADDED ONLY) */
+const toggleMinistry = (opt) => {
+
+  let list = member.ministries || [];
+
+  if (list.includes(opt)) {
+    list = list.filter(m => m !== opt);
+  } else {
+    list.push(opt);
+  }
+
+  setMember({ ...member, ministries: list });
 };
 
 /* ✅ UPLOAD IMAGE */
@@ -103,7 +136,7 @@ const saveMember = async () => {
   }
 
   await addDoc(collection(db, "members"), {
-    ...member,
+    ...member,   // ✅ keeps BOTH ministry + ministries
     photo: imageUrl,
     createdAt: today
   });
@@ -136,161 +169,189 @@ return (
 <View style={styles.container}>
 
 <FlatList
-  data={filtered}
-  keyExtractor={(item) => item.id}
+data={filtered}
+keyExtractor={(item) => item.id}
 
-  ListHeaderComponent={
-    <>
-      {/* ✅ HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Member Registration</Text>
-      </View>
+ListHeaderComponent={
+<>
+<View style={styles.header}>
+<Text style={styles.headerText}>Member Registration</Text>
+</View>
 
-      {/* ✅ CARD */}
-      <View style={styles.card}>
+<View style={styles.card}>
 
-        {/* ✅ PHOTO */}
-        <View style={styles.photoSection}>
+{/* ✅ PHOTO SECTION (UPDATED UX ONLY) */}
+<View style={styles.photoSection}>
 
-          {!image ? (
-            <>
-              <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-                <Text>Select Gallery</Text>
-              </TouchableOpacity>
+<TouchableOpacity
+style={styles.photoBtn}
+onPress={() => setShowPhotoOptions(!showPhotoOptions)}
+>
+<Text>Select / Take Photo</Text>
+</TouchableOpacity>
 
-              <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-                <Text>Take Photo</Text>
-              </TouchableOpacity>
+{/* ✅ NEW MENU */}
+{showPhotoOptions && (
+<View style={styles.photoOptions}>
+<TouchableOpacity onPress={pickImage}>
+<Text style={styles.optionText}>📁 Gallery</Text>
+</TouchableOpacity>
 
-              <TouchableOpacity onPress={() => setImage(null)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Image source={{ uri: image }} style={styles.preview} />
+<TouchableOpacity onPress={takePhoto}>
+<Text style={styles.optionText}>📷 Camera</Text>
+</TouchableOpacity>
 
-              <View style={styles.row}>
-                <TouchableOpacity style={styles.primaryBtn} onPress={pickImage}>
-                  <Text style={styles.btnWhite}>Change</Text>
-                </TouchableOpacity>
+<TouchableOpacity onPress={() => setShowPhotoOptions(false)}>
+<Text style={styles.cancelText}>Cancel</Text>
+</TouchableOpacity>
+</View>
+)}
 
-                <TouchableOpacity style={styles.dangerBtn} onPress={() => setImage(null)}>
-                  <Text style={styles.btnWhite}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
+{image && (
+<>
+<Image source={{ uri: image }} style={styles.preview} />
 
-        {/* ✅ FIELDS */}
-        <Input label="Name" value={member.name}
-          onChange={(t) => setMember({ ...member, name: t })} />
+<View style={styles.row}>
+<TouchableOpacity style={styles.primaryBtn} onPress={pickImage}>
+<Text style={styles.btnWhite}>Change</Text>
+</TouchableOpacity>
 
-        <Input label="Phone" value={member.phone}
-          onChange={(t) => setMember({ ...member, phone: t })} />
+<TouchableOpacity style={styles.dangerBtn} onPress={() => setImage(null)}>
+<Text style={styles.btnWhite}>Remove</Text>
+</TouchableOpacity>
+</View>
+</>
+)}
 
-        <Input label="Address" value={member.address}
-          onChange={(t) => setMember({ ...member, address: t })} />
+</View>
 
-        <Input label="Occupation" value={member.occupation}
-          onChange={(t) => setMember({ ...member, occupation: t })} />
+{/* ✅ EXISTING INPUTS (UNCHANGED) */}
+<Input label="Name" value={member.name}
+onChange={(t) => setMember({ ...member, name: t })} />
 
-        {/* ✅ MINISTRY (SMART) */}
-        <Text style={styles.label}>Ministry</Text>
-        <TextInput
-          style={styles.input}
-          value={member.ministry}
-          onChangeText={(t) => setMember({ ...member, ministry: t })}
-          placeholder="Type or select"
-        />
+<Input label="Phone" value={member.phone}
+onChange={(t) => setMember({ ...member, phone: t })} />
 
-        <View style={styles.chipRow}>
-          {ministryOptions.map(opt => (
-            <TouchableOpacity key={opt} style={styles.chip}
-              onPress={() => setMember({ ...member, ministry: opt })}>
-              <Text>{opt}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+<Input label="Address" value={member.address}
+onChange={(t) => setMember({ ...member, address: t })} />
 
-        {/* ✅ BAPTISM */}
-        <Text style={styles.label}>Baptism Status</Text>
-        <View style={styles.chipRow}>
-          {baptismOptions.map(opt => (
-            <TouchableOpacity
-              key={opt}
-              style={[
-                styles.chip,
-                member.baptismStatus === opt && styles.activeChip
-              ]}
-              onPress={() =>
-                setMember({ ...member, baptismStatus: opt })
-              }
-            >
-              <Text
-                style={
-                  member.baptismStatus === opt && styles.activeChipText
-                }
-              >
-                {opt}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+<Input label="Occupation" value={member.occupation}
+onChange={(t) => setMember({ ...member, occupation: t })} />
 
-        <Input label="Emergency Contact"
-          value={member.emergencyContact}
-          onChange={(t) =>
-            setMember({ ...member, emergencyContact: t })
-          } />
+{/* ✅ EXISTING MINISTRY INPUT (KEPT) */}
+<Text style={styles.label}>Ministry</Text>
+<TextInput
+style={styles.input}
+value={member.ministry}
+onChangeText={(t) => setMember({ ...member, ministry: t })}
+placeholder="Type ministry"
+/>
 
-        <Input label="Membership Duration"
-          value={member.membershipDuration}
-          onChange={(t) =>
-            setMember({ ...member, membershipDuration: t })
-          } />
+{/* ✅ NEW MULTI-SELECT (ADDED ONLY) */}
+<View style={styles.chipRow}>
+{ministryOptions.map(opt => {
 
-        {/* ✅ BUTTONS */}
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={saveMember}>
-            <Text style={styles.btnWhite}>Save</Text>
-          </TouchableOpacity>
+const selected = member.ministries?.includes(opt);
 
-          <TouchableOpacity style={styles.secondaryBtn} onPress={clearForm}>
-            <Text>Clear</Text>
-          </TouchableOpacity>
+return (
+<TouchableOpacity
+key={opt}
+style={[
+styles.chip,
+selected && styles.activeChip
+]}
+onPress={() => toggleMinistry(opt)}
+>
+<Text style={selected && styles.activeChipText}>
+{opt}
+</Text>
+</TouchableOpacity>
+);
+})}
+</View>
 
-          <TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
-            <Text>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+{/* ✅ BAPTISM (UNCHANGED) */}
+<Text style={styles.label}>Baptism Status</Text>
+<View style={styles.chipRow}>
+{baptismOptions.map(opt => (
+<TouchableOpacity
+key={opt}
+style={[
+styles.chip,
+member.baptismStatus === opt && styles.activeChip
+]}
+onPress={() =>
+setMember({ ...member, baptismStatus: opt })
+}
+>
+<Text style={
+member.baptismStatus === opt && styles.activeChipText
+}>
+{opt}
+</Text>
+</TouchableOpacity>
+))}
+</View>
 
-        {/* ✅ SEARCH */}
-        <TextInput
-          style={styles.input}
-          placeholder="Search members..."
-          value={search}
-          onChangeText={setSearch}
-        />
+<Input label="Emergency Contact"
+value={member.emergencyContact}
+onChange={(t) =>
+setMember({ ...member, emergencyContact: t })
+} />
 
-      </View>
-    </>
-  }
+<Input label="Membership Duration"
+value={member.membershipDuration}
+onChange={(t) =>
+setMember({ ...member, membershipDuration: t })
+} />
 
-  renderItem={({ item }) => (
-    <View style={styles.listCard}>
-      <Image
-        source={{ uri: item.photo || "https://via.placeholder.com/60" }}
-        style={styles.avatar}
-      />
-      <View>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.sub}>{item.phone}</Text>
-        <Text style={styles.sub}>{item.ministry}</Text>
-      </View>
-    </View>
-  )}
+{/* ✅ BUTTONS (UNCHANGED) */}
+<View style={styles.row}>
+<TouchableOpacity style={styles.primaryBtn} onPress={saveMember}>
+<Text style={styles.btnWhite}>Save</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.secondaryBtn} onPress={clearForm}>
+<Text>Clear</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
+<Text>Cancel</Text>
+</TouchableOpacity>
+</View>
+
+{/* ✅ SEARCH */}
+<TextInput
+style={styles.input}
+placeholder="Search members..."
+value={search}
+onChangeText={setSearch}
+/>
+
+</View>
+</>
+}
+
+renderItem={({ item }) => (
+<View style={styles.listCard}>
+<Image
+source={{ uri: item.photo || "https://via.placeholder.com/60" }}
+style={styles.avatar}
+/>
+<View>
+<Text style={styles.name}>{item.name}</Text>
+<Text style={styles.sub}>{item.phone}</Text>
+
+{/* ✅ SAFE DISPLAY (OLD + NEW DATA) */}
+<Text style={styles.sub}>
+{item.ministries?.length > 0
+? item.ministries.join(", ")
+: item.ministry}
+</Text>
+
+</View>
+</View>
+)}
 />
 </View>
 );
@@ -298,96 +359,96 @@ return (
 
 /* ✅ INPUT COMPONENT */
 const Input = ({ label, value, onChange }) => (
-  <View style={{ marginBottom: 10 }}>
-    <Text style={{ fontSize: 12, color: "#666" }}>{label}</Text>
-    <TextInput style={styles.input} value={value} onChangeText={onChange} />
-  </View>
+<View style={{ marginBottom: 10 }}>
+<Text style={{ fontSize: 12, color: "#666" }}>{label}</Text>
+<TextInput style={styles.input} value={value} onChangeText={onChange} />
+</View>
 );
 
-/* ✅ STYLES */
+/* ✅ YOUR ORIGINAL STYLES + SMALL ADDITIONS */
 const styles = StyleSheet.create({
 
 container: { flex: 1, backgroundColor: "#f4f6fb" },
 
 header: {
-  backgroundColor: "#4B3F72",
-  padding: 30
+backgroundColor: "#4B3F72",
+padding: 30
 },
 
 headerText: { color: "#fff", fontSize: 18, fontWeight: "600" },
 
 card: {
-  backgroundColor: "#fff",
-  margin: 15,
-  padding: 15,
-  borderRadius: 15
+backgroundColor: "#fff",
+margin: 15,
+padding: 15,
+borderRadius: 15
 },
 
 input: {
-  backgroundColor: "#f7f8fb",
-  padding: 10,
-  borderRadius: 8,
-  marginTop: 5
+backgroundColor: "#f7f8fb",
+padding: 10,
+borderRadius: 8,
+marginTop: 5
 },
 
 photoSection: { alignItems: "center", marginBottom: 15 },
 
 photoBtn: {
-  backgroundColor: "#ddd",
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 6
+backgroundColor: "#ddd",
+padding: 10,
+borderRadius: 8,
+marginBottom: 6
 },
 
 preview: {
-  width: 80,
-  height: 80,
-  borderRadius: 40,
-  marginBottom: 10
+width: 80,
+height: 80,
+borderRadius: 40,
+marginBottom: 10
 },
 
 row: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  marginTop: 10
+flexDirection: "row",
+justifyContent: "space-between",
+marginTop: 10
 },
 
 primaryBtn: {
-  flex: 1,
-  backgroundColor: "#4B3F72",
-  padding: 10,
-  borderRadius: 8,
-  marginRight: 5,
-  alignItems: "center"
+flex: 1,
+backgroundColor: "#4B3F72",
+padding: 10,
+borderRadius: 8,
+marginRight: 5,
+alignItems: "center"
 },
 
 secondaryBtn: {
-  flex: 1,
-  backgroundColor: "#ddd",
-  padding: 10,
-  borderRadius: 8,
-  marginHorizontal: 5,
-  alignItems: "center"
+flex: 1,
+backgroundColor: "#ddd",
+padding: 10,
+borderRadius: 8,
+marginHorizontal: 5,
+alignItems: "center"
 },
 
 cancelBtn: {
-  flex: 1,
-  backgroundColor: "#eee",
-  padding: 10,
-  borderRadius: 8,
-  marginLeft: 5,
-  alignItems: "center"
+flex: 1,
+backgroundColor: "#eee",
+padding: 10,
+borderRadius: 8,
+marginLeft: 5,
+alignItems: "center"
 },
 
 btnWhite: { color: "#fff" },
 
 dangerBtn: {
-  flex: 1,
-  backgroundColor: "#e74c3c",
-  padding: 10,
-  borderRadius: 8,
-  marginLeft: 5,
-  alignItems: "center"
+flex: 1,
+backgroundColor: "#e74c3c",
+padding: 10,
+borderRadius: 8,
+marginLeft: 5,
+alignItems: "center"
 },
 
 cancelText: { marginTop: 5, color: "#666" },
@@ -395,11 +456,11 @@ cancelText: { marginTop: 5, color: "#666" },
 chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
 
 chip: {
-  backgroundColor: "#eee",
-  padding: 6,
-  borderRadius: 15,
-  marginRight: 6,
-  marginBottom: 6
+backgroundColor: "#eee",
+padding: 6,
+borderRadius: 15,
+marginRight: 6,
+marginBottom: 6
 },
 
 activeChip: { backgroundColor: "#4B3F72" },
@@ -407,23 +468,34 @@ activeChip: { backgroundColor: "#4B3F72" },
 activeChipText: { color: "#fff" },
 
 listCard: {
-  flexDirection: "row",
-  backgroundColor: "#fff",
-  marginHorizontal: 15,
-  marginBottom: 8,
-  padding: 10,
-  borderRadius: 10
+flexDirection: "row",
+backgroundColor: "#fff",
+marginHorizontal: 15,
+marginBottom: 8,
+padding: 10,
+borderRadius: 10
 },
 
 avatar: {
-  width: 50,
-  height: 50,
-  borderRadius: 25,
-  marginRight: 10
+width: 50,
+height: 50,
+borderRadius: 25,
+marginRight: 10
 },
 
 name: { fontWeight: "600" },
-sub: { fontSize: 12, color: "#666" }
+sub: { fontSize: 12, color: "#666" },
+
+/* ✅ NEW ONLY */
+photoOptions: {
+backgroundColor: "#fff",
+padding: 10,
+borderRadius: 8,
+marginTop: 6
+},
+
+optionText: {
+marginBottom: 8
+}
 
 });
-``
