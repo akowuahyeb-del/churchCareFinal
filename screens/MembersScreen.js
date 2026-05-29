@@ -20,336 +20,334 @@ import * as ImagePicker from "expo-image-picker";
 
 export default function MembersScreen() {
 
-  /* ✅ FORM STATE */
-  const defaultState = {
-    name: "",
-    phone: "",
-    address: "",
-    occupation: "",
-    ministry: "",
-    baptismStatus: "",
-    emergencyContact: "",
-    membershipDuration: ""
-  };
+/* ✅ DEFAULT STATE */
+const defaultState = {
+  name: "",
+  phone: "",
+  address: "",
+  occupation: "",
+  ministry: "",
+  baptismStatus: "",
+  emergencyContact: "",
+  membershipDuration: ""
+};
 
-  const [member, setMember] = useState(defaultState);
-  const [image, setImage] = useState(null);
+const [member, setMember] = useState(defaultState);
+const [image, setImage] = useState(null);
 
-  /* ✅ DATA */
-  const [members, setMembers] = useState([]);
-  const [search, setSearch] = useState("");
+const [members, setMembers] = useState([]);
+const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
+useEffect(() => {
+  loadMembers();
+}, []);
 
-  /* ✅ LOAD */
-  const loadMembers = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "members"));
+/* ✅ LOAD MEMBERS */
+const loadMembers = async () => {
+  const snapshot = await getDocs(collection(db, "members"));
+  const data = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  setMembers(data);
+};
 
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+/* ✅ PICK IMAGE */
+const pickImage = async () => {
+  const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
+  if (!result.canceled) setImage(result.assets[0].uri);
+};
 
-      setMembers(list);
-    } catch (e) {
-      console.log(e);
-    }
-  };
+/* ✅ TAKE PHOTO */
+const takePhoto = async () => {
+  const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+  if (!result.canceled) setImage(result.assets[0].uri);
+};
 
-  /* ✅ PICK IMAGE */
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.6
-    });
+/* ✅ UPLOAD IMAGE */
+const uploadImage = async () => {
+  if (!image) return null;
 
-    if (result.canceled) return;
+  const response = await fetch(image);
+  const blob = await response.blob();
 
-    setImage(result.assets[0].uri);
-  };
+  const storageRef = ref(storage, `members/${Date.now()}`);
+  await uploadBytes(storageRef, blob);
 
-  /* ✅ UPLOAD IMAGE */
-  const uploadImage = async () => {
-    if (!image) return null;
+  return await getDownloadURL(storageRef);
+};
 
-    const response = await fetch(image);
-    const blob = await response.blob();
+/* ✅ SAVE */
+const saveMember = async () => {
 
-    const storageRef = ref(storage, `members/${Date.now()}`);
+  if (!member.name || !member.phone) {
+    Alert.alert("Error", "Name and phone are required");
+    return;
+  }
 
-    await uploadBytes(storageRef, blob);
+  let imageUrl = null;
 
-    return await getDownloadURL(storageRef);
-  };
+  if (image) {
+    imageUrl = await uploadImage();
+  }
 
-  /* ✅ SAVE */
-  const saveMember = async () => {
+  await addDoc(collection(db, "members"), {
+    ...member,
+    photo: imageUrl,
+    createdAt: new Date()
+  });
 
-    if (!member.name || !member.phone) {
-      Alert.alert("Error", "Name and phone are required");
-      return;
-    }
+  clearForm();
+  Alert.alert("✅ Success", "Member saved");
 
-    let imageUrl = null;
+  loadMembers();
+};
 
-    if (image) {
-      imageUrl = await uploadImage();
-    }
+/* ✅ CLEAR */
+const clearForm = () => {
+  setMember(defaultState);
+  setImage(null);
+};
 
-    await addDoc(collection(db, "members"), {
-      ...member,
-      photo: imageUrl,
-      createdAt: new Date()
-    });
+/* ✅ CANCEL */
+const cancelForm = () => {
+  clearForm();
+  Alert.alert("Cancelled");
+};
 
-    clearForm();
+/* ✅ FILTER */
+const filtered = members.filter(m =>
+  m.name.toLowerCase().includes(search.toLowerCase())
+);
 
-    Alert.alert("✅ Success", "Member saved");
+return (
+<View style={styles.container}>
 
-    loadMembers();
-  };
+<FlatList
+  data={filtered}
+  keyExtractor={item => item.id}
+  contentContainerStyle={{ paddingBottom: 60 }}
 
-  /* ✅ CLEAR */
-  const clearForm = () => {
-    setMember(defaultState);
-    setImage(null);
-  };
+  ListHeaderComponent={
+    <>
+      <Text style={styles.header}>Member Registration</Text>
 
-  /* ✅ CANCEL */
-  const cancelForm = () => {
-    clearForm();
-    Alert.alert("Cancelled");
-  };
+      {/* ✅ PHOTO SECTION */}
+      <View style={styles.photoContainer}>
 
-  /* ✅ FILTER */
-  const filtered = members.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <View style={styles.container}>
-
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 60 }}
-
-        ListHeaderComponent={
+        {!image ? (
           <>
-            <Text style={styles.header}>Member Registration</Text>
-
-            {/* ✅ PHOTO PICKER */}
             <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-              <Text>Select Member Photo</Text>
+              <Text>Select from Gallery</Text>
             </TouchableOpacity>
 
-            {image && (
-              <Image source={{ uri: image }} style={styles.preview} />
-            )}
+            <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
+              <Text>Take Photo</Text>
+            </TouchableOpacity>
 
-            {/* ✅ FORM FIELDS */}
-
-            <TextInput
-              placeholder="Name"
-              value={member.name}
-              onChangeText={(t) => setMember({ ...member, name: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Phone"
-              value={member.phone}
-              onChangeText={(t) => setMember({ ...member, phone: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Address"
-              value={member.address}
-              onChangeText={(t) => setMember({ ...member, address: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Occupation"
-              value={member.occupation}
-              onChangeText={(t) => setMember({ ...member, occupation: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Ministry Group"
-              value={member.ministry}
-              onChangeText={(t) => setMember({ ...member, ministry: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Baptism Status"
-              value={member.baptismStatus}
-              onChangeText={(t) => setMember({ ...member, baptismStatus: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Emergency Contact"
-              value={member.emergencyContact}
-              onChangeText={(t) => setMember({ ...member, emergencyContact: t })}
-              style={styles.input}
-            />
-
-            <TextInput
-              placeholder="Membership Duration"
-              value={member.membershipDuration}
-              onChangeText={(t) => setMember({ ...member, membershipDuration: t })}
-              style={styles.input}
-            />
-
-            {/* ✅ BUTTON ROW */}
+            <TouchableOpacity style={styles.cancelAlt} onPress={() => setImage(null)}>
+              <Text>Cancel</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Image source={{ uri: image }} style={styles.preview} />
 
             <View style={styles.row}>
-
-              <TouchableOpacity style={styles.saveBtn} onPress={saveMember}>
-                <Text style={styles.btnText}>Save</Text>
+              <TouchableOpacity style={styles.changeBtn} onPress={pickImage}>
+                <Text style={{ color: "#fff" }}>Change</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.clearBtn} onPress={clearForm}>
-                <Text>Clear</Text>
+              <TouchableOpacity style={styles.removeBtn} onPress={() => setImage(null)}>
+                <Text style={{ color: "#fff" }}>Remove</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
-                <Text>Cancel</Text>
-              </TouchableOpacity>
-
             </View>
-
-            {/* ✅ SEARCH */}
-            <TextInput
-              placeholder="Search members..."
-              value={search}
-              onChangeText={setSearch}
-              style={styles.input}
-            />
           </>
-        }
-
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-
-            <Image
-              source={{
-                uri: item.photo || "https://via.placeholder.com/60"
-              }}
-              style={styles.avatar}
-            />
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.sub}>{item.phone}</Text>
-              <Text style={styles.sub}>{item.ministry}</Text>
-            </View>
-
-          </View>
         )}
+
+      </View>
+
+      {/* ✅ FIELDS */}
+      <TextInput placeholder="Name" value={member.name}
+        onChangeText={(t) => setMember({ ...member, name: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Phone" value={member.phone}
+        onChangeText={(t) => setMember({ ...member, phone: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Address" value={member.address}
+        onChangeText={(t) => setMember({ ...member, address: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Occupation" value={member.occupation}
+        onChangeText={(t) => setMember({ ...member, occupation: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Ministry Group" value={member.ministry}
+        onChangeText={(t) => setMember({ ...member, ministry: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Baptism Status" value={member.baptismStatus}
+        onChangeText={(t) => setMember({ ...member, baptismStatus: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Emergency Contact" value={member.emergencyContact}
+        onChangeText={(t) => setMember({ ...member, emergencyContact: t })}
+        style={styles.input} />
+
+      <TextInput placeholder="Membership Duration" value={member.membershipDuration}
+        onChangeText={(t) => setMember({ ...member, membershipDuration: t })}
+        style={styles.input} />
+
+      {/* ✅ BUTTONS */}
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.saveBtn} onPress={saveMember}>
+          <Text style={styles.btnText}>Save</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.clearBtn} onPress={clearForm}>
+          <Text>Clear</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
+          <Text>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ✅ SEARCH */}
+      <TextInput
+        placeholder="Search members..."
+        value={search}
+        onChangeText={setSearch}
+        style={styles.input}
+      />
+    </>
+  }
+
+  renderItem={({ item }) => (
+    <View style={styles.card}>
+
+      <Image
+        source={{ uri: item.photo || "https://via.placeholder.com/60" }}
+        style={styles.avatar}
       />
 
+      <View style={{ flex: 1 }}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.sub}>{item.phone}</Text>
+        <Text style={styles.sub}>{item.ministry}</Text>
+      </View>
+
     </View>
-  );
+  )}
+
+ />
+</View>
+);
 }
 
 /* ✅ STYLES */
 
 const styles = StyleSheet.create({
 
-  container: { flex: 1, padding: 20 },
+container: { flex: 1, padding: 20 },
 
-  header: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10
-  },
+header: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
 
-  input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10
-  },
+input: {
+  backgroundColor: "#fff",
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 10
+},
 
-  photoBtn: {
-    backgroundColor: "#ddd",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10
-  },
+photoContainer: { marginBottom: 10 },
 
-  preview: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 10,
-    alignSelf: "center"
-  },
+photoBtn: {
+  backgroundColor: "#ddd",
+  padding: 12,
+  borderRadius: 8,
+  marginBottom: 8,
+  alignItems: "center"
+},
 
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20
-  },
+cancelAlt: { alignItems: "center", marginBottom: 10 },
 
-  saveBtn: {
-    backgroundColor: "#4B3F72",
-    padding: 10,
-    flex: 1,
-    marginRight: 5,
-    borderRadius: 8,
-    alignItems: "center"
-  },
+preview: {
+  width: 90,
+  height: 90,
+  borderRadius: 45,
+  alignSelf: "center",
+  marginBottom: 10
+},
 
-  clearBtn: {
-    backgroundColor: "#ccc",
-    padding: 10,
-    flex: 1,
-    marginHorizontal: 5,
-    borderRadius: 8,
-    alignItems: "center"
-  },
+row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
 
-  cancelBtn: {
-    backgroundColor: "#eee",
-    padding: 10,
-    flex: 1,
-    marginLeft: 5,
-    borderRadius: 8,
-    alignItems: "center"
-  },
+saveBtn: {
+  backgroundColor: "#4B3F72",
+  padding: 10,
+  flex: 1,
+  marginRight: 5,
+  borderRadius: 8,
+  alignItems: "center"
+},
 
-  btnText: { color: "#fff" },
+clearBtn: {
+  backgroundColor: "#ccc",
+  padding: 10,
+  flex: 1,
+  marginHorizontal: 5,
+  borderRadius: 8,
+  alignItems: "center"
+},
 
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
-    alignItems: "center"
-  },
+cancelBtn: {
+  backgroundColor: "#eee",
+  padding: 10,
+  flex: 1,
+  marginLeft: 5,
+  borderRadius: 8,
+  alignItems: "center"
+},
 
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 10
-  },
+btnText: { color: "#fff" },
 
-  name: { fontWeight: "600" },
+card: {
+  flexDirection: "row",
+  backgroundColor: "#fff",
+  padding: 12,
+  marginBottom: 10,
+  borderRadius: 10,
+  alignItems: "center"
+},
 
-  sub: {
-    fontSize: 12,
-    color: "#666"
-  }
+avatar: {
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  marginRight: 10
+},
+
+name: { fontWeight: "600" },
+sub: { fontSize: 12, color: "#666" },
+
+changeBtn: {
+  backgroundColor: "#4B3F72",
+  padding: 10,
+  flex: 1,
+  marginRight: 5,
+  borderRadius: 8,
+  alignItems: "center"
+},
+
+removeBtn: {
+  backgroundColor: "#e74c3c",
+  padding: 10,
+  flex: 1,
+  marginLeft: 5,
+  borderRadius: 8,
+  alignItems: "center"
+}
 
 });
