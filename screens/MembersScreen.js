@@ -20,7 +20,16 @@ import * as ImagePicker from "expo-image-picker";
 
 export default function MembersScreen() {
 
-/* ✅ DEFAULT STATE */
+/* ✅ OPTIONS (SMART INPUTS) */
+const ministryOptions = [
+  "Choir", "Ushering", "Youth", "Prayer Team", "Evangelism"
+];
+
+const baptismOptions = [
+  "Baptised", "Not Baptised", "Preparing"
+];
+
+/* ✅ DEFAULT FORM */
 const defaultState = {
   name: "",
   phone: "",
@@ -38,11 +47,13 @@ const [image, setImage] = useState(null);
 const [members, setMembers] = useState([]);
 const [search, setSearch] = useState("");
 
+const today = new Date();
+
+/* ✅ LOAD MEMBERS */
 useEffect(() => {
   loadMembers();
 }, []);
 
-/* ✅ LOAD MEMBERS */
 const loadMembers = async () => {
   const snapshot = await getDocs(collection(db, "members"));
   const data = snapshot.docs.map(doc => ({
@@ -52,16 +63,16 @@ const loadMembers = async () => {
   setMembers(data);
 };
 
-/* ✅ PICK IMAGE */
+/* ✅ IMAGE PICK */
 const pickImage = async () => {
-  const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
-  if (!result.canceled) setImage(result.assets[0].uri);
+  const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
+  if (!res.canceled) setImage(res.assets[0].uri);
 };
 
-/* ✅ TAKE PHOTO */
+/* ✅ CAMERA */
 const takePhoto = async () => {
-  const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-  if (!result.canceled) setImage(result.assets[0].uri);
+  const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+  if (!res.canceled) setImage(res.assets[0].uri);
 };
 
 /* ✅ UPLOAD IMAGE */
@@ -77,11 +88,11 @@ const uploadImage = async () => {
   return await getDownloadURL(storageRef);
 };
 
-/* ✅ SAVE */
+/* ✅ SAVE MEMBER */
 const saveMember = async () => {
 
   if (!member.name || !member.phone) {
-    Alert.alert("Error", "Name and phone are required");
+    Alert.alert("Error", "Name and phone required");
     return;
   }
 
@@ -94,11 +105,12 @@ const saveMember = async () => {
   await addDoc(collection(db, "members"), {
     ...member,
     photo: imageUrl,
-    createdAt: new Date()
+    createdAt: today
   });
 
   clearForm();
-  Alert.alert("✅ Success", "Member saved");
+
+  Alert.alert("✅ Member saved");
 
   loadMembers();
 };
@@ -125,229 +137,293 @@ return (
 
 <FlatList
   data={filtered}
-  keyExtractor={item => item.id}
-  contentContainerStyle={{ paddingBottom: 60 }}
+  keyExtractor={(item) => item.id}
 
   ListHeaderComponent={
     <>
-      <Text style={styles.header}>Member Registration</Text>
-
-      {/* ✅ PHOTO SECTION */}
-      <View style={styles.photoContainer}>
-
-        {!image ? (
-          <>
-            <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-              <Text>Select from Gallery</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-              <Text>Take Photo</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelAlt} onPress={() => setImage(null)}>
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Image source={{ uri: image }} style={styles.preview} />
-
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.changeBtn} onPress={pickImage}>
-                <Text style={{ color: "#fff" }}>Change</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.removeBtn} onPress={() => setImage(null)}>
-                <Text style={{ color: "#fff" }}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
+      {/* ✅ HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Member Registration</Text>
       </View>
 
-      {/* ✅ FIELDS */}
-      <TextInput placeholder="Name" value={member.name}
-        onChangeText={(t) => setMember({ ...member, name: t })}
-        style={styles.input} />
+      {/* ✅ CARD */}
+      <View style={styles.card}>
 
-      <TextInput placeholder="Phone" value={member.phone}
-        onChangeText={(t) => setMember({ ...member, phone: t })}
-        style={styles.input} />
+        {/* ✅ PHOTO */}
+        <View style={styles.photoSection}>
 
-      <TextInput placeholder="Address" value={member.address}
-        onChangeText={(t) => setMember({ ...member, address: t })}
-        style={styles.input} />
+          {!image ? (
+            <>
+              <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
+                <Text>Select Gallery</Text>
+              </TouchableOpacity>
 
-      <TextInput placeholder="Occupation" value={member.occupation}
-        onChangeText={(t) => setMember({ ...member, occupation: t })}
-        style={styles.input} />
+              <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
+                <Text>Take Photo</Text>
+              </TouchableOpacity>
 
-      <TextInput placeholder="Ministry Group" value={member.ministry}
-        onChangeText={(t) => setMember({ ...member, ministry: t })}
-        style={styles.input} />
+              <TouchableOpacity onPress={() => setImage(null)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Image source={{ uri: image }} style={styles.preview} />
 
-      <TextInput placeholder="Baptism Status" value={member.baptismStatus}
-        onChangeText={(t) => setMember({ ...member, baptismStatus: t })}
-        style={styles.input} />
+              <View style={styles.row}>
+                <TouchableOpacity style={styles.primaryBtn} onPress={pickImage}>
+                  <Text style={styles.btnWhite}>Change</Text>
+                </TouchableOpacity>
 
-      <TextInput placeholder="Emergency Contact" value={member.emergencyContact}
-        onChangeText={(t) => setMember({ ...member, emergencyContact: t })}
-        style={styles.input} />
+                <TouchableOpacity style={styles.dangerBtn} onPress={() => setImage(null)}>
+                  <Text style={styles.btnWhite}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
 
-      <TextInput placeholder="Membership Duration" value={member.membershipDuration}
-        onChangeText={(t) => setMember({ ...member, membershipDuration: t })}
-        style={styles.input} />
+        {/* ✅ FIELDS */}
+        <Input label="Name" value={member.name}
+          onChange={(t) => setMember({ ...member, name: t })} />
 
-      {/* ✅ BUTTONS */}
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.saveBtn} onPress={saveMember}>
-          <Text style={styles.btnText}>Save</Text>
-        </TouchableOpacity>
+        <Input label="Phone" value={member.phone}
+          onChange={(t) => setMember({ ...member, phone: t })} />
 
-        <TouchableOpacity style={styles.clearBtn} onPress={clearForm}>
-          <Text>Clear</Text>
-        </TouchableOpacity>
+        <Input label="Address" value={member.address}
+          onChange={(t) => setMember({ ...member, address: t })} />
 
-        <TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
-          <Text>Cancel</Text>
-        </TouchableOpacity>
+        <Input label="Occupation" value={member.occupation}
+          onChange={(t) => setMember({ ...member, occupation: t })} />
+
+        {/* ✅ MINISTRY (SMART) */}
+        <Text style={styles.label}>Ministry</Text>
+        <TextInput
+          style={styles.input}
+          value={member.ministry}
+          onChangeText={(t) => setMember({ ...member, ministry: t })}
+          placeholder="Type or select"
+        />
+
+        <View style={styles.chipRow}>
+          {ministryOptions.map(opt => (
+            <TouchableOpacity key={opt} style={styles.chip}
+              onPress={() => setMember({ ...member, ministry: opt })}>
+              <Text>{opt}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ✅ BAPTISM */}
+        <Text style={styles.label}>Baptism Status</Text>
+        <View style={styles.chipRow}>
+          {baptismOptions.map(opt => (
+            <TouchableOpacity
+              key={opt}
+              style={[
+                styles.chip,
+                member.baptismStatus === opt && styles.activeChip
+              ]}
+              onPress={() =>
+                setMember({ ...member, baptismStatus: opt })
+              }
+            >
+              <Text
+                style={
+                  member.baptismStatus === opt && styles.activeChipText
+                }
+              >
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Input label="Emergency Contact"
+          value={member.emergencyContact}
+          onChange={(t) =>
+            setMember({ ...member, emergencyContact: t })
+          } />
+
+        <Input label="Membership Duration"
+          value={member.membershipDuration}
+          onChange={(t) =>
+            setMember({ ...member, membershipDuration: t })
+          } />
+
+        {/* ✅ BUTTONS */}
+        <View style={styles.row}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={saveMember}>
+            <Text style={styles.btnWhite}>Save</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.secondaryBtn} onPress={clearForm}>
+            <Text>Clear</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
+            <Text>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ✅ SEARCH */}
+        <TextInput
+          style={styles.input}
+          placeholder="Search members..."
+          value={search}
+          onChangeText={setSearch}
+        />
+
       </View>
-
-      {/* ✅ SEARCH */}
-      <TextInput
-        placeholder="Search members..."
-        value={search}
-        onChangeText={setSearch}
-        style={styles.input}
-      />
     </>
   }
 
   renderItem={({ item }) => (
-    <View style={styles.card}>
-
+    <View style={styles.listCard}>
       <Image
         source={{ uri: item.photo || "https://via.placeholder.com/60" }}
         style={styles.avatar}
       />
-
-      <View style={{ flex: 1 }}>
+      <View>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.sub}>{item.phone}</Text>
         <Text style={styles.sub}>{item.ministry}</Text>
       </View>
-
     </View>
   )}
-
- />
+/>
 </View>
 );
 }
 
-/* ✅ STYLES */
+/* ✅ INPUT COMPONENT */
+const Input = ({ label, value, onChange }) => (
+  <View style={{ marginBottom: 10 }}>
+    <Text style={{ fontSize: 12, color: "#666" }}>{label}</Text>
+    <TextInput style={styles.input} value={value} onChangeText={onChange} />
+  </View>
+);
 
+/* ✅ STYLES */
 const styles = StyleSheet.create({
 
-container: { flex: 1, padding: 20 },
+container: { flex: 1, backgroundColor: "#f4f6fb" },
 
-header: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
-
-input: {
-  backgroundColor: "#fff",
-  padding: 12,
-  borderRadius: 8,
-  marginBottom: 10
+header: {
+  backgroundColor: "#4B3F72",
+  padding: 30
 },
 
-photoContainer: { marginBottom: 10 },
+headerText: { color: "#fff", fontSize: 18, fontWeight: "600" },
+
+card: {
+  backgroundColor: "#fff",
+  margin: 15,
+  padding: 15,
+  borderRadius: 15
+},
+
+input: {
+  backgroundColor: "#f7f8fb",
+  padding: 10,
+  borderRadius: 8,
+  marginTop: 5
+},
+
+photoSection: { alignItems: "center", marginBottom: 15 },
 
 photoBtn: {
   backgroundColor: "#ddd",
-  padding: 12,
+  padding: 10,
   borderRadius: 8,
-  marginBottom: 8,
-  alignItems: "center"
+  marginBottom: 6
 },
 
-cancelAlt: { alignItems: "center", marginBottom: 10 },
-
 preview: {
-  width: 90,
-  height: 90,
-  borderRadius: 45,
-  alignSelf: "center",
+  width: 80,
+  height: 80,
+  borderRadius: 40,
   marginBottom: 10
 },
 
-row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
+row: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: 10
+},
 
-saveBtn: {
+primaryBtn: {
+  flex: 1,
   backgroundColor: "#4B3F72",
   padding: 10,
-  flex: 1,
-  marginRight: 5,
   borderRadius: 8,
+  marginRight: 5,
   alignItems: "center"
 },
 
-clearBtn: {
-  backgroundColor: "#ccc",
-  padding: 10,
+secondaryBtn: {
   flex: 1,
-  marginHorizontal: 5,
+  backgroundColor: "#ddd",
+  padding: 10,
   borderRadius: 8,
+  marginHorizontal: 5,
   alignItems: "center"
 },
 
 cancelBtn: {
+  flex: 1,
   backgroundColor: "#eee",
   padding: 10,
-  flex: 1,
-  marginLeft: 5,
   borderRadius: 8,
+  marginLeft: 5,
   alignItems: "center"
 },
 
-btnText: { color: "#fff" },
+btnWhite: { color: "#fff" },
 
-card: {
+dangerBtn: {
+  flex: 1,
+  backgroundColor: "#e74c3c",
+  padding: 10,
+  borderRadius: 8,
+  marginLeft: 5,
+  alignItems: "center"
+},
+
+cancelText: { marginTop: 5, color: "#666" },
+
+chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
+
+chip: {
+  backgroundColor: "#eee",
+  padding: 6,
+  borderRadius: 15,
+  marginRight: 6,
+  marginBottom: 6
+},
+
+activeChip: { backgroundColor: "#4B3F72" },
+
+activeChipText: { color: "#fff" },
+
+listCard: {
   flexDirection: "row",
   backgroundColor: "#fff",
-  padding: 12,
-  marginBottom: 10,
-  borderRadius: 10,
-  alignItems: "center"
+  marginHorizontal: 15,
+  marginBottom: 8,
+  padding: 10,
+  borderRadius: 10
 },
 
 avatar: {
-  width: 60,
-  height: 60,
-  borderRadius: 30,
+  width: 50,
+  height: 50,
+  borderRadius: 25,
   marginRight: 10
 },
 
 name: { fontWeight: "600" },
-sub: { fontSize: 12, color: "#666" },
-
-changeBtn: {
-  backgroundColor: "#4B3F72",
-  padding: 10,
-  flex: 1,
-  marginRight: 5,
-  borderRadius: 8,
-  alignItems: "center"
-},
-
-removeBtn: {
-  backgroundColor: "#e74c3c",
-  padding: 10,
-  flex: 1,
-  marginLeft: 5,
-  borderRadius: 8,
-  alignItems: "center"
-}
+sub: { fontSize: 12, color: "#666" }
 
 });
+``
