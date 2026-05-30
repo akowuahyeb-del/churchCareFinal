@@ -11,35 +11,19 @@ import {
   Pressable
 } from "react-native";
 
+/* ✅ ✅ ✅ ADD FIREBASE */
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
+
 export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
 
-  /* ✅ ✅ ✅ ADMIN-CONTROLLED FLYERS (EASY TO EDIT) */
-  const flyerData = [
-    {
-      id: "1",
-      title: "Revival Week",
-      image: require("../assets/flyer1.jpg"),
-      expiry: "2026-06-05"
-    },
-    {
-      id: "2",
-      title: "Prayer Conference",
-      image: require("../assets/flyer2.jpg"),
-      expiry: "2026-07-01"
-    },
-    {
-      id: "3",
-      title: "Youth Summit",
-      image: require("../assets/flyer3.jpg"),
-      expiry: "2026-07-15"
-    }
-  ];
+  /* ✅ ✅ ✅ REPLACED LOCAL DATA WITH FIREBASE STATE */
+  const [flyers, setFlyers] = useState([]);
 
   /* ✅ AUTO-EXPIRY */
   const today = new Date();
-  const flyers = flyerData.filter(f => new Date(f.expiry) >= today);
 
   /* ✅ STATE */
   const scrollRef = useRef(null);
@@ -47,7 +31,30 @@ export default function HomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ✅ AUTO-SLIDE */
+  /* ✅ ✅ ✅ LOAD FROM FIREBASE */
+  const loadFlyers = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "flyers"));
+
+      const data = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(f => new Date(f.expiry) >= today);
+
+      setFlyers(data);
+
+    } catch (error) {
+      console.log("Error loading flyers:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadFlyers();
+  }, []);
+
+  /* ✅ AUTO-SLIDE (UNCHANGED) */
   useEffect(() => {
     if (flyers.length === 0) return;
 
@@ -103,7 +110,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ ✅ ✅ CAROUSEL */}
+      {/* ✅ ✅ ✅ CAROUSEL (UPDATED ONLY IMAGE SOURCE) */}
       <View style={styles.carouselContainer}>
 
         <Text style={styles.sectionTitle}>Featured Events</Text>
@@ -119,13 +126,16 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
-              onPress={() => setSelectedImage(item.image)}
+              onPress={() => setSelectedImage(item.imageUrl)} // ✅ UPDATED
               style={{
                 width: screenWidth - 30,
                 marginRight: 10
               }}
             >
-              <Image source={item.image} style={styles.carouselImage} />
+              <Image
+                source={{ uri: item.imageUrl }} // ✅ UPDATED
+                style={styles.carouselImage}
+              />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -162,7 +172,10 @@ export default function HomeScreen() {
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
-            <Image source={selectedImage} style={styles.fullImage} />
+            <Image
+              source={{ uri: selectedImage }} // ✅ UPDATED
+              style={styles.fullImage}
+            />
           </Pressable>
         </View>
       </Modal>
@@ -171,18 +184,14 @@ export default function HomeScreen() {
   );
 }
 
-/* ✅ STYLES */
+/* ✅ STYLES (UNCHANGED) */
 const styles = StyleSheet.create({
-
   container: { flex: 1, backgroundColor: "#f4f6fb", padding: 15 },
-
   header: { backgroundColor: "#4B3F72", padding: 20, borderRadius: 12, marginBottom: 15 },
-
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
   headerSub: { color: "#ddd", fontSize: 12 },
 
   messageCard: { backgroundColor: "#fff", padding: 15, borderRadius: 10, marginBottom: 15 },
-
   messageTitle: { fontWeight: "600", marginBottom: 5 },
   messageText: { fontSize: 13, color: "#555" },
 
@@ -252,5 +261,4 @@ const styles = StyleSheet.create({
     height: 500,
     borderRadius: 20
   }
-
 });
