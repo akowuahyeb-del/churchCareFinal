@@ -11,7 +11,7 @@ import {
   Pressable
 } from "react-native";
 
-/* ✅ ✅ ✅ ADD FIREBASE */
+/* ✅ ✅ ✅ ADD FIREBASE (NEW) */
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -19,19 +19,19 @@ export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
 
-  /* ✅ ✅ ✅ REPLACED LOCAL DATA WITH FIREBASE STATE */
+  /* ✅ ✅ ✅ REPLACED LOCAL DATA WITH STATE (NEW) */
   const [flyers, setFlyers] = useState([]);
 
   /* ✅ AUTO-EXPIRY */
   const today = new Date();
 
-  /* ✅ STATE */
+  /* ✅ STATE (UNCHANGED) */
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ✅ ✅ ✅ LOAD FROM FIREBASE */
+  /* ✅ ✅ ✅ LOAD FLYERS FROM FIREBASE (NEW) */
   const loadFlyers = async () => {
     try {
       const snapshot = await getDocs(collection(db, "flyers"));
@@ -110,7 +110,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ ✅ ✅ CAROUSEL (UPDATED ONLY IMAGE SOURCE) */}
+      {/* ✅ ✅ ✅ CAROUSEL */}
       <View style={styles.carouselContainer}>
 
         <Text style={styles.sectionTitle}>Featured Events</Text>
@@ -122,22 +122,26 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.carouselContent}
         >
+
           {flyers.map((item) => (
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
-              onPress={() => setSelectedImage(item.imageUrl)} // ✅ UPDATED
+              onPress={() => setSelectedImage(item.imageUrl)}  /* ✅ UPDATED */
               style={{
                 width: screenWidth - 30,
                 marginRight: 10
               }}
             >
+
               <Image
-                source={{ uri: item.imageUrl }} // ✅ UPDATED
+                source={{ uri: item.imageUrl }}  /* ✅ UPDATED */
                 style={styles.carouselImage}
               />
+
             </TouchableOpacity>
           ))}
+
         </ScrollView>
 
         {/* ✅ DOTS */}
@@ -173,7 +177,7 @@ export default function HomeScreen() {
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
             <Image
-              source={{ uri: selectedImage }} // ✅ UPDATED
+              source={{ uri: selectedImage }}  /* ✅ UPDATED */
               style={styles.fullImage}
             />
           </Pressable>
@@ -186,12 +190,16 @@ export default function HomeScreen() {
 
 /* ✅ STYLES (UNCHANGED) */
 const styles = StyleSheet.create({
+
   container: { flex: 1, backgroundColor: "#f4f6fb", padding: 15 },
+
   header: { backgroundColor: "#4B3F72", padding: 20, borderRadius: 12, marginBottom: 15 },
+
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
   headerSub: { color: "#ddd", fontSize: 12 },
 
   messageCard: { backgroundColor: "#fff", padding: 15, borderRadius: 10, marginBottom: 15 },
+
   messageTitle: { fontWeight: "600", marginBottom: 5 },
   messageText: { fontSize: 13, color: "#555" },
 
@@ -261,4 +269,5 @@ const styles = StyleSheet.create({
     height: 500,
     borderRadius: 20
   }
+
 });
