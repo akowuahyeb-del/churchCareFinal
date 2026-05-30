@@ -1,33 +1,53 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image
+  Image,
+  Dimensions
 } from "react-native";
 
 export default function HomeScreen() {
 
-  /* ✅ YOUR FLYERS */
+  /* ✅ SCREEN WIDTH */
+  const screenWidth = Dimensions.get("window").width;
+
+  /* ✅ FLYERS */
   const flyers = [
-    {
-      id: "1",
-      image: require("../assets/flyer1.jpg")
-    }
+    { id: "1", image: require("../assets/flyer1.jpg") },
+    { id: "2", image: require("../assets/flyer1.jpg") }
   ];
+
+  /* ✅ AUTO SLIDE SETUP */
+  const scrollRef = useRef(null);
+  const currentIndex = useRef(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      currentIndex.current =
+        (currentIndex.current + 1) % flyers.length;
+
+      scrollRef.current?.scrollTo({
+        x: currentIndex.current * (screenWidth - 30),
+        animated: true
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <ScrollView style={styles.container}>
 
-      {/* ✅ HEADER (UNCHANGED CONCEPT) */}
+      {/* ✅ HEADER (UNCHANGED) */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ChurchCare</Text>
         <Text style={styles.headerSub}>Welcome Back</Text>
       </View>
 
-      {/* ✅ ✅ ✅ PASTOR MESSAGE (RESTORED) */}
+      {/* ✅ ✅ ✅ PASTOR MESSAGE (KEPT) */}
       <View style={styles.messageCard}>
         <Text style={styles.messageTitle}>Message from Pastor John</Text>
         <Text style={styles.messageText}>
@@ -35,7 +55,7 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* ✅ ✅ ✅ QUICK ACTIONS (RESTORED) */}
+      {/* ✅ ✅ ✅ QUICK ACTIONS (KEPT) */}
       <Text style={styles.sectionTitle}>Quick Actions</Text>
 
       <View style={styles.quickRow}>
@@ -52,17 +72,34 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ ✅ ✅ ✅ CAROUSEL (ONLY ADDITION HERE) */}
+      {/* ✅ ✅ ✅ ✅ CAROUSEL (ONLY ADDITION) */}
       <View style={styles.carouselContainer}>
 
         <Text style={styles.sectionTitle}>Featured Event</Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselContent}
+        >
+
           {flyers.map((item) => (
-            <View key={item.id} style={styles.carouselCard}>
-              <Image source={item.image} style={styles.carouselImage} />
+            <View
+              key={item.id}
+              style={{
+                width: screenWidth - 30,
+                marginRight: 10
+              }}
+            >
+              <Image
+                source={item.image}
+                style={styles.carouselImage}
+              />
             </View>
           ))}
+
         </ScrollView>
 
       </View>
@@ -85,6 +122,7 @@ export default function HomeScreen() {
 }
 
 /* ✅ STYLES */
+
 const styles = StyleSheet.create({
 
   container: {
@@ -111,7 +149,7 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
 
-  /* ✅ MESSAGE CARD */
+  /* ✅ MESSAGE */
   messageCard: {
     backgroundColor: "#fff",
     padding: 15,
@@ -156,19 +194,20 @@ const styles = StyleSheet.create({
     fontWeight: "500"
   },
 
-  /* ✅ ✅ CAROUSEL */
+  /* ✅ ✅ CAROUSEL FIXED */
   carouselContainer: {
     marginBottom: 20
   },
 
-  carouselCard: {
-    marginRight: 12
+  carouselContent: {
+    paddingHorizontal: 5
   },
 
   carouselImage: {
-    width: 320,
+    width: "100%",
     height: 180,
-    borderRadius: 15
+    borderRadius: 15,
+    resizeMode: "cover"
   },
 
   /* ✅ EVENTS */
@@ -189,3 +228,4 @@ const styles = StyleSheet.create({
   }
 
 });
+``
