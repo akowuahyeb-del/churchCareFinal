@@ -7,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import HomeScreen from "./screens/HomeScreen";
 import AttendanceScreen from "./screens/AttendanceScreen";
 import MembersScreen from "./screens/MembersScreen";
+import AdminUploadFlyer from "./screens/AdminUploadFlyer";
 
 /* ✅ PLACEHOLDERS */
 import { View, Text } from "react-native";
