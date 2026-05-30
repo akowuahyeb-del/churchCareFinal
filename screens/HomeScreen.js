@@ -26,35 +26,39 @@ export default function HomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const today = new Date();
+  /* ✅ LOCAL ASSETS (FORCE DISPLAY) */
+  const localImages = [
+    require("../assets/flyer1.jpg"),
+    require("../assets/flyer2.jpg"),
+    require("../assets/flyer3.jpg")
+  ];
 
-  /* ✅ LOAD FLYERS */
+  /* ✅ LOAD FROM FIREBASE */
   const loadFlyers = async () => {
     try {
       const snapshot = await getDocs(collection(db, "flyers"));
 
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(f => {
-          if (!f.expiry) return true; // ✅ safety
-          return new Date(f.expiry) >= today;
-        });
+      const data = snapshot.docs.map((doc, index) => ({
+        id: doc.id,
+        ...doc.data(),
+        localImage: localImages[index % localImages.length] // ✅ FORCE LOCAL IMAGE
+      }));
 
       setFlyers(data);
 
     } catch (error) {
-      console.log("Error:", error);
+      console.log("Error loading flyers:", error);
     }
   };
 
-  /* ✅ REAL-TIME (SAFE POLLING) */
+  /* ✅ LOAD + AUTO REFRESH */
   useEffect(() => {
 
     loadFlyers();
 
     const interval = setInterval(() => {
       loadFlyers();
-    }, 5000); // every 5 sec
+    }, 5000);
 
     return () => clearInterval(interval);
 
@@ -96,7 +100,7 @@ export default function HomeScreen() {
       <View style={styles.messageCard}>
         <Text style={styles.messageTitle}>Message from Pastor John</Text>
         <Text style={styles.messageText}>
-          Stay strong in faith. This week we focus on spiritual growth and unity.
+          Stay strong in faith. This week we focus on spiritual growth.
         </Text>
       </View>
 
@@ -117,7 +121,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ ✅ ✅ CAROUSEL */}
+      {/* ✅ CAROUSEL */}
       <View style={styles.carouselContainer}>
 
         <Text style={styles.sectionTitle}>Featured Events</Text>
@@ -127,19 +131,24 @@ export default function HomeScreen() {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.carouselContent}
         >
 
           {flyers.map((item) => (
             <TouchableOpacity
               key={item.id}
-              onPress={() => setSelectedImage(item.imageUrl)}
-              style={{ width: screenWidth - 30, marginRight: 10 }}
+              activeOpacity={0.9}
+              onPress={() => setSelectedImage(item.localImage)}
+              style={{
+                width: screenWidth - 30,
+                marginRight: 10
+              }}
             >
 
+              {/* ✅ ALWAYS SHOW LOCAL IMAGE */}
               <Image
-                source={{ uri: item.imageUrl }}
+                source={item.localImage}
                 style={styles.carouselImage}
+                resizeMode="cover"
               />
 
             </TouchableOpacity>
@@ -174,7 +183,7 @@ export default function HomeScreen() {
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
-            <Image source={{ uri: selectedImage }} style={styles.fullImage} />
+            <Image source={selectedImage} style={styles.fullImage} />
           </Pressable>
         </View>
       </Modal>
@@ -183,7 +192,7 @@ export default function HomeScreen() {
   );
 }
 
-/* ✅ STYLES (UNCHANGED) */
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f4f6fb", padding: 15 },
 

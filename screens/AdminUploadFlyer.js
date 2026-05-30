@@ -13,75 +13,55 @@ import {
 import * as ImagePicker from "expo-image-picker";
 
 /* ✅ FIREBASE */
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
 import { addDoc, collection } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function AdminUploadFlyer({ navigation }) {
 
   const [image, setImage] = useState(null);
   const [title, setTitle] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [showOptions, setShowOptions] = useState(false);
 
-  /* ✅ OPEN SELECT OPTIONS */
-  const openPickerOptions = () => {
-    setShowOptions(true);
-  };
-
-  /* ✅ PICK FROM GALLERY */
+  /* ✅ PICK IMAGE (BASE64 ENABLED) */
   const pickImage = async () => {
+
     const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.7
+      quality: 0.5,
+      base64: true
     });
 
-    setShowOptions(false);
-
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const base64 = "data:image/jpeg;base64," + result.assets[0].base64;
+      setImage(base64);
     }
   };
 
-  /* ✅ TAKE PHOTO (FIXED PERMISSION) */
+  /* ✅ TAKE PHOTO (CAMERA + BASE64) */
   const takePhoto = async () => {
 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert("Permission Required", "Enable camera access to take photo.");
+      Alert.alert("Camera permission required");
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      quality: 0.7
+      quality: 0.5,
+      base64: true
     });
 
-    setShowOptions(false);
-
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      const base64 = "data:image/jpeg;base64," + result.assets[0].base64;
+      setImage(base64);
     }
   };
 
-  /* ✅ UPLOAD IMAGE */
-  const uploadImage = async () => {
-    const response = await fetch(image);
-    const blob = await response.blob();
-
-    const storageRef = ref(storage, `flyers/${Date.now()}.jpg`);
-    await uploadBytes(storageRef, blob);
-
-    return await getDownloadURL(storageRef);
-  };
-
-  /* ✅ VALIDATE DATE */
-  const validDate = /^\d{4}-\d{2}-\d{2}$/;
-
-  /* ✅ UPLOAD FLYER */
+  /* ✅ SAVE FLYER (REAL IMAGE) */
   const uploadFlyer = async () => {
 
     if (!image) {
-      Alert.alert("Select a flyer image");
+      Alert.alert("Please select or take a photo");
       return;
     }
 
@@ -90,22 +70,21 @@ export default function AdminUploadFlyer({ navigation }) {
       return;
     }
 
-    if (!expiry || !validDate.test(expiry)) {
-      Alert.alert("Use format YYYY-MM-DD");
+    if (!expiry) {
+      Alert.alert("Enter expiry date");
       return;
     }
 
     try {
-      const url = await uploadImage();
 
       await addDoc(collection(db, "flyers"), {
-        imageUrl: url,
+        imageUrl: image, // ✅ REAL IMAGE SAVED
         title,
         expiry,
         createdAt: new Date()
       });
 
-      Alert.alert("✅ Flyer uploaded!");
+      Alert.alert("✅ Flyer saved successfully");
 
       setImage(null);
       setTitle("");
@@ -113,7 +92,7 @@ export default function AdminUploadFlyer({ navigation }) {
 
     } catch (err) {
       console.log(err);
-      Alert.alert("Upload failed");
+      Alert.alert("Error saving flyer");
     }
   };
 
@@ -126,37 +105,23 @@ export default function AdminUploadFlyer({ navigation }) {
   return (
     <ScrollView style={styles.container}>
 
-      {/* ✅ HEADER */}
       <Text style={styles.header}>Upload Flyer</Text>
 
-      {/* ✅ IMAGE SELECT BUTTON */}
-      <TouchableOpacity style={styles.primaryBtn} onPress={openPickerOptions}>
-        <Text style={styles.whiteText}>Select / Take Photo</Text>
+      {/* ✅ IMAGE OPTIONS */}
+      <TouchableOpacity style={styles.button} onPress={pickImage}>
+        <Text>📁 Select Image from Gallery</Text>
       </TouchableOpacity>
 
-      {/* ✅ OPTIONS PANEL */}
-      {showOptions && (
-        <View style={styles.optionsBox}>
-          <TouchableOpacity onPress={pickImage}>
-            <Text style={styles.option}>📁 Choose from Gallery</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={takePhoto}>
-            <Text style={styles.option}>📷 Take Photo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => setShowOptions(false)}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <TouchableOpacity style={styles.button} onPress={takePhoto}>
+        <Text>📷 Take Photo</Text>
+      </TouchableOpacity>
 
       {/* ✅ IMAGE PREVIEW */}
       {image && (
         <Image source={{ uri: image }} style={styles.preview} />
       )}
 
-      {/* ✅ INPUTS */}
+      {/* ✅ TITLE */}
       <TextInput
         placeholder="Event Title"
         value={title}
@@ -164,6 +129,7 @@ export default function AdminUploadFlyer({ navigation }) {
         style={styles.input}
       />
 
+      {/* ✅ EXPIRY */}
       <TextInput
         placeholder="Expiry (YYYY-MM-DD)"
         value={expiry}
@@ -171,26 +137,26 @@ export default function AdminUploadFlyer({ navigation }) {
         style={styles.input}
       />
 
-      {/* ✅ UPLOAD */}
-      <TouchableOpacity style={styles.primaryBtn} onPress={uploadFlyer}>
-        <Text style={styles.whiteText}>Upload Flyer</Text>
+      {/* ✅ SAVE BUTTON */}
+      <TouchableOpacity style={styles.uploadBtn} onPress={uploadFlyer}>
+        <Text style={styles.btnText}>Save Flyer</Text>
       </TouchableOpacity>
 
       {/* ✅ CANCEL */}
-      <TouchableOpacity style={styles.secondaryBtn} onPress={cancelUpload}>
+      <TouchableOpacity style={styles.cancelBtn} onPress={cancelUpload}>
         <Text>Clear</Text>
       </TouchableOpacity>
 
       {/* ✅ BACK */}
-      <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text>⬅ Back</Text>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.back}>⬅ Back</Text>
       </TouchableOpacity>
 
     </ScrollView>
   );
 }
 
-/* ✅ PROFESSIONAL STYLES */
+/* ✅ PROFESSIONAL UI STYLES */
 const styles = StyleSheet.create({
 
   container: {
@@ -205,45 +171,19 @@ const styles = StyleSheet.create({
     marginBottom: 15
   },
 
-  primaryBtn: {
-    backgroundColor: "#4B3F72",
+  button: {
+    backgroundColor: "#ddd",
     padding: 14,
     borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 10
-  },
-
-  normalBtn: {
-    backgroundColor: "#ddd",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    alignItems: "center"
-  },
-
-  secondaryBtn: {
-    backgroundColor: "#eee",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 5
-  },
-
-  whiteText: {
-    color: "#fff",
-    fontWeight: "600"
-  },
-
-  backBtn: {
-    marginTop: 15,
+    marginBottom: 10,
     alignItems: "center"
   },
 
   preview: {
     width: "100%",
-    height: 200,
+    height: 220,
     borderRadius: 12,
-    marginBottom: 10
+    marginBottom: 15
   },
 
   input: {
@@ -253,21 +193,27 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
 
-  optionsBox: {
-    backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    elevation: 2
+  uploadBtn: {
+    backgroundColor: "#4B3F72",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 10
   },
 
-  option: {
-    marginBottom: 8
+  btnText: {
+    color: "#fff",
+    fontWeight: "600"
   },
 
-  cancelText: {
-    color: "#999",
-    marginTop: 5
+  cancelBtn: {
+    alignItems: "center",
+    marginBottom: 10
+  },
+
+  back: {
+    textAlign: "center",
+    color: "#555"
   }
 
 });
