@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,48 +6,79 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Dimensions
+  Dimensions,
+  Modal,
+  Pressable
 } from "react-native";
 
 export default function HomeScreen() {
 
-  /* ✅ SCREEN WIDTH */
   const screenWidth = Dimensions.get("window").width;
 
-  /* ✅ FLYERS */
-  const flyers = [
-    { id: "1", image: require("../assets/flyer1.jpg") },
-    { id: "2", image: require("../assets/flyer1.jpg") }
+  /* ✅ ✅ ✅ ADMIN-CONTROLLED FLYERS (EASY TO EDIT) */
+  const flyerData = [
+    {
+      id: "1",
+      title: "Revival Week",
+      image: require("../assets/flyer1.jpg"),
+      expiry: "2026-06-05"
+    },
+    {
+      id: "2",
+      title: "Prayer Conference",
+      image: require("../assets/flyer2.jpg"),
+      expiry: "2026-07-01"
+    },
+    {
+      id: "3",
+      title: "Youth Summit",
+      image: require("../assets/flyer3.jpg"),
+      expiry: "2026-07-15"
+    }
   ];
 
-  /* ✅ AUTO SLIDE SETUP */
+  /* ✅ AUTO-EXPIRY */
+  const today = new Date();
+  const flyers = flyerData.filter(f => new Date(f.expiry) >= today);
+
+  /* ✅ STATE */
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedImage, setSelectedImage] = useState(null);
 
+  /* ✅ AUTO-SLIDE */
   useEffect(() => {
+    if (flyers.length === 0) return;
+
     const interval = setInterval(() => {
+
       currentIndex.current =
         (currentIndex.current + 1) % flyers.length;
+
+      setActiveIndex(currentIndex.current);
 
       scrollRef.current?.scrollTo({
         x: currentIndex.current * (screenWidth - 30),
         animated: true
       });
+
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+
+  }, [flyers.length]);
 
   return (
     <ScrollView style={styles.container}>
 
-      {/* ✅ HEADER (UNCHANGED) */}
+      {/* ✅ HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ChurchCare</Text>
         <Text style={styles.headerSub}>Welcome Back</Text>
       </View>
 
-      {/* ✅ ✅ ✅ PASTOR MESSAGE (KEPT) */}
+      {/* ✅ PASTOR MESSAGE */}
       <View style={styles.messageCard}>
         <Text style={styles.messageTitle}>Message from Pastor John</Text>
         <Text style={styles.messageText}>
@@ -55,7 +86,7 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* ✅ ✅ ✅ QUICK ACTIONS (KEPT) */}
+      {/* ✅ QUICK ACTIONS */}
       <Text style={styles.sectionTitle}>Quick Actions</Text>
 
       <View style={styles.quickRow}>
@@ -72,10 +103,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ ✅ ✅ ✅ CAROUSEL (ONLY ADDITION) */}
+      {/* ✅ ✅ ✅ CAROUSEL */}
       <View style={styles.carouselContainer}>
 
-        <Text style={styles.sectionTitle}>Featured Event</Text>
+        <Text style={styles.sectionTitle}>Featured Events</Text>
 
         <ScrollView
           ref={scrollRef}
@@ -84,27 +115,37 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.carouselContent}
         >
-
           {flyers.map((item) => (
-            <View
+            <TouchableOpacity
               key={item.id}
+              activeOpacity={0.9}
+              onPress={() => setSelectedImage(item.image)}
               style={{
                 width: screenWidth - 30,
                 marginRight: 10
               }}
             >
-              <Image
-                source={item.image}
-                style={styles.carouselImage}
-              />
-            </View>
+              <Image source={item.image} style={styles.carouselImage} />
+            </TouchableOpacity>
           ))}
-
         </ScrollView>
+
+        {/* ✅ DOTS */}
+        <View style={styles.dotsContainer}>
+          {flyers.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                activeIndex === index && styles.activeDot
+              ]}
+            />
+          ))}
+        </View>
 
       </View>
 
-      {/* ✅ ✅ ✅ UPCOMING EVENTS (UNCHANGED) */}
+      {/* ✅ UPCOMING EVENTS */}
       <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
       <View style={styles.eventCard}>
@@ -117,68 +158,37 @@ export default function HomeScreen() {
         <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
       </View>
 
+      {/* ✅ FULL SCREEN FLYER */}
+      <Modal visible={!!selectedImage} transparent>
+        <View style={styles.modalWrap}>
+          <Pressable onPress={() => setSelectedImage(null)}>
+            <Image source={selectedImage} style={styles.fullImage} />
+          </Pressable>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
 
 /* ✅ STYLES */
-
 const styles = StyleSheet.create({
 
-  container: {
-    flex: 1,
-    backgroundColor: "#f4f6fb",
-    padding: 15
-  },
+  container: { flex: 1, backgroundColor: "#f4f6fb", padding: 15 },
 
-  header: {
-    backgroundColor: "#4B3F72",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15
-  },
+  header: { backgroundColor: "#4B3F72", padding: 20, borderRadius: 12, marginBottom: 15 },
 
-  headerTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600"
-  },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "600" },
+  headerSub: { color: "#ddd", fontSize: 12 },
 
-  headerSub: {
-    color: "#ddd",
-    fontSize: 12
-  },
+  messageCard: { backgroundColor: "#fff", padding: 15, borderRadius: 10, marginBottom: 15 },
 
-  /* ✅ MESSAGE */
-  messageCard: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15
-  },
+  messageTitle: { fontWeight: "600", marginBottom: 5 },
+  messageText: { fontSize: 13, color: "#555" },
 
-  messageTitle: {
-    fontWeight: "600",
-    marginBottom: 5
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
 
-  messageText: {
-    fontSize: 13,
-    color: "#555"
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 10
-  },
-
-  /* ✅ QUICK ACTIONS */
-  quickRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20
-  },
+  quickRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
 
   quickBtn: {
     backgroundColor: "#fff",
@@ -189,28 +199,37 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
 
-  quickText: {
-    fontSize: 12,
-    fontWeight: "500"
-  },
+  quickText: { fontSize: 12 },
 
-  /* ✅ ✅ CAROUSEL FIXED */
-  carouselContainer: {
-    marginBottom: 20
-  },
-
-  carouselContent: {
-    paddingHorizontal: 5
-  },
+  carouselContainer: { marginBottom: 20 },
+  carouselContent: { paddingHorizontal: 5 },
 
   carouselImage: {
     width: "100%",
     height: 180,
-    borderRadius: 15,
-    resizeMode: "cover"
+    borderRadius: 15
   },
 
-  /* ✅ EVENTS */
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#ccc",
+    marginHorizontal: 4
+  },
+
+  activeDot: {
+    width: 8,
+    height: 8,
+    backgroundColor: "#4B3F72"
+  },
+
   eventCard: {
     backgroundColor: "#fff",
     padding: 15,
@@ -218,14 +237,20 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
 
-  eventTitle: {
-    fontWeight: "600"
+  eventTitle: { fontWeight: "600" },
+  eventSub: { fontSize: 12, color: "#666" },
+
+  modalWrap: {
+    flex: 1,
+    backgroundColor: "#000c",
+    justifyContent: "center",
+    alignItems: "center"
   },
 
-  eventSub: {
-    fontSize: 12,
-    color: "#666"
+  fullImage: {
+    width: 350,
+    height: 500,
+    borderRadius: 20
   }
 
 });
-``
