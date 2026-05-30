@@ -11,6 +11,7 @@ import {
   Pressable
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -25,14 +26,12 @@ export default function HomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ✅ LOCAL FLYERS */
   const localImages = [
     require("../assets/flyer1.jpg"),
     require("../assets/flyer2.jpg"),
     require("../assets/flyer3.jpg")
   ];
 
-  /* ✅ LOAD DATA */
   const loadFlyers = async () => {
     const snapshot = await getDocs(collection(db, "flyers"));
 
@@ -49,7 +48,6 @@ export default function HomeScreen() {
     loadFlyers();
   }, []);
 
-  /* ✅ AUTO SLIDE */
   useEffect(() => {
     if (flyers.length === 0) return;
 
@@ -91,20 +89,29 @@ export default function HomeScreen() {
       <View style={styles.quickRow}>
 
         <TouchableOpacity style={[styles.quickBtn, { backgroundColor: "#E8F0FE" }]}>
-          <Text style={[styles.quickText, { color: "#2F55D4" }]}>Attendance</Text>
+          <Ionicons name="checkmark-circle-outline" size={18} color="#2F55D4" />
+          <Text style={[styles.quickText, { color: "#2F55D4" }]} numberOfLines={2}>
+            Attendance
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.quickBtn, { backgroundColor: "#E6F7EF" }]}>
-          <Text style={[styles.quickText, { color: "#1BA97F" }]}>Members</Text>
+          <Ionicons name="people-outline" size={18} color="#1BA97F" />
+          <Text style={[styles.quickText, { color: "#1BA97F" }]} numberOfLines={2}>
+            Members
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.quickBtn, { backgroundColor: "#FFF4E5" }]}>
-          <Text style={[styles.quickText, { color: "#D97706" }]}>Reports</Text>
+          <Ionicons name="analytics-outline" size={18} color="#D97706" />
+          <Text style={[styles.quickText, { color: "#D97706" }]} numberOfLines={2}>
+            Reports
+          </Text>
         </TouchableOpacity>
 
       </View>
 
-      {/* ✅ CAROUSEL */}
+      {/* CAROUSEL */}
       <View style={styles.carouselContainer}>
 
         <Text style={styles.sectionTitle}>Featured Events</Text>
@@ -147,7 +154,7 @@ export default function HomeScreen() {
 
       </View>
 
-      {/* ✅ EVENTS */}
+      {/* EVENTS */}
       <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
       <View style={styles.eventCard}>
@@ -160,7 +167,7 @@ export default function HomeScreen() {
         <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
       </View>
 
-      {/* FULL SCREEN */}
+      {/* FULL VIEW */}
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
@@ -173,7 +180,7 @@ export default function HomeScreen() {
   );
 }
 
-/* ✅ PROFESSIONAL STYLES */
+/* ✅ STYLES */
 const styles = StyleSheet.create({
 
   container: {
@@ -237,16 +244,19 @@ const styles = StyleSheet.create({
 
   quickBtn: {
     flex: 1,
-    padding: 15,
+    paddingVertical: 12,
     borderRadius: 12,
     marginRight: 8,
     alignItems: "center",
+    justifyContent: "center",
     elevation: 2
   },
 
   quickText: {
-    fontSize: 13,
-    fontWeight: "600"
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+    flexWrap: "wrap"
   },
 
   carouselContainer: {
@@ -309,4 +319,5 @@ const styles = StyleSheet.create({
     height: 500,
     borderRadius: 20
   }
+
 });
