@@ -2,108 +2,96 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Image,
-  TextInput,
   Alert,
-  StyleSheet
+  StyleSheet,
+  ScrollView
 } from "react-native";
 
 import * as ImagePicker from "expo-image-picker";
 
-/* ✅ FIREBASE */
 import { db, storage } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function AdminUploadFlyer() {
 
   const [image, setImage] = useState(null);
-  const [expiry, setExpiry] = useState("");
   const [title, setTitle] = useState("");
+  const [expiry, setExpiry] = useState("");
 
   /* ✅ PICK IMAGE */
   const pickImage = async () => {
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.6
-    });
-
+    const result = await ImagePicker.launchImageLibraryAsync();
     if (!result.canceled) {
       setImage(result.assets[0].uri);
     }
   };
 
-  /* ✅ UPLOAD TO FIREBASE STORAGE */
+  /* ✅ UPLOAD IMAGE */
   const uploadImage = async () => {
-
-    if (!image) return null;
-
     const response = await fetch(image);
     const blob = await response.blob();
 
     const storageRef = ref(storage, `flyers/${Date.now()}.jpg`);
-
     await uploadBytes(storageRef, blob);
 
-    const url = await getDownloadURL(storageRef);
-
-    return url;
+    return await getDownloadURL(storageRef);
   };
 
-  /* ✅ SAVE TO FIRESTORE */
+  /* ✅ SAVE */
   const uploadFlyer = async () => {
 
-    if (!image || !expiry || !title) {
-      Alert.alert("All fields required");
+    if (!image || !title || !expiry) {
+      Alert.alert("Fill all fields");
       return;
     }
 
     try {
 
-      const imageUrl = await uploadImage();
+      const url = await uploadImage();
 
       await addDoc(collection(db, "flyers"), {
-        imageUrl: imageUrl,
-        expiry: expiry,
-        title: title,
+        imageUrl: url,
+        title,
+        expiry,
         createdAt: new Date()
       });
 
-      Alert.alert("✅ Flyer uploaded successfully");
+      Alert.alert("✅ Uploaded");
 
       setImage(null);
-      setExpiry("");
       setTitle("");
+      setExpiry("");
 
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.log(err);
       Alert.alert("Upload failed");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
 
       <Text style={styles.title}>Upload Flyer</Text>
 
-      <TouchableOpacity style={styles.pickBtn} onPress={pickImage}>
-        <Text>Select Flyer Image</Text>
+      <TouchableOpacity style={styles.btn} onPress={pickImage}>
+        <Text>Select Image</Text>
       </TouchableOpacity>
 
-      {image && (
-        <Image source={{ uri: image }} style={styles.preview} />
-      )}
+      {image && <Image source={{ uri: image }} style={styles.image} />}
 
       <TextInput
-        placeholder="Event title"
+        placeholder="Event Title"
         value={title}
         onChangeText={setTitle}
         style={styles.input}
       />
 
       <TextInput
-        placeholder="Expiry date (YYYY-MM-DD)"
+        placeholder="Expiry (YYYY-MM-DD)"
         value={expiry}
         onChangeText={setExpiry}
         style={styles.input}
@@ -113,52 +101,40 @@ export default function AdminUploadFlyer() {
         <Text style={{ color: "#fff" }}>Upload Flyer</Text>
       </TouchableOpacity>
 
-    </View>
+    </ScrollView>
   );
 }
 
-/* ✅ STYLES */
 const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20 },
+  title: { fontSize: 18, marginBottom: 15 },
 
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f4f6fb"
-  },
-
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20
-  },
-
-  pickBtn: {
+  btn: {
     backgroundColor: "#ddd",
     padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10
+    marginBottom: 10,
+    borderRadius: 8
   },
 
-  preview: {
-    width: 150,
-    height: 150,
+  image: {
+    width: "100%",
+    height: 200,
     borderRadius: 10,
     marginBottom: 10
   },
 
   input: {
     backgroundColor: "#fff",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 10
   },
 
   uploadBtn: {
     backgroundColor: "#4B3F72",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center"
+    padding: 15,
+    alignItems: "center",
+    borderRadius: 10
   }
-
 });
+``
