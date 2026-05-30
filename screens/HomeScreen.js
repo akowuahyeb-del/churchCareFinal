@@ -11,7 +11,7 @@ import {
   Pressable
 } from "react-native";
 
-/* ✅ ✅ ✅ ADD FIREBASE (NEW) */
+/* ✅ ✅ ✅ ADD FIREBASE */
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -19,19 +19,19 @@ export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
 
-  /* ✅ ✅ ✅ REPLACED LOCAL DATA WITH STATE (NEW) */
+  /* ✅ ✅ ✅ REPLACE LOCAL DATA WITH STATE */
   const [flyers, setFlyers] = useState([]);
 
   /* ✅ AUTO-EXPIRY */
   const today = new Date();
 
-  /* ✅ STATE (UNCHANGED) */
+  /* ✅ STATE */
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ✅ ✅ ✅ LOAD FLYERS FROM FIREBASE (NEW) */
+  /* ✅ ✅ ✅ LOAD FROM FIREBASE */
   const loadFlyers = async () => {
     try {
       const snapshot = await getDocs(collection(db, "flyers"));
@@ -44,14 +44,22 @@ export default function HomeScreen() {
         .filter(f => new Date(f.expiry) >= today);
 
       setFlyers(data);
-
     } catch (error) {
       console.log("Error loading flyers:", error);
     }
   };
 
+  /* ✅ ✅ ✅ INITIAL LOAD + REAL-TIME REFRESH */
   useEffect(() => {
+
     loadFlyers();
+
+    const interval = setInterval(() => {
+      loadFlyers(); // ✅ LIVE UPDATE
+    }, 5000);
+
+    return () => clearInterval(interval);
+
   }, []);
 
   /* ✅ AUTO-SLIDE (UNCHANGED) */
@@ -127,7 +135,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
-              onPress={() => setSelectedImage(item.imageUrl)}  /* ✅ UPDATED */
+              onPress={() => setSelectedImage(item.imageUrl)}
               style={{
                 width: screenWidth - 30,
                 marginRight: 10
@@ -135,7 +143,7 @@ export default function HomeScreen() {
             >
 
               <Image
-                source={{ uri: item.imageUrl }}  /* ✅ UPDATED */
+                source={{ uri: item.imageUrl }}
                 style={styles.carouselImage}
               />
 
@@ -177,7 +185,7 @@ export default function HomeScreen() {
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
             <Image
-              source={{ uri: selectedImage }}  /* ✅ UPDATED */
+              source={{ uri: selectedImage }}
               style={styles.fullImage}
             />
           </Pressable>
