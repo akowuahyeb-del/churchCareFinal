@@ -22,21 +22,28 @@ export default function HomeScreen() {
 
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const flyers = [
-    { id: "1", image: require("../assets/flyer1.jpg") },
-    { id: "2", image: require("../assets/flyer2.jpg") },
-    { id: "3", image: require("../assets/flyer3.jpg") }
-  ];
+  /* ✅ FLYERS */
+  const [flyers, setFlyers] = useState([
+    { id: "1", image: require("../assets/flyer1.jpg"), active: true },
+    { id: "2", image: require("../assets/flyer2.jpg"), active: true },
+    { id: "3", image: require("../assets/flyer3.jpg"), active: false }
+  ]);
+
+  const activeFlyers = flyers.filter(f => f.active);
 
   /* ✅ AUTO SLIDE */
   useEffect(() => {
+
+    if (activeFlyers.length === 0) return;
+
     const interval = setInterval(() => {
 
       currentIndex.current =
-        (currentIndex.current + 1) % flyers.length;
+        (currentIndex.current + 1) % activeFlyers.length;
 
       setActiveIndex(currentIndex.current);
 
@@ -48,7 +55,8 @@ export default function HomeScreen() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+
+  }, [flyers]);
 
   /* ✅ SHRINK EFFECT */
   const carouselHeight = scrollY.interpolate({
@@ -60,32 +68,36 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
 
-      {/* ✅ STICKY + SHRINK CAROUSEL */}
+      {/* ✅ CAROUSEL */}
       <Animated.View style={[styles.carouselWrapper, { height: carouselHeight }]}>
-
         <Text style={styles.sectionTitle}>Featured Events</Text>
 
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-        >
+        {activeFlyers.length === 0 ? (
+          <Text style={{ textAlign: "center", color: "#777" }}>
+            No active flyers
+          </Text>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+          >
+            {activeFlyers.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setSelectedImage(item.image)}
+                style={{ width: screenWidth - 30, marginRight: 10 }}
+              >
+                <Image source={item.image} style={styles.carouselImage} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
-          {flyers.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              onPress={() => setSelectedImage(item.image)}
-              style={{ width: screenWidth - 30, marginRight: 10 }}
-            >
-              <Image source={item.image} style={styles.carouselImage} />
-            </TouchableOpacity>
-          ))}
-
-        </ScrollView>
-
+        {/* ✅ DOTS */}
         <View style={styles.dotsContainer}>
-          {flyers.map((_, index) => (
+          {activeFlyers.map((_, index) => (
             <View
               key={index}
               style={[
@@ -95,21 +107,57 @@ export default function HomeScreen() {
             />
           ))}
         </View>
-
       </Animated.View>
+
+      {/* ✅ ADMIN CONTROL PANEL */}
+      <View style={styles.adminPanel}>
+        <Text style={styles.adminTitle}>Manage Flyers</Text>
+
+        {flyers.map((item) => (
+          <View key={item.id} style={styles.adminRow}>
+
+            <Image source={item.image} style={styles.adminImage} />
+
+            <Text style={styles.statusText}>
+              {item.active ? "Active" : "Inactive"}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.adminBtn,
+                { backgroundColor: item.active ? "#ff4d4d" : "#1BA97F" }
+              ]}
+              onPress={() => {
+                setFlyers(prev =>
+                  prev.map(f =>
+                    f.id === item.id
+                      ? { ...f, active: !f.active }
+                      : f
+                  )
+                );
+              }}
+            >
+              <Text style={styles.adminBtnText}>
+                {item.active ? "Deactivate" : "Activate"}
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        ))}
+
+      </View>
 
       {/* ✅ SCROLLABLE CONTENT */}
       <Animated.ScrollView
         contentContainerStyle={{ padding: 15, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
-
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
       >
 
-        {/* ✅ HEADER WITH LOGO */}
+        {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <Image
@@ -168,7 +216,7 @@ export default function HomeScreen() {
 
       </Animated.ScrollView>
 
-      {/* FULL IMAGE */}
+      {/* ✅ FULL IMAGE MODAL */}
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
@@ -218,6 +266,47 @@ const styles = StyleSheet.create({
 
   activeDot: {
     backgroundColor: "#4B3F72"
+  },
+
+  adminPanel: {
+    paddingHorizontal: 15,
+    marginTop: 5
+  },
+
+  adminTitle: {
+    fontWeight: "700",
+    marginBottom: 6
+  },
+
+  adminRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 8
+  },
+
+  adminImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6
+  },
+
+  statusText: {
+    fontSize: 12
+  },
+
+  adminBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6
+  },
+
+  adminBtnText: {
+    color: "#fff",
+    fontSize: 10
   },
 
   header: {
