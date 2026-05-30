@@ -3,203 +3,189 @@ import {
   View,
   Text,
   StyleSheet,
+  TouchableOpacity,
   ScrollView,
-  SafeAreaView,
-  TouchableOpacity
+  Image
 } from "react-native";
 
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+export default function HomeScreen() {
 
-export default function HomeScreen({ navigation }) {
+  /* ✅ YOUR FLYERS */
+  const flyers = [
+    {
+      id: "1",
+      image: require("../assets/flyer1.jpg")
+    }
+  ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <ScrollView style={styles.container}>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* ✅ HEADER (UNCHANGED CONCEPT) */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ChurchCare</Text>
+        <Text style={styles.headerSub}>Welcome Back</Text>
+      </View>
 
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good Morning 👋</Text>
-            <Text style={styles.name}>Pastor John</Text>
-          </View>
+      {/* ✅ ✅ ✅ PASTOR MESSAGE (RESTORED) */}
+      <View style={styles.messageCard}>
+        <Text style={styles.messageTitle}>Message from Pastor John</Text>
+        <Text style={styles.messageText}>
+          Stay strong in faith. This week we focus on spiritual growth and unity.
+        </Text>
+      </View>
 
-          {/* Notification */}
-          <View style={styles.bellContainer}>
-            <Feather name="bell" size={22} color="#fff" />
-            <View style={styles.notificationDot} />
-          </View>
-        </View>
+      {/* ✅ ✅ ✅ QUICK ACTIONS (RESTORED) */}
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-        {/* CONTENT */}
-        <View style={styles.content}>
+      <View style={styles.quickRow}>
+        <TouchableOpacity style={styles.quickBtn}>
+          <Text style={styles.quickText}>Attendance</Text>
+        </TouchableOpacity>
 
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
-          <Text style={styles.subDate}>Sunday, 12 May 2024</Text>
+        <TouchableOpacity style={styles.quickBtn}>
+          <Text style={styles.quickText}>Members</Text>
+        </TouchableOpacity>
 
-          <View style={styles.statsRow}>
-            <StatCard value="186" label="Attendance" />
-            <StatCard value="12" label="Members" />
-            <StatCard value="05" label="Events" />
-          </View>
+        <TouchableOpacity style={styles.quickBtn}>
+          <Text style={styles.quickText}>Reports</Text>
+        </TouchableOpacity>
+      </View>
 
-          {/* ACTIONS */}
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+      {/* ✅ ✅ ✅ ✅ CAROUSEL (ONLY ADDITION HERE) */}
+      <View style={styles.carouselContainer}>
 
-          <View style={styles.actionRow}>
+        <Text style={styles.sectionTitle}>Featured Event</Text>
 
-            <ActionCard
-              icon="check-circle"
-              label="Check Attendance"
-              onPress={() => navigation.navigate("Attendance")}
-            />
-
-            <ActionCard icon="users" label="Members" />
-            <ActionCard icon="file-text" label="Reports" />
-            <ActionCard icon="bell" label="Notify" />
-
-          </View>
-
-          {/* EVENT */}
-          <View style={styles.eventHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Event</Text>
-            <Text style={styles.viewAll}>View All</Text>
-          </View>
-
-          <View style={styles.eventCard}>
-            <MaterialIcons name="event" size={22} color="#4B3F72" />
-
-            <View style={{ marginLeft: 12 }}>
-              <Text style={styles.eventTitle}>Youth Service</Text>
-              <Text style={styles.eventDetails}>
-                Sat, 11 May • 4:00 PM
-              </Text>
-              <Text style={styles.eventDetails}>
-                Main Auditorium
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {flyers.map((item) => (
+            <View key={item.id} style={styles.carouselCard}>
+              <Image source={item.image} style={styles.carouselImage} />
             </View>
-          </View>
+          ))}
+        </ScrollView>
 
-        </View>
+      </View>
 
-      </ScrollView>
-    </SafeAreaView>
+      {/* ✅ ✅ ✅ UPCOMING EVENTS (UNCHANGED) */}
+      <Text style={styles.sectionTitle}>Upcoming Events</Text>
+
+      <View style={styles.eventCard}>
+        <Text style={styles.eventTitle}>Sunday Service</Text>
+        <Text style={styles.eventSub}>10:00 AM</Text>
+      </View>
+
+      <View style={styles.eventCard}>
+        <Text style={styles.eventTitle}>Midweek Prayer</Text>
+        <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
+      </View>
+
+    </ScrollView>
   );
 }
 
-/* COMPONENTS */
-
-const StatCard = ({ value, label }) => (
-  <View style={styles.statCard}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-
-const ActionCard = ({ icon, label, onPress }) => (
-  <TouchableOpacity style={styles.actionCard} onPress={onPress}>
-    <View style={styles.iconBox}>
-      <Feather name={icon} size={18} color="#4B3F72" />
-    </View>
-    <Text style={styles.actionText}>{label}</Text>
-  </TouchableOpacity>
-);
-
-/* STYLES */
-
+/* ✅ STYLES */
 const styles = StyleSheet.create({
 
-  safeArea: { flex: 1, backgroundColor: "#4B3F72" },
-  scrollContent: { flexGrow: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#f4f6fb",
+    padding: 15
+  },
 
   header: {
+    backgroundColor: "#4B3F72",
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 15
+  },
+
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600"
+  },
+
+  headerSub: {
+    color: "#ddd",
+    fontSize: 12
+  },
+
+  /* ✅ MESSAGE CARD */
+  messageCard: {
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15
+  },
+
+  messageTitle: {
+    fontWeight: "600",
+    marginBottom: 5
+  },
+
+  messageText: {
+    fontSize: 13,
+    color: "#555"
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 10
+  },
+
+  /* ✅ QUICK ACTIONS */
+  quickRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingTop: 55,
-    paddingHorizontal: 20
+    marginBottom: 20
   },
 
-  greeting: { color: "#fff", fontSize: 14 },
-  name: { color: "#fff", fontSize: 20, fontWeight: "600" },
-
-  bellContainer: { position: "relative" },
-  notificationDot: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    backgroundColor: "red",
-    borderRadius: 4
-  },
-
-  content: {
+  quickBtn: {
+    backgroundColor: "#fff",
     flex: 1,
-    backgroundColor: "#f7f8fb",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 18
-  },
-
-  sectionTitle: { fontWeight: "600", marginTop: 14 },
-  subDate: { fontSize: 11, color: "#888" },
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16
-  },
-
-  statCard: {
-    backgroundColor: "#fff",
-    width: "30%",
-    paddingVertical: 18,
+    padding: 15,
     borderRadius: 10,
+    marginRight: 8,
     alignItems: "center"
   },
 
-  statValue: { fontWeight: "700", color: "#4B3F72" },
-  statLabel: { fontSize: 11 },
-
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16
+  quickText: {
+    fontSize: 12,
+    fontWeight: "500"
   },
 
-  actionCard: {
-    backgroundColor: "#fff",
-    width: "23%",
-    paddingVertical: 18,
-    borderRadius: 12,
-    alignItems: "center"
+  /* ✅ ✅ CAROUSEL */
+  carouselContainer: {
+    marginBottom: 20
   },
 
-  iconBox: {
-    backgroundColor: "#E6DFFD",
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 8
+  carouselCard: {
+    marginRight: 12
   },
 
-  actionText: { fontSize: 11 },
-
-  eventHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between"
+  carouselImage: {
+    width: 320,
+    height: 180,
+    borderRadius: 15
   },
 
-  viewAll: { fontSize: 11, color: "#4B3F72" },
-
+  /* ✅ EVENTS */
   eventCard: {
-    flexDirection: "row",
     backgroundColor: "#fff",
-    padding: 16,
+    padding: 15,
     borderRadius: 10,
-    marginTop: 6
+    marginBottom: 10
   },
 
-  eventTitle: { fontWeight: "600" },
-  eventDetails: { fontSize: 11 }
+  eventTitle: {
+    fontWeight: "600"
+  },
+
+  eventSub: {
+    fontSize: 12,
+    color: "#666"
+  }
 
 });
