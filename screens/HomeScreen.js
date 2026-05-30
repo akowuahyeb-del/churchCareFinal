@@ -53,7 +53,7 @@ export default function HomeScreen() {
   /* ✅ SHRINK EFFECT */
   const carouselHeight = scrollY.interpolate({
     inputRange: [0, 150],
-    outputRange: [180, 110],  // ✅ shrink size
+    outputRange: [180, 110],
     extrapolate: "clamp"
   });
 
@@ -109,10 +109,18 @@ export default function HomeScreen() {
         )}
       >
 
-        {/* HEADER */}
+        {/* ✅ HEADER WITH LOGO */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>ChurchCare</Text>
-          <Text style={styles.headerSub}>Welcome Back</Text>
+          <View style={styles.headerRow}>
+            <Image
+              source={require("../assets/logo.png")}
+              style={styles.logo}
+            />
+            <View>
+              <Text style={styles.headerTitle}>ChurchCare</Text>
+              <Text style={styles.headerSub}>Welcome Back</Text>
+            </View>
+          </View>
         </View>
 
         {/* MESSAGE */}
@@ -217,6 +225,19 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+
+  logo: {
+    width: 38,
+    height: 38,
+    marginRight: 10,
+    borderRadius: 8,
+    resizeMode: "contain"
   },
 
   headerTitle: {
