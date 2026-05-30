@@ -17,132 +17,85 @@ import { db, storage } from "../firebase";
 import { addDoc, collection } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export default function AdminUploadFlyer() {
+export default function AdminUploadFlyer({ navigation }) {
 
   const [image, setImage] = useState(null);
   const [title, setTitle] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  /* ✅ PICK IMAGE */
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.7
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
+    const res = await ImagePicker.launchImageLibraryAsync();
+    if (!res.canceled) setImage(res.assets[0].uri);
   };
 
-  /* ✅ TAKE PHOTO */
-  const takePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert("Camera permission required");
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.7
-    });
-
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  /* ✅ UPLOAD IMAGE */
   const uploadImage = async () => {
     const response = await fetch(image);
     const blob = await response.blob();
 
-    const storageRef = ref(storage, `flyers/${Date.now()}.jpg`);
-
+    const storageRef = ref(storage, `flyers/${Date.now()}`);
     await uploadBytes(storageRef, blob);
 
     return await getDownloadURL(storageRef);
   };
 
-  /* ✅ VALIDATE DATE */
-  const isValidDate = (date) => {
-    return /^\d{4}-\d{2}-\d{2}$/.test(date);
-  };
-
-  /* ✅ UPLOAD FLYER */
   const uploadFlyer = async () => {
 
-    if (!image) {
-      Alert.alert("Please select an image");
-      return;
-    }
-
-    if (!title) {
-      Alert.alert("Please enter title");
-      return;
-    }
-
-    if (!expiry || !isValidDate(expiry)) {
-      Alert.alert("Enter expiry in format YYYY-MM-DD");
+    if (!image || !title || !expiry) {
+      Alert.alert("Fill all fields");
       return;
     }
 
     try {
-      setLoading(true);
 
-      const imageUrl = await uploadImage();
+      const url = await uploadImage();
 
       await addDoc(collection(db, "flyers"), {
-        imageUrl,
+        imageUrl: url,
         title,
         expiry,
         createdAt: new Date()
       });
 
-      Alert.alert("✅ Flyer Uploaded!");
+      Alert.alert("✅ Uploaded");
 
-      /* ✅ RESET */
       setImage(null);
       setTitle("");
       setExpiry("");
 
     } catch (err) {
-      console.log(err);
       Alert.alert("Upload failed");
     }
+  };
 
-    setLoading(false);
+  const cancelUpload = () => {
+    setImage(null);
+    setTitle("");
+    setExpiry("");
+    Alert.alert("Cancelled");
   };
 
   return (
     <ScrollView style={styles.container}>
 
-      <Text style={styles.header}>Upload Flyer</Text>
+      <Text style={styles.title}>Upload Flyer</Text>
 
-      {/* ✅ IMAGE BUTTONS */}
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text>Select Image from Gallery</Text>
+      {/* ✅ IMAGE */}
+      <TouchableOpacity style={styles.btn} onPress={pickImage}>
+        <Text>Select Image</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={takePhoto}>
-        <Text>Take Photo</Text>
-      </TouchableOpacity>
-
-      {/* ✅ IMAGE PREVIEW */}
       {image && (
-        <Image source={{ uri: image }} style={styles.preview} />
+        <Image source={{ uri: image }} style={styles.image} />
       )}
 
-      {/* ✅ TITLE */}
+      {/* ✅ INPUTS */}
       <TextInput
-        placeholder="Event Title"
+        placeholder="Title"
         value={title}
         onChangeText={setTitle}
         style={styles.input}
       />
 
-      {/* ✅ EXPIRY */}
       <TextInput
         placeholder="Expiry (YYYY-MM-DD)"
         value={expiry}
@@ -150,69 +103,69 @@ export default function AdminUploadFlyer() {
         style={styles.input}
       />
 
-      {/* ✅ UPLOAD BUTTON FIXED */}
+      {/* ✅ BUTTONS */}
+      <TouchableOpacity style={styles.uploadBtn} onPress={uploadFlyer}>
+        <Text style={styles.btnText}>Upload</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.cancelBtn} onPress={cancelUpload}>
+        <Text>Cancel</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={uploadFlyer}
+        style={styles.backBtn}
+        onPress={() => navigation.goBack()}
       >
-        <Text style={styles.uploadText}>
-          {loading ? "Uploading..." : "Upload Flyer"}
-        </Text>
+        <Text>⬅ Back</Text>
       </TouchableOpacity>
 
     </ScrollView>
   );
 }
 
-/* ✅ STYLES */
 const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20 },
 
-  container: {
-    flex: 1,
-    backgroundColor: "#f4f6fb",
-    padding: 20
-  },
+  title: { fontSize: 18, marginBottom: 15 },
 
-  header: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 20
-  },
-
-  button: {
+  btn: {
     backgroundColor: "#ddd",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-    alignItems: "center"
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10
   },
 
-  preview: {
+  image: {
     width: "100%",
-    height: 220,
-    borderRadius: 12,
-    marginBottom: 15
+    height: 200,
+    marginBottom: 10
   },
 
   input: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 8
   },
 
-  uploadButton: {
+  uploadBtn: {
     backgroundColor: "#4B3F72",
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
     alignItems: "center",
-    marginTop: 10
+    borderRadius: 10
   },
 
-  uploadText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600"
-  }
+  btnText: {
+    color: "#fff"
+  },
 
+  cancelBtn: {
+    marginTop: 10,
+    alignItems: "center"
+  },
+
+  backBtn: {
+    marginTop: 15,
+    alignItems: "center"
+  }
 });

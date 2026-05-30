@@ -11,7 +11,7 @@ import {
   Pressable
 } from "react-native";
 
-/* ✅ ✅ ✅ ADD FIREBASE */
+/* ✅ FIREBASE */
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -19,51 +19,50 @@ export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
 
-  /* ✅ ✅ ✅ REPLACE LOCAL DATA WITH STATE */
   const [flyers, setFlyers] = useState([]);
 
-  /* ✅ AUTO-EXPIRY */
-  const today = new Date();
-
-  /* ✅ STATE */
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ✅ ✅ ✅ LOAD FROM FIREBASE */
+  const today = new Date();
+
+  /* ✅ LOAD FLYERS */
   const loadFlyers = async () => {
     try {
       const snapshot = await getDocs(collection(db, "flyers"));
 
       const data = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .filter(f => new Date(f.expiry) >= today);
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(f => {
+          if (!f.expiry) return true; // ✅ safety
+          return new Date(f.expiry) >= today;
+        });
 
       setFlyers(data);
+
     } catch (error) {
-      console.log("Error loading flyers:", error);
+      console.log("Error:", error);
     }
   };
 
-  /* ✅ ✅ ✅ INITIAL LOAD + REAL-TIME REFRESH */
+  /* ✅ REAL-TIME (SAFE POLLING) */
   useEffect(() => {
 
     loadFlyers();
 
     const interval = setInterval(() => {
-      loadFlyers(); // ✅ LIVE UPDATE
-    }, 5000);
+      loadFlyers();
+    }, 5000); // every 5 sec
 
     return () => clearInterval(interval);
 
   }, []);
 
-  /* ✅ AUTO-SLIDE (UNCHANGED) */
+  /* ✅ AUTO SLIDE */
   useEffect(() => {
+
     if (flyers.length === 0) return;
 
     const interval = setInterval(() => {
@@ -93,7 +92,7 @@ export default function HomeScreen() {
         <Text style={styles.headerSub}>Welcome Back</Text>
       </View>
 
-      {/* ✅ PASTOR MESSAGE */}
+      {/* ✅ MESSAGE */}
       <View style={styles.messageCard}>
         <Text style={styles.messageTitle}>Message from Pastor John</Text>
         <Text style={styles.messageText}>
@@ -134,12 +133,8 @@ export default function HomeScreen() {
           {flyers.map((item) => (
             <TouchableOpacity
               key={item.id}
-              activeOpacity={0.9}
               onPress={() => setSelectedImage(item.imageUrl)}
-              style={{
-                width: screenWidth - 30,
-                marginRight: 10
-              }}
+              style={{ width: screenWidth - 30, marginRight: 10 }}
             >
 
               <Image
@@ -167,7 +162,7 @@ export default function HomeScreen() {
 
       </View>
 
-      {/* ✅ UPCOMING EVENTS */}
+      {/* ✅ EVENTS */}
       <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
       <View style={styles.eventCard}>
@@ -175,19 +170,11 @@ export default function HomeScreen() {
         <Text style={styles.eventSub}>10:00 AM</Text>
       </View>
 
-      <View style={styles.eventCard}>
-        <Text style={styles.eventTitle}>Midweek Prayer</Text>
-        <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
-      </View>
-
-      {/* ✅ FULL SCREEN FLYER */}
+      {/* ✅ FULL IMAGE */}
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.fullImage}
-            />
+            <Image source={{ uri: selectedImage }} style={styles.fullImage} />
           </Pressable>
         </View>
       </Modal>
@@ -198,7 +185,6 @@ export default function HomeScreen() {
 
 /* ✅ STYLES (UNCHANGED) */
 const styles = StyleSheet.create({
-
   container: { flex: 1, backgroundColor: "#f4f6fb", padding: 15 },
 
   header: { backgroundColor: "#4B3F72", padding: 20, borderRadius: 12, marginBottom: 15 },
@@ -208,12 +194,9 @@ const styles = StyleSheet.create({
 
   messageCard: { backgroundColor: "#fff", padding: 15, borderRadius: 10, marginBottom: 15 },
 
-  messageTitle: { fontWeight: "600", marginBottom: 5 },
-  messageText: { fontSize: 13, color: "#555" },
-
   sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 10 },
 
-  quickRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
+  quickRow: { flexDirection: "row", marginBottom: 20 },
 
   quickBtn: {
     backgroundColor: "#fff",
@@ -223,11 +206,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     alignItems: "center"
   },
-
-  quickText: { fontSize: 12 },
-
-  carouselContainer: { marginBottom: 20 },
-  carouselContent: { paddingHorizontal: 5 },
 
   carouselImage: {
     width: "100%",
@@ -244,9 +222,9 @@ const styles = StyleSheet.create({
   dot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
     backgroundColor: "#ccc",
-    marginHorizontal: 4
+    margin: 4,
+    borderRadius: 3
   },
 
   activeDot: {
@@ -258,12 +236,8 @@ const styles = StyleSheet.create({
   eventCard: {
     backgroundColor: "#fff",
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 10
+    borderRadius: 10
   },
-
-  eventTitle: { fontWeight: "600" },
-  eventSub: { fontSize: 12, color: "#666" },
 
   modalWrap: {
     flex: 1,
@@ -277,5 +251,4 @@ const styles = StyleSheet.create({
     height: 500,
     borderRadius: 20
   }
-
 });
