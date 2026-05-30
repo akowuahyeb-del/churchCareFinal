@@ -22,12 +22,14 @@ export default function AdminUploadFlyer({ navigation }) {
   const [title, setTitle] = useState("");
   const [expiry, setExpiry] = useState("");
 
-  /* ✅ PICK IMAGE (BASE64 ENABLED) */
+  /* ✅ PICK IMAGE (OPTIMISED) */
   const pickImage = async () => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.5,
-      base64: true
+      quality: 0.3,              // ✅ reduce size (VERY IMPORTANT)
+      base64: true,
+      allowsEditing: true,       // ✅ crop support
+      aspect: [4, 3]
     });
 
     if (!result.canceled) {
@@ -36,19 +38,20 @@ export default function AdminUploadFlyer({ navigation }) {
     }
   };
 
-  /* ✅ TAKE PHOTO (CAMERA + BASE64) */
+  /* ✅ TAKE PHOTO (OPTIMISED) */
   const takePhoto = async () => {
 
     const permission = await ImagePicker.requestCameraPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert("Camera permission required");
+      Alert.alert("Enable camera permission");
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      quality: 0.5,
-      base64: true
+      quality: 0.3,              // ✅ compress camera photo
+      base64: true,
+      allowsEditing: true
     });
 
     if (!result.canceled) {
@@ -57,34 +60,24 @@ export default function AdminUploadFlyer({ navigation }) {
     }
   };
 
-  /* ✅ SAVE FLYER (REAL IMAGE) */
+  /* ✅ SAVE */
   const uploadFlyer = async () => {
 
-    if (!image) {
-      Alert.alert("Please select or take a photo");
-      return;
-    }
-
-    if (!title) {
-      Alert.alert("Enter event title");
-      return;
-    }
-
-    if (!expiry) {
-      Alert.alert("Enter expiry date");
+    if (!image || !title || !expiry) {
+      Alert.alert("Fill all fields");
       return;
     }
 
     try {
 
       await addDoc(collection(db, "flyers"), {
-        imageUrl: image, // ✅ REAL IMAGE SAVED
+        imageUrl: image,
         title,
         expiry,
         createdAt: new Date()
       });
 
-      Alert.alert("✅ Flyer saved successfully");
+      Alert.alert("✅ Flyer optimised and saved");
 
       setImage(null);
       setTitle("");
@@ -92,14 +85,7 @@ export default function AdminUploadFlyer({ navigation }) {
 
     } catch (err) {
       console.log(err);
-      Alert.alert("Error saving flyer");
     }
-  };
-
-  const cancelUpload = () => {
-    setImage(null);
-    setTitle("");
-    setExpiry("");
   };
 
   return (
@@ -107,21 +93,18 @@ export default function AdminUploadFlyer({ navigation }) {
 
       <Text style={styles.header}>Upload Flyer</Text>
 
-      {/* ✅ IMAGE OPTIONS */}
-      <TouchableOpacity style={styles.button} onPress={pickImage}>
-        <Text>📁 Select Image from Gallery</Text>
+      <TouchableOpacity style={styles.btn} onPress={pickImage}>
+        <Text>📁 Select Image</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={takePhoto}>
+      <TouchableOpacity style={styles.btn} onPress={takePhoto}>
         <Text>📷 Take Photo</Text>
       </TouchableOpacity>
 
-      {/* ✅ IMAGE PREVIEW */}
       {image && (
         <Image source={{ uri: image }} style={styles.preview} />
       )}
 
-      {/* ✅ TITLE */}
       <TextInput
         placeholder="Event Title"
         value={title}
@@ -129,7 +112,6 @@ export default function AdminUploadFlyer({ navigation }) {
         style={styles.input}
       />
 
-      {/* ✅ EXPIRY */}
       <TextInput
         placeholder="Expiry (YYYY-MM-DD)"
         value={expiry}
@@ -137,43 +119,22 @@ export default function AdminUploadFlyer({ navigation }) {
         style={styles.input}
       />
 
-      {/* ✅ SAVE BUTTON */}
       <TouchableOpacity style={styles.uploadBtn} onPress={uploadFlyer}>
-        <Text style={styles.btnText}>Save Flyer</Text>
-      </TouchableOpacity>
-
-      {/* ✅ CANCEL */}
-      <TouchableOpacity style={styles.cancelBtn} onPress={cancelUpload}>
-        <Text>Clear</Text>
-      </TouchableOpacity>
-
-      {/* ✅ BACK */}
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.back}>⬅ Back</Text>
+        <Text style={styles.whiteText}>Save Flyer</Text>
       </TouchableOpacity>
 
     </ScrollView>
   );
 }
 
-/* ✅ PROFESSIONAL UI STYLES */
 const styles = StyleSheet.create({
+  container: { flex: 1, padding: 20, backgroundColor: "#f4f6fb" },
 
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f4f6fb"
-  },
+  header: { fontSize: 18, fontWeight: "600", marginBottom: 15 },
 
-  header: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 15
-  },
-
-  button: {
+  btn: {
     backgroundColor: "#ddd",
-    padding: 14,
+    padding: 12,
     borderRadius: 10,
     marginBottom: 10,
     alignItems: "center"
@@ -181,39 +142,27 @@ const styles = StyleSheet.create({
 
   preview: {
     width: "100%",
-    height: 220,
-    borderRadius: 12,
-    marginBottom: 15
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 10
   },
 
   input: {
     backgroundColor: "#fff",
-    padding: 14,
+    padding: 12,
     borderRadius: 10,
     marginBottom: 10
   },
 
   uploadBtn: {
     backgroundColor: "#4B3F72",
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
     alignItems: "center",
-    marginBottom: 10
+    borderRadius: 10
   },
 
-  btnText: {
+  whiteText: {
     color: "#fff",
     fontWeight: "600"
-  },
-
-  cancelBtn: {
-    alignItems: "center",
-    marginBottom: 10
-  },
-
-  back: {
-    textAlign: "center",
-    color: "#555"
   }
-
 });
