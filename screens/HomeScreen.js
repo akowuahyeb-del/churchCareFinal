@@ -10,7 +10,8 @@ import {
   Animated,
   Modal,
   Pressable,
-  Alert
+  Alert,
+  TextInput
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -25,11 +26,28 @@ export default function HomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  /* ✅ FLYERS */
   const [flyers, setFlyers] = useState([
     { id: "1", image: require("../assets/flyer1.jpg"), active: true },
     { id: "2", image: require("../assets/flyer2.jpg"), active: true },
     { id: "3", image: require("../assets/flyer3.jpg"), active: false }
   ]);
+
+  /* ✅ PASTOR MESSAGE */
+  const [pastorMessage, setPastorMessage] = useState(
+    "Stay strong in faith. God is working in your life this week."
+  );
+  const [editingMessage, setEditingMessage] = useState(false);
+
+  /* ✅ EVENTS */
+  const [events, setEvents] = useState([
+    { id: "1", title: "Sunday Service", time: "2 June • 9:00 AM" },
+    { id: "2", title: "Youth Meeting", time: "5 June • 5:00 PM" }
+  ]);
+
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   const activeFlyers = flyers.filter(f => f.active);
 
@@ -57,10 +75,7 @@ export default function HomeScreen() {
       {/* ✅ HEADER */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Image
-            source={require("../assets/logo.png")}
-            style={styles.logo}
-          />
+          <Image source={require("../assets/logo.png")} style={styles.logo} />
           <View>
             <Text style={styles.headerTitle}>ChurchCare</Text>
             <Text style={styles.headerSub}>Welcome Back</Text>
@@ -69,10 +84,7 @@ export default function HomeScreen() {
       </View>
 
       <Animated.ScrollView
-        contentContainerStyle={{
-          padding: 15,
-          paddingBottom: 120
-        }}
+        contentContainerStyle={{ padding: 15, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
 
@@ -108,73 +120,43 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* ✅ MANAGE FLYERS (RESTORED + DELETE) */}
-        <View style={styles.adminPanel}>
-          <Text style={styles.sectionTitle}>Manage Flyers</Text>
+        {/* ✅ PASTOR MESSAGE */}
+        <Text style={styles.sectionTitle}>Message from Pastor</Text>
 
-          {flyers.map((item) => (
-            <View key={item.id} style={styles.adminRow}>
+        <View style={styles.pastorBox}>
 
-              <Image source={item.image} style={styles.adminImage} />
+          {editingMessage ? (
+            <>
+              <TextInput
+                value={pastorMessage}
+                onChangeText={setPastorMessage}
+                multiline
+                style={styles.input}
+              />
 
-              <Text style={styles.statusText}>
-                {item.active ? "Active" : "Inactive"}
-              </Text>
-
-              {/* Activate/Deactivate */}
               <TouchableOpacity
-                style={[
-                  styles.adminBtn,
-                  { backgroundColor: item.active ? "#ff4d4d" : "#1BA97F" }
-                ]}
-                onPress={() => {
-                  setFlyers(prev =>
-                    prev.map(f =>
-                      f.id === item.id
-                        ? { ...f, active: !f.active }
-                        : f
-                    )
-                  );
-                }}
+                style={styles.saveBtn}
+                onPress={() => setEditingMessage(false)}
               >
-                <Text style={styles.adminBtnText}>
-                  {item.active ? "Deactivate" : "Activate"}
-                </Text>
+                <Text style={{ color: "#fff" }}>Save</Text>
               </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.pastorText}>{pastorMessage}</Text>
 
-              {/* DELETE BUTTON */}
-              <TouchableOpacity
-                onPress={() => {
-                  Alert.alert(
-                    "Delete Flyer",
-                    "Are you sure you want to delete this flyer?",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: () => {
-                          setFlyers(prev =>
-                            prev.filter(f => f.id !== item.id)
-                          );
-                        }
-                      }
-                    ]
-                  );
-                }}
-              >
-                <Ionicons name="trash-outline" size={20} color="red" />
+              <TouchableOpacity onPress={() => setEditingMessage(true)}>
+                <Text style={styles.editText}>Edit Message</Text>
               </TouchableOpacity>
+            </>
+          )}
 
-            </View>
-          ))}
         </View>
 
-        {/* ✅ QUICK ACTIONS (FIXED SIZE) */}
+        {/* ✅ QUICK ACTIONS (NOW BEFORE EVENTS ✅) */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         <View style={styles.quickGrid}>
-
           <TouchableOpacity style={[styles.quickCard, styles.attCard]}>
             <Ionicons name="checkmark-circle" size={20} color="#fff" />
             <Text style={styles.quickText}>Attendance</Text>
@@ -189,6 +171,77 @@ export default function HomeScreen() {
             <Ionicons name="bar-chart" size={20} color="#fff" />
             <Text style={styles.quickText}>Reports</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* ✅ EVENTS */}
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+
+        <View style={{ marginBottom: 15 }}>
+
+          {events.map((item) => (
+            <View key={item.id} style={styles.eventRow}>
+              <View>
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventTime}>{item.time}</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setEvents(prev => prev.filter(e => e.id !== item.id));
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color="red" />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {/* ✅ ADD EVENT FORM */}
+          {addingEvent ? (
+            <View style={styles.addForm}>
+              <TextInput
+                placeholder="Event Title"
+                value={newTitle}
+                onChangeText={setNewTitle}
+                style={styles.input}
+              />
+
+              <TextInput
+                placeholder="Date & Time"
+                value={newTime}
+                onChangeText={setNewTime}
+                style={styles.input}
+              />
+
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={() => {
+                  if (!newTitle || !newTime) return;
+
+                  setEvents(prev => [
+                    ...prev,
+                    {
+                      id: Date.now().toString(),
+                      title: newTitle,
+                      time: newTime
+                    }
+                  ]);
+
+                  setNewTitle("");
+                  setNewTime("");
+                  setAddingEvent(false);
+                }}
+              >
+                <Text style={{ color: "#fff" }}>Save Event</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => setAddingEvent(true)}
+            >
+              <Text style={{ color: "#fff" }}>+ Add Event</Text>
+            </TouchableOpacity>
+          )}
 
         </View>
 
@@ -207,15 +260,13 @@ export default function HomeScreen() {
   );
 }
 
-/* ✅ STYLES */
 const styles = StyleSheet.create({
 
   header: {
     backgroundColor: "#4B3F72",
     padding: 16,
     borderRadius: 12,
-    margin: 15,
-    elevation: 6
+    margin: 15
   },
 
   headerRow: {
@@ -231,7 +282,6 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: "#fff",
-    fontSize: 16,
     fontWeight: "700"
   },
 
@@ -258,78 +308,77 @@ const styles = StyleSheet.create({
     marginVertical: 6
   },
 
-  dot: {
-    width: 6,
-    height: 6,
-    backgroundColor: "#ccc",
-    margin: 4,
-    borderRadius: 3
+  dot: { width: 6, height: 6, backgroundColor: "#ccc", margin: 4 },
+  activeDot: { backgroundColor: "#4B3F72" },
+
+  pastorBox: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15
   },
 
-  activeDot: {
-    backgroundColor: "#4B3F72"
+  pastorText: { fontSize: 13 },
+  editText: { color: "#1BA97F", fontSize: 12 },
+
+  input: {
+    backgroundColor: "#eee",
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 6
   },
 
-  adminPanel: {
-    marginBottom: 14
+  saveBtn: {
+    backgroundColor: "#1BA97F",
+    padding: 10,
+    borderRadius: 6,
+    alignItems: "center"
   },
 
-  adminRow: {
+  eventRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#fff",
     padding: 10,
-    borderRadius: 10,
-    marginBottom: 8
+    borderRadius: 8,
+    marginBottom: 6
   },
 
-  adminImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 6
+  eventTitle: { fontWeight: "600" },
+  eventTime: { fontSize: 12, color: "#666" },
+
+  addBtn: {
+    backgroundColor: "#4B3F72",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 6
   },
 
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600"
-  },
-
-  adminBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6
-  },
-
-  adminBtnText: {
-    color: "#fff",
-    fontSize: 11
+  addForm: {
+    backgroundColor: "#fff",
+    padding: 10,
+    borderRadius: 8
   },
 
   quickGrid: {
     flexDirection: "row",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    marginBottom: 10
   },
 
   quickCard: {
     width: "32%",
-    paddingVertical: 12,
+    padding: 12,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 3
+    alignItems: "center"
   },
 
   attCard: { backgroundColor: "#2F55D4" },
   memberCard: { backgroundColor: "#1BA97F" },
   reportCard: { backgroundColor: "#D97706" },
 
-  quickText: {
-    color: "#fff",
-    fontSize: 11,
-    marginTop: 3,
-    fontWeight: "600"
-  },
+  quickText: { color: "#fff", fontSize: 11 },
 
   modalWrap: {
     flex: 1,
@@ -340,8 +389,7 @@ const styles = StyleSheet.create({
 
   fullImage: {
     width: 320,
-    height: 480,
-    borderRadius: 12
+    height: 480
   }
 
 });
