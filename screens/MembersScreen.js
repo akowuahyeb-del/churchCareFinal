@@ -1,501 +1,461 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  Alert
+  View, Text, StyleSheet,
+  TextInput, TouchableOpacity,
+  FlatList, Modal, Alert
 } from "react-native";
 
-/* ✅ FIREBASE */
-import { db, storage } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "../firebase";
+import {
+  collection, addDoc, getDocs,
+  updateDoc, deleteDoc, doc
+} from "firebase/firestore";
 
-/* ✅ IMAGE PICKER */
+import QRCode from "react-native-qrcode-svg";
 import * as ImagePicker from "expo-image-picker";
 
 export default function MembersScreen() {
 
-/* ✅ OPTIONS (SMART INPUTS) */
-const ministryOptions = [
-  "Choir", "Ushering", "Youth", "Prayer Team", "Evangelism"
-];
+//////////////////////////////////////////////////////////////
+/* ✅ ROLE CONTROL */
+//////////////////////////////////////////////////////////////
 
-const baptismOptions = [
-  "Baptised", "Not Baptised", "Preparing"
-];
+const userRole = "admin"; // 🔁 change later
 
-/* ✅ DEFAULT FORM */
-/* ✅ ONLY ADDITION → ministries (NO REMOVAL) */
-const defaultState = {
+//////////////////////////////////////////////////////////////
+/* ✅ STATE */
+//////////////////////////////////////////////////////////////
+
+const defaultMember = {
   name: "",
   phone: "",
   address: "",
   occupation: "",
-  ministry: "",          // 🔵 kept (NO CHANGE)
-  ministries: [],        // ✅ added (multi-select)
+  ministry: "",
   baptismStatus: "",
+  status: "",
   emergencyContact: "",
   membershipDuration: ""
 };
 
-const [member, setMember] = useState(defaultState);
-const [image, setImage] = useState(null);
-
-/* ✅ NEW (PHOTO MENU CONTROL) */
-const [showPhotoOptions, setShowPhotoOptions] = useState(false);
-
+const [member, setMember] = useState(defaultMember);
 const [members, setMembers] = useState([]);
 const [search, setSearch] = useState("");
 
-const today = new Date();
+const [editingId, setEditingId] = useState(null);
+const [showForm, setShowForm] = useState(true);
+const [saving, setSaving] = useState(false);
 
+const [selectedQR, setSelectedQR] = useState(null);
+const [image, setImage] = useState(null);
+
+//////////////////////////////////////////////////////////////
+/* ✅ LIST DATA */
+//////////////////////////////////////////////////////////////
+
+const [ministries, setMinistries] = useState(["Choir","Ushering","Youth"]);
+const [baptismList, setBaptismList] = useState(["Baptised","Not Baptised"]);
+const [statusList, setStatusList] = useState(["Regular","Visitor"]);
+
+//////////////////////////////////////////////////////////////
+/* ✅ MODALS */
+//////////////////////////////////////////////////////////////
+
+const [ministryModal,setMinistryModal]=useState(false);
+const [ministryInput,setMinistryInput]=useState("");
+const [ministryIndex,setMinistryIndex]=useState(null);
+
+const [baptismModal,setBaptismModal]=useState(false);
+const [baptismInput,setBaptismInput]=useState("");
+const [baptismIndex,setBaptismIndex]=useState(null);
+
+const [statusModal,setStatusModal]=useState(false);
+const [statusInput,setStatusInput]=useState("");
+const [statusIndex,setStatusIndex]=useState(null);
+
+//////////////////////////////////////////////////////////////
 /* ✅ LOAD MEMBERS */
-useEffect(() => {
-  loadMembers();
-}, []);
+//////////////////////////////////////////////////////////////
 
-const loadMembers = async () => {
-  const snapshot = await getDocs(collection(db, "members"));
-  const data = snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-  setMembers(data);
+useEffect(()=>{loadMembers();},[]);
+
+const loadMembers=async()=>{
+  const snap=await getDocs(collection(db,"members"));
+  setMembers(snap.docs.map(d=>({id:d.id,...d.data()})));
 };
 
-/* ✅ IMAGE PICK (UNCHANGED, just close menu added) */
+//////////////////////////////////////////////////////////////
+/* ✅ IMAGE PICK */
+//////////////////////////////////////////////////////////////
+
 const pickImage = async () => {
-  const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.6 });
-
-  setShowPhotoOptions(false); // ✅ close menu
-
-  if (!res.canceled) setImage(res.assets[0].uri);
-};
-
-/* ✅ CAMERA FIXED ✅ */
-const takePhoto = async () => {
-
-  const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-  if (!permission.granted) {
-    Alert.alert("Permission Required", "Please allow camera access");
-    return;
-  }
-
-  const res = await ImagePicker.launchCameraAsync({ quality: 0.6 });
-
-  setShowPhotoOptions(false);
-
-  if (!res.canceled) setImage(res.assets[0].uri);
-};
-
-/* ✅ MULTI-MINISTRY TOGGLE (ADDED ONLY) */
-const toggleMinistry = (opt) => {
-
-  let list = member.ministries || [];
-
-  if (list.includes(opt)) {
-    list = list.filter(m => m !== opt);
-  } else {
-    list.push(opt);
-  }
-
-  setMember({ ...member, ministries: list });
-};
-
-/* ✅ UPLOAD IMAGE */
-const uploadImage = async () => {
-  if (!image) return null;
-
-  const response = await fetch(image);
-  const blob = await response.blob();
-
-  const storageRef = ref(storage, `members/${Date.now()}`);
-  await uploadBytes(storageRef, blob);
-
-  return await getDownloadURL(storageRef);
-};
-
-/* ✅ SAVE MEMBER */
-const saveMember = async () => {
-
-  if (!member.name || !member.phone) {
-    Alert.alert("Error", "Name and phone required");
-    return;
-  }
-
-  let imageUrl = null;
-
-  if (image) {
-    imageUrl = await uploadImage();
-  }
-
-  await addDoc(collection(db, "members"), {
-    ...member,   // ✅ keeps BOTH ministry + ministries
-    photo: imageUrl,
-    createdAt: today
+  const res = await ImagePicker.launchImageLibraryAsync({
+    quality: 0.6
   });
 
-  clearForm();
-
-  Alert.alert("✅ Member saved");
-
-  loadMembers();
+  if (!res.canceled) {
+    setImage(res.assets[0].uri);
+  }
 };
 
-/* ✅ CLEAR */
-const clearForm = () => {
-  setMember(defaultState);
+//////////////////////////////////////////////////////////////
+/* ✅ SAVE MEMBER */
+//////////////////////////////////////////////////////////////
+
+const saveMember = async () => {
+
+  if (saving) return;
+
+  if (!member.name || !member.phone) {
+    Alert.alert("Name & phone required");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+
+    if (editingId) {
+      await updateDoc(doc(db,"members",editingId), {
+        ...member,
+        image
+      });
+      Alert.alert("✅ Updated","Member updated");
+    } else {
+      await addDoc(collection(db,"members"),{
+        ...member,
+        image,
+        createdAt:new Date()
+      });
+      Alert.alert("✅ Success","Member saved successfully");
+    }
+
+    setMember(defaultMember);
+    setEditingId(null);
+    setImage(null);
+
+    loadMembers();
+    setShowForm(false);
+
+  } catch(e){
+    Alert.alert("Error","Operation failed");
+  }
+
+  setSaving(false);
+};
+
+//////////////////////////////////////////////////////////////
+/* ✅ DELETE */
+//////////////////////////////////////////////////////////////
+
+const deleteMember = (id) => {
+  Alert.alert("Delete Member","Are you sure?",[
+    {text:"Cancel"},
+    {
+      text:"Delete",
+      style:"destructive",
+      onPress: async ()=>{
+        await deleteDoc(doc(db,"members",id));
+        loadMembers();
+      }
+    }
+  ]);
+};
+
+//////////////////////////////////////////////////////////////
+/* ✅ FORM CONTROL */
+//////////////////////////////////////////////////////////////
+
+const clearForm = ()=>{
+  setMember(defaultMember);
   setImage(null);
 };
 
-/* ✅ CANCEL */
-const cancelForm = () => {
-  clearForm();
-  Alert.alert("Cancelled");
+const cancelForm = ()=>{
+  setMember(defaultMember);
+  setEditingId(null);
+  setShowForm(false);
 };
 
+//////////////////////////////////////////////////////////////
+/* ✅ GENERIC SAVE */
+//////////////////////////////////////////////////////////////
+
+const saveList=(input,index,list,setList,close)=>{
+  if(!input.trim())return;
+
+  if(index!==null){
+    const updated=[...list];
+    updated[index]=input;
+    setList(updated);
+  } else {
+    setList(prev=>[...prev,input]);
+  }
+
+  close();
+};
+
+//////////////////////////////////////////////////////////////
+/* ✅ CLOSE MODALS */
+//////////////////////////////////////////////////////////////
+
+const closeMinistryModal=()=>{setMinistryModal(false);setMinistryInput("");setMinistryIndex(null);};
+const closeBaptismModal=()=>{setBaptismModal(false);setBaptismInput("");setBaptismIndex(null);};
+const closeStatusModal=()=>{setStatusModal(false);setStatusInput("");setStatusIndex(null);};
+
+//////////////////////////////////////////////////////////////
 /* ✅ FILTER */
-const filtered = members.filter(m =>
-  m.name.toLowerCase().includes(search.toLowerCase())
+//////////////////////////////////////////////////////////////
+
+const filtered=members.filter(m =>
+  (m.name || "").toLowerCase().includes(search.toLowerCase())
 );
+
+//////////////////////////////////////////////////////////////
+/* ✅ UI */
+//////////////////////////////////////////////////////////////
 
 return (
 <View style={styles.container}>
 
-<FlatList
-data={filtered}
-keyExtractor={(item) => item.id}
+{/* ✅ COLLAPSIBLE HEADER */}
+<TouchableOpacity onPress={()=>setShowForm(!showForm)}>
+<Text style={styles.header}>
+{showForm?"▼":"▶"} Member Registration
+</Text>
+</TouchableOpacity>
 
-ListHeaderComponent={
+{/* ✅ FORM */}
+{showForm && userRole==="admin" && (
 <>
-<View style={styles.header}>
-<Text style={styles.headerText}>Member Registration</Text>
-</View>
+<Input label="Name" value={member.name} onChange={t=>setMember({...member,name:t})}/>
+<Input label="Phone" value={member.phone} onChange={t=>setMember({...member,phone:t})}/>
+<Input label="Address" value={member.address} onChange={t=>setMember({...member,address:t})}/>
+<Input label="Occupation" value={member.occupation} onChange={t=>setMember({...member,occupation:t})}/>
+<Input label="Emergency Contact" value={member.emergencyContact} onChange={t=>setMember({...member,emergencyContact:t})}/>
 
-<View style={styles.card}>
-
-{/* ✅ PHOTO SECTION (UPDATED UX ONLY) */}
-<View style={styles.photoSection}>
-
-<TouchableOpacity
-style={styles.photoBtn}
-onPress={() => setShowPhotoOptions(!showPhotoOptions)}
->
-<Text>Select / Take Photo</Text>
+{/* ✅ IMAGE */}
+<TouchableOpacity style={styles.btn} onPress={pickImage}>
+<Text style={styles.white}>
+{image ? "Change Photo" : "Upload Photo"}
+</Text>
 </TouchableOpacity>
 
-{/* ✅ NEW MENU */}
-{showPhotoOptions && (
-<View style={styles.photoOptions}>
-<TouchableOpacity onPress={pickImage}>
-<Text style={styles.optionText}>📁 Gallery</Text>
+{/* ✅ CHIPS */}
+<Chips label="Ministry" list={ministries}
+value={member.ministry}
+onSelect={v=>setMember({...member,ministry:v})}
+onEdit={(i)=>{setMinistryIndex(i);setMinistryInput(ministries[i]);setMinistryModal(true)}}
+onAdd={()=>setMinistryModal(true)}/>
+
+<Chips label="Baptism" list={baptismList}
+value={member.baptismStatus}
+onSelect={v=>setMember({...member,baptismStatus:v})}
+onEdit={(i)=>{setBaptismIndex(i);setBaptismInput(baptismList[i]);setBaptismModal(true)}}
+onAdd={()=>setBaptismModal(true)}/>
+
+<Chips label="Status" list={statusList}
+value={member.status}
+onSelect={v=>setMember({...member,status:v})}
+onEdit={(i)=>{setStatusIndex(i);setStatusInput(statusList[i]);setStatusModal(true)}}
+onAdd={()=>setStatusModal(true)}/>
+
+{/* ✅ BUTTONS */}
+<TouchableOpacity style={styles.btn} onPress={saveMember} disabled={saving}>
+<Text style={styles.white}>
+{saving?"Saving...":editingId?"Update":"Save"}
+</Text>
 </TouchableOpacity>
 
-<TouchableOpacity onPress={takePhoto}>
-<Text style={styles.optionText}>📷 Camera</Text>
+<TouchableOpacity style={styles.smallBtn} onPress={clearForm}>
+<Text>Clear</Text>
 </TouchableOpacity>
 
-<TouchableOpacity onPress={() => setShowPhotoOptions(false)}>
-<Text style={styles.cancelText}>Cancel</Text>
-</TouchableOpacity>
-</View>
-)}
-
-{image && (
-<>
-<Image source={{ uri: image }} style={styles.preview} />
-
-<View style={styles.row}>
-<TouchableOpacity style={styles.primaryBtn} onPress={pickImage}>
-<Text style={styles.btnWhite}>Change</Text>
+<TouchableOpacity style={styles.smallBtn} onPress={cancelForm}>
+<Text style={{color:"red"}}>Cancel</Text>
 </TouchableOpacity>
 
-<TouchableOpacity style={styles.dangerBtn} onPress={() => setImage(null)}>
-<Text style={styles.btnWhite}>Remove</Text>
-</TouchableOpacity>
-</View>
 </>
 )}
 
-</View>
-
-{/* ✅ EXISTING INPUTS (UNCHANGED) */}
-<Input label="Name" value={member.name}
-onChange={(t) => setMember({ ...member, name: t })} />
-
-<Input label="Phone" value={member.phone}
-onChange={(t) => setMember({ ...member, phone: t })} />
-
-<Input label="Address" value={member.address}
-onChange={(t) => setMember({ ...member, address: t })} />
-
-<Input label="Occupation" value={member.occupation}
-onChange={(t) => setMember({ ...member, occupation: t })} />
-
-{/* ✅ EXISTING MINISTRY INPUT (KEPT) */}
-<Text style={styles.label}>Ministry</Text>
-<TextInput
-style={styles.input}
-value={member.ministry}
-onChangeText={(t) => setMember({ ...member, ministry: t })}
-placeholder="Type ministry"
-/>
-
-{/* ✅ NEW MULTI-SELECT (ADDED ONLY) */}
-<View style={styles.chipRow}>
-{ministryOptions.map(opt => {
-
-const selected = member.ministries?.includes(opt);
-
-return (
-<TouchableOpacity
-key={opt}
-style={[
-styles.chip,
-selected && styles.activeChip
-]}
-onPress={() => toggleMinistry(opt)}
->
-<Text style={selected && styles.activeChipText}>
-{opt}
-</Text>
+{/* ✅ ADD BUTTON */}
+{userRole==="admin" && (
+<TouchableOpacity style={styles.addBtn} onPress={()=>{
+setMember(defaultMember);
+setEditingId(null);
+setShowForm(true);
+}}>
+<Text style={styles.white}>+ Add Member</Text>
 </TouchableOpacity>
-);
-})}
+)}
+
+{/* ✅ SPACING */}
+<View style={styles.divider} />
+
+<Text style={styles.sectionHeader}>Member List</Text>
+
+<View style={styles.listContainer}>
+<FlatList
+data={filtered}
+keyExtractor={i=>i.id}
+renderItem={({item})=>(
+<View style={styles.card}>
+
+<Text>{item.name}</Text>
+
+<View style={styles.rowBetween}>
+
+<TouchableOpacity onPress={()=>setSelectedQR(item.id)}>
+<QRCode value={item.id} size={60}/>
+</TouchableOpacity>
+
+{userRole==="admin" && (
+<View style={{flexDirection:"row"}}>
+
+<TouchableOpacity style={styles.editBtn}
+onPress={()=>{setMember(item);setEditingId(item.id);setShowForm(true);}}>
+<Text style={styles.white}>Edit</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.deleteBtn}
+onPress={()=>deleteMember(item.id)}>
+<Text style={styles.white}>Delete</Text>
+</TouchableOpacity>
+
+</View>
+)}
+
 </View>
 
-{/* ✅ BAPTISM (UNCHANGED) */}
-<Text style={styles.label}>Baptism Status</Text>
-<View style={styles.chipRow}>
-{baptismOptions.map(opt => (
-<TouchableOpacity
-key={opt}
-style={[
-styles.chip,
-member.baptismStatus === opt && styles.activeChip
-]}
-onPress={() =>
-setMember({ ...member, baptismStatus: opt })
+</View>
+)}
+/>
+</View>
+
+{/* ✅ QR MODAL */}
+<Modal visible={!!selectedQR} transparent>
+<View style={styles.modalWrap}>
+<View style={styles.modalBox}>
+<QRCode value={selectedQR} size={200}/>
+<TouchableOpacity onPress={()=>setSelectedQR(null)}>
+<Text>Close</Text>
+</TouchableOpacity>
+</View>
+</View>
+</Modal>
+
+{/* ✅ MINISTRY MODAL */}
+<Modal visible={ministryModal} transparent>
+<ModalBox
+title={ministryIndex!==null?"Edit Ministry":"Add Ministry"}
+value={ministryInput}
+onChange={setMinistryInput}
+onSave={()=>saveList(ministryInput,ministryIndex,ministries,setMinistries,closeMinistryModal)}
+onCancel={closeMinistryModal}
+/>
+</Modal>
+
+{/* ✅ BAPTISM MODAL */}
+<Modal visible={baptismModal} transparent>
+<ModalBox
+title={baptismIndex!==null?"Edit Baptism":"Add Baptism"}
+value={baptismInput}
+onChange={setBaptismInput}
+onSave={()=>saveList(baptismInput,baptismIndex,baptismList,setBaptismList,closeBaptismModal)}
+onCancel={closeBaptismModal}
+/>
+</Modal>
+
+{/* ✅ STATUS MODAL */}
+<Modal visible={statusModal} transparent>
+<ModalBox
+title={statusIndex!==null?"Edit Status":"Add Status"}
+value={statusInput}
+onChange={setStatusInput}
+onSave={()=>saveList(statusInput,statusIndex,statusList,setStatusList,closeStatusModal)}
+onCancel={closeStatusModal}
+/>
+</Modal>
+
+</View>
+);
 }
+
+//////////////////////////////////////////////////////////////
+/* ✅ COMPONENTS */
+//////////////////////////////////////////////////////////////
+
+const Input=({label,value,onChange})=>(
+<>
+<Text style={styles.label}>{label}</Text>
+<TextInput style={styles.input} value={value} onChangeText={onChange}/>
+</>
+);
+
+const Chips=({label,list,value,onSelect,onEdit,onAdd})=>(
+<>
+<Text style={styles.label}>{label}</Text>
+<View style={styles.chipRow}>
+{list.map((m,i)=>(
+<TouchableOpacity key={m}
+style={[styles.chip,value===m&&styles.activeChip]}
+onPress={()=>onSelect(m)}
+onLongPress={()=>onEdit(i)}
 >
-<Text style={
-member.baptismStatus === opt && styles.activeChipText
-}>
-{opt}
-</Text>
+<Text style={value===m&&styles.activeText}>{m}</Text>
 </TouchableOpacity>
 ))}
 </View>
 
-<Input label="Emergency Contact"
-value={member.emergencyContact}
-onChange={(t) =>
-setMember({ ...member, emergencyContact: t })
-} />
-
-<Input label="Membership Duration"
-value={member.membershipDuration}
-onChange={(t) =>
-setMember({ ...member, membershipDuration: t })
-} />
-
-{/* ✅ BUTTONS (UNCHANGED) */}
-<View style={styles.row}>
-<TouchableOpacity style={styles.primaryBtn} onPress={saveMember}>
-<Text style={styles.btnWhite}>Save</Text>
+<TouchableOpacity onPress={onAdd}>
+<Text style={styles.addLink}>+ Add</Text>
 </TouchableOpacity>
-
-<TouchableOpacity style={styles.secondaryBtn} onPress={clearForm}>
-<Text>Clear</Text>
-</TouchableOpacity>
-
-<TouchableOpacity style={styles.cancelBtn} onPress={cancelForm}>
-<Text>Cancel</Text>
-</TouchableOpacity>
-</View>
-
-{/* ✅ SEARCH */}
-<TextInput
-style={styles.input}
-placeholder="Search members..."
-value={search}
-onChangeText={setSearch}
-/>
-
-</View>
 </>
-}
-
-renderItem={({ item }) => (
-<View style={styles.listCard}>
-<Image
-source={{ uri: item.photo || "https://via.placeholder.com/60" }}
-style={styles.avatar}
-/>
-<View>
-<Text style={styles.name}>{item.name}</Text>
-<Text style={styles.sub}>{item.phone}</Text>
-
-{/* ✅ SAFE DISPLAY (OLD + NEW DATA) */}
-<Text style={styles.sub}>
-{item.ministries?.length > 0
-? item.ministries.join(", ")
-: item.ministry}
-</Text>
-
-</View>
-</View>
-)}
-/>
-</View>
 );
-}
 
-/* ✅ INPUT COMPONENT */
-const Input = ({ label, value, onChange }) => (
-<View style={{ marginBottom: 10 }}>
-<Text style={{ fontSize: 12, color: "#666" }}>{label}</Text>
-<TextInput style={styles.input} value={value} onChangeText={onChange} />
+const ModalBox=({title,value,onChange,onSave,onCancel})=>(
+<View style={styles.modalWrap}>
+<View style={styles.modalBox}>
+<Text style={styles.modalTitle}>{title}</Text>
+<TextInput style={styles.input} value={value} onChangeText={onChange}/>
+<TouchableOpacity style={styles.saveBtn} onPress={onSave}>
+<Text style={styles.white}>Save</Text>
+</TouchableOpacity>
+<TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
+<Text style={styles.cancelText}>Cancel</Text>
+</TouchableOpacity>
+</View>
 </View>
 );
 
-/* ✅ YOUR ORIGINAL STYLES + SMALL ADDITIONS */
-const styles = StyleSheet.create({
+//////////////////////////////////////////////////////////////
+/* ✅ STYLES */
+//////////////////////////////////////////////////////////////
 
-container: { flex: 1, backgroundColor: "#f4f6fb" },
-
-header: {
-backgroundColor: "#4B3F72",
-padding: 30
-},
-
-headerText: { color: "#fff", fontSize: 18, fontWeight: "600" },
-
-card: {
-backgroundColor: "#fff",
-margin: 15,
-padding: 15,
-borderRadius: 15
-},
-
-input: {
-backgroundColor: "#f7f8fb",
-padding: 10,
-borderRadius: 8,
-marginTop: 5
-},
-
-photoSection: { alignItems: "center", marginBottom: 15 },
-
-photoBtn: {
-backgroundColor: "#ddd",
-padding: 10,
-borderRadius: 8,
-marginBottom: 6
-},
-
-preview: {
-width: 80,
-height: 80,
-borderRadius: 40,
-marginBottom: 10
-},
-
-row: {
-flexDirection: "row",
-justifyContent: "space-between",
-marginTop: 10
-},
-
-primaryBtn: {
-flex: 1,
-backgroundColor: "#4B3F72",
-padding: 10,
-borderRadius: 8,
-marginRight: 5,
-alignItems: "center"
-},
-
-secondaryBtn: {
-flex: 1,
-backgroundColor: "#ddd",
-padding: 10,
-borderRadius: 8,
-marginHorizontal: 5,
-alignItems: "center"
-},
-
-cancelBtn: {
-flex: 1,
-backgroundColor: "#eee",
-padding: 10,
-borderRadius: 8,
-marginLeft: 5,
-alignItems: "center"
-},
-
-btnWhite: { color: "#fff" },
-
-dangerBtn: {
-flex: 1,
-backgroundColor: "#e74c3c",
-padding: 10,
-borderRadius: 8,
-marginLeft: 5,
-alignItems: "center"
-},
-
-cancelText: { marginTop: 5, color: "#666" },
-
-chipRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10 },
-
-chip: {
-backgroundColor: "#eee",
-padding: 6,
-borderRadius: 15,
-marginRight: 6,
-marginBottom: 6
-},
-
-activeChip: { backgroundColor: "#4B3F72" },
-
-activeChipText: { color: "#fff" },
-
-listCard: {
-flexDirection: "row",
-backgroundColor: "#fff",
-marginHorizontal: 15,
-marginBottom: 8,
-padding: 10,
-borderRadius: 10
-},
-
-avatar: {
-width: 50,
-height: 50,
-borderRadius: 25,
-marginRight: 10
-},
-
-name: { fontWeight: "600" },
-sub: { fontSize: 12, color: "#666" },
-
-/* ✅ NEW ONLY */
-photoOptions: {
-backgroundColor: "#fff",
-padding: 10,
-borderRadius: 8,
-marginTop: 6
-},
-
-optionText: {
-marginBottom: 8
-}
-
+const styles=StyleSheet.create({
+container:{flex:1,padding:15},
+header:{fontSize:18,fontWeight:"600"},
+sectionHeader:{fontSize:16,fontWeight:"600"},
+input:{backgroundColor:"#fff",padding:10,marginVertical:5},
+btn:{backgroundColor:"#4B3F72",padding:10,alignItems:"center"},
+white:{color:"#fff"},
+smallBtn:{marginTop:5,alignItems:"center"},
+addBtn:{backgroundColor:"#1BA97F",padding:12,marginTop:15,alignItems:"center"},
+divider:{height:1,backgroundColor:"#ddd",marginVertical:15},
+card:{backgroundColor:"#fff",padding:10,marginVertical:5},
+rowBetween:{flexDirection:"row",justifyContent:"space-between"},
+editBtn:{backgroundColor:"#3498db",padding:6,marginRight:5},
+deleteBtn:{backgroundColor:"#e74c3c",padding:6},
+chipRow:{flexDirection:"row",flexWrap:"wrap"},
+chip:{backgroundColor:"#eee",padding:8,margin:3},
+activeChip:{backgroundColor:"#4B3F72"},
+activeText:{color:"#fff"},
+addLink:{color:"#1BA97F"},
+modalWrap:{flex:1,justifyContent:"center",backgroundColor:"#0006"},
+modalBox:{backgroundColor:"#fff",margin:20,padding:20},
+modalTitle:{fontWeight:"600",marginBottom:10},
+saveBtn:{backgroundColor:"#4B3F72",padding:10,marginTop:10},
+cancelBtn:{marginTop:10,alignItems:"center"},
+cancelText:{color:"red"}
 });
+``
