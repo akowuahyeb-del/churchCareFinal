@@ -32,13 +32,28 @@ export default function HomeScreen() {
 
   const activeFlyers = flyers.filter(f => f.active);
 
-  /* ✅ EVENTS */
-  const [events] = useState([
+  /* ✅ EVENTS (UPDATED ONLY) */
+  const [events, setEvents] = useState([
     { id: "1", title: "Sunday Service", date: "9:00 AM", desc: "Main worship", active: true },
     { id: "2", title: "Youth Meetup", date: "Friday 6PM", desc: "Youth fellowship", active: true }
   ]);
 
   const activeEvents = events.filter(e => e.active);
+
+  /* ✅ NEW FUNCTIONS ONLY */
+  const deleteEvent = (id) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
+  };
+
+  const editEvent = (id) => {
+    setEvents(prev =>
+      prev.map(e =>
+        e.id === id
+          ? { ...e, title: e.title + " (Edited)" }
+          : e
+      )
+    );
+  };
 
   /* ✅ AUTO SLIDE */
   useEffect(() => {
@@ -80,7 +95,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ✅ FIXED: paddingBottom ADDED */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -107,7 +121,6 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
 
-          {/* DOTS */}
           <View style={styles.dotsContainer}>
             {activeFlyers.map((_, index) => (
               <View
@@ -167,7 +180,26 @@ export default function HomeScreen() {
                 <Text style={styles.eventDate}>{event.date}</Text>
                 <Text style={styles.eventDesc}>{event.desc}</Text>
               </View>
-              <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
+
+              {/* ✅ ONLY THIS SIDE WAS UPDATED */}
+              <View style={{ alignItems: "center" }}>
+                <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
+
+                <TouchableOpacity
+                  style={{ marginTop: 4 }}
+                  onPress={() => editEvent(event.id)}
+                >
+                  <Ionicons name="create-outline" size={16} color="#1BA97F" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ marginTop: 4 }}
+                  onPress={() => deleteEvent(event.id)}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#ff4d4d" />
+                </TouchableOpacity>
+              </View>
+
             </View>
           ))}
         </View>
@@ -180,7 +212,7 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* ✅ QUICK ACTIONS (FIXED VISIBILITY) */}
+        {/* ✅ QUICK ACTIONS */}
         <Text style={[styles.sectionTitle, { paddingHorizontal: 15 }]}>
           Quick Actions
         </Text>
@@ -222,189 +254,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-/* ✅ STYLES */
-const styles = StyleSheet.create({
-
-  header: {
-    backgroundColor: "#4B3F72",
-    paddingTop: 40,
-    paddingBottom: 12,
-    paddingHorizontal: 15
-  },
-
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-
-  logo: {
-    width: 28,
-    height: 28,
-    marginRight: 8
-  },
-
-  headerTitle: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700"
-  },
-
-  headerSub: {
-    color: "#ddd",
-    fontSize: 11
-  },
-
-  carouselWrapper: {
-    marginTop: 10,
-    paddingHorizontal: 15
-  },
-
-  carouselImage: {
-    width: "100%",
-    height: 150,
-    borderRadius: 12
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 8
-  },
-
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 6
-  },
-
-  dot: {
-    width: 6,
-    height: 6,
-    backgroundColor: "#ccc",
-    margin: 4,
-    borderRadius: 3
-  },
-
-  activeDot: {
-    backgroundColor: "#4B3F72"
-  },
-
-  adminPanel: {
-    paddingHorizontal: 15,
-    marginTop: 10
-  },
-
-  adminTitle: {
-    fontWeight: "700",
-    marginBottom: 6
-  },
-
-  adminRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-    backgroundColor: "#fff",
-    padding: 8,
-    borderRadius: 8
-  },
-
-  adminImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 6
-  },
-
-  statusText: {
-    fontSize: 12
-  },
-
-  adminBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6
-  },
-
-  adminBtnText: {
-    color: "#fff",
-    fontSize: 10
-  },
-
-  eventCard: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    alignItems: "center"
-  },
-
-  eventTitle: {
-    fontWeight: "700",
-    fontSize: 13
-  },
-
-  eventDate: {
-    fontSize: 11,
-    color: "#4B3F72"
-  },
-
-  eventDesc: {
-    fontSize: 11,
-    color: "#666"
-  },
-
-  messageCard: {
-    backgroundColor: "#fff",
-    margin: 15,
-    padding: 12,
-    borderRadius: 10
-  },
-
-  messageTitle: {
-    fontWeight: "600"
-  },
-
-  messageText: {
-    fontSize: 12,
-    color: "#555"
-  },
-
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 15,
-    marginBottom: 40
-  },
-
-  quickCard: {
-    width: "48%",
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 8,
-    alignItems: "center"
-  },
-
-  quickText: {
-    fontSize: 11,
-    marginTop: 3,
-    fontWeight: "600"
-  },
-
-  modalWrap: {
-    flex: 1,
-    backgroundColor: "#000c",
-    justifyContent: "center",
-    alignItems: "center"
-  },
-
-  fullImage: {
-    width: 320,
-    height: 480,
-    borderRadius: 16
-  }
-
-});
-``
