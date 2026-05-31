@@ -9,16 +9,16 @@ import {
   Dimensions,
   Animated,
   Modal,
-  Pressable,
-  Alert,
-  TextInput
+  Pressable
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+
 import { Ionicons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
+
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
@@ -26,38 +26,22 @@ export default function HomeScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  /* ✅ FLYERS */
   const [flyers, setFlyers] = useState([
     { id: "1", image: require("../assets/flyer1.jpg"), active: true },
     { id: "2", image: require("../assets/flyer2.jpg"), active: true },
     { id: "3", image: require("../assets/flyer3.jpg"), active: false }
   ]);
 
-  const [pastorMessage, setPastorMessage] = useState(
-    "Stay strong in faith. God is working in your life this week."
-  );
-  const [editingMessage, setEditingMessage] = useState(false);
-
-  const [events, setEvents] = useState([
-    { id: "1", title: "Sunday Service", time: new Date() },
-    { id: "2", title: "Youth Meeting", time: new Date() }
-  ]);
-
-  const [addingEvent, setAddingEvent] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newTime, setNewTime] = useState(new Date());
-
-  const [editingEventId, setEditingEventId] = useState(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editTime, setEditTime] = useState(new Date());
-
-  const [showPicker, setShowPicker] = useState(false);
-
   const activeFlyers = flyers.filter(f => f.active);
 
+  /* ✅ AUTO SLIDE */
   useEffect(() => {
+
     if (activeFlyers.length === 0) return;
 
     const interval = setInterval(() => {
+
       currentIndex.current =
         (currentIndex.current + 1) % activeFlyers.length;
 
@@ -67,238 +51,359 @@ export default function HomeScreen() {
         x: currentIndex.current * (screenWidth - 30),
         animated: true
       });
+
     }, 3000);
 
     return () => clearInterval(interval);
+
   }, [flyers]);
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString(undefined, {
-      weekday: "short",
-      day: "numeric",
-      month: "short"
-    }) + " • " + date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+  /* ✅ SHRINK EFFECT */
+  const carouselHeight = scrollY.interpolate({
+    inputRange: [0, 150],
+    outputRange: [180, 110],
+    extrapolate: "clamp"
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
 
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Image source={require("../assets/logo.png")} style={styles.logo} />
-          <View>
-            <Text style={styles.headerTitle}>ChurchCare</Text>
-            <Text style={styles.headerSub}>Welcome Back</Text>
-          </View>
-        </View>
-      </View>
-
-      <Animated.ScrollView contentContainerStyle={{ padding: 15, paddingBottom: 120 }}>
-
+      {/* ✅ CAROUSEL */}
+      <Animated.View style={[styles.carouselWrapper, { height: carouselHeight }]}>
         <Text style={styles.sectionTitle}>Featured Events</Text>
 
-        <ScrollView ref={scrollRef} horizontal pagingEnabled>
-          {activeFlyers.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              onPress={() => setSelectedImage(item.image)}
-              style={{ width: screenWidth - 30, marginRight: 10 }}
-            >
-              <Image source={item.image} style={styles.carouselImage} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {activeFlyers.length === 0 ? (
+          <Text style={{ textAlign: "center", color: "#777" }}>
+            No active flyers
+          </Text>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+          >
+            {activeFlyers.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setSelectedImage(item.image)}
+                style={{ width: screenWidth - 30, marginRight: 10 }}
+              >
+                <Image source={item.image} style={styles.carouselImage} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
+        {/* ✅ DOTS */}
         <View style={styles.dotsContainer}>
           {activeFlyers.map((_, index) => (
-            <View key={index} style={[styles.dot, activeIndex === index && styles.activeDot]} />
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                activeIndex === index && styles.activeDot
+              ]}
+            />
           ))}
         </View>
+      </Animated.View>
 
-        <Text style={styles.sectionTitle}>Message from Pastor</Text>
+      {/* ✅ ADMIN CONTROL PANEL */}
+      <View style={styles.adminPanel}>
+        <Text style={styles.adminTitle}>Manage Flyers</Text>
 
-        <View style={styles.pastorBox}>
-          {editingMessage ? (
-            <>
-              <TextInput value={pastorMessage} onChangeText={setPastorMessage} style={styles.input} />
-              <TouchableOpacity style={styles.saveBtn} onPress={() => setEditingMessage(false)}>
-                <Text style={{ color: "#fff" }}>Save</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.pastorText}>{pastorMessage}</Text>
-              <TouchableOpacity onPress={() => setEditingMessage(true)}>
-                <Text style={styles.editText}>Edit Message</Text>
-              </TouchableOpacity>
-            </>
-          )}
+        {flyers.map((item) => (
+          <View key={item.id} style={styles.adminRow}>
+
+            <Image source={item.image} style={styles.adminImage} />
+
+            <Text style={styles.statusText}>
+              {item.active ? "Active" : "Inactive"}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.adminBtn,
+                { backgroundColor: item.active ? "#ff4d4d" : "#1BA97F" }
+              ]}
+              onPress={() => {
+                setFlyers(prev =>
+                  prev.map(f =>
+                    f.id === item.id
+                      ? { ...f, active: !f.active }
+                      : f
+                  )
+                );
+              }}
+            >
+              <Text style={styles.adminBtnText}>
+                {item.active ? "Deactivate" : "Activate"}
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        ))}
+
+      </View>
+
+      {/* ✅ SCROLLABLE CONTENT */}
+      <Animated.ScrollView
+        contentContainerStyle={{ padding: 15, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+      >
+
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <Image
+              source={require("../assets/logo.png")}
+              style={styles.logo}
+            />
+            <View>
+              <Text style={styles.headerTitle}>ChurchCare</Text>
+              <Text style={styles.headerSub}>Welcome Back</Text>
+            </View>
+          </View>
         </View>
 
+        {/* MESSAGE */}
+        <View style={styles.messageCard}>
+          <Text style={styles.messageTitle}>Message from Pastor</Text>
+          <Text style={styles.messageText}>
+            Stay strong in faith. Continue to grow spiritually.
+          </Text>
+        </View>
+
+        {/* QUICK ACTIONS */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         <View style={styles.quickGrid}>
-          <TouchableOpacity style={[styles.quickCard, styles.attCard]}>
-            <Text style={styles.quickText}>Attendance</Text>
+
+          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#E8F0FE" }]}>
+            <Ionicons name="checkmark-circle-outline" size={18} color="#2F55D4" />
+            <Text style={[styles.quickText, { color: "#2F55D4" }]}>Attendance</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.quickCard, styles.memberCard]}>
-            <Text style={styles.quickText}>Members</Text>
+
+          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#E6F7EF" }]}>
+            <Ionicons name="people-outline" size={18} color="#1BA97F" />
+            <Text style={[styles.quickText, { color: "#1BA97F" }]}>Members</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.quickCard, styles.reportCard]}>
-            <Text style={styles.quickText}>Reports</Text>
+
+          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF4E5" }]}>
+            <Ionicons name="analytics-outline" size={18} color="#D97706" />
+            <Text style={[styles.quickText, { color: "#D97706" }]}>Reports</Text>
           </TouchableOpacity>
+
         </View>
 
+        {/* EVENTS */}
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
-        <View style={{ marginBottom: 15 }}>
-
-          {events.map((item) => (
-            <View key={item.id} style={styles.eventRow}>
-
-              {editingEventId === item.id ? (
-                <>
-                  <View>
-                    <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.input} />
-
-                    <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
-                      <Text>{formatDate(editTime)}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setEvents(prev =>
-                        prev.map(e =>
-                          e.id === item.id
-                            ? { ...e, title: editTitle, time: editTime }
-                            : e
-                        )
-                      );
-                      setEditingEventId(null);
-                    }}
-                  >
-                    <Text style={{ color: "#1BA97F" }}>Save</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <View>
-                    <Text style={styles.eventTitle}>{item.title}</Text>
-                    <Text style={styles.eventTime}>{formatDate(item.time)}</Text>
-                  </View>
-
-                  <View style={{ flexDirection: "row", gap: 10 }}>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        setEditingEventId(item.id);
-                        setEditTitle(item.title);
-                        setEditTime(item.time);
-                      }}
-                    >
-                      <Ionicons name="create-outline" size={18} color="blue" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert("Delete", "Delete event?", [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Delete",
-                            onPress: () =>
-                              setEvents(prev => prev.filter(e => e.id !== item.id))
-                          }
-                        ]);
-                      }}
-                    >
-                      <Ionicons name="trash-outline" size={18} color="red" />
-                    </TouchableOpacity>
-
-                  </View>
-                </>
-              )}
-
-            </View>
-          ))}
-
-          {addingEvent ? (
-            <View style={styles.addForm}>
-              <TextInput value={newTitle} onChangeText={setNewTitle} style={styles.input} />
-
-              <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
-                <Text>{formatDate(newTime)}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.saveBtn}
-                onPress={() => {
-                  setEvents(prev => [
-                    ...prev,
-                    { id: Date.now().toString(), title: newTitle, time: newTime }
-                  ]);
-                  setAddingEvent(false);
-                  setNewTitle("");
-                }}
-              >
-                <Text style={{ color: "#fff" }}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.addBtn} onPress={() => setAddingEvent(true)}>
-              <Text style={{ color: "#fff" }}>+ Add Event</Text>
-            </TouchableOpacity>
-          )}
-
+        <View style={styles.eventCard}>
+          <Text style={styles.eventTitle}>Sunday Service</Text>
+          <Text style={styles.eventSub}>10:00 AM</Text>
         </View>
 
-        {showPicker && (
-          <DateTimePicker
-            value={editingEventId ? editTime : newTime}
-            mode="datetime"
-            onChange={(e, d) => {
-              setShowPicker(false);
-              if (!d) return;
-              editingEventId ? setEditTime(d) : setNewTime(d);
-            }}
-          />
-        )}
+        <View style={styles.eventCard}>
+          <Text style={styles.eventTitle}>Midweek Prayer</Text>
+          <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
+        </View>
 
       </Animated.ScrollView>
+
+      {/* ✅ FULL IMAGE MODAL */}
+      <Modal visible={!!selectedImage} transparent>
+        <View style={styles.modalWrap}>
+          <Pressable onPress={() => setSelectedImage(null)}>
+            <Image source={selectedImage} style={styles.fullImage} />
+          </Pressable>
+        </View>
+      </Modal>
 
     </View>
   );
 }
 
-/* STYLES UNCHANGED */
+/* ✅ STYLES */
 const styles = StyleSheet.create({
-  header: { backgroundColor: "#4B3F72", padding: 16, borderRadius: 12, margin: 15 },
-  headerRow: { flexDirection: "row", alignItems: "center" },
-  logo: { width: 38, height: 38, marginRight: 10 },
-  headerTitle: { color: "#fff", fontWeight: "700" },
-  headerSub: { color: "#ddd", fontSize: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", marginBottom: 8 },
-  carouselImage: { width: "100%", height: 140, borderRadius: 12 },
-  dotsContainer: { flexDirection: "row", justifyContent: "center", marginVertical: 6 },
-  dot: { width: 6, height: 6, backgroundColor: "#ccc", margin: 4 },
-  activeDot: { backgroundColor: "#4B3F72" },
-  pastorBox: { backgroundColor: "#fff", padding: 12, borderRadius: 8, marginBottom: 15 },
-  pastorText: { fontSize: 13 },
-  editText: { color: "#1BA97F", fontSize: 12 },
-  input: { backgroundColor: "#eee", padding: 8, borderRadius: 6, marginBottom: 6 },
-  saveBtn: { backgroundColor: "#1BA97F", padding: 10, borderRadius: 6 },
-  eventRow: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#fff", padding: 10, borderRadius: 8, marginBottom: 6 },
-  eventTitle: { fontWeight: "600" },
-  eventTime: { fontSize: 12 },
-  addBtn: { backgroundColor: "#4B3F72", padding: 10, borderRadius: 8, alignItems: "center" },
-  addForm: { backgroundColor: "#fff", padding: 10, borderRadius: 8 },
-  quickGrid: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  quickCard: { width: "32%", padding: 12, borderRadius: 10 },
-  attCard: { backgroundColor: "#2F55D4" },
-  memberCard: { backgroundColor: "#1BA97F" },
-  reportCard: { backgroundColor: "#D97706" },
-  quickText: { color: "#fff" }
+
+  carouselWrapper: {
+    backgroundColor: "#f4f6fb",
+    padding: 15
+  },
+
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 8,
+    color: "#222"
+  },
+
+  carouselImage: {
+    width: "100%",
+    height: 140,
+    borderRadius: 12
+  },
+
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 6
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    backgroundColor: "#ccc",
+    margin: 4,
+    borderRadius: 3
+  },
+
+  activeDot: {
+    backgroundColor: "#4B3F72"
+  },
+
+  adminPanel: {
+    paddingHorizontal: 15,
+    marginTop: 5
+  },
+
+  adminTitle: {
+    fontWeight: "700",
+    marginBottom: 6
+  },
+
+  adminRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 8
+  },
+
+  adminImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6
+  },
+
+  statusText: {
+    fontSize: 12
+  },
+
+  adminBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6
+  },
+
+  adminBtnText: {
+    color: "#fff",
+    fontSize: 10
+  },
+
+  header: {
+    backgroundColor: "#4B3F72",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+
+  logo: {
+    width: 38,
+    height: 38,
+    marginRight: 10,
+    borderRadius: 8,
+    resizeMode: "contain"
+  },
+
+  headerTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700"
+  },
+
+  headerSub: {
+    color: "#ddd",
+    fontSize: 12
+  },
+
+  messageCard: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12
+  },
+
+  messageTitle: {
+    fontWeight: "600"
+  },
+
+  messageText: {
+    fontSize: 12,
+    color: "#555"
+  },
+
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between"
+  },
+
+  quickCard: {
+    width: "48%",
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+    alignItems: "center"
+  },
+
+  quickText: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 3
+  },
+
+  eventCard: {
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10
+  },
+
+  eventTitle: {
+    fontWeight: "700",
+    fontSize: 13
+  },
+
+  eventSub: {
+    fontSize: 11,
+    color: "#777"
+  },
+
+  modalWrap: {
+    flex: 1,
+    backgroundColor: "#000c",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  fullImage: {
+    width: 320,
+    height: 480,
+    borderRadius: 16
+  }
+
 });
