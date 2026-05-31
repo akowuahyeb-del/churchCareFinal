@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
   Dimensions,
-  Animated,
   Modal,
   Pressable
 } from "react-native";
@@ -17,8 +16,6 @@ import { Ionicons } from "@expo/vector-icons";
 export default function HomeScreen() {
 
   const screenWidth = Dimensions.get("window").width;
-
-  const scrollY = useRef(new Animated.Value(0)).current;
 
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
@@ -34,6 +31,14 @@ export default function HomeScreen() {
   ]);
 
   const activeFlyers = flyers.filter(f => f.active);
+
+  /* ✅ EVENTS */
+  const [events] = useState([
+    { id: "1", title: "Sunday Service", date: "9:00 AM", desc: "Main worship", active: true },
+    { id: "2", title: "Youth Meetup", date: "Friday 6PM", desc: "Youth fellowship", active: true }
+  ]);
+
+  const activeEvents = events.filter(e => e.active);
 
   /* ✅ AUTO SLIDE */
   useEffect(() => {
@@ -58,18 +63,11 @@ export default function HomeScreen() {
 
   }, [flyers]);
 
-  /* ✅ SHRINK EFFECT */
-  const carouselHeight = scrollY.interpolate({
-    inputRange: [0, 150],
-    outputRange: [180, 110],
-    extrapolate: "clamp"
-  });
-
   return (
-    <View style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
+    <View style={{ flex: 1, backgroundColor: "#f4f6fb", paddingBottom: 10 }}>
 
-      {/* ✅ STICKY HEADER (ONLY ADDITION) */}
-      <View style={styles.stickyHeader}>
+      {/* ✅ HEADER */}
+      <View style={styles.header}>
         <View style={styles.headerRow}>
           <Image
             source={require("../assets/logo.png")}
@@ -82,15 +80,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ✅ CAROUSEL */}
-      <Animated.View style={[styles.carouselWrapper, { height: carouselHeight, marginTop: 80 }]}>
-        <Text style={styles.sectionTitle}>Featured Events</Text>
+      {/* ✅ FIXED: paddingBottom ADDED */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
 
-        {activeFlyers.length === 0 ? (
-          <Text style={{ textAlign: "center", color: "#777" }}>
-            No active flyers
-          </Text>
-        ) : (
+        {/* ✅ CAROUSEL */}
+        <View style={styles.carouselWrapper}>
+          <Text style={styles.sectionTitle}>Featured Events</Text>
+
           <ScrollView
             ref={scrollRef}
             horizontal
@@ -107,85 +106,73 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-        )}
 
-        {/* DOTS */}
-        <View style={styles.dotsContainer}>
-          {activeFlyers.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                activeIndex === index && styles.activeDot
-              ]}
-            />
+          {/* DOTS */}
+          <View style={styles.dotsContainer}>
+            {activeFlyers.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  activeIndex === index && styles.activeDot
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ✅ MANAGE FLYERS */}
+        <View style={styles.adminPanel}>
+          <Text style={styles.adminTitle}>Manage Flyers</Text>
+
+          {flyers.map((item) => (
+            <View key={item.id} style={styles.adminRow}>
+              <Image source={item.image} style={styles.adminImage} />
+
+              <Text style={styles.statusText}>
+                {item.active ? "Active" : "Inactive"}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.adminBtn,
+                  { backgroundColor: item.active ? "#ff4d4d" : "#1BA97F" }
+                ]}
+                onPress={() => {
+                  setFlyers(prev =>
+                    prev.map(f =>
+                      f.id === item.id
+                        ? { ...f, active: !f.active }
+                        : f
+                    )
+                  );
+                }}
+              >
+                <Text style={styles.adminBtnText}>
+                  {item.active ? "Deactivate" : "Activate"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
-      </Animated.View>
 
-      {/* ✅ ADMIN CONTROL PANEL */}
-      <View style={styles.adminPanel}>
-        <Text style={styles.adminTitle}>Manage Flyers</Text>
+        {/* ✅ EVENTS */}
+        <View style={{ paddingHorizontal: 15 }}>
+          <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
-        {flyers.map((item) => (
-          <View key={item.id} style={styles.adminRow}>
-
-            <Image source={item.image} style={styles.adminImage} />
-
-            <Text style={styles.statusText}>
-              {item.active ? "Active" : "Inactive"}
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.adminBtn,
-                { backgroundColor: item.active ? "#ff4d4d" : "#1BA97F" }
-              ]}
-              onPress={() => {
-                setFlyers(prev =>
-                  prev.map(f =>
-                    f.id === item.id
-                      ? { ...f, active: !f.active }
-                      : f
-                  )
-                );
-              }}
-            >
-              <Text style={styles.adminBtnText}>
-                {item.active ? "Deactivate" : "Activate"}
-              </Text>
-            </TouchableOpacity>
-
-          </View>
-        ))}
-
-      </View>
-
-      {/* ✅ SCROLLABLE CONTENT */}
-      <Animated.ScrollView
-        contentContainerStyle={{ padding: 15, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-      >
-
-        {/* HEADER (unchanged) */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <Image
-              source={require("../assets/logo.png")}
-              style={styles.logo}
-            />
-            <View>
-              <Text style={styles.headerTitle}>ChurchCare</Text>
-              <Text style={styles.headerSub}>Welcome Back</Text>
+          {activeEvents.map(event => (
+            <View key={event.id} style={styles.eventCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <Text style={styles.eventDate}>{event.date}</Text>
+                <Text style={styles.eventDesc}>{event.desc}</Text>
+              </View>
+              <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
             </View>
-          </View>
+          ))}
         </View>
 
-        {/* MESSAGE */}
+        {/* ✅ MESSAGE */}
         <View style={styles.messageCard}>
           <Text style={styles.messageTitle}>Message from Pastor</Text>
           <Text style={styles.messageText}>
@@ -193,27 +180,35 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        {/* QUICK ACTIONS */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        {/* ✅ QUICK ACTIONS (FIXED VISIBILITY) */}
+        <Text style={[styles.sectionTitle, { paddingHorizontal: 15 }]}>
+          Quick Actions
+        </Text>
 
         <View style={styles.quickGrid}>
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#E8F0FE" }]}>
             <Ionicons name="checkmark-circle-outline" size={18} color="#2F55D4" />
-            <Text style={[styles.quickText, { color: "#2F55D4" }]}>Attendance</Text>
+            <Text style={[styles.quickText, { color: "#2F55D4" }]}>
+              Attendance
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#E6F7EF" }]}>
             <Ionicons name="people-outline" size={18} color="#1BA97F" />
-            <Text style={[styles.quickText, { color: "#1BA97F" }]}>Members</Text>
+            <Text style={[styles.quickText, { color: "#1BA97F" }]}>
+              Members
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF4E5" }]}>
             <Ionicons name="analytics-outline" size={18} color="#D97706" />
-            <Text style={[styles.quickText, { color: "#D97706" }]}>Reports</Text>
+            <Text style={[styles.quickText, { color: "#D97706" }]}>
+              Reports
+            </Text>
           </TouchableOpacity>
         </View>
 
-      </Animated.ScrollView>
+      </ScrollView>
 
       {/* ✅ MODAL */}
       <Modal visible={!!selectedImage} transparent>
@@ -231,32 +226,50 @@ export default function HomeScreen() {
 /* ✅ STYLES */
 const styles = StyleSheet.create({
 
-  stickyHeader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
+  header: {
     backgroundColor: "#4B3F72",
-    padding: 16
+    paddingTop: 40,
+    paddingBottom: 12,
+    paddingHorizontal: 15
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+
+  logo: {
+    width: 28,
+    height: 28,
+    marginRight: 8
+  },
+
+  headerTitle: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700"
+  },
+
+  headerSub: {
+    color: "#ddd",
+    fontSize: 11
   },
 
   carouselWrapper: {
-    backgroundColor: "#f4f6fb",
-    padding: 15
-  },
-
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 8,
-    color: "#222"
+    marginTop: 10,
+    paddingHorizontal: 15
   },
 
   carouselImage: {
     width: "100%",
-    height: 140,
+    height: 150,
     borderRadius: 12
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8
   },
 
   dotsContainer: {
@@ -279,7 +292,7 @@ const styles = StyleSheet.create({
 
   adminPanel: {
     paddingHorizontal: 15,
-    marginTop: 5
+    marginTop: 10
   },
 
   adminTitle: {
@@ -318,42 +331,35 @@ const styles = StyleSheet.create({
     fontSize: 10
   },
 
-  header: {
-    backgroundColor: "#4B3F72",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12
-  },
-
-  headerRow: {
+  eventCard: {
     flexDirection: "row",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
     alignItems: "center"
   },
 
-  logo: {
-    width: 38,
-    height: 38,
-    marginRight: 10,
-    borderRadius: 8,
-    resizeMode: "contain"
+  eventTitle: {
+    fontWeight: "700",
+    fontSize: 13
   },
 
-  headerTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700"
+  eventDate: {
+    fontSize: 11,
+    color: "#4B3F72"
   },
 
-  headerSub: {
-    color: "#ddd",
-    fontSize: 12
+  eventDesc: {
+    fontSize: 11,
+    color: "#666"
   },
 
   messageCard: {
     backgroundColor: "#fff",
+    margin: 15,
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 12
+    borderRadius: 10
   },
 
   messageTitle: {
@@ -368,7 +374,9 @@ const styles = StyleSheet.create({
   quickGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    marginBottom: 40
   },
 
   quickCard: {
@@ -381,8 +389,8 @@ const styles = StyleSheet.create({
 
   quickText: {
     fontSize: 11,
-    fontWeight: "600",
-    marginTop: 3
+    marginTop: 3,
+    fontWeight: "600"
   },
 
   modalWrap: {
@@ -399,3 +407,4 @@ const styles = StyleSheet.create({
   }
 
 });
+``
