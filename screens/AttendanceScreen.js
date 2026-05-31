@@ -2,328 +2,321 @@ import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet,
   FlatList, TouchableOpacity,
-  TextInput, Modal, Alert
+  TextInput, Alert
 } from "react-native";
 
-/* ✅ FIREBASE IMPORT */
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Camera, CameraView } from "expo-camera";
+
 import { db } from "../firebase";
 import {
-  collection,
-  addDoc,
-  getDocs
+  collection, addDoc, getDocs,
+  deleteDoc, doc, query, where
 } from "firebase/firestore";
 
 export default function AttendanceScreen() {
 
-  /* ✅ SERVICES */
-  const [services, setServices] = useState([
-    "Sunday Service", "Midweek Service", "Choir"
-  ]);
+/* ✅ ROLE */
+const userRole = "admin";
 
-  const [types, setTypes] = useState([
-    "First Service", "Second Service", "Wedding"
-  ]);
+/* ✅ MODE */
+const [mode, setMode] = useState("manual");
 
-  const [selectedService, setSelectedService] = useState("Sunday Service");
-  const [selectedType, setSelectedType] = useState("First Service");
+/* ✅ CAMERA */
+const [permission, setPermission] = useState(false);
+const [scanned, setScanned] = useState(false);
 
-  const [serviceModal, setServiceModal] = useState(false);
-  const [typeModal, setTypeModal] = useState(false);
+/* ✅ DATE */
+const [dateObj, setDateObj] = useState(new Date());
+const [showPicker, setShowPicker] = useState(false);
+const today = dateObj.toISOString().split("T")[0];
 
-  /* ✅ SEARCH */
-  const [searchMember, setSearchMember] = useState("");
-  const [searchService, setSearchService] = useState("");
-  const [searchType, setSearchType] = useState("");
+/* ✅ CHURCH */
+const [selectedChurch, setSelectedChurch] = useState("church_1");
 
-  /* ✅ ADD NEW */
-  const [newService, setNewService] = useState("");
-  const [newType, setNewType] = useState("");
+/* ✅ MEMBERS */
+const [members, setMembers] = useState([]);
+const [searchMember, setSearchMember] = useState("");
 
-  /* ✅ MEMBERS (FROM FIREBASE) */
-  const [members, setMembers] = useState([]);
+/* ✅ SERVICE */
+const [selectedService] = useState("Sunday Service");
+const [selectedType] = useState("First Service");
 
-  const today = new Date().toISOString().split("T")[0];
+/* ✅ ATTENDANCE */
+const [attendance, setAttendance] = useState({});
+const [presentCount, setPresentCount] = useState(0);
 
-  /* ✅ LOAD MEMBERS FROM FIREBASE */
-  useEffect(() => {
-    loadMembers();
-  }, []);
+/* ✅ CAMERA PERMISSION */
+useEffect(() => {
+  (async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setPermission(status === "granted");
+  })();
+}, []);
 
-  const loadMembers = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "members"));
+/* ✅ LOAD MEMBERS */
+useEffect(() => { loadMembers(); }, [selectedChurch]);
 
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        attendance: []
-      }));
-
-      setMembers(data);
-
-    } catch (error) {
-      console.log("❌ Error loading members:", error);
-    }
-  };
-
-  /* ✅ ADD SERVICE */
-  const addService = () => {
-    if (!newService.trim()) return;
-    setServices(prev => [...prev, newService]);
-    setSelectedService(newService);
-    setNewService("");
-    setServiceModal(false);
-  };
-
-  /* ✅ ADD TYPE */
-  const addType = () => {
-    if (!newType.trim()) return;
-    setTypes(prev => [...prev, newType]);
-    setSelectedType(newType);
-    setNewType("");
-    setTypeModal(false);
-  };
-
-  /* ✅ FILTER MEMBERS */
-  const filteredMembers = members.filter(m =>
-    m.name.toLowerCase().includes(searchMember.toLowerCase())
+const loadMembers = async () => {
+  const q = query(
+    collection(db, "members"),
+    where("churchId", "==", selectedChurch)
   );
 
-  /* ✅ SAVE ATTENDANCE TO FIREBASE */
-  const saveAttendance = async (member, status) => {
-    try {
-      await addDoc(collection(db, "attendance"), {
-        memberId: member.id,
-        name: member.name,
-        service: selectedService,
-        type: selectedType,
-        status: status,
-        date: today,
-        createdAt: new Date()
-      });
+  const snap = await getDocs(q);
 
-      Alert.alert("✅ Saved", "Attendance recorded");
+  setMembers(snap.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  })));
+};
 
-    } catch (error) {
-      console.log("❌ Error saving:", error);
+/* ✅ LOAD ATTENDANCE */
+useEffect(() => { loadAttendance(); },
+[selectedChurch, dateObj, selectedService, selectedType]);
+
+const loadAttendance = async () => {
+
+  const q = query(
+    collection(db, "attendance"),
+    where("churchId", "==", selectedChurch)
+  );
+
+  const snap = await getDocs(q);
+
+  let map = {};
+  let present = 0;
+
+  snap.docs.forEach(d => {
+    const data = d.data();
+
+    if (
+      data.date === today &&
+      data.service === selectedService &&
+      data.type === selectedType
+    ) {
+      map[data.memberId] = {
+        id: d.id,
+        status: data.status
+      };
+
+      if (data.status === "present") present++;
     }
-  };
+  });
 
-  /* ✅ TOGGLE */
-  const toggleAttendance = (member, status) => {
+  setAttendance(map);
+  setPresentCount(present);
+};
 
-    Alert.alert(
-      "Confirm",
-      `${status === "present" ? "Mark Present" : "Mark Absent"} for ${member.name}?`,
-      [
-        { text: "Cancel" },
-        { text: "Yes", onPress: () => saveAttendance(member, status) }
-      ]
-    );
-  };
+/* ✅ MANUAL ATTENDANCE */
+const toggleAttendance = async (member, status) => {
 
-  return (
-    <View style={styles.container}>
+  const existing = attendance[member.id];
 
-      <Text style={styles.header}>Attendance</Text>
+  if (existing && userRole !== "admin") return;
 
-      {/* ✅ SERVICE */}
-      <TouchableOpacity style={styles.combo} onPress={() => setServiceModal(true)}>
-        <Text>{selectedService}</Text>
-      </TouchableOpacity>
+  if (existing) {
+    await deleteDoc(doc(db, "attendance", existing.id));
+  }
 
-      {/* ✅ TYPE */}
-      <TouchableOpacity style={styles.combo} onPress={() => setTypeModal(true)}>
-        <Text>{selectedType}</Text>
-      </TouchableOpacity>
+  await addDoc(collection(db, "attendance"), {
+    memberId: member.id,
+    name: member.name,
+    churchId: selectedChurch,
+    service: selectedService,
+    type: selectedType,
+    date: today,
+    status
+  });
 
-      {/* ✅ SEARCH */}
-      <TextInput
-        placeholder="Search member..."
-        value={searchMember}
-        onChangeText={setSearchMember}
-        style={styles.searchInput}
+  loadAttendance();
+};
+
+/* ✅ QR SCAN */
+const handleScan = async ({ data }) => {
+
+  if (scanned) return;
+  setScanned(true);
+
+  const member = members.find(m => m.id === data);
+
+  if (!member) {
+    Alert.alert("Member not found");
+    setScanned(false);
+    return;
+  }
+
+  await toggleAttendance(member, "present");
+
+  setTimeout(() => setScanned(false), 2000);
+};
+
+/* ✅ FILTER */
+const filtered = members.filter(m =>
+  (m.name || "").toLowerCase().includes(searchMember.toLowerCase())
+);
+
+return (
+<View style={styles.container}>
+
+<Text style={styles.header}>Attendance</Text>
+
+{/* ✅ DATE */}
+<TouchableOpacity
+  style={styles.box}
+  onPress={() => setShowPicker(true)}
+>
+  <Text>{today}</Text>
+</TouchableOpacity>
+
+{showPicker && (
+  <DateTimePicker
+    value={dateObj}
+    mode="date"
+    onChange={(e, d) => {
+      setShowPicker(false);
+      if (d) setDateObj(d);
+    }}
+  />
+)}
+
+<Text style={styles.presentText}>
+  Today's Present: {presentCount}
+</Text>
+
+{/* ✅ MODE SWITCH */}
+<View style={styles.modeRow}>
+
+  <TouchableOpacity
+    style={[styles.modeBtn, mode === "manual" && styles.activeMode]}
+    onPress={() => setMode("manual")}
+  >
+    <Text style={mode === "manual" && styles.white}>Manual</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[styles.modeBtn, mode === "qr" && styles.activeMode]}
+    onPress={() => setMode("qr")}
+  >
+    <Text style={mode === "qr" && styles.white}>QR Scan</Text>
+  </TouchableOpacity>
+
+</View>
+
+{/* ✅ QR CAMERA */}
+{mode === "qr" && (
+  <View style={styles.cameraBox}>
+
+    {permission ? (
+      <CameraView
+        style={{ height: 200 }}
+        barcodeScannerEnabled={true}
+        onBarcodeScanned={scanned ? undefined : handleScan}
       />
+    ) : (
+      <Text>Camera permission required</Text>
+    )}
 
-      {/* ✅ MEMBER LIST */}
-      <FlatList
-        data={filteredMembers}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+    <Text style={styles.scanText}>Scan QR Code</Text>
+
+  </View>
+)}
+
+{/* ✅ MANUAL MODE */}
+{mode === "manual" && (
+  <View>
+
+    <TextInput
+      placeholder="Search members..."
+      value={searchMember}
+      onChangeText={setSearchMember}
+      style={styles.input}
+    />
+
+    <FlatList
+      data={filtered}
+      keyExtractor={(i) => i.id}
+      renderItem={({ item }) => {
+
+        const status = attendance[item.id]?.status;
+
+        return (
           <View style={styles.card}>
 
-            <Text style={styles.name}>{item.name}</Text>
+            <Text>{item.name}</Text>
 
-            <View style={styles.row}>
+            <View style={{ flexDirection: "row" }}>
 
               <TouchableOpacity
-                style={styles.present}
+                style={[
+                  styles.btn,
+                  status === "present" && styles.present
+                ]}
                 onPress={() => toggleAttendance(item, "present")}
               >
-                <Text style={styles.btnText}>Present</Text>
+                <Text style={styles.white}>Present</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.absent}
+                style={[
+                  styles.btn,
+                  status === "absent" && styles.absent
+                ]}
                 onPress={() => toggleAttendance(item, "absent")}
               >
-                <Text style={styles.btnText}>Absent</Text>
+                <Text style={styles.white}>Absent</Text>
               </TouchableOpacity>
 
             </View>
 
           </View>
-        )}
-      />
+        );
+      }}
+    />
 
-      {/* ✅ SERVICE MODAL */}
-      <Modal visible={serviceModal} transparent>
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
+  </View>
+)}
 
-            <TextInput
-              placeholder="Service"
-              value={searchService}
-              onChangeText={setSearchService}
-              style={styles.input}
-            />
-
-            {services
-              .filter(s => s.toLowerCase().includes(searchService.toLowerCase()))
-              .map((s, i) => (
-                <TouchableOpacity key={i} onPress={() => {
-                  setSelectedService(s);
-                  setServiceModal(false);
-                }}>
-                  <Text style={styles.item}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-
-            <TextInput
-              placeholder="New Service"
-              value={newService}
-              onChangeText={setNewService}
-              style={styles.input}
-            />
-
-            <TouchableOpacity style={styles.addBtn} onPress={addService}>
-              <Text style={{ color: "#fff" }}>Add</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setServiceModal(false)}>
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      </Modal>
-
-      {/* ✅ TYPE MODAL */}
-      <Modal visible={typeModal} transparent>
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-
-            <TextInput
-              placeholder="Type"
-              value={searchType}
-              onChangeText={setSearchType}
-              style={styles.input}
-            />
-
-            {types
-              .filter(t => t.toLowerCase().includes(searchType.toLowerCase()))
-              .map((t, i) => (
-                <TouchableOpacity key={i} onPress={() => {
-                  setSelectedType(t);
-                  setTypeModal(false);
-                }}>
-                  <Text style={styles.item}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-
-            <TextInput
-              placeholder="New Type"
-              value={newType}
-              onChangeText={setNewType}
-              style={styles.input}
-            />
-
-            <TouchableOpacity style={styles.addBtn} onPress={addType}>
-              <Text style={{ color: "#fff" }}>Add</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setTypeModal(false)}>
-              <Text>Cancel</Text>
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      </Modal>
-
-    </View>
-  );
+</View>
+);
 }
 
-/* ✅ STYLES */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { fontSize: 18, marginBottom: 10 },
+container:{flex:1,padding:15},
+header:{fontSize:18},
 
-  combo: {
-    backgroundColor: "#fff",
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 8
-  },
+box:{backgroundColor:"#fff",padding:10,marginVertical:5},
+presentText:{marginVertical:10,fontWeight:"600"},
 
-  searchInput: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10
-  },
+modeRow:{flexDirection:"row",marginVertical:10},
 
-  card: {
-    backgroundColor: "#fff",
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 8
-  },
+modeBtn:{
+flex:1,
+backgroundColor:"#ddd",
+padding:10,
+marginRight:5,
+borderRadius:8,
+alignItems:"center"
+},
 
-  name: { fontWeight: "600", marginBottom: 10 },
+activeMode:{backgroundColor:"#4B3F72"},
 
-  row: { flexDirection: "row" },
+cameraBox:{
+backgroundColor:"#fff",
+padding:10,
+borderRadius:10,
+marginVertical:10
+},
 
-  present: { backgroundColor: "#27ae60", padding: 8, marginRight: 8 },
-  absent: { backgroundColor: "#e74c3c", padding: 8 },
+scanText:{textAlign:"center",fontSize:12,color:"#666"},
 
-  btnText: { color: "#fff" },
+input:{backgroundColor:"#fff",padding:10,marginVertical:5},
 
-  overlay: {
-    flex: 1,
-    justifyContent: "center",
-    backgroundColor: "#0007"
-  },
+card:{backgroundColor:"#fff",padding:10,marginVertical:5},
 
-  modal: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 20,
-    borderRadius: 10
-  },
+btn:{backgroundColor:"#bbb",padding:8,marginRight:5},
+present:{backgroundColor:"#27ae60"},
+absent:{backgroundColor:"#e74c3c"},
 
-  input: {
-    borderWidth: 1,
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 6
-  },
-
-  item: { padding: 10 },
-
-  addBtn: {
-    backgroundColor: "#4B3F72",
-    padding: 10,
-    alignItems: "center"
-  }
+white:{color:"#fff"}
 });

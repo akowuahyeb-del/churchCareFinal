@@ -1,6 +1,7 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 /* ✅ ICONS */
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +13,30 @@ import MembersScreen from "./screens/MembersScreen";
 import AttendanceScreen from "./screens/AttendanceScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 
+/* ✅ ✅ QR SCREEN */
+import QRCodeAttendanceScreen from "./screens/QRCodeAttendanceScreen";
+
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+/* ✅ ✅ ATTENDANCE STACK (ONLY ADDITION) */
+function AttendanceStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+
+      <Stack.Screen
+        name="AttendanceMain"
+        component={AttendanceScreen}
+      />
+
+      <Stack.Screen
+        name="QRCodeAttendanceScreen"
+        component={QRCodeAttendanceScreen}
+      />
+
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   return (
@@ -44,7 +68,7 @@ export default function App() {
           tabBarActiveTintColor: "#4B3F72",
           tabBarInactiveTintColor: "#999",
 
-          /* ✅ ✅ ✅ FLOATING STYLE */
+          /* ✅ FLOATING STYLE */
           tabBarStyle: {
             position: "absolute",
             bottom: 15,
@@ -68,7 +92,13 @@ export default function App() {
 
         <Tab.Screen name="Home" component={HomeScreen} />
         <Tab.Screen name="Members" component={MembersScreen} />
-        <Tab.Screen name="Attendance" component={AttendanceScreen} />
+
+        {/* ✅ ✅ UPDATED ONLY THIS LINE */}
+        <Tab.Screen
+          name="Attendance"
+          component={AttendanceStack}
+        />
+
         <Tab.Screen name="Upload" component={AdminUploadFlyer} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
 
