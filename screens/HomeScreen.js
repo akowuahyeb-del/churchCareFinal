@@ -68,8 +68,22 @@ export default function HomeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
 
+      {/* ✅ STICKY HEADER (ONLY ADDITION) */}
+      <View style={styles.stickyHeader}>
+        <View style={styles.headerRow}>
+          <Image
+            source={require("../assets/logo.png")}
+            style={styles.logo}
+          />
+          <View>
+            <Text style={styles.headerTitle}>ChurchCare</Text>
+            <Text style={styles.headerSub}>Welcome Back</Text>
+          </View>
+        </View>
+      </View>
+
       {/* ✅ CAROUSEL */}
-      <Animated.View style={[styles.carouselWrapper, { height: carouselHeight }]}>
+      <Animated.View style={[styles.carouselWrapper, { height: carouselHeight, marginTop: 80 }]}>
         <Text style={styles.sectionTitle}>Featured Events</Text>
 
         {activeFlyers.length === 0 ? (
@@ -95,7 +109,7 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* ✅ DOTS */}
+        {/* DOTS */}
         <View style={styles.dotsContainer}>
           {activeFlyers.map((_, index) => (
             <View
@@ -157,7 +171,7 @@ export default function HomeScreen() {
         )}
       >
 
-        {/* HEADER */}
+        {/* HEADER (unchanged) */}
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <Image
@@ -183,7 +197,6 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         <View style={styles.quickGrid}>
-
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#E8F0FE" }]}>
             <Ionicons name="checkmark-circle-outline" size={18} color="#2F55D4" />
             <Text style={[styles.quickText, { color: "#2F55D4" }]}>Attendance</Text>
@@ -198,25 +211,11 @@ export default function HomeScreen() {
             <Ionicons name="analytics-outline" size={18} color="#D97706" />
             <Text style={[styles.quickText, { color: "#D97706" }]}>Reports</Text>
           </TouchableOpacity>
-
-        </View>
-
-        {/* EVENTS */}
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-
-        <View style={styles.eventCard}>
-          <Text style={styles.eventTitle}>Sunday Service</Text>
-          <Text style={styles.eventSub}>10:00 AM</Text>
-        </View>
-
-        <View style={styles.eventCard}>
-          <Text style={styles.eventTitle}>Midweek Prayer</Text>
-          <Text style={styles.eventSub}>Wednesday 6:00 PM</Text>
         </View>
 
       </Animated.ScrollView>
 
-      {/* ✅ FULL IMAGE MODAL */}
+      {/* ✅ MODAL */}
       <Modal visible={!!selectedImage} transparent>
         <View style={styles.modalWrap}>
           <Pressable onPress={() => setSelectedImage(null)}>
@@ -231,6 +230,16 @@ export default function HomeScreen() {
 
 /* ✅ STYLES */
 const styles = StyleSheet.create({
+
+  stickyHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    backgroundColor: "#4B3F72",
+    padding: 16
+  },
 
   carouselWrapper: {
     backgroundColor: "#f4f6fb",
@@ -374,23 +383,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     marginTop: 3
-  },
-
-  eventCard: {
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10
-  },
-
-  eventTitle: {
-    fontWeight: "700",
-    fontSize: 13
-  },
-
-  eventSub: {
-    fontSize: 11,
-    color: "#777"
   },
 
   modalWrap: {
