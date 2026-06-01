@@ -1,23 +1,27 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet,
   TextInput, TouchableOpacity,
   FlatList, Modal, Alert
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { db } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import {
+  collection, addDoc, getDocs,
+  updateDoc, deleteDoc, doc
+} from "firebase/firestore";
+
+import QRCode from "react-native-qrcode-svg";
 
 export default function MembersScreen() {
 
+//////////////// STATE //////////////////
 const defaultMember = {
-  name:"",
-  phone:"",
-  address:"",
-  occupation:"",
-  ministry:"",
-  baptismStatus:"",
-  status:"",
+  name:"", phone:"", address:"",
+  occupation:"", ministry:"",
+  baptismStatus:"", status:"",
   emergencyContact:"",
   membershipDuration:""
 };
@@ -26,45 +30,99 @@ const [member,setMember] = useState(defaultMember);
 const [members,setMembers] = useState([]);
 
 const [showForm,setShowForm] = useState(false);
+const [editingId,setEditingId] = useState(null);
+
 const [search,setSearch] = useState("");
+const [showActions,setShowActions] = useState(true);
 
-/* ✅ LIST VALUES */
-const [ministries,setMinistries] = useState(["Choir","Ushering","Youth"]);
-const [baptismList,setBaptismList] = useState(["Baptised","Not Baptised"]);
-const [statusList,setStatusList] = useState(["Regular","Visitor"]);
-
-/* ✅ MODAL STATE */
 const [modal,setModal] = useState({
   visible:false,type:null,input:"",index:null
 });
 
+//////////////// LIST OPTIONS //////////////////
+const [ministries,setMinistries] = useState(["Choir","Ushering","Youth"]);
+const [baptismList,setBaptismList] = useState(["Baptised","Not Baptised"]);
+const [statusList,setStatusList] = useState(["Regular","Visitor"]);
+
+//////////////// LOAD //////////////////
 useEffect(()=>{loadMembers();},[]);
+
 const loadMembers = async ()=>{
   const snap = await getDocs(collection(db,"members"));
   setMembers(snap.docs.map(d=>({id:d.id,...d.data()})));
 };
 
-/* ✅ SAVE MEMBER */
+//////////////// LOAD TOGGLE //////////////////
+useEffect(()=>{
+  const loadToggle = async ()=>{
+    const saved = await AsyncStorage.getItem("showActions");
+    if(saved!==null){
+      setShowActions(JSON.parse(saved));
+    }
+  };
+  loadToggle();
+},[]);
+
+//////////////// TOGGLE //////////////////
+const toggleActions = async ()=>{
+  const newState = !showActions;
+  setShowActions(newState);
+  await AsyncStorage.setItem("showActions", JSON.stringify(newState));
+};
+
+//////////////// SAVE //////////////////
 const saveMember = async ()=>{
   if(!member.name || !member.phone){
     Alert.alert("Name & phone required");
     return;
   }
 
-  await addDoc(collection(db,"members"), member);
-  Alert.alert("✅ Saved");
+  try{
+    if(editingId){
+      await updateDoc(doc(db,"members",editingId),member);
+      Alert.alert("✅ Updated");
+    }else{
+      await addDoc(collection(db,"members"),member);
+      Alert.alert("✅ Saved");
+    }
 
-  setMember(defaultMember);
-  setShowForm(false);
-  loadMembers();
+    setMember(defaultMember);
+    setEditingId(null);
+    setShowForm(false);
+    loadMembers();
+
+  }catch{
+    Alert.alert("Error saving");
+  }
 };
 
-/* ✅ MODAL FUNCTIONS */
+//////////////// EDIT //////////////////
+const editMember = (item)=>{
+  setMember(item);
+  setEditingId(item.id);
+  setShowForm(true);
+};
+
+//////////////// DELETE //////////////////
+const deleteMember = (id)=>{
+  Alert.alert("Delete member?", "", [
+    {text:"Cancel"},
+    {
+      text:"Delete",
+      onPress: async ()=>{
+        await deleteDoc(doc(db,"members",id));
+        loadMembers();
+      }
+    }
+  ]);
+};
+
+//////////////// MODALS //////////////////
 const openModal=(type,index=null,list=[])=>{
   setModal({
     visible:true,
     type,
-    input:index!==null ? list[index] : "",
+    input:index!=null?list[index]:"",
     index
   });
 };
@@ -76,27 +134,36 @@ const closeModal=()=>{
 const saveList=(list,setList)=>{
   if(!modal.input.trim()) return;
 
-  if(modal.index!==null){
+  if(modal.index!=null){
     const updated=[...list];
     updated[modal.index]=modal.input;
     setList(updated);
   }else{
     setList(prev=>[...prev,modal.input]);
   }
+
   closeModal();
 };
 
-/* ✅ FILTER */
+//////////////// FILTER //////////////////
 const filtered = members.filter(m =>
   (m.name||"").toLowerCase().includes(search.toLowerCase())
 );
 
+//////////////// UI //////////////////
 return (
 <View style={styles.container}>
 
-{/* ✅ RED QUICK ACTION BUTTON */}
+{/* 🔴 ADD MEMBER */}
 <TouchableOpacity style={styles.fab} onPress={()=>setShowForm(true)}>
   <Text style={styles.fabText}>+ Add Member</Text>
+</TouchableOpacity>
+
+{/* ✅ TOGGLE */}
+<TouchableOpacity style={styles.toggleBtn} onPress={toggleActions}>
+<Text style={styles.white}>
+{showActions ? "Hide Details" : "Show Details"}
+</Text>
 </TouchableOpacity>
 
 <Text style={styles.header}>Members</Text>
@@ -108,89 +175,108 @@ onChangeText={setSearch}
 style={styles.search}
 />
 
-{/* ✅ MEMBER LIST */}
+{/* ===== MEMBER LIST ===== */}
 <FlatList
 data={filtered}
 keyExtractor={(item)=>item.id}
-contentContainerStyle={{ paddingBottom:120 }}
+contentContainerStyle={{paddingBottom:120}}
+
 renderItem={({item})=>(
 <View style={styles.card}>
-  <Text style={styles.name}>{item.name}</Text>
+
+<Text style={styles.name}>{item.name}</Text>
+
+{/* ✅ QR */}
+{showActions && (
+<QRCode value={item.id} size={80}/>
+)}
+
+{/* ✅ ACTION BUTTONS */}
+{showActions && (
+<View style={{marginTop:10}}>
+
+<View style={styles.row}>
+<TouchableOpacity style={styles.editBtn} onPress={()=>editMember(item)}>
+<Text style={styles.white}>Edit</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.deleteBtn} onPress={()=>deleteMember(item.id)}>
+<Text style={styles.white}>Delete</Text>
+</TouchableOpacity>
+</View>
+
+<View style={styles.row}>
+<TouchableOpacity style={styles.suspendBtn}>
+<Text style={styles.white}>Suspend</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.warnBtn}>
+<Text style={styles.white}>Reprimand</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={styles.demoteBtn}>
+<Text style={styles.white}>Demote</Text>
+</TouchableOpacity>
+</View>
+
+</View>
+)}
+
 </View>
 )}
 />
 
-{/* ✅ FORM MODAL */}
+{/* ===== FORM MODAL ===== */}
 <Modal visible={showForm} animationType="slide">
 <View style={styles.modalContainer}>
 
-<Text style={styles.modalHeader}>New Member</Text>
+<Text style={styles.header}>
+{editingId ? "Edit Member" : "Register Member"}
+</Text>
 
-<Input label="Name" value={member.name}
-onChange={t=>setMember({...member,name:t})}/>
+<Input label="Name" value={member.name} onChange={t=>setMember({...member,name:t})}/>
+<Input label="Phone" value={member.phone} onChange={t=>setMember({...member,phone:t})}/>
+<Input label="Address" value={member.address} onChange={t=>setMember({...member,address:t})}/>
+<Input label="Occupation" value={member.occupation} onChange={t=>setMember({...member,occupation:t})}/>
+<Input label="Emergency Contact" value={member.emergencyContact} onChange={t=>setMember({...member,emergencyContact:t})}/>
+<Input label="Membership Duration" value={member.membershipDuration} onChange={t=>setMember({...member,membershipDuration:t})}/>
 
-<Input label="Phone" value={member.phone}
-onChange={t=>setMember({...member,phone:t})}/>
-
-<Input label="Address" value={member.address}
-onChange={t=>setMember({...member,address:t})}/>
-
-<Input label="Occupation" value={member.occupation}
-onChange={t=>setMember({...member,occupation:t})}/>
-
-<Input label="Emergency Contact" value={member.emergencyContact}
-onChange={t=>setMember({...member,emergencyContact:t})}/>
-
-<Input label="Membership Duration" value={member.membershipDuration}
-onChange={t=>setMember({...member,membershipDuration:t})}/>
-
-{/* ✅ MINISTRY */}
-<ChipRow
-label="Group / Ministry"
-list={ministries}
+{/* ✅ CHIP MODALS */}
+<ChipRow label="Ministry" list={ministries}
 value={member.ministry}
 onSelect={v=>setMember({...member,ministry:v})}
 onAdd={()=>openModal("ministry")}
-onEdit={(i)=>openModal("ministry",i,ministries)}
-/>
+onEdit={(i)=>openModal("ministry",i,ministries)}/>
 
-{/* ✅ BAPTISM */}
-<ChipRow
-label="Baptism"
-list={baptismList}
+<ChipRow label="Baptism" list={baptismList}
 value={member.baptismStatus}
 onSelect={v=>setMember({...member,baptismStatus:v})}
 onAdd={()=>openModal("baptism")}
-onEdit={(i)=>openModal("baptism",i,baptismList)}
-/>
+onEdit={(i)=>openModal("baptism",i,baptismList)}/>
 
-{/* ✅ STATUS */}
-<ChipRow
-label="Status"
-list={statusList}
+<ChipRow label="Status" list={statusList}
 value={member.status}
 onSelect={v=>setMember({...member,status:v})}
 onAdd={()=>openModal("status")}
-onEdit={(i)=>openModal("status",i,statusList)}
-/>
+onEdit={(i)=>openModal("status",i,statusList)}/>
 
 <TouchableOpacity style={styles.btn} onPress={saveMember}>
-<Text style={styles.white}>Save Member</Text>
+<Text style={styles.white}>Save</Text>
 </TouchableOpacity>
 
 <TouchableOpacity onPress={()=>setShowForm(false)}>
-<Text style={{color:"red",marginTop:15}}>Cancel</Text>
+<Text style={{color:"red"}}>Cancel</Text>
 </TouchableOpacity>
 
 </View>
 </Modal>
 
-{/* ✅ LIST MODAL */}
+{/* ===== LIST MODAL ===== */}
 <Modal visible={modal.visible} transparent>
 <View style={styles.modalWrap}>
 <View style={styles.modalBox}>
 
-<Text style={{marginBottom:10}}>{modal.type}</Text>
+<Text>{modal.type}</Text>
 
 <TextInput
 value={modal.input}
@@ -219,7 +305,7 @@ if(modal.type==="status")saveList(statusList,setStatusList);
 );
 }
 
-/* ✅ INPUT */
+//////////////// COMPONENTS //////////////////
 const Input = ({label,value,onChange})=>(
 <>
 <Text>{label}</Text>
@@ -227,8 +313,7 @@ const Input = ({label,value,onChange})=>(
 </>
 );
 
-/* ✅ CHIP SELECTOR */
-const ChipRow = ({label,list,value,onSelect,onEdit,onAdd})=>(
+const ChipRow = ({label,list,value,onSelect,onAdd,onEdit})=>(
 <>
 <Text>{label}</Text>
 <View style={styles.chipRow}>
@@ -239,53 +324,49 @@ onPress={()=>onSelect(m)}
 onLongPress={()=>onEdit(i)}
 style={[styles.chip,value===m && styles.activeChip]}
 >
-<Text style={value===m&&styles.activeText}>{m}</Text>
+<Text>{m}</Text>
 </TouchableOpacity>
 ))}
 </View>
+
 <TouchableOpacity onPress={onAdd}>
-<Text style={{color:"#1BA97F"}}>+ Add</Text>
+<Text style={{color:"green"}}>+ Add</Text>
 </TouchableOpacity>
 </>
 );
 
-/* ✅ STYLES */
+//////////////// STYLES //////////////////
 const styles = StyleSheet.create({
 container:{flex:1,padding:15,backgroundColor:"#f4f6fb"},
-
-header:{fontSize:22,fontWeight:"600",marginBottom:10},
-
-search:{backgroundColor:"#fff",padding:14,borderRadius:10,marginBottom:15},
+header:{fontSize:20,fontWeight:"600"},
+search:{backgroundColor:"#fff",padding:14,borderRadius:10,marginVertical:10},
 
 card:{backgroundColor:"#fff",padding:15,marginBottom:12,borderRadius:10},
 name:{fontWeight:"600"},
 
-fab:{
-position:"absolute",
-bottom:90,
-right:20,
-backgroundColor:"red",   // ✅ RED BUTTON
-paddingVertical:12,
-paddingHorizontal:20,
-borderRadius:30,
-zIndex:9999,
-elevation:20
-},
+row:{flexDirection:"row",justifyContent:"space-between",marginTop:5},
 
+editBtn:{flex:1,backgroundColor:"#3498db",padding:8,marginRight:5,alignItems:"center"},
+deleteBtn:{flex:1,backgroundColor:"#e74c3c",padding:8,alignItems:"center"},
+
+suspendBtn:{flex:1,backgroundColor:"#f39c12",padding:8,marginRight:5,alignItems:"center"},
+warnBtn:{flex:1,backgroundColor:"#e67e22",padding:8,marginRight:5,alignItems:"center"},
+demoteBtn:{flex:1,backgroundColor:"#8e44ad",padding:8,alignItems:"center"},
+
+fab:{position:"absolute",bottom:90,right:20,backgroundColor:"red",padding:12,borderRadius:30,zIndex:9999},
 fabText:{color:"#fff",fontWeight:"600"},
 
-modalContainer:{flex:1,padding:20,backgroundColor:"#fff"},
-modalHeader:{fontSize:22,fontWeight:"600",marginBottom:15},
+toggleBtn:{position:"absolute",top:10,right:20,backgroundColor:"#4B3F72",padding:10,borderRadius:8},
 
-input:{backgroundColor:"#f2f2f2",padding:12,borderRadius:10,marginVertical:5},
+modalContainer:{flex:1,padding:20,backgroundColor:"#fff"},
+input:{backgroundColor:"#eee",padding:12,borderRadius:10,marginVertical:5},
 
 btn:{backgroundColor:"#4B3F72",padding:12,marginTop:10,alignItems:"center"},
 white:{color:"#fff"},
 
 chipRow:{flexDirection:"row",flexWrap:"wrap"},
-chip:{backgroundColor:"#eee",padding:8,borderRadius:15,margin:4},
-activeChip:{backgroundColor:"#4B3F72"},
-activeText:{color:"#fff"},
+chip:{backgroundColor:"#eee",padding:6,borderRadius:15,margin:4},
+activeChip:{backgroundColor:"#ccc"},
 
 modalWrap:{flex:1,justifyContent:"center",backgroundColor:"#0006"},
 modalBox:{backgroundColor:"#fff",padding:20,margin:20,borderRadius:10}
