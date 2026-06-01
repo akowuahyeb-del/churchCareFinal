@@ -6,7 +6,6 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs,
@@ -35,11 +34,13 @@ const [editingId,setEditingId] = useState(null);
 const [search,setSearch] = useState("");
 const [showActions,setShowActions] = useState(true);
 
+const [selectedQR,setSelectedQR] = useState(null);
+
 const [modal,setModal] = useState({
   visible:false,type:null,input:"",index:null
 });
 
-//////////////// LIST OPTIONS //////////////////
+//////////////// OPTIONS //////////////////
 const [ministries,setMinistries] = useState(["Choir","Ushering","Youth"]);
 const [baptismList,setBaptismList] = useState(["Baptised","Not Baptised"]);
 const [statusList,setStatusList] = useState(["Regular","Visitor"]);
@@ -52,58 +53,48 @@ const loadMembers = async ()=>{
   setMembers(snap.docs.map(d=>({id:d.id,...d.data()})));
 };
 
-//////////////// LOAD TOGGLE //////////////////
+//////////////// TOGGLE //////////////////
 useEffect(()=>{
-  const loadToggle = async ()=>{
+  const load = async ()=>{
     const saved = await AsyncStorage.getItem("showActions");
-    if(saved!==null){
-      setShowActions(JSON.parse(saved));
-    }
+    if(saved!==null) setShowActions(JSON.parse(saved));
   };
-  loadToggle();
+  load();
 },[]);
 
-//////////////// TOGGLE //////////////////
 const toggleActions = async ()=>{
   const newState = !showActions;
   setShowActions(newState);
   await AsyncStorage.setItem("showActions", JSON.stringify(newState));
 };
 
-//////////////// SAVE //////////////////
+//////////////// CRUD //////////////////
 const saveMember = async ()=>{
   if(!member.name || !member.phone){
     Alert.alert("Name & phone required");
     return;
   }
 
-  try{
-    if(editingId){
-      await updateDoc(doc(db,"members",editingId),member);
-      Alert.alert("✅ Updated");
-    }else{
-      await addDoc(collection(db,"members"),member);
-      Alert.alert("✅ Saved");
-    }
-
-    setMember(defaultMember);
-    setEditingId(null);
-    setShowForm(false);
-    loadMembers();
-
-  }catch{
-    Alert.alert("Error saving");
+  if(editingId){
+    await updateDoc(doc(db,"members",editingId),member);
+    Alert.alert("✅ Updated");
+  } else {
+    await addDoc(collection(db,"members"),member);
+    Alert.alert("✅ Saved");
   }
+
+  setMember(defaultMember);
+  setEditingId(null);
+  setShowForm(false);
+  loadMembers();
 };
 
-//////////////// EDIT //////////////////
 const editMember = (item)=>{
   setMember(item);
   setEditingId(item.id);
   setShowForm(true);
 };
 
-//////////////// DELETE //////////////////
 const deleteMember = (id)=>{
   Alert.alert("Delete member?", "", [
     {text:"Cancel"},
@@ -117,7 +108,7 @@ const deleteMember = (id)=>{
   ]);
 };
 
-//////////////// MODALS //////////////////
+//////////////// MODAL //////////////////
 const openModal=(type,index=null,list=[])=>{
   setModal({
     visible:true,
@@ -138,10 +129,9 @@ const saveList=(list,setList)=>{
     const updated=[...list];
     updated[modal.index]=modal.input;
     setList(updated);
-  }else{
+  } else {
     setList(prev=>[...prev,modal.input]);
   }
-
   closeModal();
 };
 
@@ -154,12 +144,12 @@ const filtered = members.filter(m =>
 return (
 <View style={styles.container}>
 
-{/* 🔴 ADD MEMBER */}
+{/* ADD MEMBER */}
 <TouchableOpacity style={styles.fab} onPress={()=>setShowForm(true)}>
   <Text style={styles.fabText}>+ Add Member</Text>
 </TouchableOpacity>
 
-{/* ✅ TOGGLE */}
+{/* TOGGLE */}
 <TouchableOpacity style={styles.toggleBtn} onPress={toggleActions}>
 <Text style={styles.white}>
 {showActions ? "Hide Details" : "Show Details"}
@@ -175,32 +165,36 @@ onChangeText={setSearch}
 style={styles.search}
 />
 
-{/* ===== MEMBER LIST ===== */}
+{/* LIST */}
 <FlatList
 data={filtered}
 keyExtractor={(item)=>item.id}
 contentContainerStyle={{paddingBottom:120}}
 
-renderItem={({item})=>(
+renderItem={({ item }) => (
 <View style={styles.card}>
 
 <Text style={styles.name}>{item.name}</Text>
 
-{/* ✅ QR */}
 {showActions && (
+<>
+<TouchableOpacity
+onPress={()=>setSelectedQR(item.id)}
+style={{marginTop:10}}
+>
 <QRCode value={item.id} size={80}/>
-)}
+</TouchableOpacity>
 
-{/* ✅ ACTION BUTTONS */}
-{showActions && (
 <View style={{marginTop:10}}>
 
 <View style={styles.row}>
-<TouchableOpacity style={styles.editBtn} onPress={()=>editMember(item)}>
+<TouchableOpacity style={styles.editBtn}
+onPress={()=>editMember(item)}>
 <Text style={styles.white}>Edit</Text>
 </TouchableOpacity>
 
-<TouchableOpacity style={styles.deleteBtn} onPress={()=>deleteMember(item.id)}>
+<TouchableOpacity style={styles.deleteBtn}
+onPress={()=>deleteMember(item.id)}>
 <Text style={styles.white}>Delete</Text>
 </TouchableOpacity>
 </View>
@@ -220,13 +214,29 @@ renderItem={({item})=>(
 </View>
 
 </View>
+</>
 )}
 
 </View>
 )}
 />
 
-{/* ===== FORM MODAL ===== */}
+{/* QR MODAL */}
+<Modal visible={!!selectedQR} transparent>
+<View style={styles.modalWrap}>
+<View style={styles.modalBox}>
+
+<QRCode value={selectedQR} size={220}/>
+
+<TouchableOpacity onPress={()=>setSelectedQR(null)}>
+<Text style={{color:"red",marginTop:10}}>Close</Text>
+</TouchableOpacity>
+
+</View>
+</View>
+</Modal>
+
+{/* FORM MODAL */}
 <Modal visible={showForm} animationType="slide">
 <View style={styles.modalContainer}>
 
@@ -241,7 +251,6 @@ renderItem={({item})=>(
 <Input label="Emergency Contact" value={member.emergencyContact} onChange={t=>setMember({...member,emergencyContact:t})}/>
 <Input label="Membership Duration" value={member.membershipDuration} onChange={t=>setMember({...member,membershipDuration:t})}/>
 
-{/* ✅ CHIP MODALS */}
 <ChipRow label="Ministry" list={ministries}
 value={member.ministry}
 onSelect={v=>setMember({...member,ministry:v})}
@@ -271,7 +280,7 @@ onEdit={(i)=>openModal("status",i,statusList)}/>
 </View>
 </Modal>
 
-{/* ===== LIST MODAL ===== */}
+{/* LIST MODAL */}
 <Modal visible={modal.visible} transparent>
 <View style={styles.modalWrap}>
 <View style={styles.modalBox}>
@@ -285,11 +294,12 @@ style={styles.input}
 />
 
 <TouchableOpacity style={styles.btn}
-onPress={()=>{
-if(modal.type==="ministry")saveList(ministries,setMinistries);
-if(modal.type==="baptism")saveList(baptismList,setBaptismList);
-if(modal.type==="status")saveList(statusList,setStatusList);
-}}>
+onPress={()=>saveList(
+modal.type==="ministry"?ministries:
+modal.type==="baptism"?baptismList:statusList,
+modal.type==="ministry"?setMinistries:
+modal.type==="baptism"?setBaptismList:setStatusList
+)}>
 <Text style={styles.white}>Save</Text>
 </TouchableOpacity>
 
@@ -318,17 +328,14 @@ const ChipRow = ({label,list,value,onSelect,onAdd,onEdit})=>(
 <Text>{label}</Text>
 <View style={styles.chipRow}>
 {list.map((m,i)=>(
-<TouchableOpacity
-key={i}
+<TouchableOpacity key={i}
 onPress={()=>onSelect(m)}
 onLongPress={()=>onEdit(i)}
-style={[styles.chip,value===m && styles.activeChip]}
->
+style={[styles.chip,value===m&&styles.activeChip]}>
 <Text>{m}</Text>
 </TouchableOpacity>
 ))}
 </View>
-
 <TouchableOpacity onPress={onAdd}>
 <Text style={{color:"green"}}>+ Add</Text>
 </TouchableOpacity>
@@ -353,21 +360,20 @@ suspendBtn:{flex:1,backgroundColor:"#f39c12",padding:8,marginRight:5,alignItems:
 warnBtn:{flex:1,backgroundColor:"#e67e22",padding:8,marginRight:5,alignItems:"center"},
 demoteBtn:{flex:1,backgroundColor:"#8e44ad",padding:8,alignItems:"center"},
 
-fab:{position:"absolute",bottom:90,right:20,backgroundColor:"red",padding:12,borderRadius:30,zIndex:9999},
-fabText:{color:"#fff",fontWeight:"600"},
-
+fab:{position:"absolute",bottom:90,right:20,backgroundColor:"red",padding:12,borderRadius:30},
+fabText:{color:"#fff"},
 toggleBtn:{position:"absolute",top:10,right:20,backgroundColor:"#4B3F72",padding:10,borderRadius:8},
 
+modalWrap:{flex:1,justifyContent:"center",backgroundColor:"#0006"},
+modalBox:{backgroundColor:"#fff",padding:20,margin:20,borderRadius:10},
+
 modalContainer:{flex:1,padding:20,backgroundColor:"#fff"},
-input:{backgroundColor:"#eee",padding:12,borderRadius:10,marginVertical:5},
+input:{backgroundColor:"#eee",padding:10,borderRadius:10},
 
 btn:{backgroundColor:"#4B3F72",padding:12,marginTop:10,alignItems:"center"},
 white:{color:"#fff"},
 
 chipRow:{flexDirection:"row",flexWrap:"wrap"},
 chip:{backgroundColor:"#eee",padding:6,borderRadius:15,margin:4},
-activeChip:{backgroundColor:"#ccc"},
-
-modalWrap:{flex:1,justifyContent:"center",backgroundColor:"#0006"},
-modalBox:{backgroundColor:"#fff",padding:20,margin:20,borderRadius:10}
+activeChip:{backgroundColor:"#ccc"}
 });
