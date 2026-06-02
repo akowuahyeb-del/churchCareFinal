@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet,
   FlatList, TouchableOpacity,
-  TextInput, Alert
+  TextInput, Alert, Modal
 } from "react-native";
 
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Camera, CameraView } from "expo-camera";
+import { CameraView, Camera } from "expo-camera";
 
 import { db } from "../firebase";
 import {
@@ -32,15 +32,31 @@ const [showPicker, setShowPicker] = useState(false);
 const today = dateObj.toISOString().split("T")[0];
 
 /* ✅ CHURCH */
-const [selectedChurch, setSelectedChurch] = useState("church_1");
+const [selectedChurch] = useState("church_1");
 
 /* ✅ MEMBERS */
 const [members, setMembers] = useState([]);
 const [searchMember, setSearchMember] = useState("");
 
-/* ✅ SERVICE */
-const [selectedService] = useState("Sunday Service");
-const [selectedType] = useState("First Service");
+/* ✅ SERVICES DATA */
+const [services, setServices] = useState(["Sunday"]);
+const [types, setTypes] = useState(["First"]);
+const [events, setEvents] = useState(["General Service"]);
+
+const [selectedService, setSelectedService] = useState("Sunday");
+const [selectedType, setSelectedType] = useState("First");
+const [selectedEvent, setSelectedEvent] = useState("General Service");
+
+/* ✅ DROPDOWN */
+const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+const [showEventDropdown, setShowEventDropdown] = useState(false);
+
+/* ✅ MODAL */
+const [modalVisible, setModalVisible] = useState(false);
+const [modalType, setModalType] = useState("");
+const [inputValue, setInputValue] = useState("");
+const [editingIndex, setEditingIndex] = useState(null);
 
 /* ✅ ATTENDANCE */
 const [attendance, setAttendance] = useState({});
@@ -54,26 +70,43 @@ useEffect(() => {
   })();
 }, []);
 
-/* ✅ LOAD MEMBERS */
-useEffect(() => { loadMembers(); }, [selectedChurch]);
+/* ✅ ✅ FIXED MEMBERS LOAD */
+useEffect(() => { loadMembers(); }, []);
 
 const loadMembers = async () => {
-  const q = query(
-    collection(db, "members"),
-    where("churchId", "==", selectedChurch)
-  );
+  try {
+    const q = query(
+      collection(db, "members"),
+      where("churchId", "==", selectedChurch)
+    );
 
-  const snap = await getDocs(q);
+    const snap = await getDocs(q);
 
-  setMembers(snap.docs.map(d => ({
-    id: d.id,
-    ...d.data()
-  })));
+    let data = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    // ✅ fallback if empty
+    if (data.length === 0) {
+      const snapAll = await getDocs(collection(db, "members"));
+
+      data = snapAll.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+    }
+
+    setMembers(data);
+
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 /* ✅ LOAD ATTENDANCE */
 useEffect(() => { loadAttendance(); },
-[selectedChurch, dateObj, selectedService, selectedType]);
+[dateObj, selectedService, selectedType]);
 
 const loadAttendance = async () => {
 
@@ -108,47 +141,82 @@ const loadAttendance = async () => {
   setPresentCount(present);
 };
 
-/* ✅ MANUAL ATTENDANCE */
+/* ✅ MODAL SAVE */
+const handleSave = () => {
+  if (!inputValue) return;
+
+  let list, setter;
+
+  if (modalType === "service") {
+    list = services; setter = setServices;
+  } else if (modalType === "type") {
+    list = types; setter = setTypes;
+  } else {
+    list = events; setter = setEvents;
+  }
+
+  if (editingIndex !== null) {
+    const updated = [...list];
+    updated[editingIndex] = inputValue;
+    setter(updated);
+  } else {
+    setter([...list, inputValue]);
+  }
+
+  resetModal();
+};
+
+/* ✅ DELETE */
+const handleDelete = () => {
+
+  let list, setter;
+
+  if (modalType === "service") {
+    list = services; setter = setServices;
+  } else if (modalType === "type") {
+    list = types; setter = setTypes;
+  } else {
+    list = events; setter = setEvents;
+  }
+
+  const updated = list.filter((_, i) => i !== editingIndex);
+  setter(updated);
+
+  resetModal();
+};
+
+/* ✅ RESET */
+const resetModal = () => {
+  setModalVisible(false);
+  setEditingIndex(null);
+  setInputValue("");
+};
+
+/* ✅ TOGGLE */
 const toggleAttendance = async (member, status) => {
 
   const existing = attendance[member.id];
 
-  if (existing && userRole !== "admin") return;
-
-  if (existing) {
+  if (existing && existing.status === status) {
     await deleteDoc(doc(db, "attendance", existing.id));
-  }
+  } else {
+    if (existing) {
+      await deleteDoc(doc(db, "attendance", existing.id));
+    }
 
-  await addDoc(collection(db, "attendance"), {
-    memberId: member.id,
-    name: member.name,
-    churchId: selectedChurch,
-    service: selectedService,
-    type: selectedType,
-    date: today,
-    status
-  });
+    await addDoc(collection(db, "attendance"), {
+      memberId: member.id,
+      name: member.name,
+      churchId: selectedChurch,
+      service: selectedService,
+      type: selectedType,
+      event: selectedEvent,
+      date: today,
+      status
+    });
+  }
 
   loadAttendance();
-};
-
-/* ✅ QR SCAN */
-const handleScan = async ({ data }) => {
-
-  if (scanned) return;
-  setScanned(true);
-
-  const member = members.find(m => m.id === data);
-
-  if (!member) {
-    Alert.alert("Member not found");
-    setScanned(false);
-    return;
-  }
-
-  await toggleAttendance(member, "present");
-
-  setTimeout(() => setScanned(false), 2000);
 };
 
 /* ✅ FILTER */
@@ -161,121 +229,183 @@ return (
 
 <Text style={styles.header}>Attendance</Text>
 
-{/* ✅ DATE */}
-<TouchableOpacity
-  style={styles.box}
-  onPress={() => setShowPicker(true)}
->
-  <Text>{today}</Text>
+{/* DATE */}
+<TouchableOpacity style={styles.box} onPress={()=>setShowPicker(true)}>
+<Text>{today}</Text>
 </TouchableOpacity>
 
 {showPicker && (
-  <DateTimePicker
-    value={dateObj}
-    mode="date"
-    onChange={(e, d) => {
-      setShowPicker(false);
-      if (d) setDateObj(d);
-    }}
-  />
+<DateTimePicker
+value={dateObj}
+mode="date"
+onChange={(e,d)=>{setShowPicker(false); if(d)setDateObj(d)}}
+/>
 )}
 
-<Text style={styles.presentText}>
-  Today's Present: {presentCount}
-</Text>
+{/* ✅ SERVICE */}
+<View>
+<TouchableOpacity style={styles.box}
+onPress={()=>setShowServiceDropdown(!showServiceDropdown)}>
+<Text>Service: {selectedService}</Text>
+</TouchableOpacity>
 
-{/* ✅ MODE SWITCH */}
-<View style={styles.modeRow}>
-
-  <TouchableOpacity
-    style={[styles.modeBtn, mode === "manual" && styles.activeMode]}
-    onPress={() => setMode("manual")}
-  >
-    <Text style={mode === "manual" && styles.white}>Manual</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={[styles.modeBtn, mode === "qr" && styles.activeMode]}
-    onPress={() => setMode("qr")}
-  >
-    <Text style={mode === "qr" && styles.white}>QR Scan</Text>
-  </TouchableOpacity>
-
+{showServiceDropdown && (
+<View style={{backgroundColor:"#fff",padding:10}}>
+{services.map((s,i)=>(
+<TouchableOpacity key={i}
+onPress={()=>{setSelectedService(s);setShowServiceDropdown(false)}}
+onLongPress={()=>{setEditingIndex(i);setInputValue(s);setModalType("service");setModalVisible(true)}}
+>
+<Text>{s}</Text>
+</TouchableOpacity>
+))}
+<TouchableOpacity onPress={()=>{setModalType("service");setModalVisible(true)}}>
+<Text style={styles.link}>+ Add Service</Text>
+</TouchableOpacity>
+</View>
+)}
 </View>
 
-{/* ✅ QR CAMERA */}
-{mode === "qr" && (
-  <View style={styles.cameraBox}>
+{/* ✅ TYPE */}
+<View>
+<TouchableOpacity style={styles.box}
+onPress={()=>setShowTypeDropdown(!showTypeDropdown)}>
+<Text>Type: {selectedType}</Text>
+</TouchableOpacity>
 
-    {permission ? (
-      <CameraView
-        style={{ height: 200 }}
-        barcodeScannerEnabled={true}
-        onBarcodeScanned={scanned ? undefined : handleScan}
-      />
-    ) : (
-      <Text>Camera permission required</Text>
-    )}
+{showTypeDropdown && (
+<View style={{backgroundColor:"#fff",padding:10}}>
+{types.map((t,i)=>(
+<TouchableOpacity key={i}
+onPress={()=>{setSelectedType(t);setShowTypeDropdown(false)}}
+onLongPress={()=>{setEditingIndex(i);setInputValue(t);setModalType("type");setModalVisible(true)}}
+>
+<Text>{t}</Text>
+</TouchableOpacity>
+))}
+<TouchableOpacity onPress={()=>{setModalType("type");setModalVisible(true)}}>
+<Text style={styles.link}>+ Add Type</Text>
+</TouchableOpacity>
+</View>
+)}
+</View>
 
-    <Text style={styles.scanText}>Scan QR Code</Text>
+{/* ✅ EVENT */}
+<View>
+<TouchableOpacity style={styles.box}
+onPress={()=>setShowEventDropdown(!showEventDropdown)}>
+<Text>Event: {selectedEvent}</Text>
+</TouchableOpacity>
 
-  </View>
+{showEventDropdown && (
+<View style={{backgroundColor:"#fff",padding:10}}>
+{events.map((e,i)=>(
+<TouchableOpacity key={i}
+onPress={()=>{setSelectedEvent(e);setShowEventDropdown(false)}}
+onLongPress={()=>{setEditingIndex(i);setInputValue(e);setModalType("event");setModalVisible(true)}}
+>
+<Text>{e}</Text>
+</TouchableOpacity>
+))}
+<TouchableOpacity onPress={()=>{setModalType("event");setModalVisible(true)}}>
+<Text style={styles.link}>+ Add Event</Text>
+</TouchableOpacity>
+</View>
+)}
+</View>
+
+<Text style={styles.presentText}>Present: {presentCount}</Text>
+
+{/* MODE */}
+<View style={styles.modeRow}>
+<TouchableOpacity style={[styles.modeBtn, mode==="manual" && styles.activeMode]}
+onPress={()=>setMode("manual")}>
+<Text style={mode==="manual" && styles.white}>Manual</Text>
+</TouchableOpacity>
+
+<TouchableOpacity style={[styles.modeBtn, mode==="qr" && styles.activeMode]}
+onPress={()=>setMode("qr")}>
+<Text style={mode==="qr" && styles.white}>QR Scan</Text>
+</TouchableOpacity>
+</View>
+
+{/* ✅ MEMBERS */}
+{mode==="manual" && (
+<View style={{flex:1}}>
+
+<TextInput
+placeholder="Search members..."
+value={searchMember}
+onChangeText={setSearchMember}
+style={styles.input}
+/>
+
+<FlatList
+style={{flex:1}}
+contentContainerStyle={{paddingBottom:60}}
+data={filtered}
+extraData={attendance}
+keyExtractor={(i)=>i.id}
+renderItem={({item})=>{
+const status = attendance[item.id]?.status;
+
+return (
+<View style={styles.card}>
+<Text>{item.name}</Text>
+
+<View style={{flexDirection:"row"}}>
+<TouchableOpacity
+style={[styles.btn, status==="present" && styles.present]}
+onPress={()=>toggleAttendance(item,"present")}
+>
+<Text style={styles.white}>Present</Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+style={[styles.btn, status==="absent" && styles.absent]}
+onPress={()=>toggleAttendance(item,"absent")}
+>
+<Text style={styles.white}>Absent</Text>
+</TouchableOpacity>
+</View>
+
+</View>
+);
+}}
+/>
+
+</View>
 )}
 
-{/* ✅ MANUAL MODE */}
-{mode === "manual" && (
-  <View>
+{/* ✅ MODAL */}
+<Modal visible={modalVisible} transparent>
+<View style={styles.modal}>
+<View style={styles.modalBox}>
 
-    <TextInput
-      placeholder="Search members..."
-      value={searchMember}
-      onChangeText={setSearchMember}
-      style={styles.input}
-    />
+<TextInput value={inputValue}
+onChangeText={setInputValue}
+style={styles.input}
+/>
 
-    <FlatList
-      data={filtered}
-      keyExtractor={(i) => i.id}
-      renderItem={({ item }) => {
+<View style={{flexDirection:"row"}}>
+<TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+<Text style={styles.white}>Save</Text>
+</TouchableOpacity>
 
-        const status = attendance[item.id]?.status;
+<TouchableOpacity style={styles.cancelBtn} onPress={resetModal}>
+<Text style={styles.white}>Cancel</Text>
+</TouchableOpacity>
+</View>
 
-        return (
-          <View style={styles.card}>
-
-            <Text>{item.name}</Text>
-
-            <View style={{ flexDirection: "row" }}>
-
-              <TouchableOpacity
-                style={[
-                  styles.btn,
-                  status === "present" && styles.present
-                ]}
-                onPress={() => toggleAttendance(item, "present")}
-              >
-                <Text style={styles.white}>Present</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.btn,
-                  status === "absent" && styles.absent
-                ]}
-                onPress={() => toggleAttendance(item, "absent")}
-              >
-                <Text style={styles.white}>Absent</Text>
-              </TouchableOpacity>
-
-            </View>
-
-          </View>
-        );
-      }}
-    />
-
-  </View>
+{editingIndex !== null && (
+<TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+<Text style={styles.white}>Delete</Text>
+</TouchableOpacity>
 )}
+
+</View>
+</View>
+</Modal>
 
 </View>
 );
@@ -286,29 +416,15 @@ container:{flex:1,padding:15},
 header:{fontSize:18},
 
 box:{backgroundColor:"#fff",padding:10,marginVertical:5},
+link:{color:"#4B3F72",marginTop:5},
+
 presentText:{marginVertical:10,fontWeight:"600"},
 
 modeRow:{flexDirection:"row",marginVertical:10},
-
-modeBtn:{
-flex:1,
-backgroundColor:"#ddd",
-padding:10,
-marginRight:5,
-borderRadius:8,
-alignItems:"center"
-},
-
+modeBtn:{flex:1,backgroundColor:"#ddd",padding:10,marginRight:5,borderRadius:8,alignItems:"center"},
 activeMode:{backgroundColor:"#4B3F72"},
 
-cameraBox:{
-backgroundColor:"#fff",
-padding:10,
-borderRadius:10,
-marginVertical:10
-},
-
-scanText:{textAlign:"center",fontSize:12,color:"#666"},
+cameraBox:{backgroundColor:"#fff",padding:10,marginVertical:10},
 
 input:{backgroundColor:"#fff",padding:10,marginVertical:5},
 
@@ -317,6 +433,12 @@ card:{backgroundColor:"#fff",padding:10,marginVertical:5},
 btn:{backgroundColor:"#bbb",padding:8,marginRight:5},
 present:{backgroundColor:"#27ae60"},
 absent:{backgroundColor:"#e74c3c"},
+white:{color:"#fff"},
 
-white:{color:"#fff"}
+modal:{flex:1,justifyContent:"center",backgroundColor:"rgba(0,0,0,0.5)"},
+modalBox:{backgroundColor:"#fff",margin:20,padding:15,borderRadius:10},
+
+saveBtn:{backgroundColor:"#27ae60",padding:10,flex:1,marginRight:5,alignItems:"center"},
+cancelBtn:{backgroundColor:"#888",padding:10,flex:1,alignItems:"center"},
+deleteBtn:{backgroundColor:"#e74c3c",padding:10,marginTop:10,alignItems:"center"},
 });
