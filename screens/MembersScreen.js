@@ -14,7 +14,7 @@ import {
 
 import QRCode from "react-native-qrcode-svg";
 
-export default function MembersScreen() {
+export default function MembersScreen({ navigation }) {
 
   //////////////// STATE //////////////////
   const defaultMember = {
