@@ -1,192 +1,242 @@
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Image, Modal, TextInput
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet
 } from "react-native";
 
-import * as ImagePicker from "expo-image-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-
-import { db, storage } from "../firebase";
-import {
-  collection, addDoc, deleteDoc, doc,
-  updateDoc, onSnapshot
-} from "firebase/firestore";
-
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
-const churchId = "church1"; // ✅ multi-church base
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function AdminDashboard() {
 
-  const [events, setEvents] = useState([]);
-  const [flyers, setFlyers] = useState([]);
+  const navigation = useNavigation();
 
-  const [modal, setModal] = useState(false);
-  const [editing, setEditing] = useState(null);
-
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [activeTab, setActiveTab] = useState("Activities");
 
   /* ✅ LOAD DATA */
   useEffect(() => {
-
-    const ev = onSnapshot(collection(db, "events"), snap =>
-      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const mem = onSnapshot(collection(db, "members"),
+      snap => setMembers(snap.docs.map(d => d.data()))
     );
 
-    const fl = onSnapshot(collection(db, "flyers"), snap =>
-      setFlyers(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const att = onSnapshot(collection(db, "attendance"),
+      snap => setAttendance(snap.docs.map(d => d.data()))
     );
 
-    return () => { ev(); fl(); };
-
+    return () => {
+      mem();
+      att();
+    };
   }, []);
 
-  /* ✅ IMAGE UPLOAD */
-  const uploadImage = async () => {
+  /* ✅ METRICS */
+  const totalMembers = members.length;
+  const present = attendance.filter(a => a.status === "present").length;
+  const absent = attendance.filter(a => a.status === "absent").length;
 
-    const result = await ImagePicker.launchImageLibraryAsync();
-    if (result.canceled) return null;
+  /* ✅ DATA */
+  const stats = {
+    Activities: [
+      { title: "Events", value: 12, icon: "calendar", color: "#6C5CE7" },
+      { title: "Services", value: 8, icon: "time", color: "#00B894" }
+    ],
 
-    const response = await fetch(result.assets[0].uri);
-    const blob = await response.blob();
+    Members: [
+      { title: "Total Members", value: totalMembers, icon: "people", color: "#0984E3" },
+      { title: "New Members", value: 12, icon: "person-add", color: "#00CEC9" }
+    ],
 
-    const imageRef = ref(storage, "uploads/" + Date.now());
-    await uploadBytes(imageRef, blob);
+    Attendance: [
+      { title: "Present", value: present, icon: "checkmark-circle", color: "#00B894" },
+      { title: "Absent", value: absent, icon: "close-circle", color: "#D63031" }
+    ],
 
-    return await getDownloadURL(imageRef);
-  };
-
-  /* ✅ ADD FLYER */
-  const addFlyer = async () => {
-    const url = await uploadImage();
-
-    await addDoc(collection(db, "flyers"), {
-      image: url,
-      churchId,
-      expireAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    });
-  };
-
-  /* ✅ SAVE EVENT */
-  const saveEvent = async () => {
-
-    if (editing) {
-      await updateDoc(doc(db, "events", editing.id), {
-        title,
-        date,
-        churchId
-      });
-    } else {
-      await addDoc(collection(db, "events"), {
-        title,
-        date,
-        churchId,
-        expireAt: date
-      });
-    }
-
-    setModal(false);
-    setEditing(null);
-    setTitle("");
+    Financial: [
+      { title: "Tithes", value: "₵5000", icon: "cash", color: "#FDCB6E" },
+      { title: "Offerings", value: "₵3200", icon: "wallet", color: "#E17055" }
+    ]
   };
 
   return (
-    <ScrollView style={{ padding: 15 }}>
+    <View style={styles.container}>
 
-      {/* ✅ FLYERS */}
-      <Text style={styles.title}>Flyer Manager</Text>
+      {/* ✅ HEADER */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: "MainTabs" }]
+              })
+            )
+          }
+        >
+          <Ionicons name="arrow-back" size={22} />
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.btn} onPress={addFlyer}>
-        <Text style={styles.btnText}>Upload Flyer</Text>
-      </TouchableOpacity>
+        <Text style={styles.header}>Admin Dashboard</Text>
+      </View>
 
-      {flyers.map(f => (
-        <View key={f.id} style={styles.card}>
-          <Image source={{ uri: f.image }} style={{ height: 120 }} />
-          <TouchableOpacity onPress={() =>
-            deleteDoc(doc(db, "flyers", f.id))
-          }>
-            <Text style={{ color: "red" }}>Delete</Text>
-          </TouchableOpacity>
+      {/* ✅ MODERN TABS */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.tabsContainer}>
+          {Object.keys(stats).map(tab => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              style={[
+                styles.tabPill,
+                activeTab === tab && styles.activePill
+              ]}
+            >
+              <Text style={[
+                styles.tabText,
+                activeTab === tab && styles.activeText
+              ]}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      ))}
+      </ScrollView>
 
-      {/* ✅ EVENTS */}
-      <Text style={styles.title}>Events Manager</Text>
+      {/* ✅ CARDS */}
+      <ScrollView contentContainerStyle={styles.grid}>
+        {stats[activeTab].map((item, index) => (
 
-      <TouchableOpacity
-        style={styles.btn}
-        onPress={() => setModal(true)}
-      >
-        <Text style={styles.btnText}>Add Event</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            key={index}
+            style={styles.card}
+            activeOpacity={0.85}
+            onPress={() =>
+              navigation.navigate("DashboardDetails", {
+                title: item.title
+              })
+            }
+          >
 
-      {events.map(e => (
-        <View key={e.id} style={styles.card}>
-          <Text>{e.title}</Text>
-          <Text>{new Date(e.date?.seconds * 1000).toLocaleString()}</Text>
+            {/* ICON */}
+            <View style={[styles.iconBox, { backgroundColor: item.color }]}>
+              <Ionicons name={item.icon} size={18} color="#fff" />
+            </View>
 
-          <TouchableOpacity onPress={() => {
-            setEditing(e);
-            setTitle(e.title);
-            setModal(true);
-          }}>
-            <Text style={{ color: "blue" }}>Edit</Text>
+            {/* VALUE */}
+            <Text style={styles.value}>{item.value}</Text>
+
+            {/* LABEL */}
+            <Text style={styles.label}>{item.title}</Text>
+
+            {/* FOOTER */}
+            <Text style={styles.cardHint}>View details →</Text>
+
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() =>
-            deleteDoc(doc(db, "events", e.id))
-          }>
-            <Text style={{ color: "red" }}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+        ))}
+      </ScrollView>
 
-      {/* ✅ MODAL */}
-      <Modal visible={modal} animationType="slide">
-        <View style={{ padding: 20 }}>
-
-          <TextInput
-            placeholder="Event Title"
-            value={title}
-            onChangeText={setTitle}
-            style={styles.input}
-          />
-
-          <TouchableOpacity onPress={() => setShowPicker(true)}>
-            <Text>{date.toLocaleString()}</Text>
-          </TouchableOpacity>
-
-          {showPicker && (
-            <DateTimePicker
-              value={date}
-              mode="datetime"
-              onChange={(e, d) => {
-                setShowPicker(false);
-                if (d) setDate(d);
-              }}
-            />
-          )}
-
-          <TouchableOpacity style={styles.saveBtn} onPress={saveEvent}>
-            <Text style={{ color: "#fff" }}>Save</Text>
-          </TouchableOpacity>
-
-        </View>
-      </Modal>
-
-    </ScrollView>
+    </View>
   );
 }
 
+/* ✅ ✅ ✅ STYLES */
 const styles = StyleSheet.create({
-  title: { fontWeight: "800", fontSize: 18, marginBottom: 10 },
-  btn: { backgroundColor: "#4B3F72", padding: 10, borderRadius: 8, marginBottom: 10 },
-  btnText: { color: "#fff", textAlign: "center" },
-  card: { backgroundColor: "#fff", padding: 10, marginBottom: 10, borderRadius: 8 },
-  input: { backgroundColor: "#eee", padding: 10, marginBottom: 10 },
-  saveBtn: { backgroundColor: "#1BA97F", padding: 12, borderRadius: 8 }
+
+  container: {
+    flex: 1,
+    backgroundColor: "#f4f6fb",
+    padding: 15
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15
+  },
+
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginLeft: 10
+  },
+
+  /* ✅ TABS */
+  tabsContainer: {
+    flexDirection: "row",
+    paddingBottom: 10
+  },
+
+  tabPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: "#eee",
+    borderRadius: 20,
+    marginRight: 10
+  },
+
+  activePill: {
+    backgroundColor: "#4B3F72"
+  },
+
+  tabText: {
+    fontSize: 12,
+    color: "#555"
+  },
+
+  activeText: {
+    color: "#fff",
+    fontWeight: "600"
+  },
+
+  /* ✅ GRID */
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between"
+  },
+
+  /* ✅ PREMIUM CARD */
+  card: {
+    width: "48%",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 14,
+    elevation: 4
+  },
+
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10
+  },
+
+  value: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#333"
+  },
+
+  label: {
+    fontSize: 13,
+    color: "#777",
+    marginTop: 4
+  },
+
+  cardHint: {
+    marginTop: 10,
+    fontSize: 11,
+    color: "#1BA97F"
+  }
+
 });

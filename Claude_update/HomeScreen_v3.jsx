@@ -19,17 +19,18 @@ import * as ImagePicker from "expo-image-picker";
 export default function HomeScreen({ navigation }) {
 
   const screenWidth = Dimensions.get("window").width;
+
   const scrollRef = useRef(null);
   const currentIndex = useRef(0);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  /* ── FEATURED EVENTS HEADING — editable ── */
+  /* FEATURED EVENTS HEADING — editable */
   const [carouselHeading, setCarouselHeading] = useState("Featured Events");
   const [editingCarouselHeading, setEditingCarouselHeading] = useState(false);
 
-  /* ── PASTOR MESSAGE — editable ── */
+  /* PASTOR MESSAGE — editable */
   const [pastorHeading, setPastorHeading] = useState("Message from Pastor");
   const [pastorMessage, setPastorMessage] = useState(
     "Stay strong in faith. Continue to grow spiritually."
@@ -37,7 +38,7 @@ export default function HomeScreen({ navigation }) {
   const [editingPastorHeading, setEditingPastorHeading] = useState(false);
   const [editingPastorMessage, setEditingPastorMessage] = useState(false);
 
-  /* ── FLYERS ── */
+  /* FLYERS */
   const [flyers, setFlyers] = useState([
     { id: "1", image: require("../assets/flyer1.jpg"), active: true },
     { id: "2", image: require("../assets/flyer2.jpg"), active: true },
@@ -47,14 +48,16 @@ export default function HomeScreen({ navigation }) {
   /* Hide / Show ALL flyers in carousel */
   const [flyerSectionVisible, setFlyerSectionVisible] = useState(true);
 
-  /* ✅ Collapse/expand manage flyers list */
   const [manageFlyersExpanded, setManageFlyersExpanded] = useState(true);
 
-  /* Active flyers — space collapses fully when none */
-  const activeFlyers = flyerSectionVisible ? flyers.filter(f => f.active) : [];
+  const activeFlyers = flyerSectionVisible
+    ? flyers.filter(f => f.active)
+    : [];
   const showCarousel = activeFlyers.length > 0;
 
-  /* ── FLYER DELETE ── */
+  const [eventsVisible, setEventsVisible] = useState(true);
+
+  /* FLYER DELETE */
   const [flyerToDelete, setFlyerToDelete] = useState(null);
   const [deleteFlyerModalVisible, setDeleteFlyerModalVisible] = useState(false);
 
@@ -64,64 +67,75 @@ export default function HomeScreen({ navigation }) {
     setFlyerToDelete(null);
   };
 
-  /* ── EVENTS ── */
+  /* EVENTS */
   const [events, setEvents] = useState([
     { id: "1", title: "Sunday Service", date: "9:00 AM", desc: "Main worship", active: true },
     { id: "2", title: "Youth Meetup", date: "Friday 6PM", desc: "Youth fellowship", active: true }
   ]);
 
-  /* ✅ Toggle upcoming events section */
-  const [eventsVisible, setEventsVisible] = useState(true);
-
   const activeEvents = events.filter(e => e.active);
 
-  /* ── EVENT MODAL STATES ── */
+  /* EVENT MODAL STATES */
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible]     = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [editingEvent, setEditingEvent]   = useState(null);
-  const [eventToDelete, setEventToDelete] = useState(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDate, setNewDate]   = useState("");
-  const [newDesc, setNewDesc]   = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [editDate, setEditDate]   = useState("");
-  const [editDesc, setEditDesc]   = useState("");
 
-  /* ── EVENT FUNCTIONS ── */
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventToDelete, setEventToDelete] = useState(null);
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+
+  const [editTitle, setEditTitle] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+
+  /* EVENT FUNCTIONS */
   const createEvent = () => {
     if (!newTitle.trim()) return;
-    setEvents(prev => [{
+    const newEvent = {
       id: Date.now().toString(),
-      title: newTitle, date: newDate, desc: newDesc, active: true
-    }, ...prev]);
+      title: newTitle,
+      date: newDate,
+      desc: newDesc,
+      active: true
+    };
+    setEvents(prev => [newEvent, ...prev]);
     setCreateModalVisible(false);
     setNewTitle(""); setNewDate(""); setNewDesc("");
   };
 
   const editEvent = (event) => {
     setEditingEvent(event);
-    setEditTitle(event.title); setEditDate(event.date); setEditDesc(event.desc);
+    setEditTitle(event.title);
+    setEditDate(event.date);
+    setEditDesc(event.desc);
     setEditModalVisible(true);
   };
 
   const saveEdit = () => {
-    setEvents(prev => prev.map(e =>
-      e.id === editingEvent.id
-        ? { ...e, title: editTitle, date: editDate, desc: editDesc }
-        : e
-    ));
+    setEvents(prev =>
+      prev.map(e =>
+        e.id === editingEvent.id
+          ? { ...e, title: editTitle, date: editDate, desc: editDesc }
+          : e
+      )
+    );
     setEditModalVisible(false);
   };
 
-  const deleteEvent = (event) => { setEventToDelete(event); setDeleteModalVisible(true); };
+  const deleteEvent = (event) => {
+    setEventToDelete(event);
+    setDeleteModalVisible(true);
+  };
 
   const confirmDelete = () => {
     setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
     setDeleteModalVisible(false);
   };
 
-  /* ✅ Upload flyer — opens gallery or camera */
+  /* Upload flyer: open gallery or camera */
   const handleUpload = () => {
     Alert.alert(
       "Upload Flyer",
@@ -175,9 +189,27 @@ export default function HomeScreen({ navigation }) {
     );
   };
 
-  /* ── AUTO SLIDE ── */
+  // ─────────────────────────────────────────────────────────────
+  // MEMBERS NAVIGATION — works whether MembersScreen is:
+  //   (a) a direct tab:  navigate("Members")
+  //   (b) a stack inside a tab: getParent().navigate("Members")
+  //   (c) a stack screen named "MembersScreen": navigate("MembersScreen")
+  //
+  // This helper tries all three routes in order so one will always land.
+  // ─────────────────────────────────────────────────────────────
+  const goToMembers = () => {
+    // Try the parent tab navigator first (most common setup)
+    try {
+      navigation.getParent()?.navigate("Members");
+    } catch (e) {}
+    // Also call direct in case HomeScreen is already at the root tab level
+    navigation.navigate("Members");
+  };
+
+  /* AUTO SLIDE */
   useEffect(() => {
     if (activeFlyers.length === 0) return;
+
     const interval = setInterval(() => {
       currentIndex.current = (currentIndex.current + 1) % activeFlyers.length;
       setActiveIndex(currentIndex.current);
@@ -186,6 +218,7 @@ export default function HomeScreen({ navigation }) {
         animated: true
       });
     }, 3000);
+
     return () => clearInterval(interval);
   }, [flyers, flyerSectionVisible]);
 
@@ -205,7 +238,7 @@ export default function HomeScreen({ navigation }) {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
 
-        {/* ── 1. CAROUSEL ── */}
+        {/* 1 — CAROUSEL */}
         <View style={styles.carouselWrapper}>
 
           <View style={styles.carouselHeadingRow}>
@@ -221,20 +254,19 @@ export default function HomeScreen({ navigation }) {
             ) : (
               <TouchableOpacity onPress={() => setEditingCarouselHeading(true)} style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>
-                  {carouselHeading}{"  "}
+                  {carouselHeading}
+                  {"  "}
                   <Ionicons name="pencil-outline" size={13} color="#4B3F72" />
                 </Text>
               </TouchableOpacity>
             )}
 
-            {/* ✅ Upload button opens gallery/camera */}
             <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
               <Ionicons name="cloud-upload-outline" size={14} color="#fff" />
               <Text style={styles.uploadBtnText}>Upload</Text>
             </TouchableOpacity>
           </View>
 
-          {/* ✅ Carousel space fully collapses when no active flyers */}
           {showCarousel && (
             <>
               <ScrollView ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
@@ -256,7 +288,7 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {/* ── 2. MESSAGE FROM PASTOR ── */}
+        {/* 2 — MESSAGE FROM PASTOR */}
         <View style={styles.messageCard}>
           {editingPastorHeading ? (
             <TextInput
@@ -295,25 +327,26 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
-        {/* ── 3. MANAGE FLYERS ── */}
+        {/* 3 — MANAGE FLYERS */}
         <View style={styles.adminPanel}>
-
           <View style={styles.manageFlyersHeader}>
             <Text style={styles.adminTitle}>Manage Flyers</Text>
 
             <View style={{ flexDirection: "row", gap: 6 }}>
-              {/* Hide/Show all in carousel */}
               <TouchableOpacity
                 style={[styles.toggleAllBtn, { backgroundColor: flyerSectionVisible ? "#4B3F72" : "#1BA97F" }]}
                 onPress={() => setFlyerSectionVisible(prev => !prev)}
               >
-                <Ionicons name={flyerSectionVisible ? "eye-off-outline" : "eye-outline"} size={13} color="#fff" />
+                <Ionicons
+                  name={flyerSectionVisible ? "eye-off-outline" : "eye-outline"}
+                  size={13}
+                  color="#fff"
+                />
                 <Text style={styles.toggleAllText}>
                   {flyerSectionVisible ? "Hide All" : "Show All"}
                 </Text>
               </TouchableOpacity>
 
-              {/* ✅ Collapse/expand the flyer list */}
               <TouchableOpacity
                 style={[styles.toggleAllBtn, { backgroundColor: "#888" }]}
                 onPress={() => setManageFlyersExpanded(prev => !prev)}
@@ -330,7 +363,6 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
 
-          {/* ✅ Flyer rows hidden when collapsed */}
           {manageFlyersExpanded && flyers.map(item => (
             <View key={item.id} style={styles.adminRow}>
               <Image source={item.image} style={styles.adminImage} />
@@ -354,7 +386,10 @@ export default function HomeScreen({ navigation }) {
 
               <TouchableOpacity
                 style={[styles.adminBtn, { backgroundColor: "#7f1d1d", marginLeft: 4 }]}
-                onPress={() => { setFlyerToDelete(item); setDeleteFlyerModalVisible(true); }}
+                onPress={() => {
+                  setFlyerToDelete(item);
+                  setDeleteFlyerModalVisible(true);
+                }}
               >
                 <Text style={styles.adminBtnText}>Delete</Text>
               </TouchableOpacity>
@@ -362,12 +397,11 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* ── 4. QUICK ACTIONS ── */}
+        {/* 4 — QUICK ACTIONS */}
         <Text style={[styles.sectionTitle, { paddingHorizontal: 15 }]}>Quick Actions</Text>
 
         <View style={styles.quickGrid}>
 
-          {/* ✅ Attendance → Attendance tab */}
           <TouchableOpacity
             style={styles.quickCard}
             onPress={() => navigation?.navigate("Attendance")}
@@ -376,38 +410,32 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.quickText}>Attendance</Text>
           </TouchableOpacity>
 
-          {/* Members → Members tab */}
+          {/* ✅ FIXED: uses goToMembers() helper */}
           <TouchableOpacity
-             style={styles.quickCard}
-            onPress={() => navigation.jumpTo("Members")}
-           >
-
-        
+            style={styles.quickCard}
+            onPress={goToMembers}
+          >
             <Ionicons name="people-outline" size={18} color="#1BA97F" />
             <Text style={styles.quickText}>Members</Text>
           </TouchableOpacity>
 
-          {/* ✅ Reports → AdminDashboard */}
           <TouchableOpacity
             style={styles.quickCard}
-            
+            onPress={() => navigation?.navigate("AdminDashboard")}
           >
             <Ionicons name="analytics-outline" size={18} color="#D97706" />
             <Text style={styles.quickText}>Reports</Text>
           </TouchableOpacity>
 
-          {/* Donate */}
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF3E0" }]}>
             <Ionicons name="heart-outline" size={18} color="#E53935" />
             <Text style={styles.quickText}>Donate</Text>
           </TouchableOpacity>
-
         </View>
 
-        {/* ── 5. UPCOMING EVENTS ── */}
+        {/* 5 — UPCOMING EVENTS */}
         <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
 
-          {/* ✅ Section header with toggle */}
           <View style={styles.eventsSectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Events</Text>
             <TouchableOpacity
@@ -416,9 +444,12 @@ export default function HomeScreen({ navigation }) {
             >
               <Ionicons
                 name={eventsVisible ? "eye-off-outline" : "eye-outline"}
-                size={13} color="#fff"
+                size={13}
+                color="#fff"
               />
-              <Text style={styles.toggleAllText}>{eventsVisible ? "Hide" : "Show"}</Text>
+              <Text style={styles.toggleAllText}>
+                {eventsVisible ? "Hide" : "Show"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -435,11 +466,14 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.eventDate}>{event.date}</Text>
                     <Text style={styles.eventDesc}>{event.desc}</Text>
                   </View>
+
                   <View style={{ alignItems: "center", gap: 6 }}>
                     <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
+
                     <TouchableOpacity onPress={() => editEvent(event)}>
                       <Ionicons name="create-outline" size={20} color="#1BA97F" />
                     </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => deleteEvent(event)}>
                       <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
                     </TouchableOpacity>
@@ -553,15 +587,21 @@ const styles = StyleSheet.create({
   headerSub: { color: "#ddd", fontSize: 11 },
 
   carouselWrapper: { marginTop: 10, paddingHorizontal: 15 },
+
   carouselHeadingRow: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 8
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8
   },
   uploadBtn: {
-    flexDirection: "row", alignItems: "center",
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#4B3F72",
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 8, gap: 4
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4
   },
   uploadBtnText: { color: "#fff", fontSize: 11, fontWeight: "600" },
 
@@ -570,31 +610,47 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, backgroundColor: "#ccc", margin: 4, borderRadius: 3 },
   activeDot: { backgroundColor: "#4B3F72" },
 
+  noFlyerBox: {
+    height: 100,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  noFlyerText: { color: "#aaa", fontSize: 12, marginTop: 6 },
+
   messageCard: { backgroundColor: "#fff", marginHorizontal: 15, marginTop: 14, padding: 14, borderRadius: 10 },
   messageTitle: { fontWeight: "600", marginBottom: 4 },
   messageText: { fontSize: 12, color: "#555" },
   inlineInput: {
-    borderBottomWidth: 1.5, borderBottomColor: "#4B3F72",
-    paddingVertical: 2, fontSize: 14, fontWeight: "600", color: "#222", flex: 1
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#4B3F72",
+    paddingVertical: 2,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#222",
+    flex: 1
   },
 
   adminPanel: { paddingHorizontal: 15, marginTop: 14 },
   manageFlyersHeader: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 8
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8
   },
   adminTitle: { fontWeight: "700", fontSize: 16 },
   toggleAllBtn: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, gap: 4
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4
   },
   toggleAllText: { color: "#fff", fontSize: 11, fontWeight: "600" },
 
-  adminRow: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 8,
-    backgroundColor: "#fff", padding: 8, borderRadius: 8
-  },
+  adminRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8, backgroundColor: "#fff", padding: 8, borderRadius: 8 },
   adminImage: { width: 50, height: 50, borderRadius: 6 },
   statusText: { fontSize: 12, flex: 1, marginLeft: 8 },
   adminBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
@@ -602,19 +658,15 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
 
-  quickGrid: {
-    flexDirection: "row", flexWrap: "wrap",
-    justifyContent: "space-between", paddingHorizontal: 15
-  },
-  quickCard: {
-    width: "48%", padding: 10, backgroundColor: "#E8F0FE",
-    borderRadius: 10, marginBottom: 8, alignItems: "center"
-  },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 15 },
+  quickCard: { width: "48%", padding: 10, backgroundColor: "#E8F0FE", borderRadius: 10, marginBottom: 8, alignItems: "center" },
   quickText: { fontSize: 11, marginTop: 4 },
 
   eventsSectionHeader: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between", marginBottom: 4
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4
   },
 
   eventCard: { flexDirection: "row", backgroundColor: "#fff", padding: 12, borderRadius: 10, marginBottom: 8 },

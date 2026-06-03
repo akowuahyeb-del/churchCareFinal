@@ -378,11 +378,9 @@ export default function HomeScreen({ navigation }) {
 
           {/* Members → Members tab */}
           <TouchableOpacity
-             style={styles.quickCard}
-            onPress={() => navigation.jumpTo("Members")}
-           >
-
-        
+            style={styles.quickCard}
+            onPress={() => navigation?.navigate("Members")}
+          >
             <Ionicons name="people-outline" size={18} color="#1BA97F" />
             <Text style={styles.quickText}>Members</Text>
           </TouchableOpacity>
@@ -390,7 +388,7 @@ export default function HomeScreen({ navigation }) {
           {/* ✅ Reports → AdminDashboard */}
           <TouchableOpacity
             style={styles.quickCard}
-            
+            onPress={() => navigation?.navigate("AdminDashboard")}
           >
             <Ionicons name="analytics-outline" size={18} color="#D97706" />
             <Text style={styles.quickText}>Reports</Text>

@@ -9,10 +9,12 @@ import {
   Dimensions,
   Modal,
   Pressable,
-  TextInput
+  TextInput,
+  Alert
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
 export default function HomeScreen({ navigation }) {
 
@@ -46,9 +48,14 @@ export default function HomeScreen({ navigation }) {
   /* Hide / Show ALL flyers in carousel */
   const [flyerSectionVisible, setFlyerSectionVisible] = useState(true);
 
+  const [manageFlyersExpanded, setManageFlyersExpanded] = useState(true);
+
   const activeFlyers = flyerSectionVisible
     ? flyers.filter(f => f.active)
     : [];
+  const showCarousel = activeFlyers.length > 0;
+
+  const [eventsVisible, setEventsVisible] = useState(true);
 
   /* FLYER DELETE */
   const [flyerToDelete, setFlyerToDelete] = useState(null);
@@ -128,6 +135,77 @@ export default function HomeScreen({ navigation }) {
     setDeleteModalVisible(false);
   };
 
+  /* Upload flyer: open gallery or camera */
+  const handleUpload = () => {
+    Alert.alert(
+      "Upload Flyer",
+      "Choose a source",
+      [
+        {
+          text: "Photo Library",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Please allow photo library access.");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              quality: 0.8
+            });
+            if (!result.canceled) {
+              const uri = result.assets[0].uri;
+              setFlyers(prev => [
+                ...prev,
+                { id: Date.now().toString(), image: { uri }, active: true }
+              ]);
+            }
+          }
+        },
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Please allow camera access.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              quality: 0.8
+            });
+            if (!result.canceled) {
+              const uri = result.assets[0].uri;
+              setFlyers(prev => [
+                ...prev,
+                { id: Date.now().toString(), image: { uri }, active: true }
+              ]);
+            }
+          }
+        },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // MEMBERS NAVIGATION — works whether MembersScreen is:
+  //   (a) a direct tab:  navigate("Members")
+  //   (b) a stack inside a tab: getParent().navigate("Members")
+  //   (c) a stack screen named "MembersScreen": navigate("MembersScreen")
+  //
+  // This helper tries all three routes in order so one will always land.
+  // ─────────────────────────────────────────────────────────────
+  const goToMembers = () => {
+    // Try the parent tab navigator first (most common setup)
+    try {
+      navigation.getParent()?.navigate("Members");
+    } catch (e) {}
+    // Also call direct in case HomeScreen is already at the root tab level
+    navigation.navigate("Members");
+  };
+
   /* AUTO SLIDE */
   useEffect(() => {
     if (activeFlyers.length === 0) return;
@@ -163,7 +241,6 @@ export default function HomeScreen({ navigation }) {
         {/* 1 — CAROUSEL */}
         <View style={styles.carouselWrapper}>
 
-          {/* Heading row: editable title + Upload button */}
           <View style={styles.carouselHeadingRow}>
             {editingCarouselHeading ? (
               <TextInput
@@ -184,14 +261,13 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             )}
 
-            {/* Upload Flyer Button */}
-            <TouchableOpacity style={styles.uploadBtn}>
+            <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
               <Ionicons name="cloud-upload-outline" size={14} color="#fff" />
               <Text style={styles.uploadBtnText}>Upload</Text>
             </TouchableOpacity>
           </View>
 
-          {activeFlyers.length > 0 ? (
+          {showCarousel && (
             <>
               <ScrollView ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
                 {activeFlyers.map(item => (
@@ -209,19 +285,11 @@ export default function HomeScreen({ navigation }) {
                 ))}
               </View>
             </>
-          ) : (
-            <View style={styles.noFlyerBox}>
-              <Ionicons name="images-outline" size={32} color="#bbb" />
-              <Text style={styles.noFlyerText}>
-                {flyerSectionVisible ? "No active flyers" : "Flyers hidden"}
-              </Text>
-            </View>
           )}
         </View>
 
         {/* 2 — MESSAGE FROM PASTOR */}
         <View style={styles.messageCard}>
-          {/* Editable heading */}
           {editingPastorHeading ? (
             <TextInput
               style={[styles.inlineInput, { marginBottom: 6 }]}
@@ -240,7 +308,6 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           )}
 
-          {/* Editable message body */}
           {editingPastorMessage ? (
             <TextInput
               style={[styles.inlineInput, { fontSize: 12, color: "#555" }]}
@@ -265,23 +332,38 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.manageFlyersHeader}>
             <Text style={styles.adminTitle}>Manage Flyers</Text>
 
-            {/* Hide / Show ALL flyers toggle */}
-            <TouchableOpacity
-              style={[styles.toggleAllBtn, { backgroundColor: flyerSectionVisible ? "#4B3F72" : "#1BA97F" }]}
-              onPress={() => setFlyerSectionVisible(prev => !prev)}
-            >
-              <Ionicons
-                name={flyerSectionVisible ? "eye-off-outline" : "eye-outline"}
-                size={13}
-                color="#fff"
-              />
-              <Text style={styles.toggleAllText}>
-                {flyerSectionVisible ? "Hide All" : "Show All"}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <TouchableOpacity
+                style={[styles.toggleAllBtn, { backgroundColor: flyerSectionVisible ? "#4B3F72" : "#1BA97F" }]}
+                onPress={() => setFlyerSectionVisible(prev => !prev)}
+              >
+                <Ionicons
+                  name={flyerSectionVisible ? "eye-off-outline" : "eye-outline"}
+                  size={13}
+                  color="#fff"
+                />
+                <Text style={styles.toggleAllText}>
+                  {flyerSectionVisible ? "Hide All" : "Show All"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.toggleAllBtn, { backgroundColor: "#888" }]}
+                onPress={() => setManageFlyersExpanded(prev => !prev)}
+              >
+                <Ionicons
+                  name={manageFlyersExpanded ? "chevron-up-outline" : "chevron-down-outline"}
+                  size={13}
+                  color="#fff"
+                />
+                <Text style={styles.toggleAllText}>
+                  {manageFlyersExpanded ? "Collapse" : "Expand"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {flyers.map(item => (
+          {manageFlyersExpanded && flyers.map(item => (
             <View key={item.id} style={styles.adminRow}>
               <Image source={item.image} style={styles.adminImage} />
 
@@ -319,26 +401,32 @@ export default function HomeScreen({ navigation }) {
         <Text style={[styles.sectionTitle, { paddingHorizontal: 15 }]}>Quick Actions</Text>
 
         <View style={styles.quickGrid}>
-          <TouchableOpacity style={styles.quickCard}>
+
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => navigation?.navigate("Attendance")}
+          >
             <Ionicons name="checkmark-circle-outline" size={18} color="#2F55D4" />
             <Text style={styles.quickText}>Attendance</Text>
           </TouchableOpacity>
 
-          {/* Members → navigates to Members tab */}
+          {/* ✅ FIXED: uses goToMembers() helper */}
           <TouchableOpacity
             style={styles.quickCard}
-            onPress={() => navigation?.navigate("Members")}
+            onPress={() => navigation.jumpTo("Members")}
           >
             <Ionicons name="people-outline" size={18} color="#1BA97F" />
             <Text style={styles.quickText}>Members</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickCard}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => navigation?.navigate("AdminDashboard")}
+          >
             <Ionicons name="analytics-outline" size={18} color="#D97706" />
             <Text style={styles.quickText}>Reports</Text>
           </TouchableOpacity>
 
-          {/* Donate — new */}
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF3E0" }]}>
             <Ionicons name="heart-outline" size={18} color="#E53935" />
             <Text style={styles.quickText}>Donate</Text>
@@ -347,33 +435,53 @@ export default function HomeScreen({ navigation }) {
 
         {/* 5 — UPCOMING EVENTS */}
         <View style={{ paddingHorizontal: 15, marginTop: 10 }}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
 
-          <TouchableOpacity style={styles.addBtn} onPress={() => setCreateModalVisible(true)}>
-            <Text style={{ color: "#fff" }}>+ Add Event</Text>
-          </TouchableOpacity>
+          <View style={styles.eventsSectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <TouchableOpacity
+              style={[styles.toggleAllBtn, { backgroundColor: eventsVisible ? "#4B3F72" : "#1BA97F" }]}
+              onPress={() => setEventsVisible(prev => !prev)}
+            >
+              <Ionicons
+                name={eventsVisible ? "eye-off-outline" : "eye-outline"}
+                size={13}
+                color="#fff"
+              />
+              <Text style={styles.toggleAllText}>
+                {eventsVisible ? "Hide" : "Show"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          {activeEvents.map(event => (
-            <View key={event.id} style={styles.eventCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDate}>{event.date}</Text>
-                <Text style={styles.eventDesc}>{event.desc}</Text>
-              </View>
+          {eventsVisible && (
+            <>
+              <TouchableOpacity style={styles.addBtn} onPress={() => setCreateModalVisible(true)}>
+                <Text style={{ color: "#fff" }}>+ Add Event</Text>
+              </TouchableOpacity>
 
-              <View style={{ alignItems: "center", gap: 6 }}>
-                <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
+              {activeEvents.map(event => (
+                <View key={event.id} style={styles.eventCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.eventTitle}>{event.title}</Text>
+                    <Text style={styles.eventDate}>{event.date}</Text>
+                    <Text style={styles.eventDesc}>{event.desc}</Text>
+                  </View>
 
-                <TouchableOpacity onPress={() => editEvent(event)}>
-                  <Ionicons name="create-outline" size={20} color="#1BA97F" />
-                </TouchableOpacity>
+                  <View style={{ alignItems: "center", gap: 6 }}>
+                    <Ionicons name="calendar-outline" size={20} color="#4B3F72" />
 
-                <TouchableOpacity onPress={() => deleteEvent(event)}>
-                  <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+                    <TouchableOpacity onPress={() => editEvent(event)}>
+                      <Ionicons name="create-outline" size={20} color="#1BA97F" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => deleteEvent(event)}>
+                      <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
         </View>
 
       </ScrollView>
@@ -480,7 +588,6 @@ const styles = StyleSheet.create({
 
   carouselWrapper: { marginTop: 10, paddingHorizontal: 15 },
 
-  /* Heading row with Upload button */
   carouselHeadingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -512,7 +619,6 @@ const styles = StyleSheet.create({
   },
   noFlyerText: { color: "#aaa", fontSize: 12, marginTop: 6 },
 
-  /* Message card — inline editable */
   messageCard: { backgroundColor: "#fff", marginHorizontal: 15, marginTop: 14, padding: 14, borderRadius: 10 },
   messageTitle: { fontWeight: "600", marginBottom: 4 },
   messageText: { fontSize: 12, color: "#555" },
@@ -526,7 +632,6 @@ const styles = StyleSheet.create({
     flex: 1
   },
 
-  /* Manage Flyers */
   adminPanel: { paddingHorizontal: 15, marginTop: 14 },
   manageFlyersHeader: {
     flexDirection: "row",
@@ -553,10 +658,16 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
 
-  /* Quick Actions — 2-column grid, now 4 cards */
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 15 },
   quickCard: { width: "48%", padding: 10, backgroundColor: "#E8F0FE", borderRadius: 10, marginBottom: 8, alignItems: "center" },
   quickText: { fontSize: 11, marginTop: 4 },
+
+  eventsSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4
+  },
 
   eventCard: { flexDirection: "row", backgroundColor: "#fff", padding: 12, borderRadius: 10, marginBottom: 8 },
   eventTitle: { fontWeight: "700", fontSize: 13 },
