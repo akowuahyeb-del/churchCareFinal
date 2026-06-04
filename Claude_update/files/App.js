@@ -13,9 +13,7 @@ import SettingsScreen from "./screens/SettingsScreen";
 import MemberProfileScreen from "./screens/MemberProfileScreen";
 import AdminDashboard from "./screens/AdminDashboard";
 import DashboardDetailsScreen from "./screens/DashboardDetailsScreen";
-import DonateScreen from "./screens/DonateScreen";
 import HistoryScreen from "./screens/HistoryScreen"; // ← create this screen
-import AdminFinanceScreen from "./screens/AdminFinanceScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -83,8 +81,6 @@ function RootStack() {
       <Stack.Screen name="MainTabs"        component={MainTabs} />
       <Stack.Screen name="AdminDashboard"  component={AdminDashboard} />
       <Stack.Screen name="DashboardDetails" component={DashboardDetailsScreen} />
-      <Stack.Screen name="Donate" component={DonateScreen} />
-      <Stack.Screen name="Finance" component={AdminFinanceScreen} />
     </Stack.Navigator>
   );
 }

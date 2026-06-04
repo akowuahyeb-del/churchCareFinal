@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -43,24 +43,37 @@ export default function AdminDashboard() {
 
   /* ✅ DATA */
   const stats = {
+
     Activities: [
       { title: "Events", value: 12, icon: "calendar", color: "#6C5CE7" },
-      { title: "Services", value: 8, icon: "time", color: "#00B894" }
+      { title: "Services", value: 8, icon: "time", color: "#00B894" },
     ],
 
     Members: [
       { title: "Total Members", value: totalMembers, icon: "people", color: "#0984E3" },
-      { title: "New Members", value: 12, icon: "person-add", color: "#00CEC9" }
+      { title: "New Members", value: 12, icon: "person-add", color: "#00CEC9" },
     ],
 
     Attendance: [
       { title: "Present", value: present, icon: "checkmark-circle", color: "#00B894" },
-      { title: "Absent", value: absent, icon: "close-circle", color: "#D63031" }
+      { title: "Absent", value: absent, icon: "close-circle", color: "#D63031" },
     ],
 
     Financial: [
       { title: "Tithes", value: "₵5000", icon: "cash", color: "#FDCB6E" },
-      { title: "Offerings", value: "₵3200", icon: "wallet", color: "#E17055" }
+      { title: "Offerings", value: "₵3200", icon: "wallet", color: "#E17055" },
+    ],
+
+    /* ✅ NEW TAB */
+    Inventory: [
+      { title: "In Stock", value: 120, icon: "cube", color: "#00B894" },
+      { title: "Low Stock", value: 8, icon: "alert-circle", color: "#E17055" },
+    ],
+
+    /* ✅ NEW TAB */
+    History: [
+      { title: "Today's Logs", value: 25, icon: "time", color: "#6C5CE7" },
+      { title: "Total Records", value: 540, icon: "document-text", color: "#0984E3" },
     ]
   };
 
@@ -79,36 +92,38 @@ export default function AdminDashboard() {
             )
           }
         >
-          <Ionicons name="arrow-back" size={22} />
+          <Ionicons name="arrow-back" size={20} />
         </TouchableOpacity>
 
         <Text style={styles.header}>Admin Dashboard</Text>
       </View>
 
-      {/* ✅ MODERN TABS */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.tabsContainer}>
-          {Object.keys(stats).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={[
-                styles.tabPill,
-                activeTab === tab && styles.activePill
-              ]}
-            >
-              <Text style={[
-                styles.tabText,
-                activeTab === tab && styles.activeText
-              ]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {/* ✅ MODERN SLIM TABS */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabsContainer}
+      >
+        {Object.keys(stats).map(tab => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={[
+              styles.tabPill,
+              activeTab === tab && styles.activePill
+            ]}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === tab && styles.activeText
+            ]}>
+              {tab}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
-      {/* ✅ CARDS */}
+      {/* ✅ GRID CARDS */}
       <ScrollView contentContainerStyle={styles.grid}>
         {stats[activeTab].map((item, index) => (
 
@@ -116,16 +131,14 @@ export default function AdminDashboard() {
             key={index}
             style={styles.card}
             activeOpacity={0.85}
-            onPress={() =>
-              navigation.navigate("DashboardDetails", {
-                title: item.title
-              })
-            }
+            onPress={() => navigation.navigate("DashboardDetails", {
+              title: item.title
+            })}
           >
 
             {/* ICON */}
             <View style={[styles.iconBox, { backgroundColor: item.color }]}>
-              <Ionicons name={item.icon} size={18} color="#fff" />
+              <Ionicons name={item.icon} size={16} color="#fff" />
             </View>
 
             {/* VALUE */}
@@ -146,7 +159,7 @@ export default function AdminDashboard() {
   );
 }
 
-/* ✅ ✅ ✅ STYLES */
+/* ✅ ✅ ✅ FINAL STYLES */
 const styles = StyleSheet.create({
 
   container: {
@@ -162,23 +175,23 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
-    marginLeft: 10
+    marginLeft: 8
   },
 
-  /* ✅ TABS */
+  /* ✅ SLIM TABS */
   tabsContainer: {
     flexDirection: "row",
-    paddingBottom: 10
+    paddingBottom: 8
   },
 
   tabPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 6,   // ✅ reduced height
+    paddingHorizontal: 14,
     backgroundColor: "#eee",
-    borderRadius: 20,
-    marginRight: 10
+    borderRadius: 18,
+    marginRight: 8
   },
 
   activePill: {
@@ -186,7 +199,7 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#555"
   },
 
@@ -206,37 +219,38 @@ const styles = StyleSheet.create({
   card: {
     width: "48%",
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 14,
-    elevation: 4
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 12,
+    elevation: 3
   },
 
   iconBox: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10
+    marginBottom: 8
   },
 
   value: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     color: "#333"
   },
 
   label: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#777",
     marginTop: 4
   },
 
   cardHint: {
-    marginTop: 10,
-    fontSize: 11,
+    marginTop: 8,
+    fontSize: 10,
     color: "#1BA97F"
   }
 
 });
+``
