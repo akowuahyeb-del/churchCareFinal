@@ -8,7 +8,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { CommonActions } from "@react-navigation/native";
 
 export default function HomeScreen({ navigation }) {
 
@@ -177,17 +176,9 @@ export default function HomeScreen({ navigation }) {
     navigation.jumpTo("Members", { screen: "MembersMain" });
   };
 
-  
-const goToDonate = () => {
-  navigation.navigate("MainTabs", {
-    screen: "Home",
-  });
-
-  setTimeout(() => {
-    navigation.getParent()?.navigate("Donate");
-  }, 0);
-};
-``
+  const goToDonate = () => {
+    navigation.navigate("Donate");   // RootStack screen — see App.js note below
+  };
 
   useEffect(() => {
     if (activeFlyers.length === 0) return;
