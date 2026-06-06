@@ -335,7 +335,7 @@ export default function HomeScreen({ navigation }) {
 
   /* ══════════════ NAVIGATION ══════════════ */
   const goToMembers = () => navigation.jumpTo("Members", { screen: "MembersMain" });
-  const goToDonate  = () => navigation.navigate("Donate");
+  const goToDonate  = () => navigation.navigate("DonateScreen");
 
   /* ══════════════ HELPERS ══════════════ */
   const fmtDateTime = (iso) => {
