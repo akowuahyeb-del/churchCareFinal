@@ -39,7 +39,7 @@ export default function MembersScreen({ navigation }) {
 
   /* ── viewer role (pass from auth context in production) ── */
   const viewerRole = "admin"; // change to actual role from auth
-
+  const [churchId, setChurchId] = useState(null);
   /* ── member form defaults ── */
   const defaultMember = {
     name: "", phone: "", address: "", occupation: "",
@@ -104,11 +104,22 @@ export default function MembersScreen({ navigation }) {
     loadMembers();
     AsyncStorage.getItem("showActions").then(v => { if (v !== null) setShowActions(JSON.parse(v)); });
   }, []);
+  useEffect(() => {
+  if (churchId) {
+    loadMembers();
+  }
+}, [churchId]);
+  useEffect(() => {
+  AsyncStorage.getItem("churchId").then(id => {
+    console.log("churchId loaded:", id);
+    setChurchId(id);
+  });
+}, []);
 
   const loadMembers = async () => {
     setLoading(true); setError(null);
     try {
-      const snap = await getDocs(collection(db, "members"));
+      const snap = await getDocs(collection(db, "members"), where("churchId", "==", churchId));
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setMembers(data);
       await AsyncStorage.setItem(MEMBERS_CACHE_KEY, JSON.stringify(data));
