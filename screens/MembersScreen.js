@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
@@ -875,5 +874,3 @@ const styles = StyleSheet.create({
   approvalPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   approvalPillText: { fontSize: 11, fontWeight: "600" },
 });
-
-
