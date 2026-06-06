@@ -151,28 +151,51 @@ export default function HomeScreen({ navigation }) {
       { text: "Cancel", style: "cancel" }
     ]);
   };
-
   const uploadFlyerToFirebase = async (uri) => {
-    setUploadingFlyer(true);
-    try {
-      const response  = await fetch(uri);
-      const blob      = await response.blob();
-      const filename  = `flyers/${Date.now()}.jpg`;
-      const storageRef= ref(storage, filename);
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      await addDoc(collection(db, "flyers"), {
-        imageUrl: downloadURL,
-        active:   true,
-        expiry:   null,
-        uploadedAt: new Date().toISOString(),
-      });
-      await loadFlyers();
-      Alert.alert("✅ Flyer uploaded", "It will appear in the carousel.");
-    } catch (e) {
-      Alert.alert("Upload failed", e.message);
-    } finally { setUploadingFlyer(false); }
-  };
+  setUploadingFlyer(true);
+
+  try {
+    const filename = `flyers/${Date.now()}.jpg`;
+    const storageRef = ref(storage, filename);
+
+    // ✅ FIX: use XMLHttpRequest (native-safe)
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function () {
+        reject(new TypeError("Network request failed"));
+      };
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
+      xhr.send(null);
+    });
+
+    await uploadBytes(storageRef, blob);
+    blob.close && blob.close(); // ✅ safe cleanup
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    await addDoc(collection(db, "flyers"), {
+      imageUrl: downloadURL,
+      active: true,
+      expiry: null,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    await loadFlyers();
+
+    Alert.alert("✅ Flyer uploaded", "It will appear in the carousel");
+
+  } catch (error) {
+    console.log("Upload error:", error);
+    Alert.alert("Upload failed", "Please try again");
+  } finally {
+    setUploadingFlyer(false);
+  }
+};
+
 
   const openFlyerExpiry = (id) => {
     setFlyerExpiryTarget(id);
