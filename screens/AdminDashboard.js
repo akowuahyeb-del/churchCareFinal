@@ -390,7 +390,7 @@ export default function AdminDashboard() {
         {/* ✅ #1 — Back button fixed */}
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.replace("MainTabs")}
         >
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>

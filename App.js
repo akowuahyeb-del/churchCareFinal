@@ -85,7 +85,6 @@ function RootStack() {
       <Stack.Screen name="DashboardDetails" component={DashboardDetailsScreen} />
       <Stack.Screen name="DonateScreen" component={DonateScreen} />
       <Stack.Screen name="Finance" component={AdminFinanceScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
       
     </Stack.Navigator>
   );
