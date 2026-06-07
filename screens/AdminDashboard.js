@@ -403,7 +403,7 @@ export default function AdminDashboard() {
       </View>
 
       {/* ✅ #7 — Grid-style tab layout (2 columns × 3 rows) */}
-      <View style={styles.tabGrid}>
+     <View style={styles.tabGrid}>
   {TABS.map(tab => {
     const isActive = activeTab === tab.key;
 
@@ -412,7 +412,9 @@ export default function AdminDashboard() {
         key={tab.key}
         style={[
           styles.tabCard,
-          isActive && styles.tabCardActive
+          { backgroundColor: tab.bg },
+          isActive && styles.tabCardActive,
+          { transform: [{ scale: isActive ? 1.05 : 1 }] }
         ]}
         onPress={() => {
           if (tab.key === "Financial") {
@@ -424,7 +426,7 @@ export default function AdminDashboard() {
       >
         <View style={[
           styles.tabIconWrap,
-          { backgroundColor: tab.bg }
+          { backgroundColor: "#fff" }
         ]}>
           <Ionicons
             name={tab.icon}
@@ -433,13 +435,17 @@ export default function AdminDashboard() {
           />
         </View>
 
-        <Text style={styles.tabLabel}>
+        <Text style={[
+          styles.tabLabel,
+          isActive && { color: tab.color }
+        ]}>
           {tab.label}
         </Text>
       </TouchableOpacity>
     );
   })}
 </View>
+
 
 
       {/* ── CONTENT ── */}
@@ -470,6 +476,49 @@ const styles = StyleSheet.create({
   paddingHorizontal: 16,
   paddingVertical: 16,
   backgroundColor: "#f4f6fb",
+},
+
+tabGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+},
+
+tabCard: {
+  width: "48%",
+  borderRadius: 16,
+  paddingVertical: 16,
+  alignItems: "center",
+  marginBottom: 12,
+
+  backgroundColor: "#fff",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  elevation: 2,
+},
+
+tabCardActive: {
+  borderWidth: 2,
+  borderColor: "#4B3F72",
+},
+
+tabIconBadge: {
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 8,
+},
+
+tabTitle: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#333",
 },
 
 tabCard: {

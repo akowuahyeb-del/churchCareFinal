@@ -298,45 +298,47 @@ export default function AdminFinanceScreen() {
       </View>
 
       {/* ── Tabs ── */}
-      <View style={styles.tabGrid}>
-  {TABS.map(t => {
-    const isActive = tab === t.key;
+     
+<View style={styles.tabGrid}>
+  {TABS.map(tabItem => {
+    const isActive = tab === tabItem.key;
 
     return (
       <TouchableOpacity
-        key={t.key}
+        key={tabItem.key}
         style={[
           styles.tabCard,
-          isActive && styles.tabCardActive
+          { backgroundColor: tabItem.bg },
+          isActive && styles.tabCardActive,
         ]}
-        onPress={() => setTab(t.key)}
+        onPress={() => setTab(tabItem.key)}
       >
         <View
           style={[
             styles.tabIconWrap,
-            { backgroundColor: "#EEF0FA" }
+            { backgroundColor: "#fff" }
           ]}
         >
           <Ionicons
-            name={t.icon}
+            name={tabItem.icon}
             size={20}
-            color={isActive ? "#4B3F72" : "#888"}
+            color={tabItem.color}
           />
         </View>
 
         <Text
           style={[
             styles.tabLabel,
-            isActive && { color: "#4B3F72" }
+            isActive && { color: tabItem.color }
           ]}
-          numberOfLines={1}
         >
-          {t.label}
+          {tabItem.label}
         </Text>
       </TouchableOpacity>
     );
   })}
 </View>
+
 
       {loading ? (
         <View style={styles.loader}><ActivityIndicator color="#4B3F72" size="large" /></View>
@@ -1118,6 +1120,49 @@ tabLabel: {
   fontWeight: "700",
   color: "#666",
   textAlign: "center",
+  tabGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+},
+
+tabCard: {
+  width: "48%",
+  borderRadius: 16,
+  paddingVertical: 16,
+  alignItems: "center",
+  marginBottom: 12,
+
+  backgroundColor: "#fff",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  elevation: 2,
+},
+
+tabCardActive: {
+  borderWidth: 2,
+  borderColor: "#4B3F72",
+},
+
+tabIconBadge: {
+  width: 44,
+  height: 44,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 8,
+},
+
+tabTitle: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#333",
+},
+
 },
 
 });
