@@ -109,6 +109,7 @@ export default function MembersScreen({ navigation }) {
     loadMembers();
   }
 }, [churchId]);
+
   useEffect(() => {
   AsyncStorage.getItem("churchId").then(id => {
     console.log("churchId loaded:", id);
