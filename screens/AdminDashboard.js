@@ -404,19 +404,43 @@ export default function AdminDashboard() {
 
       {/* ✅ #7 — Grid-style tab layout (2 columns × 3 rows) */}
       <View style={styles.tabGrid}>
-        {TABS.map(tab => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity key={tab.key}
-              style={[styles.tabGridBtn, isActive && { backgroundColor: tab.color, borderColor: tab.color }]}
-              onPress={() => setActiveTab(tab.key)}>
-              <Ionicons name={tab.icon} size={18} color={isActive ? "#fff" : tab.color} />
-              <Text style={[styles.tabGridText, { color: isActive ? "#fff" : tab.color }]}
-                numberOfLines={1}>{tab.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+  {TABS.map(tab => {
+    const isActive = activeTab === tab.key;
+
+    return (
+      <TouchableOpacity
+        key={tab.key}
+        style={[
+          styles.tabCard,
+          isActive && styles.tabCardActive
+        ]}
+        onPress={() => {
+          if (tab.key === "Financial") {
+            navigation.navigate("Finance");
+          } else {
+            setActiveTab(tab.key);
+          }
+        }}
+      >
+        <View style={[
+          styles.tabIconWrap,
+          { backgroundColor: tab.bg }
+        ]}>
+          <Ionicons
+            name={tab.icon}
+            size={20}
+            color={tab.color}
+          />
+        </View>
+
+        <Text style={styles.tabLabel}>
+          {tab.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
 
       {/* ── CONTENT ── */}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -440,9 +464,49 @@ const styles = StyleSheet.create({
 
   /* ✅ #7 — Grid tabs: 3 columns × 2 rows */
   tabGrid: {
-    flexDirection: "row", flexWrap: "wrap", backgroundColor: "#f4f6fb",
-    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
-  },
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  paddingHorizontal: 16,
+  paddingVertical: 16,
+  backgroundColor: "#f4f6fb",
+},
+
+tabCard: {
+  width: "31%",
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  paddingVertical: 16,
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 14,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 6,
+  elevation: 3,
+},
+
+tabCardActive: {
+  borderWidth: 2,
+  borderColor: "#4B3F72",
+},
+
+tabIconWrap: {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 8,
+},
+
+tabLabel: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#333",
+  textAlign: "center",
+},
   tabGridBtn: {
     width: "30.5%",                // 3 per row
     flexDirection: "row", alignItems: "center", justifyContent: "center",
