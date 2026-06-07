@@ -298,14 +298,14 @@ export default function AdminFinanceScreen() {
       </View>
 
       {/* ── Tabs ── */}
-     
-<View style={styles.tabGrid}>
+     <View style={styles.tabGrid}>
   {TABS.map(tabItem => {
     const isActive = tab === tabItem.key;
 
     return (
       <TouchableOpacity
         key={tabItem.key}
+        activeOpacity={0.8}
         style={[
           styles.tabCard,
           { backgroundColor: tabItem.bg },
@@ -1075,6 +1075,7 @@ const styles = StyleSheet.create({
 
   emptyState: { alignItems:"center", padding:40 },
   emptyText: { color:"#bbb", marginTop:10, fontSize:13 },
+  
   tabGrid: {
   flexDirection: "row",
   flexWrap: "wrap",
@@ -1082,7 +1083,7 @@ const styles = StyleSheet.create({
   paddingHorizontal: 16,
   paddingVertical: 14,
   backgroundColor: "#f4f6fb",
-},
+  },
 
 tabCard: {
   width: "31%",
@@ -1093,7 +1094,6 @@ tabCard: {
   justifyContent: "center",
   marginBottom: 14,
   minHeight: 85,
-
   shadowColor: "#000",
   shadowOpacity: 0.05,
   shadowRadius: 6,
@@ -1103,13 +1103,16 @@ tabCard: {
 tabCardActive: {
   borderWidth: 2,
   borderColor: "#4B3F72",
-  transform: [{ scale: 1.05 }],
+  shadowColor: "#4B3F72",
+  shadowOpacity: 0.2,
+  shadowRadius: 10,
+  elevation: 6,
 },
 
 tabIconWrap: {
-  width: 40,
-  height: 40,
-  borderRadius: 12,
+  width: 44,
+  height: 44,
+  borderRadius: 14,
   alignItems: "center",
   justifyContent: "center",
   marginBottom: 8,
@@ -1119,14 +1122,7 @@ tabLabel: {
   fontSize: 11,
   fontWeight: "700",
   color: "#666",
-  textAlign: "center",
-  tabGrid: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "space-between",
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-},
+  textAlign: "center",},
 
 tabCard: {
   width: "48%",
@@ -1163,7 +1159,7 @@ tabTitle: {
   color: "#333",
 },
 
-},
+
 
 });
 
