@@ -284,7 +284,10 @@ export default function AdminFinanceScreen() {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+           onPress={() => navigation.navigate("AdminDashboard")}
+>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -924,9 +927,31 @@ const DEMO_TRANSACTIONS = [
 
 /* ─── Styles ──────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  safe: { flex:1, backgroundColor:"#4B3F72" },
-  header: { flexDirection:"row", alignItems:"center", paddingHorizontal:16, paddingBottom:14, paddingTop:8 },
-  backBtn: { width:36, height:36, borderRadius:18, backgroundColor:"rgba(255,255,255,0.15)", alignItems:"center", justifyContent:"center", marginRight:12 },
+  safe: {
+  flex: 1,
+  backgroundColor: "#4B3F72",
+  paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+},
+  header: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 16,
+  paddingBottom: 14,
+  paddingTop: Platform.OS === "android" ? 16 : 24, 
+},
+
+  backBtn: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "rgba(255,255,255,0.15)",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 12,
+
+  marginLeft: 4, 
+},
+
   headerTitle: { color:"#fff", fontSize:17, fontWeight:"800" },
   headerSub: { color:"rgba(255,255,255,0.65)", fontSize:11 },
   addEntryBtn: { flexDirection:"row", alignItems:"center", backgroundColor:"rgba(255,255,255,0.2)", paddingHorizontal:12, paddingVertical:7, borderRadius:10, gap:4 },
