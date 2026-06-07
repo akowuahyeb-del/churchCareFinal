@@ -1118,6 +1118,7 @@ tabIconWrap: {
   marginBottom: 8,
 },
 
+
 tabLabel: {
   fontSize: 11,
   fontWeight: "700",
@@ -1142,6 +1143,10 @@ tabCard: {
 tabCardActive: {
   borderWidth: 2,
   borderColor: "#4B3F72",
+  shadowColor: "#4B3F72",
+shadowOpacity: 0.2,
+shadowRadius: 10,
+elevation: 6,
 },
 
 tabIconBadge: {
