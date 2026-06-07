@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, Dimensions, SafeAreaView, StatusBar
+  StyleSheet, Dimensions, SafeAreaView, StatusBar, Platform
 } from "react-native";
+
 
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -389,7 +390,7 @@ export default function AdminDashboard() {
         {/* ✅ #1 — Back button fixed */}
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("Home")}
         >
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
@@ -459,11 +460,36 @@ export default function AdminDashboard() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#4B3F72" },
+  safe: {
+  flex: 1,
+  backgroundColor: "#4B3F72",
+  paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0 
+},
+
 
   /* Header */
-  headerBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, paddingTop: 8, backgroundColor: "#4B3F72" },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  headerBar: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 16,
+  paddingBottom: 14,
+  paddingTop: Platform.OS === "android" ? 16 : 24,
+  backgroundColor: "#4B3F72",
+},
+
+
+  backBtn: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "rgba(255,255,255,0.15)",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 12,
+
+  marginLeft: 4, 
+},
+
   headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
   headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11, marginTop: 1 },
   headerBadge: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
