@@ -24,6 +24,7 @@ export default function HomeScreen({ navigation }) {
 
   const scrollRef    = useRef(null);
   const currentIndex = useRef(0);
+  const isAdmin = true; 
 
   const [activeIndex,   setActiveIndex]   = useState(0);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -365,11 +366,11 @@ export default function HomeScreen({ navigation }) {
         {/* ── 1. CAROUSEL ── */}
         {/* ── 1. CAROUSEL ── */}
         
-       {/* ── 1. CAROUSEL ── */}
+       
        {/* ── 1. CAROUSEL ── */}
 <View style={styles.carouselWrapper}>
 
-  {/* ✅ HEADER ALWAYS VISIBLE */}
+  {/* ✅ HEADER */}
   <View style={styles.carouselHeadingRow}>
 
     {editingCarouselHeading ? (
@@ -392,16 +393,18 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
     )}
 
-    {/* ✅ UPLOAD BUTTON ALWAYS AVAILABLE */}
-    <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
-      <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
-      <Text style={styles.uploadBtnText}>Upload</Text>
-    </TouchableOpacity>
+    {/* ✅ ADMIN UPLOAD BUTTON */}
+    {isAdmin && (
+      <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
+        <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
+        <Text style={styles.uploadBtnText}>Upload</Text>
+      </TouchableOpacity>
+    )}
 
   </View>
 
-  {/* ✅ CONTENT COLLAPSES AUTOMATICALLY */}
-  {showCarousel ? (
+  {/* ✅ CAROUSEL CONTENT */}
+  {showCarousel && (
     <>
       <ScrollView
         ref={scrollRef}
@@ -415,7 +418,10 @@ export default function HomeScreen({ navigation }) {
             onPress={() => setSelectedImage({ uri: item.imageUrl })}
             style={{ width: SCREEN_W - 30 }}
           >
-            <Image source={{ uri: item.imageUrl }} style={styles.carouselImage} />
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.carouselImage}
+            />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -429,14 +435,10 @@ export default function HomeScreen({ navigation }) {
         ))}
       </View>
     </>
-  ) : null}
+  )}
 
 </View>
 
-
-
-
-        
         {/* ── 2. MESSAGE FROM PASTOR ── */}
         <View style={styles.messageCard}>
           {editingPastorHeading ? (
