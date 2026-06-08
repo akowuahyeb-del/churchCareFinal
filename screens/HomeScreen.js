@@ -366,8 +366,10 @@ export default function HomeScreen({ navigation }) {
         {/* ── 1. CAROUSEL ── */}
         
        {/* ── 1. CAROUSEL ── */}
+       {/* ── 1. CAROUSEL ── */}
 <View style={styles.carouselWrapper}>
 
+  {/* ✅ HEADER ALWAYS VISIBLE */}
   <View style={styles.carouselHeadingRow}>
 
     {editingCarouselHeading ? (
@@ -379,7 +381,10 @@ export default function HomeScreen({ navigation }) {
         onBlur={() => setEditingCarouselHeading(false)}
       />
     ) : (
-      <TouchableOpacity onPress={() => setEditingCarouselHeading(true)} style={{ flex: 1 }}>
+      <TouchableOpacity
+        onPress={() => setEditingCarouselHeading(true)}
+        style={{ flex: 1 }}
+      >
         <Text style={styles.sectionTitle}>
           {carouselHeading}{" "}
           <Ionicons name="pencil-outline" size={12} color="#4B3F72" />
@@ -387,6 +392,7 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
     )}
 
+    {/* ✅ UPLOAD BUTTON ALWAYS AVAILABLE */}
     <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
       <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
       <Text style={styles.uploadBtnText}>Upload</Text>
@@ -394,6 +400,7 @@ export default function HomeScreen({ navigation }) {
 
   </View>
 
+  {/* ✅ CONTENT COLLAPSES AUTOMATICALLY */}
   {showCarousel ? (
     <>
       <ScrollView
@@ -415,18 +422,17 @@ export default function HomeScreen({ navigation }) {
 
       <View style={styles.dotsContainer}>
         {activeFlyers.map((_, i) => (
-          <View key={i} style={[styles.dot, activeIndex === i && styles.activeDot]} />
+          <View
+            key={i}
+            style={[styles.dot, activeIndex === i && styles.activeDot]}
+          />
         ))}
       </View>
     </>
-  ) : (
-    <View style={styles.noFlyerBox}>
-      <Ionicons name="images-outline" size={28} color="#ccc" />
-      <Text style={styles.noFlyerText}>No active flyers</Text>
-    </View>
-  )}
+  ) : null}
 
 </View>
+
 
 
 
