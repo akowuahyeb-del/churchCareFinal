@@ -374,6 +374,12 @@ export default function HomeScreen({ navigation }) {
     {showCarousel ? (
       <>
         <ScrollView />
+
+           ref={scrollRef}
+           horizontal
+           pagingEnabled
+           showsHorizontalScrollIndicator={false}
+
         <View style={styles.dotsContainer} />
       </>
     ) : (
