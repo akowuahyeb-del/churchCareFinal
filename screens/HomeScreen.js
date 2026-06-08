@@ -846,9 +846,23 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#4B3F72" },
 
   /* Header */
-  header: { backgroundColor: "#4B3F72", paddingBottom: 14, paddingHorizontal: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center" },
-  logo: { width: 32, height: 32, marginRight: 10, borderRadius: 6 },
+header: {
+  backgroundColor: "#4B3F72",
+  paddingBottom: 14,
+  paddingHorizontal: 16,
+  paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 20) + 10 : 30,
+},
+  headerRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 4,
+},
+  logo: {
+  width: 36,
+  height: 36,
+  marginRight: 12,
+  borderRadius: 6,
+},
   headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 0.3 },
   headerSub: { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 1 },
 

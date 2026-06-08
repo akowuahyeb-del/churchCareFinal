@@ -13,6 +13,7 @@ import * as Location from "expo-location";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 
+
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, deleteDoc,
@@ -635,7 +636,7 @@ export default function AttendanceScreen({ navigation }) {
                 </ScrollView>
                 <Text style={[styles.filterLabel, { marginTop: 8 }]}>Status</Text>
                 <View style={{ flexDirection: "row", gap: 6 }}>
-                  {[["All","all-inclusive"],["present","checkmark-circle"],["absent","close-circle"],["unmarked","remove-circle"]].map(([s, icon]) => (
+                  {[["All","apps"],["present","checkmark-circle"],["absent","close-circle"],["unmarked","remove-circle"]].map(([s, icon]) => (
                     <TouchableOpacity key={s}
                       style={[styles.filterChip, filterStatus===s && styles.filterChipActive]}
                       onPress={() => setFilterStatus(s)}>
@@ -1104,10 +1105,23 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#4B3F72" },
 
   /* Header */
-  header: { flexDirection:"row", alignItems:"center", backgroundColor:"#4B3F72",
-    paddingHorizontal:14, paddingVertical:10, paddingTop:6 },
-  backBtn: { width:36, height:36, borderRadius:18, backgroundColor:"rgba(255,255,255,0.15)",
-    alignItems:"center", justifyContent:"center", marginRight:10 },
+header: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#4B3F72",
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 20) + 10 : 30,
+},
+backBtn: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "rgba(255,255,255,0.15)",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 10,
+},
   headerTitle: { color:"#fff", fontSize:16, fontWeight:"800" },
   headerSub: { color:"rgba(255,255,255,0.7)", fontSize:10, marginTop:1 },
   headerActions: { flexDirection:"row", gap:5, alignItems:"center" },
