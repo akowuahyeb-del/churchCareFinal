@@ -5,9 +5,9 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Image, Dimensions, Modal,
   Pressable, TextInput, Alert, Platform,
-  SafeAreaView, StatusBar
+   StatusBar
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -364,7 +364,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── 1. CAROUSEL ── */}
         {/* ── 1. CAROUSEL ── */}
-        {showCarousel && (
+        
   <View style={styles.carouselWrapper}>
 
     <View style={styles.carouselHeadingRow}>
@@ -373,16 +373,15 @@ export default function HomeScreen({ navigation }) {
 
     {showCarousel ? (
       <>
-        <ScrollView />
-
-           ref={scrollRef}
-           horizontal
-           pagingEnabled
-           showsHorizontalScrollIndicator={false}
-
+         <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+         showsHorizontalScrollIndicator={false}
+        ></ScrollView>
         <View style={styles.dotsContainer} />
       </>
-    ) : (
+    ): (
       <View style={styles.noFlyerBox}>
         <Ionicons name="images-outline" size={28} color="#ccc" />
         <Text style={styles.noFlyerText}>No active flyers</Text>
@@ -465,7 +464,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
             onPress={() => navigation.navigate("Attendance")}>
             <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
-              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Ionicons name="checkmark-circle" size={14} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#4F46E5" }]} numberOfLines={1}>Attendance</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Mark & track</Text>
@@ -474,7 +473,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#ECFDF5" }]}
             onPress={goToMembers}>
             <View style={[styles.quickIcon, { backgroundColor: "#059669" }]}>
-              <Ionicons name="people" size={16} color="#fff" />
+              <Ionicons name="people" size={14} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#059669" }]} numberOfLines={1}>Members</Text>
             <Text style={styles.quickSub} numberOfLines={1}>View all</Text>
@@ -483,7 +482,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFFBEB" }]}
             onPress={() => navigation.navigate("AdminDashboard")}>
             <View style={[styles.quickIcon, { backgroundColor: "#D97706" }]}>
-              <Ionicons name="bar-chart" size={16} color="#fff" />
+              <Ionicons name="bar-chart" size={14} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#D97706" }]} numberOfLines={1}>Reports</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Dashboard</Text>
@@ -493,7 +492,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF1F2" }]}
             onPress={goToDonate}>
             <View style={[styles.quickIcon, { backgroundColor: "#E11D48" }]}>
-              <Ionicons name="heart" size={16} color="#fff" />
+              <Ionicons name="heart" size={14} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#E11D48" }]} numberOfLines={1}>Donate</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Give now</Text>
@@ -902,9 +901,9 @@ header: {
 },
 
   quickIcon: {
-  width: 44,
-  height: 44,
-  borderRadius: 22,
+  width: 38,
+  height: 38,
+  borderRadius: 19,
   alignItems: "center",
   justifyContent: "center",
 },
