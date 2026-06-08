@@ -365,31 +365,70 @@ export default function HomeScreen({ navigation }) {
         {/* ── 1. CAROUSEL ── */}
         {/* ── 1. CAROUSEL ── */}
         
-  <View style={styles.carouselWrapper}>
+       {/* ── 1. CAROUSEL ── */}
+<View style={styles.carouselWrapper}>
 
-    <View style={styles.carouselHeadingRow}>
-      {/* heading */}
-    </View>
+  <View style={styles.carouselHeadingRow}>
 
-    {showCarousel ? (
-      <>
-         <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-         showsHorizontalScrollIndicator={false}
-        ></ScrollView>
-        <View style={styles.dotsContainer} />
-      </>
-    ): (
-      <View style={styles.noFlyerBox}>
-        <Ionicons name="images-outline" size={28} color="#ccc" />
-        <Text style={styles.noFlyerText}>No active flyers</Text>
-      </View>
+    {editingCarouselHeading ? (
+      <TextInput
+        style={styles.inlineInput}
+        value={carouselHeading}
+        onChangeText={setCarouselHeading}
+        autoFocus
+        onBlur={() => setEditingCarouselHeading(false)}
+      />
+    ) : (
+      <TouchableOpacity onPress={() => setEditingCarouselHeading(true)} style={{ flex: 1 }}>
+        <Text style={styles.sectionTitle}>
+          {carouselHeading}{" "}
+          <Ionicons name="pencil-outline" size={12} color="#4B3F72" />
+        </Text>
+      </TouchableOpacity>
     )}
 
+    <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
+      <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
+      <Text style={styles.uploadBtnText}>Upload</Text>
+    </TouchableOpacity>
+
   </View>
-)}
+
+  {showCarousel ? (
+    <>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+      >
+        {activeFlyers.map(item => (
+          <TouchableOpacity
+            key={item.id}
+            onPress={() => setSelectedImage({ uri: item.imageUrl })}
+            style={{ width: SCREEN_W - 30 }}
+          >
+            <Image source={{ uri: item.imageUrl }} style={styles.carouselImage} />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <View style={styles.dotsContainer}>
+        {activeFlyers.map((_, i) => (
+          <View key={i} style={[styles.dot, activeIndex === i && styles.activeDot]} />
+        ))}
+      </View>
+    </>
+  ) : (
+    <View style={styles.noFlyerBox}>
+      <Ionicons name="images-outline" size={28} color="#ccc" />
+      <Text style={styles.noFlyerText}>No active flyers</Text>
+    </View>
+  )}
+
+</View>
+
+
 
         
         {/* ── 2. MESSAGE FROM PASTOR ── */}
