@@ -360,50 +360,33 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
 
         {/* ── 1. CAROUSEL ── */}
-        <View style={styles.carouselWrapper}>
-          <View style={styles.carouselHeadingRow}>
-            {editingCarouselHeading ? (
-              <TextInput style={styles.inlineInput} value={carouselHeading} onChangeText={setCarouselHeading}
-                autoFocus onBlur={() => setEditingCarouselHeading(false)} onSubmitEditing={() => setEditingCarouselHeading(false)} />
-            ) : (
-              <TouchableOpacity onPress={() => setEditingCarouselHeading(true)} style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle} numberOfLines={1}>
-                  {carouselHeading}{"  "}<Ionicons name="pencil-outline" size={12} color="#4B3F72" />
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload} disabled={uploadingFlyer}>
-              <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
-              <Text style={styles.uploadBtnText}>{uploadingFlyer ? "..." : "Upload"}</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ── 1. CAROUSEL ── */}
+        {showCarousel && (
+  <View style={styles.carouselWrapper}>
 
-          {showCarousel ? (
-            <>
-              <ScrollView ref={scrollRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-                {activeFlyers.map(item => (
-                  <TouchableOpacity key={item.id}
-                    onPress={() => setSelectedImage({ uri: item.imageUrl })}
-                    style={{ width: SCREEN_W - 30 }}>
-                    <Image source={{ uri: item.imageUrl }} style={styles.carouselImage} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <View style={styles.dotsContainer}>
-                {activeFlyers.map((_, i) => <View key={i} style={[styles.dot, activeIndex === i && styles.activeDot]} />)}
-              </View>
-            </>
-          ) : (
-            <View style={styles.noFlyerBox}>
-              <Ionicons name="images-outline" size={28} color="#ccc" />
-              <Text style={styles.noFlyerText}>No active flyers</Text>
-            </View>
-          )}
-        </View>
+    <View style={styles.carouselHeadingRow}>
+      {/* heading */}
+    </View>
 
+    {showCarousel ? (
+      <>
+        <ScrollView />
+        <View style={styles.dotsContainer} />
+      </>
+    ) : (
+      <View style={styles.noFlyerBox}>
+        <Ionicons name="images-outline" size={28} color="#ccc" />
+        <Text style={styles.noFlyerText}>No active flyers</Text>
+      </View>
+    )}
+
+  </View>
+)}
+
+        
         {/* ── 2. MESSAGE FROM PASTOR ── */}
         <View style={styles.messageCard}>
           {editingPastorHeading ? (
@@ -476,7 +459,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
             onPress={() => navigation.navigate("Attendance")}>
             <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#4F46E5" }]} numberOfLines={1}>Attendance</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Mark & track</Text>
@@ -485,7 +468,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#ECFDF5" }]}
             onPress={goToMembers}>
             <View style={[styles.quickIcon, { backgroundColor: "#059669" }]}>
-              <Ionicons name="people" size={20} color="#fff" />
+              <Ionicons name="people" size={16} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#059669" }]} numberOfLines={1}>Members</Text>
             <Text style={styles.quickSub} numberOfLines={1}>View all</Text>
@@ -494,7 +477,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFFBEB" }]}
             onPress={() => navigation.navigate("AdminDashboard")}>
             <View style={[styles.quickIcon, { backgroundColor: "#D97706" }]}>
-              <Ionicons name="bar-chart" size={20} color="#fff" />
+              <Ionicons name="bar-chart" size={16} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#D97706" }]} numberOfLines={1}>Reports</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Dashboard</Text>
@@ -504,7 +487,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF1F2" }]}
             onPress={goToDonate}>
             <View style={[styles.quickIcon, { backgroundColor: "#E11D48" }]}>
-              <Ionicons name="heart" size={20} color="#fff" />
+              <Ionicons name="heart" size={16} color="#fff" />
             </View>
             <Text style={[styles.quickLabel, { color: "#E11D48" }]} numberOfLines={1}>Donate</Text>
             <Text style={styles.quickSub} numberOfLines={1}>Give now</Text>
@@ -850,7 +833,9 @@ header: {
   backgroundColor: "#4B3F72",
   paddingBottom: 14,
   paddingHorizontal: 16,
-  paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 20) + 10 : 30,
+  paddingTop: Platform.OS === "android"
+    ? (StatusBar.currentHeight || 20) + 12
+    : 36,
 },
   headerRow: {
   flexDirection: "row",
@@ -902,10 +887,35 @@ header: {
 
   /* Quick actions */
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 15, gap: 10, marginBottom: 4 },
-  quickCard: { width: "47%", borderRadius: 14, padding: 13, alignItems: "center", gap: 5, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 },
-  quickIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  quickLabel: { fontSize: 12, fontWeight: "800", textAlign: "center" },
-  quickSub: { fontSize: 10, color: "#999" },
+  quickCard: {
+  width: "23%",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 16,
+  paddingVertical: 6, // ✅ reduces bulky look
+},
+
+  quickIcon: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+  quickLabel: {
+  fontSize: 12,
+  fontWeight: "500",
+  textAlign: "center",
+  marginTop: 6,
+},
+  quickSub: {
+  fontSize: 10,
+  color: "#999",
+  textAlign: "center",
+},
+
+
 
   /* Events tabs */
   eventsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
