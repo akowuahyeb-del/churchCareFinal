@@ -553,24 +553,29 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
   </Text>
   <Ionicons name="chevron-down" size={12} color="#4B3F72" />
 </TouchableOpacity>
-        
-        
-        <View style={styles.quickGrid}>
+      <TouchableOpacity
+  style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
+  onPress={() =>
+    navigation.navigate("Attendance", {
+      churchId: selectedChurchId,
+      churchName: selectedChurchName
+    })
+  }
+>
+  <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
+    <Ionicons name="checkmark-circle" size={14} color="#fff" />
+  </View>
 
-          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
-            onPress={() =>
-  navigation.navigate("Attendance", {
-    churchId: selectedChurchId,
-    churchName: selectedChurchName
-  })
-}
+  <Text style={[styles.quickLabel, { color: "#4F46E5" }]}>
+    Attendance
+  </Text>
 
-            <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
-              <Ionicons name="checkmark-circle" size={14} color="#fff" />
-            </View>
-            <Text style={[styles.quickLabel, { color: "#4F46E5" }]} numberOfLines={1}>Attendance</Text>
-            <Text style={styles.quickSub} numberOfLines={1}>Mark & track</Text>
-          </TouchableOpacity>
+  <Text style={styles.quickSub}>
+    Mark & track
+  </Text>
+</TouchableOpacity>
+
+
 
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#ECFDF5" }]}
             onPress={goToMembers}>
@@ -600,7 +605,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
             <Text style={styles.quickSub} numberOfLines={1}>Give now</Text>
           </TouchableOpacity>
 
-        </View>
+        
 
         {/* ── 5. EVENTS (3 TABS) ── */}
         <View style={{ paddingHorizontal: 15, marginTop: 14 }}>

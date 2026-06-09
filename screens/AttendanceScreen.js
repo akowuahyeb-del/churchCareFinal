@@ -21,7 +21,6 @@ import {
   doc, query, where, writeBatch, serverTimestamp, updateDoc
 } from "firebase/firestore";
 
-export default function AttendanceScreen({ route }) {
 const { width: SCREEN_W } = Dimensions.get("window");
 const OFFLINE_KEY = "offline_attendance_queue";
 
@@ -38,10 +37,10 @@ const METHODS = [
 // session doc: { date, service, type, event, churchId, startTime, endTime,
 //               status: "open"|"ended"|"extended", lockedAt, lockedBy }
 
-export default function AttendanceScreen({ navigation }) {
+export default function AttendanceScreen({ navigation, route }) {
 
   const userRole = "admin"; // replace with auth context
-
+  const { churchId, churchName } = route.params || {};
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
 
@@ -456,7 +455,9 @@ export default function AttendanceScreen({ navigation }) {
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>Attendance</Text>
+          <Text style={styles.headerTitle}>
+  {churchName || "Attendance"}
+</Text>
           {startTime ? (
             <Text style={styles.headerSub} numberOfLines={1}>
               {selectedService} · Started {startTime}{endTime ? ` · Ends ${endTime}` : ""}
