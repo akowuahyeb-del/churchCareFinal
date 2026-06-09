@@ -14,12 +14,14 @@ import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 
 
+
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, deleteDoc,
   doc, query, where, writeBatch, serverTimestamp, updateDoc
 } from "firebase/firestore";
 
+export default function AttendanceScreen({ route }) {
 const { width: SCREEN_W } = Dimensions.get("window");
 const OFFLINE_KEY = "offline_attendance_queue";
 

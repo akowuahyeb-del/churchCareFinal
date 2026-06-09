@@ -558,7 +558,13 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
         <View style={styles.quickGrid}>
 
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
-            onPress={() => navigation.navigate("Attendance")}>
+            onPress={() =>
+  navigation.navigate("Attendance", {
+    churchId: selectedChurchId,
+    churchName: selectedChurchName
+  })
+}
+
             <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
               <Ionicons name="checkmark-circle" size={14} color="#fff" />
             </View>
