@@ -960,12 +960,36 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
   </View>
 </Modal>
 
-<TouchableOpacity
-  onPress={() => setChurchModal(true)}
-  style={{ padding: 15, backgroundColor: "green", margin: 20 }}
->
-  <Text style={{ color: "#fff" }}>OPEN MODAL</Text>
-</TouchableOpacity>
+<View style={{ paddingHorizontal: 15, marginBottom: 12 }}>
+  <TouchableOpacity
+    onPress={() => setChurchModal(true)}
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#f2f3f7",
+      borderRadius: 25,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      alignSelf: "flex-start",
+    }}
+  >
+    <Ionicons name="business-outline" size={16} color="#4B3F72" />
+
+    <Text
+      style={{
+        marginHorizontal: 8,
+        fontWeight: "800",
+        color: "#4B3F72",
+        fontSize: 13,
+      }}
+    >
+      {selectedChurchName}
+    </Text>
+
+    <Ionicons name="chevron-down" size={14} color="#4B3F72" />
+  </TouchableOpacity>
+</View>
+
 
     </SafeAreaView>
   );
