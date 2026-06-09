@@ -966,7 +966,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
     style={{
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#f2f3f7",
+      backgroundColor: "#EEF0FA",
       borderRadius: 25,
       paddingHorizontal: 14,
       paddingVertical: 10,
