@@ -19,8 +19,18 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const { width: SCREEN_W } = Dimensions.get("window");
+const CHURCHES = [
+  { id: "church_1", name: "Main Branch", location: "Accra" },
+  { id: "church_2", name: "East Legon", location: "East Legon" },
+  { id: "church_3", name: "Kumasi Branch", location: "Kumasi" },
+];
 
 export default function HomeScreen({ navigation }) {
+
+/* ── CHURCH SWITCH ── */
+const [churchModal, setChurchModal] = useState(false);
+const [selectedChurchId, setSelectedChurchId] = useState("church_1");
+const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
 
   const scrollRef    = useRef(null);
   const currentIndex = useRef(0);
@@ -67,8 +77,8 @@ export default function HomeScreen({ navigation }) {
 
   /* ── PROGRAM ── */
   const [program, setProgram] = useState([
-    { id: "1", time: "9:00 AM", item: "Opening Prayer" },
-    { id: "2", time: "9:15 AM", item: "Praise & Worship" },
+    { id: "1", time: "9:15 AM", item: "Praise &amp; Worship" },
+    { id: "2", time: "11:15 AM", item: "Announcements &amp; Benediction" },
     { id: "3", time: "10:00 AM",item: "Sermon" },
     { id: "4", time: "11:00 AM",item: "Offering" },
     { id: "5", time: "11:15 AM",item: "Announcements & Benediction" },
@@ -107,6 +117,9 @@ export default function HomeScreen({ navigation }) {
   const [editTitle, setEditTitle] = useState("");
   const [editDate,  setEditDate]  = useState("");
   const [editDesc,  setEditDesc]  = useState("");
+
+  /* ── CHURCH SWITCH ── */
+
 
   /* ══════════════ INIT ══════════════ */
   useEffect(() => { loadFlyers(); }, []);
@@ -506,6 +519,42 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── 4. QUICK ACTIONS ── */}
         <Text style={[styles.sectionTitle, { paddingHorizontal: 15, marginTop: 6 }]}>Quick Actions</Text>
+          
+
+{/* ✅ DEBUG TEXT (add this) */}
+<Text style={{ color: "red", paddingHorizontal: 15 }}>
+  {selectedChurchName}
+</Text>
+
+
+        <TouchableOpacity
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    marginBottom: 10
+  }}
+  onPress={() => setChurchModal(true)}
+>
+  <Ionicons name="business-outline" size={14} color="#4B3F72" />
+  <Text style={{ marginHorizontal: 6, fontWeight: "700", color: "#4B3F72" }}>
+    {selectedChurchName}
+  </Text>
+  <Ionicons name="chevron-down" size={12} color="#4B3F72" />
+</TouchableOpacity>
+
+        <TouchableOpacity
+  style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 15, marginBottom: 8 }}
+  onPress={() => setChurchModal(true)}
+>
+  <Ionicons name="business-outline" size={14} color="#4B3F72" />
+  <Text style={{ marginHorizontal: 6, fontWeight: "700", color: "#4B3F72" }}>
+    {selectedChurchName}
+  </Text>
+  <Ionicons name="chevron-down" size={12} color="#4B3F72" />
+</TouchableOpacity>
+        
+        
         <View style={styles.quickGrid}>
 
           <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
@@ -871,6 +920,52 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         </View>
       </Modal>
+     <Modal visible={churchModal} transparent animationType="slide">
+  <View style={{ flex: 1, justifyContent: "center", backgroundColor: "#000a" }}>
+    <View style={{ backgroundColor: "#fff", margin: 20, padding: 20, borderRadius: 16 }}>
+
+      <Text style={{ fontWeight: "800", fontSize: 16, marginBottom: 12 }}>
+        Switch Church
+      </Text>
+
+      {CHURCHES.map(ch => (
+        <TouchableOpacity
+          key={ch.id}
+          onPress={() => {
+            setSelectedChurchId(ch.id);
+            setSelectedChurchName(ch.name);
+            setChurchModal(false);
+          }}
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            paddingVertical: 10
+          }}
+        >
+          <Text>{ch.name}</Text>
+
+          {selectedChurchId === ch.id && (
+            <Ionicons name="checkmark-circle" size={18} color="#4B3F72" />
+          )}
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity onPress={() => setChurchModal(false)}>
+        <Text style={{ textAlign: "center", marginTop: 10, color: "#888" }}>
+          Close
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+<TouchableOpacity
+  onPress={() => setChurchModal(true)}
+  style={{ padding: 15, backgroundColor: "green", margin: 20 }}
+>
+  <Text style={{ color: "#fff" }}>OPEN MODAL</Text>
+</TouchableOpacity>
 
     </SafeAreaView>
   );
