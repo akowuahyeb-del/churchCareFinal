@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Modal, ScrollView, Linking, Alert,
-  Platform, ActivityIndicator, SafeAreaView, StatusBar,
+  Platform, ActivityIndicator,  StatusBar,
   Dimensions
 } from "react-native";
 
@@ -12,6 +12,7 @@ import { CameraView, Camera } from "expo-camera";
 import * as Location from "expo-location";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
 
@@ -76,7 +77,7 @@ export default function AttendanceScreen({ navigation, route }) {
   const [extendModal,     setExtendModal]     = useState(false);
   const [unlockModal,     setUnlockModal]     = useState(false);
   const [adminPin,        setAdminPin]        = useState("");
-  const ADMIN_PIN = "1234"; // replace with secure check
+  const ADMIN_PIN = "1234";
 
   /* ── CHURCH ── */
   const [selectedChurch] = useState(churchId || "church_1");
@@ -174,7 +175,16 @@ export default function AttendanceScreen({ navigation, route }) {
     try {
       const q    = query(collection(db, "members"), where("churchId", "==", selectedChurch));
       const snap = await getDocs(q);
-      let data   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      let data = snap.docs.map(d => {
+  const member = { id: d.id, ...d.data() };
+
+  // ✅ Auto-assign missing churchId (non-destructive)
+  if (!member.churchId) {
+    member.churchId = "church_1";
+  }
+
+  return member;
+});
       
       setMembers(data);
     } catch (e) { console.log(e); }
@@ -521,22 +531,6 @@ const fixOldMembers = async () => {
       </View>
 
    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-
- {/* ✅ TEMP FIX BUTTON */}
-  <TouchableOpacity
-    onPress={fixOldMembers}
-    style={{
-      margin: 10,
-      padding: 12,
-      backgroundColor: "red",
-      borderRadius: 10
-    }}
-  >
-    <Text style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}>
-      FIX OLD MEMBERS
-    </Text>
-  </TouchableOpacity>
-
 
         
         {/* ── OFFLINE BANNER ── */}
