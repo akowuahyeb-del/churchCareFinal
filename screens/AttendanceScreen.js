@@ -175,10 +175,7 @@ export default function AttendanceScreen({ navigation, route }) {
       const q    = query(collection(db, "members"), where("churchId", "==", selectedChurch));
       const snap = await getDocs(q);
       let data   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (data.length === 0) {
-        const all = await getDocs(collection(db, "members"));
-        data = all.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
+      
       setMembers(data);
     } catch (e) { console.log(e); }
   };
@@ -200,6 +197,36 @@ export default function AttendanceScreen({ navigation, route }) {
       setPresentCount(present);
     } catch (e) { console.log(e); }
   };
+
+/* Test functions*/
+const fixOldMembers = async () => {
+  try {
+    const snap = await getDocs(collection(db, "members"));
+
+    const batch = writeBatch(db);
+
+    snap.docs.forEach(d => {
+      const data = d.data();
+
+      // ✅ Only update records WITHOUT churchId
+      if (!data.churchId) {
+        batch.update(doc(db, "members", d.id), {
+          churchId: "church_1"
+        });
+      }
+    });
+
+    await batch.commit();
+
+    Alert.alert("✅ Fixed", "All old members assigned to Main Branch");
+
+    loadMembers();
+  } catch (e) {
+    console.log(e);
+  }
+};
+/* End test fucntion*/
+
 
   /* ══════════ SESSION MANAGEMENT ══════════ */
   const fmt12 = (d) => {
@@ -344,6 +371,7 @@ export default function AttendanceScreen({ navigation, route }) {
     } catch (_) {}
   };
 
+
   /* ══════════ CONTACT ══════════ */
   const sendSMS = (m) => Linking.openURL(`sms:${m.phone||""}?body=${encodeURIComponent(`Hi ${m.name}, we missed you at ${selectedService} service.`)}`);
   const sendWhatsApp = (m) => Linking.openURL(`https://wa.me/${(m.phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Hi ${m.name}, we missed you at ${selectedService} service.`)}`);
@@ -448,10 +476,12 @@ export default function AttendanceScreen({ navigation, route }) {
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
+  <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
+  <View style={{ flex: 1 }}>   {/* ✅ ADD THIS */}
+
+    {/* ── HEADER ── */}
+    <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
@@ -490,8 +520,25 @@ export default function AttendanceScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+   <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
+ {/* ✅ TEMP FIX BUTTON */}
+  <TouchableOpacity
+    onPress={fixOldMembers}
+    style={{
+      margin: 10,
+      padding: 12,
+      backgroundColor: "red",
+      borderRadius: 10
+    }}
+  >
+    <Text style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}>
+      FIX OLD MEMBERS
+    </Text>
+  </TouchableOpacity>
+
+
+        
         {/* ── OFFLINE BANNER ── */}
         {!isOnline && (
           <View style={styles.offlineBanner}>
@@ -593,6 +640,7 @@ export default function AttendanceScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
 
         {/* ══ MANUAL MODE ══ */}
         {mode === "manual" && (
@@ -816,8 +864,8 @@ export default function AttendanceScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         )}
-
-      </ScrollView>
+       </ScrollView>   
+      </View>
 
       {/* ══ SESSION SETUP MODAL ══ */}
       <Modal visible={sessionModal} transparent animationType="slide">
@@ -961,40 +1009,69 @@ export default function AttendanceScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+   
+     {/* ══ LOG MODAL ══ */}
+<Modal visible={logVisible} transparent animationType="slide">
+  <View style={styles.modalOverlay}>
+    <View style={[styles.modalSheet, { maxHeight: "85%" }]}>
+      
+      <Text style={styles.modalTitle}>Attendance Log</Text>
+      <Text style={styles.modalSub} numberOfLines={1}>
+        {selectedService} · {selectedType} · {today}
+      </Text>
 
-      {/* ══ LOG MODAL ══ */}
-      <Modal visible={logVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { maxHeight: "85%" }]}>
-            <Text style={styles.modalTitle}>Attendance Log</Text>
-            <Text style={styles.modalSub} numberOfLines={1}>{selectedService} · {selectedType} · {today}</Text>
-            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
-              {logData.length === 0
-                ? <Text style={styles.emptyText}>No records for this session.</Text>
-                : logData.map(r => (
-                  <View key={r.docId} style={styles.logRow}>
-                    <View style={{ flex:1, minWidth:0 }}>
-                      <Text style={styles.logName} numberOfLines={1}>{r.name}</Text>
-                      <Text style={styles.logMeta} numberOfLines={1}>
-                        {r.method || "manual"}{r.homeChurchId!==r.visitingChurchId ? " · Visitor":""}{r.ministry ? ` · ${r.ministry}`:""}
-                      </Text>
-                    </View>
-                    <View style={[styles.logBadge, { backgroundColor:r.status==="present"?"#e8f8f0":"#fce8e8" }]}>
-                      <Text style={[styles.logBadgeText, { color:r.status==="present"?"#27ae60":"#e74c3c" }]}>
-                        {r.status==="present"?"Present":"Absent"}
-                      </Text>
-                    </View>
-                  </View>
-                ))
-              }
-            </ScrollView>
-            <TouchableOpacity style={[styles.primaryBtn, { marginTop:12, backgroundColor:"#888" }]} onPress={() => setLogVisible(false)}>
-              <Text style={styles.primaryBtnText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+        
+        {logData.length === 0 ? (
+          <Text style={styles.emptyText}>No records for this session.</Text>
+        ) : (
+          logData.map(r => (
+            <View key={r.docId} style={styles.logRow}>
+              
+              <View style={{ flex:1, minWidth:0 }}>
+                <Text style={styles.logName} numberOfLines={1}>
+                  {r.name}
+                </Text>
 
+                <Text style={styles.logMeta} numberOfLines={1}>
+                  {r.method || "manual"}
+                  {r.homeChurchId !== r.visitingChurchId ? " · Visitor" : ""}
+                  {r.ministry ? ` · ${r.ministry}` : ""}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.logBadge,
+                  { backgroundColor: r.status === "present" ? "#e8f8f0" : "#fce8e8" }
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.logBadgeText,
+                    { color: r.status === "present" ? "#27ae60" : "#e74c3c" }
+                  ]}
+                >
+                  {r.status === "present" ? "Present" : "Absent"}
+                </Text>
+              </View>
+
+            </View>
+          ))
+        )}
+
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.primaryBtn, { marginTop:12, backgroundColor:"#888" }]}
+        onPress={() => setLogVisible(false)}
+      >
+        <Text style={styles.primaryBtnText}>Close</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
       {/* ══ CONTACT MODAL ══ */}
       <Modal visible={contactModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -1059,11 +1136,12 @@ export default function AttendanceScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+        </Modal>
+</SafeAreaView>
+);
+}   // ✅ ✅ ✅ ADD THIS LINE
+  
 
-    </SafeAreaView>
-  );
-}
 
 /* ── StatCard ─────────────────────────────────────────── */
 function StatCard({ icon, label, value, color, bg }) {
