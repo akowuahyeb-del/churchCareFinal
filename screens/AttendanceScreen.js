@@ -79,7 +79,8 @@ export default function AttendanceScreen({ navigation, route }) {
   const ADMIN_PIN = "1234"; // replace with secure check
 
   /* ── CHURCH ── */
-  const [selectedChurch] = useState("church_1");
+  const [selectedChurch] = useState(churchId || "church_1");
+
 
   /* ── SERVICES / TYPES / EVENTS ── */
   const [services,        setServices]        = useState(["Sunday", "Wednesday", "Friday"]);
@@ -137,8 +138,8 @@ export default function AttendanceScreen({ navigation, route }) {
   }, []);
 
   useEffect(() => { if (isOnline && syncQueue.length > 0) syncOfflineQueue(); }, [isOnline]);
-  useEffect(() => { loadMembers(); }, []);
-  useEffect(() => { loadAttendance(); }, [dateObj, selectedService, selectedType]);
+  useEffect(() => { loadMembers(); }, [selectedChurch]);
+  useEffect(() => { loadAttendance(); }, [dateObj, selectedService, selectedType, selectedChurch]);
 
   /* ══════════ OFFLINE ══════════ */
   const loadOfflineQueue = async () => {
