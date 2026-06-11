@@ -126,6 +126,9 @@ export default function AttendanceScreen({ navigation, route }) {
   const [redFlagModal,   setRedFlagModal]   = useState(false);
   const [redFlagMember,  setRedFlagMember]  = useState(null);
   const [redFlagCount,   setRedFlagCount]   = useState(0);
+  const [transferModal, setTransferModal] = useState(false);
+const [selectedMember, setSelectedMember] = useState(null);
+const [transferReason, setTransferReason] = useState("");
 
   /* ── LOG ── */
   const [logVisible, setLogVisible] = useState(false);
@@ -235,6 +238,28 @@ export default function AttendanceScreen({ navigation, route }) {
 };
 
 
+/* Transfer request*/
+
+const requestTransfer = async (member, newChurchId, reason) => {
+  try {
+    await addDoc(collection(db, "transfer_requests"), {
+      memberId: member.id,
+      memberName: member.name,
+      fromChurchId: member.churchId,
+      toChurchId: newChurchId,
+      reason: reason,
+      requestedBy: userRole, // later replace with userId
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+
+    Alert.alert("✅ Request Sent", "Transfer request submitted for approval");
+
+  } catch (e) {
+    console.log(e);
+    Alert.alert("Error", "Failed to submit request");
+  }
+};
 
 
 /* Test functions*/
@@ -807,7 +832,11 @@ const fixOldMembers = async () => {
                     </TouchableOpacity>
                     <TouchableOpacity
   style={{ backgroundColor: "#2980b9", padding: 6, borderRadius: 6 }}
-  onPress={() => transferMember(item, "church_2")}
+  onPress={() => {
+  setSelectedMember(item);
+  setTransferModal(true);
+}}
+
 >
   <Text style={{ color: "#fff", fontSize: 10 }}>Move</Text>
 </TouchableOpacity>
@@ -1188,9 +1217,65 @@ const fixOldMembers = async () => {
           </View>
         </View>
         </Modal>
+        {/* ══ TRANSFER MEMBER MODAL ══ */}
+<Modal visible={transferModal} transparent animationType="slide">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalSheet}>
+
+      <Text style={styles.modalTitle}>Transfer Member</Text>
+      <Text style={styles.modalSub}>
+        Move <Text style={{ fontWeight: "700" }}>{selectedMember?.name}</Text> to another church
+      </Text>
+
+      {/* ✅ REASON INPUT */}
+      <TextInput
+        style={[styles.input, { marginTop: 10 }]}
+        placeholder="Reason for transfer"
+        value={transferReason}
+        onChangeText={setTransferReason}
+      />
+
+      {CHURCHES
+        .filter(c => c.id !== selectedChurch)
+        .map(c => (
+          <TouchableOpacity
+            key={c.id}
+            style={styles.transferOption}
+            onPress={() => {
+              if (!transferReason.trim()) {
+                Alert.alert("Required", "Please enter a reason");
+                return;
+              }
+
+              requestTransfer(selectedMember, c.id, transferReason);
+
+              setTransferModal(false);
+              setSelectedMember(null);
+              setTransferReason("");
+            }}
+          >
+            <Ionicons name="business-outline" size={16} color="#4B3F72" />
+            <Text style={styles.transferOptionText}>{c.name}</Text>
+          </TouchableOpacity>
+        ))}
+
+      <TouchableOpacity
+        style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 10 }]}
+        onPress={() => {
+          setTransferModal(false);
+          setSelectedMember(null);
+          setTransferReason("");
+        }}
+      >
+        <Text style={styles.primaryBtnText}>Cancel</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
 </SafeAreaView>
 );
-}   // ✅ ✅ ✅ ADD THIS LINE
+}
   
 
 
