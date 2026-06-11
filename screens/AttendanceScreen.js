@@ -137,6 +137,10 @@ export default function AttendanceScreen({ navigation, route }) {
     Location.requestForegroundPermissionsAsync().then(({ status }) => setLocationPerm(status === "granted"));
     loadOfflineQueue();
   }, []);
+/*tEMP USEeFFECT*/
+  useEffect(() => {
+  fixOldMembers();
+}, []);
 
   useEffect(() => { if (isOnline && syncQueue.length > 0) syncOfflineQueue(); }, [isOnline]);
   useEffect(() => { loadMembers(); }, [selectedChurch]);
