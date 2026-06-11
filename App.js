@@ -16,6 +16,7 @@ import DashboardDetailsScreen from "./screens/DashboardDetailsScreen";
 import DonateScreen from "./screens/DonateScreen";
 import HistoryScreen from "./screens/HistoryScreen"; // ← create this screen
 import AdminFinanceScreen from "./screens/AdminFinanceScreen";
+import TransferRequestsScreen from "./screens/TransferRequestsScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -85,6 +86,8 @@ function RootStack() {
       <Stack.Screen name="DashboardDetails" component={DashboardDetailsScreen} />
       <Stack.Screen name="DonateScreen" component={DonateScreen} />
       <Stack.Screen name="Finance" component={AdminFinanceScreen} />
+      <Stack.Screen name="TransferRequests" component={TransferRequestsScreen} />
+
       
     </Stack.Navigator>
   );

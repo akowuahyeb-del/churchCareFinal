@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   TextInput, Modal, ScrollView, Linking, Alert,
   Platform, ActivityIndicator,  StatusBar,
   Dimensions
@@ -789,121 +789,165 @@ const fixOldMembers = async () => {
     <Text style={{ color: "#fff", fontSize: 12 }}>Church 1</Text>
   </TouchableOpacity>
 
-  <TouchableOpacity
-    style={{ backgroundColor: selectedChurch === "church_2" ? "#4B3F72" : "#ccc", padding: 8, margin: 3, borderRadius: 6 }}
-    onPress={() => setSelectedChurch("church_2")}
-  >
-    <Text style={{ color: "#fff", fontSize: 12 }}>Church 2</Text>
-  </TouchableOpacity>
-
 </View>
 
 
 
-            {/* ── MEMBER LIST ── */}
-            {filtered.map(item => {
-              const status  = attendance[item.id]?.status;
-              const isMarked = !!status;
-              const canUndo  = !!undoMap[item.id];
+{/* ── MEMBER LIST ── */}
+{filtered.map(item => {
+  const status  = attendance[item.id]?.status;
+  const isMarked = !!status;
+  const canUndo  = !!undoMap[item.id];
 
-              return (
-                <View key={item.id} style={[styles.card, isSessionLocked && styles.cardLocked]}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.memberName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.memberMeta} numberOfLines={1}>
-                      {[item.memberCode && `ID: ${item.memberCode}`, item.ministry].filter(Boolean).join("  ·  ")}
-                    </Text>
-                    {status && (
-                      <View style={[styles.statusBadge, { backgroundColor: status==="present"?"#e8f8f0":"#fce8e8" }]}>
-                        <Text style={[styles.statusText, { color: status==="present"?"#27ae60":"#e74c3c" }]}>
-                          {status==="present" ? "✓ Present" : "✗ Absent"}
-                          {attendance[item.id]?.id?.startsWith("offline_") ? " ⏱" : ""}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+  return (
+    <View key={item.id} style={[styles.card, isSessionLocked && styles.cardLocked]}>
 
-                  <View style={styles.btnGroup}>
-                    <TouchableOpacity
-                      style={[styles.markBtn, status==="present" ? styles.btnPresent : styles.btnPresentOff,
-                        isMarked && status!=="present" && styles.btnGreyed]}
-                      onPress={() => (!isMarked || status==="present") ? toggleAttendance(item,"present") : null}
-                      activeOpacity={isMarked && status!=="present" ? 1 : 0.7}>
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-  style={{ backgroundColor: "#2980b9", padding: 6, borderRadius: 6 }}
-  onPress={() => {
-  setSelectedMember(item);
-  setTransferModal(true);
-}}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.memberName} numberOfLines={1}>{item.name}</Text>
 
->
-  <Text style={{ color: "#fff", fontSize: 10 }}>Move</Text>
-</TouchableOpacity>
+        <Text style={styles.memberMeta} numberOfLines={1}>
+          {[item.memberCode && `ID: ${item.memberCode}`, item.ministry]
+            .filter(Boolean)
+            .join("  ·  ")}
+        </Text>
 
-     <TouchableOpacity
-     style={[styles.markBtn, status==="absent" ? styles.btnAbsent : styles.btnAbsentOff,
-       isMarked && status!=="absent" && styles.btnGreyed]}
-        onPress={() => (!isMarked || status==="absent") ? toggleAttendance(item,"absent") : null}
-       activeOpacity={isMarked && status!=="absent" ? 1 : 0.7}>
-        <Ionicons name="close" size={16} color="#fff" />
+        {status && (
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: status === "present" ? "#e8f8f0" : "#fce8e8" }
+          ]}>
+            <Text style={[
+              styles.statusText,
+              { color: status === "present" ? "#27ae60" : "#e74c3c" }
+            ]}>
+              {status === "present" ? "✓ Present" : "✗ Absent"}
+              {attendance[item.id]?.id?.startsWith("offline_") ? " ⏱" : ""}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.btnGroup}>
+
+        {/* ✅ PRESENT */}
+        <TouchableOpacity
+          style={[
+            styles.markBtn,
+            status === "present" ? styles.btnPresent : styles.btnPresentOff,
+            isMarked && status !== "present" && styles.btnGreyed
+          ]}
+          onPress={() =>
+            (!isMarked || status === "present")
+              ? toggleAttendance(item, "present")
+              : null
+          }
+        >
+          <Ionicons name="checkmark" size={16} color="#fff" />
         </TouchableOpacity>
 
-                    {canUndo && (
-                      <TouchableOpacity style={styles.btnUndo} onPress={() => undoMember(item)}>
-                        <Ionicons name="arrow-undo" size={13} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
+        {/* ✅ TRANSFER */}
+        <TouchableOpacity
+          style={styles.transferBtn}
+          onPress={() => {
+            setSelectedMember(item);
+            setTransferModal(true);
+          }}
+        >
+          <Ionicons name="swap-horizontal" size={16} color="#fff" />
+        </TouchableOpacity>
 
-            {filtered.length === 0 && (
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={36} color="#ddd" />
-                <Text style={styles.emptyText}>No members match your search</Text>
-              </View>
-            )}
+        {/* ✅ ABSENT */}
+        <TouchableOpacity
+          style={[
+            styles.markBtn,
+            status === "absent" ? styles.btnAbsent : styles.btnAbsentOff,
+            isMarked && status !== "absent" && styles.btnGreyed
+          ]}
+          onPress={() =>
+            (!isMarked || status === "absent")
+              ? toggleAttendance(item, "absent")
+              : null
+          }
+        >
+          <Ionicons name="close" size={16} color="#fff" />
+        </TouchableOpacity>
+
+        {/* ✅ UNDO */}
+        {canUndo && (
+          <TouchableOpacity
+            style={styles.btnUndo}
+            onPress={() => undoMember(item)}
+          >
+            <Ionicons name="arrow-undo" size={13} color="#fff" />
+          </TouchableOpacity>
+        )}
+
+      </View>
+
+    </View>   
+
+  );
+})}
+</View>
+)}
+
+
+
+{/* ══ QR SCAN ══ */}
+{mode === "qr" && (
+  <View style={styles.qrWrapper}>
+    {!permission ? (
+      <View style={styles.qrPlaceholder}>
+        <Ionicons name="camera-off-outline" size={40} color="#bbb" />
+        <Text style={styles.qrPlaceholderText}>Camera permission denied</Text>
+      </View>
+    ) : (
+      <>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+        />
+
+        <View style={styles.qrOverlay}>
+          <View style={styles.qrFrame} />
+        </View>
+
+        {scanFeedback && (
+          <View
+            style={[
+              styles.scanFeedback,
+              {
+                backgroundColor: scanFeedback.startsWith("✅")
+                  ? "#27ae60"
+                  : scanFeedback.startsWith("⚠️")
+                  ? "#e67e22"
+                  : "#e74c3c",
+              },
+            ]}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              {scanFeedback}
+            </Text>
           </View>
         )}
 
-        {/* ══ QR SCAN ══ */}
-        {mode === "qr" && (
-          <View style={styles.qrWrapper}>
-            {!permission ? (
-              <View style={styles.qrPlaceholder}>
-                <Ionicons name="camera-off-outline" size={40} color="#bbb" />
-                <Text style={styles.qrPlaceholderText}>Camera permission denied</Text>
-              </View>
-            ) : (
-              <>
-                <CameraView style={styles.camera} facing="back"
-                  onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                  barcodeScannerSettings={{ barcodeTypes: ["qr"] }} />
-                <View style={styles.qrOverlay}>
-                  <View style={styles.qrFrame} />
-                </View>
-                {scanFeedback ? (
-                  <View style={[styles.scanFeedback, {
-                    backgroundColor: scanFeedback.startsWith("✅") ? "#27ae60" :
-                      scanFeedback.startsWith("⚠️") ? "#e67e22" : "#e74c3c"
-                  }]}>
-                    <Text style={{ color:"#fff", fontWeight:"700" }} numberOfLines={1}>{scanFeedback}</Text>
-                  </View>
-                ) : null}
-                <Text style={styles.qrHint}>Scan member's QR code</Text>
-                {scanned && (
-                  <TouchableOpacity style={styles.rescanBtn} onPress={() => setScanned(false)}>
-                    <Ionicons name="scan-outline" size={15} color="#fff" />
-                    <Text style={{ color:"#fff", marginLeft:6, fontSize:13, fontWeight:"700" }}>Scan Next</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-          </View>
+        <Text style={styles.qrHint}>Scan member's QR code</Text>
+
+        {scanned && (
+          <TouchableOpacity
+            style={styles.rescanBtn}
+            onPress={() => setScanned(false)}
+          >
+            <Ionicons name="scan-outline" size={15} color="#fff" />
+            <Text style={{ color: "#fff", marginLeft: 6 }}>Scan Next</Text>
+          </TouchableOpacity>
         )}
+      </>
+    )}
+  </View>
+)}
 
         {/* ══ SELF QR ══ */}
         {mode === "selfqr" && (
