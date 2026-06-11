@@ -492,7 +492,7 @@ const fixOldMembers = async () => {
     <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-  <View style={{ flex: 1 }}>   {/* ✅ ADD THIS */}
+  <View style={{ flex: 1 }}>
 
     {/* ── HEADER ── */}
     <View style={styles.header}>
