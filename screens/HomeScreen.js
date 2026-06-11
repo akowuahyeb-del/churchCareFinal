@@ -521,89 +521,39 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
         <Text style={[styles.sectionTitle, { paddingHorizontal: 15, marginTop: 6 }]}>Quick Actions</Text>
           
 
-{/* ✅ DEBUG TEXT (add this) */}
-<Text style={{ color: "red", paddingHorizontal: 15 }}>
-  {selectedChurchName}
-</Text>
+     <View style={styles.quickGrid}>
+
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Attendance")}>
+    <View style={[styles.quickIcon, { backgroundColor: "#27ae60" }]}>
+      <Ionicons name="checkmark" size={18} color="#fff" />
+    </View>
+    <Text style={styles.quickLabel}>Attendance</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Members")}>
+    <View style={[styles.quickIcon, { backgroundColor: "#2980b9" }]}>
+      <Ionicons name="people" size={18} color="#fff" />
+    </View>
+    <Text style={styles.quickLabel}>Members</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("AdminTransfers")}>
+    <View style={[styles.quickIcon, { backgroundColor: "#8e44ad" }]}>
+      <Ionicons name="git-branch-outline" size={18} color="#fff" />
+    </View>
+    <Text style={styles.quickLabel}>Transfers</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Finance")}>
+    <View style={[styles.quickIcon, { backgroundColor: "#e67e22" }]}>
+      <Ionicons name="card" size={18} color="#fff" />
+    </View>
+    <Text style={styles.quickLabel}>Finance</Text>
+  </TouchableOpacity>
+
+</View>
 
 
-        <TouchableOpacity
-  style={{
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    marginBottom: 10
-  }}
-  onPress={() => setChurchModal(true)}
->
-  <Ionicons name="business-outline" size={14} color="#4B3F72" />
-  <Text style={{ marginHorizontal: 6, fontWeight: "700", color: "#4B3F72" }}>
-    {selectedChurchName}
-  </Text>
-  <Ionicons name="chevron-down" size={12} color="#4B3F72" />
-</TouchableOpacity>
-
-        <TouchableOpacity
-  style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 15, marginBottom: 8 }}
-  onPress={() => setChurchModal(true)}
->
-  <Ionicons name="business-outline" size={14} color="#4B3F72" />
-  <Text style={{ marginHorizontal: 6, fontWeight: "700", color: "#4B3F72" }}>
-    {selectedChurchName}
-  </Text>
-  <Ionicons name="chevron-down" size={12} color="#4B3F72" />
-</TouchableOpacity>
-      <TouchableOpacity
-  style={[styles.quickCard, { backgroundColor: "#EEF2FF" }]}
-  onPress={() =>
-    navigation.navigate("Attendance", {
-      churchId: selectedChurchId,
-      churchName: selectedChurchName
-    })
-  }
->
-  <View style={[styles.quickIcon, { backgroundColor: "#4F46E5" }]}>
-    <Ionicons name="checkmark-circle" size={14} color="#fff" />
-  </View>
-
-  <Text style={[styles.quickLabel, { color: "#4F46E5" }]}>
-    Attendance
-  </Text>
-
-  <Text style={styles.quickSub}>
-    Mark & track
-  </Text>
-</TouchableOpacity>
-
-
-
-          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#ECFDF5" }]}
-            onPress={goToMembers}>
-            <View style={[styles.quickIcon, { backgroundColor: "#059669" }]}>
-              <Ionicons name="people" size={14} color="#fff" />
-            </View>
-            <Text style={[styles.quickLabel, { color: "#059669" }]} numberOfLines={1}>Members</Text>
-            <Text style={styles.quickSub} numberOfLines={1}>View all</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFFBEB" }]}
-            onPress={() => navigation.navigate("AdminDashboard")}>
-            <View style={[styles.quickIcon, { backgroundColor: "#D97706" }]}>
-              <Ionicons name="bar-chart" size={14} color="#fff" />
-            </View>
-            <Text style={[styles.quickLabel, { color: "#D97706" }]} numberOfLines={1}>Reports</Text>
-            <Text style={styles.quickSub} numberOfLines={1}>Dashboard</Text>
-          </TouchableOpacity>
-
-          {/* ✅ Donate — fixed navigation */}
-          <TouchableOpacity style={[styles.quickCard, { backgroundColor: "#FFF1F2" }]}
-            onPress={goToDonate}>
-            <View style={[styles.quickIcon, { backgroundColor: "#E11D48" }]}>
-              <Ionicons name="heart" size={14} color="#fff" />
-            </View>
-            <Text style={[styles.quickLabel, { color: "#E11D48" }]} numberOfLines={1}>Donate</Text>
-            <Text style={styles.quickSub} numberOfLines={1}>Give now</Text>
-          </TouchableOpacity>
 
         
 
@@ -1068,14 +1018,15 @@ header: {
   sectionTitle: { fontSize: 15, fontWeight: "800", color: "#222", marginBottom: 8 },
 
   /* Quick actions */
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 15, gap: 10, marginBottom: 4 },
-  quickCard: {
-  width: "23%",
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: 16,
-  paddingVertical: 6, // ✅ reduces bulky look
+  quickGrid: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  paddingHorizontal: 15,
+  marginTop: 10,
+  marginBottom: 10,
 },
+
 
   quickIcon: {
   width: 38,
@@ -1110,6 +1061,9 @@ header: {
   /* Add button */
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", padding: 10, borderRadius: 8, marginBottom: 10, gap: 6 },
   addBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+
+
+  
 
   /* Event cards */
   eventCard: { flexDirection: "row", backgroundColor: "#fff", padding: 13, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },

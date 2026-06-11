@@ -240,7 +240,6 @@ const [targetChurch, setTargetChurch] = useState(null);
 
 
 /* Transfer request*/
-
 const requestTransfer = async (member, newChurchId, reason) => {
   try {
     await addDoc(collection(db, "transfer_requests"), {
@@ -249,7 +248,7 @@ const requestTransfer = async (member, newChurchId, reason) => {
       fromChurchId: member.churchId,
       toChurchId: newChurchId,
       reason: reason,
-      requestedBy: userRole, // later replace with userId
+      requestedBy: userRole, // ✅ keep this
       status: "pending",
       createdAt: serverTimestamp(),
     });
@@ -258,9 +257,10 @@ const requestTransfer = async (member, newChurchId, reason) => {
 
   } catch (e) {
     console.log(e);
-    Alert.alert("Error", "Failed to submit request");
+    Alert.alert("Error", "Failed to submit transfer request");
   }
 };
+
 
 
 /* Test functions*/
