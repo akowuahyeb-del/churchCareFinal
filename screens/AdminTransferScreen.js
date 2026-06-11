@@ -8,6 +8,12 @@ import {
   collection, getDocs, doc, updateDoc
 } from "firebase/firestore";
 
+const CHURCHES = [
+  { id: "church_1", name: "Main Branch" },
+  { id: "church_2", name: "East Branch" },
+  { id: "church_3", name: "Youth Church" },
+];
+
 export default function AdminTransferScreen() {
 
   const [requests, setRequests] = useState([]);
@@ -15,6 +21,10 @@ export default function AdminTransferScreen() {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  const getChurchName = (id) => {
+    return CHURCHES.find(c => c.id === id)?.name || id;
+  };
 
   const loadRequests = async () => {
     try {
@@ -33,21 +43,22 @@ export default function AdminTransferScreen() {
 
   const approveTransfer = async (req) => {
     try {
-      // ✅ move member
+      // ✅ Move member
       await updateDoc(doc(db, "members", req.memberId), {
         churchId: req.toChurchId
       });
 
-      // ✅ update request
+      // ✅ Update request
       await updateDoc(doc(db, "transfer_requests", req.id), {
         status: "approved"
       });
 
-      Alert.alert("✅ Approved", `${req.memberName} moved successfully`);
+      Alert.alert("Approved ✅", `${req.memberName} moved successfully`);
 
       loadRequests();
     } catch (e) {
       console.log(e);
+      Alert.alert("Error", "Failed to approve");
     }
   };
 
@@ -57,7 +68,7 @@ export default function AdminTransferScreen() {
         status: "rejected"
       });
 
-      Alert.alert("Rejected", "Transfer request denied");
+      Alert.alert("Rejected", "Transfer denied");
 
       loadRequests();
     } catch (e) {
@@ -66,7 +77,7 @@ export default function AdminTransferScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
 
       <Text style={styles.title}>Transfer Requests</Text>
 
@@ -80,15 +91,15 @@ export default function AdminTransferScreen() {
           <Text style={styles.name}>{req.memberName}</Text>
 
           <Text style={styles.meta}>
-            From: {req.fromChurchId}
+            From: {getChurchName(req.fromChurchId)}
           </Text>
 
           <Text style={styles.meta}>
-            To: {req.toChurchId}
+            To: {getChurchName(req.toChurchId)}
           </Text>
 
           <Text style={styles.reason}>
-            Reason: {req.reason}
+            {req.reason}
           </Text>
 
           <View style={styles.actions}>
@@ -119,7 +130,7 @@ export default function AdminTransferScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 10 },
+  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 12 },
 
   title: {
     fontSize: 18,
@@ -130,52 +141,59 @@ const styles = StyleSheet.create({
 
   empty: {
     textAlign: "center",
-    color: "#999",
-    marginTop: 20
+    marginTop: 20,
+    color: "#999"
   },
 
   card: {
     backgroundColor: "#fff",
-    padding: 14,
     borderRadius: 12,
-    marginBottom: 10
+    padding: 14,
+    marginBottom: 10,
+    elevation: 2
   },
 
-  name: { fontSize: 15, fontWeight: "700" },
+  name: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#222"
+  },
 
   meta: {
     fontSize: 12,
-    color: "#666",
-    marginTop: 2
+    color: "#777",
+    marginTop: 3
   },
 
   reason: {
     fontSize: 12,
-    marginTop: 6,
-    color: "#333"
+    color: "#444",
+    marginTop: 6
   },
 
   actions: {
     flexDirection: "row",
     marginTop: 10,
-    gap: 10
+    gap: 8
   },
 
   approveBtn: {
+    flex: 1,
     flexDirection: "row",
+    justifyContent: "center",
     backgroundColor: "#27ae60",
     padding: 10,
     borderRadius: 8,
-    alignItems: "center",
     gap: 6
   },
 
   rejectBtn: {
+    flex: 1,
     flexDirection: "row",
+    justifyContent: "center",
     backgroundColor: "#e74c3c",
     padding: 10,
     borderRadius: 8,
-    alignItems: "center",
     gap: 6
   },
 

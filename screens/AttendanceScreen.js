@@ -580,6 +580,13 @@ const fixOldMembers = async () => {
               <Text style={styles.pillText}>{syncQueue.length}</Text>
             </TouchableOpacity>
           )}
+<TouchableOpacity
+  style={styles.iconBtn}
+  onPress={() => navigation.navigate("AdminTransfers")}
+>
+  <Ionicons name="git-branch-outline" size={16} color="#fff" />
+</TouchableOpacity>
+
           {/* Log */}
           <TouchableOpacity style={styles.iconBtn} onPress={openLog}>
             <Ionicons name="list-outline" size={15} color="#fff" />
