@@ -129,6 +129,7 @@ export default function AttendanceScreen({ navigation, route }) {
   const [transferModal, setTransferModal] = useState(false);
 const [selectedMember, setSelectedMember] = useState(null);
 const [transferReason, setTransferReason] = useState("");
+const [targetChurch, setTargetChurch] = useState(null);
 
   /* ── LOG ── */
   const [logVisible, setLogVisible] = useState(false);
@@ -841,13 +842,13 @@ const fixOldMembers = async () => {
   <Text style={{ color: "#fff", fontSize: 10 }}>Move</Text>
 </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.markBtn, status==="absent" ? styles.btnAbsent : styles.btnAbsentOff,
-                        isMarked && status!=="absent" && styles.btnGreyed]}
-                      onPress={() => (!isMarked || status==="absent") ? toggleAttendance(item,"absent") : null}
-                      activeOpacity={isMarked && status!=="absent" ? 1 : 0.7}>
-                      <Ionicons name="close" size={16} color="#fff" />
-                    </TouchableOpacity>
+     <TouchableOpacity
+     style={[styles.markBtn, status==="absent" ? styles.btnAbsent : styles.btnAbsentOff,
+       isMarked && status!=="absent" && styles.btnGreyed]}
+        onPress={() => (!isMarked || status==="absent") ? toggleAttendance(item,"absent") : null}
+       activeOpacity={isMarked && status!=="absent" ? 1 : 0.7}>
+        <Ionicons name="close" size={16} color="#fff" />
+        </TouchableOpacity>
 
                     {canUndo && (
                       <TouchableOpacity style={styles.btnUndo} onPress={() => undoMember(item)}>
@@ -1217,57 +1218,81 @@ const fixOldMembers = async () => {
           </View>
         </View>
         </Modal>
-        {/* ══ TRANSFER MEMBER MODAL ══ */}
+       {/* ══ TRANSFER MEMBER MODAL ══ */}
 <Modal visible={transferModal} transparent animationType="slide">
   <View style={styles.modalOverlay}>
     <View style={styles.modalSheet}>
 
       <Text style={styles.modalTitle}>Transfer Member</Text>
       <Text style={styles.modalSub}>
-        Move <Text style={{ fontWeight: "700" }}>{selectedMember?.name}</Text> to another church
+        Move <Text style={{ fontWeight: "700" }}>{selectedMember?.name}</Text>
       </Text>
 
-      {/* ✅ REASON INPUT */}
-      <TextInput
-        style={[styles.input, { marginTop: 10 }]}
-        placeholder="Reason for transfer"
-        value={transferReason}
-        onChangeText={setTransferReason}
-      />
+      {/* ✅ SELECT CHURCH */}
+      <Text style={styles.fieldLabel}>Select Destination Church</Text>
 
       {CHURCHES
         .filter(c => c.id !== selectedChurch)
         .map(c => (
           <TouchableOpacity
             key={c.id}
-            style={styles.transferOption}
-            onPress={() => {
-              if (!transferReason.trim()) {
-                Alert.alert("Required", "Please enter a reason");
-                return;
-              }
-
-              requestTransfer(selectedMember, c.id, transferReason);
-
-              setTransferModal(false);
-              setSelectedMember(null);
-              setTransferReason("");
-            }}
+            style={[
+              styles.transferOption,
+              targetChurch === c.id && styles.transferOptionActive
+            ]}
+            onPress={() => setTargetChurch(c.id)}
           >
             <Ionicons name="business-outline" size={16} color="#4B3F72" />
             <Text style={styles.transferOptionText}>{c.name}</Text>
           </TouchableOpacity>
         ))}
 
+      {/* ✅ REASON INPUT */}
+      <Text style={styles.fieldLabel}>Reason</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Why is this member moving?"
+        value={transferReason}
+        onChangeText={setTransferReason}
+      />
+
+      {/* ✅ SEND BUTTON */}
       <TouchableOpacity
-        style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 10 }]}
+        style={[styles.primaryBtn, { marginTop: 14 }]}
+        onPress={() => {
+          if (!targetChurch) {
+            Alert.alert("Select Church", "Please select a church");
+            return;
+          }
+
+          if (!transferReason.trim()) {
+            Alert.alert("Required", "Please enter a reason");
+            return;
+          }
+
+          requestTransfer(selectedMember, targetChurch, transferReason);
+
+          setTransferModal(false);
+          setSelectedMember(null);
+          setTransferReason("");
+          setTargetChurch(null);
+        }}
+      >
+        <Ionicons name="send-outline" size={16} color="#fff" />
+        <Text style={styles.primaryBtnText}>Send Request</Text>
+      </TouchableOpacity>
+
+      {/* ✅ CANCEL */}
+      <TouchableOpacity
+        style={[styles.primaryBtn, { backgroundColor: "#ccc", marginTop: 8 }]}
         onPress={() => {
           setTransferModal(false);
           setSelectedMember(null);
           setTransferReason("");
+          setTargetChurch(null);
         }}
       >
-        <Text style={styles.primaryBtnText}>Cancel</Text>
+        <Text style={[styles.primaryBtnText, { color: "#333" }]}>Cancel</Text>
       </TouchableOpacity>
 
     </View>
@@ -1510,6 +1535,26 @@ backBtn: {
   marginLeft: 6,
   alignItems: "center",
   justifyContent: "center"
+},
+
+transferOption: {
+  flexDirection: "row",
+  alignItems: "center",
+  padding: 12,
+  borderRadius: 10,
+  backgroundColor: "#f5f5f5",
+  marginTop: 8,
+},
+
+transferOptionActive: {
+  backgroundColor: "#4B3F72",
+},
+
+transferOptionText: {
+  fontSize: 14,
+  marginLeft: 10,
+  color: "#333",
+  fontWeight: "600",
 },
 
   /* Log */
