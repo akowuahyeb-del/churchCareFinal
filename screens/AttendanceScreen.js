@@ -33,6 +33,11 @@ const METHODS = [
   { id: "selfqr", label: "Self QR", icon: "phone-portrait-outline"  },
   { id: "geo",    label: "Geo",     icon: "location-outline"        },
 ];
+const CHURCHES = [
+  { id: "church_1", name: "Main Branch" },
+  { id: "church_2", name: "East Branch" },
+  { id: "church_3", name: "Youth Church" },
+];
 
 // ── Service session stored in Firestore "sessions" collection ──────────────
 // session doc: { date, service, type, event, churchId, startTime, endTime,
@@ -80,7 +85,7 @@ export default function AttendanceScreen({ navigation, route }) {
   const ADMIN_PIN = "1234";
 
   /* ── CHURCH ── */
-  const [selectedChurch] = useState(churchId || "church_1");
+  const [selectedChurch, setSelectedChurch] = useState(churchId || "church_1");
 
 
   /* ── SERVICES / TYPES / EVENTS ── */
@@ -212,6 +217,26 @@ export default function AttendanceScreen({ navigation, route }) {
     } catch (e) { console.log(e); }
   };
 
+
+  /* TRANSFER */
+  const transferMember = async (member, newChurchId) => {
+  try {
+    await updateDoc(doc(db, "members", member.id), {
+      churchId: newChurchId
+    });
+
+    Alert.alert("✅ Success", `${member.name} moved successfully`);
+
+    loadMembers(); // refresh list
+  } catch (e) {
+    console.log(e);
+    Alert.alert("Error", "Transfer failed");
+  }
+};
+
+
+
+
 /* Test functions*/
 const fixOldMembers = async () => {
   try {
@@ -240,6 +265,8 @@ const fixOldMembers = async () => {
   }
 };
 /* End test fucntion*/
+
+
 
 
   /* ══════════ SESSION MANAGEMENT ══════════ */
@@ -727,6 +754,26 @@ const fixOldMembers = async () => {
               </View>
             )}
 
+<View style={{ flexDirection: "row", justifyContent: "center", marginVertical: 6 }}>
+
+  <TouchableOpacity
+    style={{ backgroundColor: selectedChurch === "church_1" ? "#4B3F72" : "#ccc", padding: 8, margin: 3, borderRadius: 6 }}
+    onPress={() => setSelectedChurch("church_1")}
+  >
+    <Text style={{ color: "#fff", fontSize: 12 }}>Church 1</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={{ backgroundColor: selectedChurch === "church_2" ? "#4B3F72" : "#ccc", padding: 8, margin: 3, borderRadius: 6 }}
+    onPress={() => setSelectedChurch("church_2")}
+  >
+    <Text style={{ color: "#fff", fontSize: 12 }}>Church 2</Text>
+  </TouchableOpacity>
+
+</View>
+
+
+
             {/* ── MEMBER LIST ── */}
             {filtered.map(item => {
               const status  = attendance[item.id]?.status;
@@ -758,6 +805,12 @@ const fixOldMembers = async () => {
                       activeOpacity={isMarked && status!=="present" ? 1 : 0.7}>
                       <Ionicons name="checkmark" size={16} color="#fff" />
                     </TouchableOpacity>
+                    <TouchableOpacity
+  style={{ backgroundColor: "#2980b9", padding: 6, borderRadius: 6 }}
+  onPress={() => transferMember(item, "church_2")}
+>
+  <Text style={{ color: "#fff", fontSize: 10 }}>Move</Text>
+</TouchableOpacity>
 
                     <TouchableOpacity
                       style={[styles.markBtn, status==="absent" ? styles.btnAbsent : styles.btnAbsentOff,
@@ -1364,6 +1417,15 @@ backBtn: {
   primaryBtnText: { color:"#fff", fontSize:14, fontWeight:"800" },
   cancelTxt: { alignItems:"center", padding:12, marginTop:4 },
   cancelTxtText: { color:"#888", fontSize:13 },
+
+  transferBtn: {
+  backgroundColor: "#2980b9",
+  padding: 8,
+  borderRadius: 8,
+  marginLeft: 6,
+  alignItems: "center",
+  justifyContent: "center"
+},
 
   /* Log */
   logRow: { flexDirection:"row", alignItems:"center", paddingVertical:8,
