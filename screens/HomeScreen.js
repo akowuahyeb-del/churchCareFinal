@@ -542,7 +542,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Attendance")}>
     <View style={[styles.quickIcon, { backgroundColor: "#27ae60" }]}>
-      <Ionicons name="checkmark" size={18} color="#fff" />
+      <Ionicons name="checkmark" size={22} color="#fff" />
     </View>
     <Text style={styles.quickLabel}>Attendance</Text>
   </TouchableOpacity>
@@ -609,7 +609,12 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
                   <TouchableOpacity key={tab.key}
                     style={[styles.tabBtn, eventsTab === tab.key && styles.tabBtnActive]}
                     onPress={() => setEventsTab(tab.key)}>
-                    <Ionicons name={tab.icon} size={13} color={eventsTab === tab.key ? "#4B3F72" : "#aaa"} />
+                    <Ionicons
+  name={tab.icon}
+  size={14}
+  color={eventsTab === tab.key ? "#fff" : "#777"}
+/>
+                    
                     <Text style={[styles.tabBtnText, eventsTab === tab.key && styles.tabBtnTextActive]}
                       numberOfLines={1}>{tab.label}</Text>
                   </TouchableOpacity>
@@ -1024,6 +1029,13 @@ sectionTitle: {
   marginBottom: 8,
   letterSpacing: 0.3,
 },
+  
+quickCard: {
+  width: "23%",        
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 18,
+},
 
   
 
@@ -1040,19 +1052,21 @@ sectionTitle: {
 
 
   quickIcon: {
-  width: 38,
-  height: 38,
-  borderRadius: 19,
+  width: 46,
+  height: 46,
+  borderRadius: 23,
   alignItems: "center",
   justifyContent: "center",
 },
 
-  quickLabel: {
+ quickLabel: {
   fontSize: 12,
-  fontWeight: "500",
+  fontWeight: "700",      
   textAlign: "center",
   marginTop: 6,
+  color: "#fff",          
 },
+
   quickSub: {
   fontSize: 10,
   color: "#999",
@@ -1063,11 +1077,41 @@ sectionTitle: {
 
   /* Events tabs */
   eventsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  tabRow: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 10, padding: 4, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 8, borderRadius: 8, gap: 4 },
-  tabBtnActive: { backgroundColor: "#EEF0FA" },
-  tabBtnText: { fontSize: 11, color: "#aaa", fontWeight: "600" },
-  tabBtnTextActive: { color: "#4B3F72", fontWeight: "800" },
+  tabRow: {
+  flexDirection: "row",
+  backgroundColor: "#F3F4F6",  
+  borderRadius: 12,
+  padding: 5,
+  marginBottom: 14,
+},
+
+  tabBtn: {
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 10,  
+  borderRadius: 10,
+  gap: 6,
+},
+  tabBtnActive: {
+  backgroundColor: "#4B3F72",   
+  shadowColor: "#000",
+  shadowOpacity: 0.15,
+  shadowRadius: 4,
+  elevation: 3,
+},
+
+  tabBtnText: {
+  fontSize: 12,
+  color: "#666",
+  fontWeight: "700",   
+},
+
+  tabBtnTextActive: {
+  color: "#fff",       
+  fontWeight: "800",
+},
 
   /* Add button */
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", padding: 10, borderRadius: 8, marginBottom: 10, gap: 6 },
