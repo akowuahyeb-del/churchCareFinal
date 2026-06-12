@@ -984,7 +984,10 @@ header: {
   headerSub: { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 1 },
 
   /* Carousel */
-  carouselWrapper: { marginTop: 10, paddingHorizontal: 15, backgroundColor: "#f4f6fb" },
+  carouselWrapper: {
+  marginTop: 10,
+  paddingHorizontal: 15
+},
   carouselHeadingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingTop: 12 },
   uploadBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#4B3F72", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, gap: 4, minWidth: 70 },
   uploadBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
@@ -1015,7 +1018,16 @@ header: {
   adminBtnText: { color: "#fff", fontSize: 10, fontWeight: "600" },
 
   /* Section title */
-  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#222", marginBottom: 8 },
+sectionTitle: {
+  fontSize: 16,
+  fontWeight: "900",
+  color: "#ffffff",
+  marginBottom: 8,
+  letterSpacing: 0.3,
+},
+
+  
+
 
   /* Quick actions */
   quickGrid: {
