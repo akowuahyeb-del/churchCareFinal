@@ -766,14 +766,9 @@ const confirmDeleteProgram = () => {
     key={ev.id}
     style={styles.eventCard}
     
-    onPress={() => {
-  setViewingEvent(null);
-
-  setTimeout(() => {
-    setViewingEvent(ev);
-    setViewEventModal(true);
-  }, 50);
-}}
+   onPress={() => {
+  setActiveEventId(activeEventId === ev.id ? null : ev.id);
+}} 
 
   >
     <View style={{ flex: 1 }}>
