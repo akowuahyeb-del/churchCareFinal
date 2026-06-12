@@ -118,6 +118,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
   const [editDate,  setEditDate]  = useState("");
   const [editDesc,  setEditDesc]  = useState("");
   const tabAnim = useRef(new Animated.Value(0)).current;
+   const TAB_WIDTH = (SCREEN_W - 30 - 10) / 3;
 
 
   /* ── CHURCH SWITCH ── */
@@ -610,10 +611,17 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
       {
         transform: [
           {
-            translateX: tabAnim.interpolate({
-              inputRange: [0, 1, 2],
-              outputRange: [0, SCREEN_W / 3 - 30, (SCREEN_W / 3 - 30) * 2],
-            }),
+ 
+        
+  translateX: tabAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [
+      0,
+      TAB_WIDTH,
+      TAB_WIDTH * 2,
+    ],
+  }),
+
           },
         ],
       },
@@ -1139,8 +1147,8 @@ quickCard: {
 tabIndicator: {
   position: "absolute",
   top: 4,
-  left: 4,
-  width: "30%",
+  left: 5,
+  width: (SCREEN_W - 30 - 10) / 3,
   height: "85%",
   backgroundColor: "#4B3F72",
   borderRadius: 10,
