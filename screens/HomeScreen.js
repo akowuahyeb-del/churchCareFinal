@@ -17,7 +17,7 @@ import {
   doc, updateDoc, query, where
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
+import { Animated } from "react-native";
 const { width: SCREEN_W } = Dimensions.get("window");
 const CHURCHES = [
   { id: "church_1", name: "Main Branch", location: "Accra" },
@@ -117,6 +117,8 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
   const [editTitle, setEditTitle] = useState("");
   const [editDate,  setEditDate]  = useState("");
   const [editDesc,  setEditDesc]  = useState("");
+  const tabAnim = useRef(new Animated.Value(0)).current;
+
 
   /* ── CHURCH SWITCH ── */
 
@@ -600,26 +602,47 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
           {eventsVisible && (
             <>
               {/* Tab row */}
-              <View style={styles.tabRow}>
-                {[
-                  { key: "upcoming", label: "Upcoming",  icon: "calendar-outline"  },
-                  { key: "program",  label: "Programme", icon: "list-outline"       },
-                  { key: "preacher", label: "Preacher",  icon: "person-outline"    },
-                ].map(tab => (
-                  <TouchableOpacity key={tab.key}
-                    style={[styles.tabBtn, eventsTab === tab.key && styles.tabBtnActive]}
-                    onPress={() => setEventsTab(tab.key)}>
-                    <Ionicons
-  name={tab.icon}
-  size={14}
-  color={eventsTab === tab.key ? "#fff" : "#777"}
-/>
-                    
-                    <Text style={[styles.tabBtnText, eventsTab === tab.key && styles.tabBtnTextActive]}
-                      numberOfLines={1}>{tab.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+         <View style={styles.tabRow}>
+
+  <Animated.View
+    style={[
+      styles.tabIndicator,
+      {
+        transform: [
+          {
+            translateX: tabAnim.interpolate({
+              inputRange: [0, 1, 2],
+              outputRange: [0, SCREEN_W / 3 - 30, (SCREEN_W / 3 - 30) * 2],
+            }),
+          },
+        ],
+      },
+    ]}
+  />
+
+  {[
+    { key: "upcoming", label: "Upcoming", icon: "calendar-outline" },
+    { key: "program", label: "Programme", icon: "list-outline" },
+    { key: "preacher", label: "Preacher", icon: "person-outline" },
+  ].map(tab => (
+    <TouchableOpacity key={tab.key} style={styles.tabBtn} onPress={() => {
+      setEventsTab(tab.key);
+      const index = ["upcoming", "program", "preacher"].indexOf(tab.key);
+      Animated.spring(tabAnim, {
+        toValue: index,
+        useNativeDriver: false,
+      }).start();
+    }}>
+      <Ionicons name={tab.icon} size={14} color={eventsTab === tab.key ? "#fff" : "#777"} />
+      <Text style={[styles.tabBtnText, eventsTab === tab.key && styles.tabBtnTextActive]}>
+        {tab.label}
+      </Text>
+    </TouchableOpacity>
+  ))}
+
+</View>  
+
+
 
               {/* ── TAB: UPCOMING EVENTS ── */}
               {eventsTab === "upcoming" && (
@@ -718,7 +741,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
                   </TouchableOpacity>
                 </View>
               )}
-            </>
+            </>  
           )}
         </View>
 
@@ -1111,6 +1134,16 @@ quickCard: {
   tabBtnTextActive: {
   color: "#fff",       
   fontWeight: "800",
+},
+
+tabIndicator: {
+  position: "absolute",
+  top: 4,
+  left: 4,
+  width: "30%",
+  height: "85%",
+  backgroundColor: "#4B3F72",
+  borderRadius: 10,
 },
 
   /* Add button */
