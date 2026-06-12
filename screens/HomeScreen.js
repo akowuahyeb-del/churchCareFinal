@@ -518,7 +518,11 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
         </View>
 
         {/* ── 4. QUICK ACTIONS ── */}
-        <Text style={[styles.sectionTitle, { paddingHorizontal: 15, marginTop: 6 }]}>Quick Actions</Text>
+        {/* ✅ WRAPPER FOR TITLE */}
+<View style={{ paddingHorizontal: 15, marginTop: 10 }}>
+  <Text style={styles.sectionTitle}>Quick Actions</Text>
+</View>
+
           
 
      <View style={styles.quickGrid}>
