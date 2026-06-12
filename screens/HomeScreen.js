@@ -78,7 +78,7 @@ const tabsScrollRef = useRef(null);
 
   /* ── PROGRAM ── */
   const [program, setProgram] = useState([
-    { id: "1", time: "9:15 AM", item: "Praise &amp; Worship" },
+    { id: "1", time: "9:15 AM", item: "Praise & Worship", expiry: null },
     { id: "2", time: "11:15 AM", item: "Announcements &amp; Benediction" },
     { id: "3", time: "10:00 AM",item: "Sermon" },
     { id: "4", time: "11:00 AM",item: "Offering" },
@@ -291,11 +291,27 @@ const handlePressOut = () => {
     setEventExpiryModal(true);
   };
   const saveEventExpiry = () => {
-    setEvents(prev => prev.map(e =>
-      e.id === eventExpiryTarget ? { ...e, expiry: eventExpiryDate.toISOString() } : e
-    ));
-    setEventExpiryModal(false);
-  };
+
+  // Update EVENTS
+  setEvents(prev =>
+    prev.map(e =>
+      e.id === eventExpiryTarget
+        ? { ...e, expiry: eventExpiryDate.toISOString() }
+        : e
+    )
+  );
+
+  // ✅ ALSO UPDATE PROGRAM
+  setProgram(prev =>
+    prev.map(p =>
+      p.id === eventExpiryTarget
+        ? { ...p, expiry: eventExpiryDate.toISOString() }
+        : p
+    )
+  );
+
+  setEventExpiryModal(false);
+};
   const clearEventExpiry = () => {
     setEvents(prev => prev.map(e =>
       e.id === eventExpiryTarget ? { ...e, expiry: null } : e
@@ -558,7 +574,7 @@ const handlePressOut = () => {
   <Text style={styles.sectionTitle}>Quick Actions</Text>
 </View>
 
-          <View style={styles.quickGrid}>
+<View style={styles.quickGrid}>
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Attendance")}>
     <View style={[styles.quickIcon, { backgroundColor: "#27ae60" }]}>
@@ -596,7 +612,6 @@ const handlePressOut = () => {
   </TouchableOpacity>
 
 </View>
-
 
 
         
@@ -705,7 +720,6 @@ const handlePressOut = () => {
   </Animated.View>
 </TouchableOpacity>
 ))}
-
 </View>
 
 <ScrollView
@@ -732,40 +746,89 @@ const handlePressOut = () => {
       <Text style={styles.addBtnText}>Add Event</Text>
     </TouchableOpacity>
 
-    {activeEvents.map(event => (
-      <View key={event.id} style={styles.eventCard}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          <Text style={styles.eventDate}>{event.date}</Text>
-          <Text style={styles.eventDesc}>{event.desc}</Text>
-        </View>
-      </View>
-    ))}
-  </View>
-
-  {/* ✅ PROGRAM */}
-  <View style={{ width: SCREEN_W }}>
-    <TouchableOpacity style={styles.addBtn} onPress={() => openProgramModal()}>
-      <Ionicons name="add-circle-outline" size={15} color="#fff" />
-      <Text style={styles.addBtnText}>Add Item</Text>
-    </TouchableOpacity>
-
-    {program.map((p, idx) => (
-      <View key={p.id} style={styles.programRow}>
-        <View style={styles.programNum}>
-          <Text style={styles.programNumText}>{idx + 1}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.programItem}>{p.item}</Text>
-        </View>
-      </View>
-    ))}
-  </View>
-
-  {/* ✅ PREACHER */}
-  <View style={{ width: SCREEN_W }}>
-  <View style={styles.preacherCard}>
+   {activeEvents.map(event => (
+  <View key={event.id} style={styles.eventCard}>
     
+    <View style={{ flex: 1 }}>
+      <Text style={styles.eventTitle}>{event.title}</Text>
+      <Text style={styles.eventDate}>{event.date}</Text>
+      <Text style={styles.eventDesc}>{event.desc}</Text>
+    </View>
+
+    <View style={{ justifyContent: "space-between", marginLeft: 8 }}>
+      
+      <TouchableOpacity onPress={() => editEvent(event)}>
+        <Ionicons name="create-outline" size={18} color="#4B3F72" />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => openEventExpiry(event.id)}>
+        <Ionicons name="time-outline" size={18} color="#6c47b8" />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => deleteEvent(event)}>
+        <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
+      </TouchableOpacity>
+
+    </View>
+
+  </View>   
+
+))}
+</View>   
+
+
+{/* ✅ PROGRAM */}
+<View style={{ width: SCREEN_W }}>
+  <TouchableOpacity style={styles.addBtn} onPress={() => openProgramModal()}>
+    <Ionicons name="add-circle-outline" size={15} color="#fff" />
+    <Text style={styles.addBtnText}>Add Item</Text>
+  </TouchableOpacity>
+
+  {program.map((p, idx) => (
+    <View key={p.id} style={styles.programRow}>
+      <View style={styles.programNum}>
+        <Text style={styles.programNumText}>{idx + 1}</Text>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={styles.programItem}>{p.item}</Text>
+      </View>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+
+  {/* EDIT */}
+  <TouchableOpacity onPress={() => openProgramModal(p)}>
+    <Ionicons name="create-outline" size={16} color="#4B3F72" />
+  </TouchableOpacity>
+
+  {/* ✅ ADD THIS EXPIRY BUTTON */}
+  <TouchableOpacity
+    onPress={() => {
+      setEventExpiryTarget(p.id);
+      setEventExpiryModal(true);
+    }}
+  >
+    <Ionicons name="time-outline" size={16} color="#6c47b8" />
+  </TouchableOpacity>
+
+  {/* DELETE */}
+  <TouchableOpacity onPress={() => {
+    setProgramDeleteId(p.id);
+    setProgramDeleteModal(true);
+  }}>
+    <Ionicons name="trash-outline" size={16} color="#ff4d4d" />
+  </TouchableOpacity>
+
+</View>
+
+    </View>
+  ))}
+</View>   {/* ✅ THIS LINE WAS MISSING */}
+
+
+{/* ✅ PREACHER */}
+<View style={{ width: SCREEN_W }}>
+  <View style={styles.preacherCard}>
+
     {preacher.photo ? (
       <Image source={{ uri: preacher.photo }} style={styles.preacherPhoto} />
     ) : (
@@ -815,13 +878,12 @@ const handlePressOut = () => {
 
   </View>
 </View>
+    </ScrollView>   
+</>             
+)}              
 
-
-</ScrollView>
-</>
-)}
-   </View>   
-</ScrollView>
+</View>         
+</ScrollView>   
 
 
       {/* ══════════ MODALS ══════════ */}
