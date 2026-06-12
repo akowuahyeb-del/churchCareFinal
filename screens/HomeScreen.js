@@ -31,6 +31,7 @@ export default function HomeScreen({ navigation }) {
 const [churchModal, setChurchModal] = useState(false);
 const [selectedChurchId, setSelectedChurchId] = useState("church_1");
 const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
+const tabsScrollRef = useRef(null);
 
   const scrollRef    = useRef(null);
   const currentIndex = useRef(0);
@@ -603,7 +604,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
           {eventsVisible && (
             <>
               {/* Tab row */}
-         <View style={styles.tabRow}>
+<View style={styles.tabRow}>
 
   <Animated.View
     style={[
@@ -650,111 +651,75 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
 
 </View>  
 
+<ScrollView
+  ref={tabsScrollRef}
+  horizontal
+  pagingEnabled
+  showsHorizontalScrollIndicator={false}
+  onMomentumScrollEnd={(e) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
 
+    setEventsTab(["upcoming", "program", "preacher"][index]);
 
-              {/* ── TAB: UPCOMING EVENTS ── */}
-              {eventsTab === "upcoming" && (
-                <>
-                  <TouchableOpacity style={styles.addBtn} onPress={() => setCreateModalVisible(true)}>
-                    <Ionicons name="add-circle-outline" size={15} color="#fff" />
-                    <Text style={styles.addBtnText}>Add Event</Text>
-                  </TouchableOpacity>
+    Animated.spring(tabAnim, {
+      toValue: index,
+      useNativeDriver: false,
+    }).start();
+  }}
+>
 
-                  {activeEvents.map(event => (
-                    <View key={event.id} style={styles.eventCard}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
-                        <Text style={styles.eventDate}>{event.date}</Text>
-                        <Text style={styles.eventDesc} numberOfLines={2}>{event.desc}</Text>
-                        {event.expiry && <Text style={styles.expiryBadge}>⏱ {fmtDateTime(event.expiry)}</Text>}
-                      </View>
-                      <View style={{ alignItems: "center", gap: 8, paddingLeft: 8 }}>
-                        <TouchableOpacity onPress={() => openEventExpiry(event.id)}>
-                          <Ionicons name="time-outline" size={19} color="#6c47b8" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => editEvent(event)}>
-                          <Ionicons name="create-outline" size={19} color="#1BA97F" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteEvent(event)}>
-                          <Ionicons name="trash-outline" size={19} color="#ff4d4d" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </>
-              )}
+  {/* ✅ UPCOMING */}
+  <View style={{ width: SCREEN_W }}>
+    <TouchableOpacity style={styles.addBtn} onPress={() => setCreateModalVisible(true)}>
+      <Ionicons name="add-circle-outline" size={15} color="#fff" />
+      <Text style={styles.addBtnText}>Add Event</Text>
+    </TouchableOpacity>
 
-              {/* ── TAB: PROGRAMME / ORDER OF SERVICE ── */}
-              {eventsTab === "program" && (
-                <>
-                  <TouchableOpacity style={styles.addBtn} onPress={() => openProgramModal()}>
-                    <Ionicons name="add-circle-outline" size={15} color="#fff" />
-                    <Text style={styles.addBtnText}>Add Item</Text>
-                  </TouchableOpacity>
-
-                  {program.map((p, idx) => (
-                    <View key={p.id} style={styles.programRow}>
-                      <View style={styles.programNum}>
-                        <Text style={styles.programNumText}>{idx + 1}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.programItem} numberOfLines={1}>{p.item}</Text>
-                        {p.time ? <Text style={styles.programTime}>{p.time}</Text> : null}
-                      </View>
-                      <TouchableOpacity onPress={() => openProgramModal(p)} style={styles.programAction}>
-                        <Ionicons name="create-outline" size={17} color="#1BA97F" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => { setProgramDeleteId(p.id); setProgramDeleteModal(true); }} style={styles.programAction}>
-                        <Ionicons name="trash-outline" size={17} color="#ff4d4d" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </>
-              )}
-
-              {/* ── TAB: PREACHER / SPEAKER ── */}
-              {eventsTab === "preacher" && (
-                <View style={styles.preacherCard}>
-                  {preacher.photo ? (
-                    <Image source={{ uri: preacher.photo }} style={styles.preacherPhoto} />
-                  ) : (
-                    <View style={styles.preacherPhotoPlaceholder}>
-                      <Ionicons name="person-outline" size={42} color="#ccc" />
-                    </View>
-                  )}
-                  {preacher.name ? (
-                    <>
-                      <Text style={styles.preacherName}>{preacher.name}</Text>
-                      {preacher.title ? <Text style={styles.preacherTitle}>{preacher.title}</Text> : null}
-                      {preacher.topic ? (
-                        <View style={styles.preacherTopicBox}>
-                          <Text style={styles.preacherTopicLabel}>Topic</Text>
-                          <Text style={styles.preacherTopic}>{preacher.topic}</Text>
-                        </View>
-                      ) : null}
-                      {preacher.bio ? (
-                        <View style={styles.preacherBioBox}>
-                          <Text style={styles.preacherBioLabel}>Profile</Text>
-                          <Text style={styles.preacherBio}>{preacher.bio}</Text>
-                        </View>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Text style={styles.preacherEmpty}>No preacher set for this service</Text>
-                  )}
-                  <TouchableOpacity style={[styles.addBtn, { marginTop: 16 }]}
-                    onPress={() => { setEditPreacher({ ...preacher }); setPreacherModal(true); }}>
-                    <Ionicons name={preacher.name ? "create-outline" : "add-circle-outline"} size={15} color="#fff" />
-                    <Text style={styles.addBtnText}>{preacher.name ? "Edit Preacher" : "Add Preacher"}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </>  
-          )}
+    {activeEvents.map(event => (
+      <View key={event.id} style={styles.eventCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.eventTitle}>{event.title}</Text>
+          <Text style={styles.eventDate}>{event.date}</Text>
+          <Text style={styles.eventDesc}>{event.desc}</Text>
         </View>
+      </View>
+    ))}
+  </View>
 
-      </ScrollView>
-      
+  {/* ✅ PROGRAM */}
+  <View style={{ width: SCREEN_W }}>
+    <TouchableOpacity style={styles.addBtn} onPress={() => openProgramModal()}>
+      <Ionicons name="add-circle-outline" size={15} color="#fff" />
+      <Text style={styles.addBtnText}>Add Item</Text>
+    </TouchableOpacity>
+
+    {program.map((p, idx) => (
+      <View key={p.id} style={styles.programRow}>
+        <View style={styles.programNum}>
+          <Text style={styles.programNumText}>{idx + 1}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.programItem}>{p.item}</Text>
+        </View>
+      </View>
+    ))}
+  </View>
+
+  {/* ✅ PREACHER */}
+  <View style={{ width: SCREEN_W }}>
+    <View style={styles.preacherCard}>
+      <Text style={styles.preacherName}>
+        {preacher.name || "No preacher set"}
+      </Text>
+    </View>
+  </View>
+
+</ScrollView>
+</>
+)}
+   </View>   
+</ScrollView>
+
 
       {/* ══════════ MODALS ══════════ */}
 
