@@ -654,6 +654,7 @@ const handlePressOut = () => {
   ].map(tab => (
     <TouchableOpacity
   key={tab.key}
+  style={{ flex: 1, marginHorizontal: 4 }} 
   onPressIn={handlePressIn}
   onPressOut={handlePressOut}
   onPress={() => {
@@ -1170,24 +1171,26 @@ quickCard: {
 
   /* Events tabs */
   eventsSectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  
   tabRow: {
   flexDirection: "row",
-  backgroundColor: "#F3F4F6",  
+  backgroundColor: "#F3F4F6",
   borderRadius: 12,
   padding: 5,
-  marginBottom: 14,
+  overflow: "hidden",   
 },
 
-  tabBtn: {
+tabBtn: {
   flex: 1,
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
-  paddingVertical: 10,  
+  paddingVertical: 10,
   borderRadius: 10,
-  marginHorizontal: 3,
   gap: 6,
+  marginHorizontal: 4,  
 },
+
   tabBtnActive: {
   backgroundColor: "#4B3F72",   
   shadowColor: "#000",
