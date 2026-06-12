@@ -363,50 +363,57 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Image source={require("../assets/logo.png")} style={styles.logo} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle} numberOfLines={1}>ChurchCare</Text>
-            <Text style={styles.headerSub}>Welcome Back</Text>
-          </View>
-        </View>
-      </View>
+ {/* ── HEADER ── */}
+<View style={styles.header}>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+  <View style={styles.headerRow}>
+    <Image source={require("../assets/logo.png")} style={styles.logo} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.headerTitle}>ChurchCare</Text>
+      <Text style={styles.headerSub}>Welcome Back</Text>
+    </View>
+  </View>
 
-        {/* ── 1. CAROUSEL ── */}
-        {/* ── 1. CAROUSEL ── */}
-        
-       
-       {/* ── 1. CAROUSEL ── */}
-<View style={styles.carouselWrapper}>
+  <View style={{ marginTop: 12 }}>
+    <TouchableOpacity
+      onPress={() => setChurchModal(true)}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        alignSelf: "flex-start",
+      }}
+    >
+      <Ionicons name="business-outline" size={16} color="#4B3F72" />
+      <Text style={{
+        marginHorizontal: 8,
+        fontWeight: "800",
+        color: "#4B3F72",
+        fontSize: 13,
+      }}>
+        {selectedChurchName}
+      </Text>
+      <Ionicons name="chevron-down" size={14} color="#4B3F72" />
+    </TouchableOpacity>
+  </View>
 
-  {/* ✅ HEADER */}
+</View>
+
+
+  {/* ✅ CAROUSEL CONTENT */}
+  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }}>
+
+  <View style={styles.carouselWrapper}>
+
   <View style={styles.carouselHeadingRow}>
 
-    {editingCarouselHeading ? (
-      <TextInput
-        style={styles.inlineInput}
-        value={carouselHeading}
-        onChangeText={setCarouselHeading}
-        autoFocus
-        onBlur={() => setEditingCarouselHeading(false)}
-      />
-    ) : (
-      <TouchableOpacity
-        onPress={() => setEditingCarouselHeading(true)}
-        style={{ flex: 1 }}
-      >
-        <Text style={styles.sectionTitle}>
-          {carouselHeading}{" "}
-          <Ionicons name="pencil-outline" size={12} color="#4B3F72" />
-        </Text>
-      </TouchableOpacity>
-    )}
+    <TouchableOpacity onPress={() => setEditingCarouselHeading(true)}>
+      <Text style={styles.sectionTitle}>{carouselHeading}</Text>
+    </TouchableOpacity>
 
-    {/* ✅ ADMIN UPLOAD BUTTON */}
     {isAdmin && (
       <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
         <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
@@ -416,7 +423,6 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
 
   </View>
 
-  {/* ✅ CAROUSEL CONTENT */}
   {showCarousel && (
     <>
       <ScrollView
@@ -449,8 +455,9 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
       </View>
     </>
   )}
+</View>   
 
-</View>
+
 
         {/* ── 2. MESSAGE FROM PASTOR ── */}
         <View style={styles.messageCard}>
@@ -477,9 +484,14 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
         </View>
 
         {/* ── 3. MANAGE FLYERS ── */}
-        <View style={styles.adminPanel}>
-          <View style={styles.manageFlyersHeader}>
-            <Text style={styles.adminTitle}>Manage Flyers</Text>
+        
+<View style={styles.adminPanel}>
+
+  <View style={styles.manageFlyersHeader}>
+
+  <View style={{ flex: 1 }}>
+    <Text style={styles.sectionTitle}>Manage Flyers</Text>
+  </View>
             <View style={{ flexDirection: "row", gap: 6 }}>
               <TouchableOpacity style={[styles.toggleAllBtn, { backgroundColor: flyerSectionVisible ? "#4B3F72" : "#1BA97F" }]}
                 onPress={() => setFlyerSectionVisible(p => !p)}>
@@ -516,6 +528,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
             </View>
           ))}
         </View>
+          
 
         {/* ── 4. QUICK ACTIONS ── */}
         {/* ✅ WRAPPER FOR TITLE */}
@@ -566,13 +579,23 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
 
           {/* Section header */}
           <View style={styles.eventsSectionHeader}>
-            <Text style={styles.sectionTitle}>Events & Services</Text>
-            <TouchableOpacity style={[styles.toggleAllBtn, { backgroundColor: eventsVisible ? "#4B3F72" : "#1BA97F" }]}
-              onPress={() => setEventsVisible(p => !p)}>
-              <Ionicons name={eventsVisible ? "eye-off-outline" : "eye-outline"} size={12} color="#fff" />
-              <Text style={styles.toggleAllText}>{eventsVisible ? "Hide" : "Show"}</Text>
-            </TouchableOpacity>
-          </View>
+
+  <View style={{ flex: 1 }}>
+    <Text style={styles.sectionTitle}>Events & Services</Text>
+  </View>
+
+  <TouchableOpacity
+    style={[styles.toggleAllBtn, { backgroundColor: eventsVisible ? "#4B3F72" : "#1BA97F" }]}
+    onPress={() => setEventsVisible(p => !p)}
+  >
+    <Ionicons name={eventsVisible ? "eye-off-outline" : "eye-outline"} size={12} color="#fff" />
+    <Text style={styles.toggleAllText}>
+      {eventsVisible ? "Hide" : "Show"}
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
 
           {eventsVisible && (
             <>
@@ -695,6 +718,7 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
         </View>
 
       </ScrollView>
+      
 
       {/* ══════════ MODALS ══════════ */}
 
@@ -925,35 +949,6 @@ const [selectedChurchName, setSelectedChurchName] = useState("Main Branch");
   </View>
 </Modal>
 
-<View style={{ paddingHorizontal: 15, marginBottom: 12 }}>
-  <TouchableOpacity
-    onPress={() => setChurchModal(true)}
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "#EEF0FA",
-      borderRadius: 25,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      alignSelf: "flex-start",
-    }}
-  >
-    <Ionicons name="business-outline" size={16} color="#4B3F72" />
-
-    <Text
-      style={{
-        marginHorizontal: 8,
-        fontWeight: "800",
-        color: "#4B3F72",
-        fontSize: 13,
-      }}
-    >
-      {selectedChurchName}
-    </Text>
-
-    <Ionicons name="chevron-down" size={14} color="#4B3F72" />
-  </TouchableOpacity>
-</View>
 
 
     </SafeAreaView>
