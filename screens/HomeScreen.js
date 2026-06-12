@@ -758,12 +758,58 @@ const handlePressOut = () => {
 
   {/* ✅ PREACHER */}
   <View style={{ width: SCREEN_W }}>
-    <View style={styles.preacherCard}>
-      <Text style={styles.preacherName}>
-        {preacher.name || "No preacher set"}
+  <View style={styles.preacherCard}>
+    
+    {preacher.photo ? (
+      <Image source={{ uri: preacher.photo }} style={styles.preacherPhoto} />
+    ) : (
+      <View style={styles.preacherPhotoPlaceholder}>
+        <Ionicons name="person" size={40} color="#bbb" />
+      </View>
+    )}
+
+    <Text style={styles.preacherName}>
+      {preacher.name || "No preacher set"}
+    </Text>
+
+    {preacher.title ? (
+      <Text style={styles.preacherTitle}>{preacher.title}</Text>
+    ) : null}
+
+    {preacher.topic ? (
+      <View style={styles.preacherTopicBox}>
+        <Text style={styles.preacherTopicLabel}>Topic</Text>
+        <Text style={styles.preacherTopic}>{preacher.topic}</Text>
+      </View>
+    ) : null}
+
+    {preacher.bio ? (
+      <View style={styles.preacherBioBox}>
+        <Text style={styles.preacherBioLabel}>Profile</Text>
+        <Text style={styles.preacherBio}>{preacher.bio}</Text>
+      </View>
+    ) : null}
+
+    <TouchableOpacity
+      style={[styles.addBtn, { marginTop: 16 }]}
+      onPress={() => {
+        setEditPreacher({ ...preacher });
+        setPreacherModal(true);
+      }}
+    >
+      <Ionicons
+        name={preacher.name ? "create-outline" : "add-circle-outline"}
+        size={15}
+        color="#fff"
+      />
+      <Text style={styles.addBtnText}>
+        {preacher.name ? "Edit Preacher" : "Add Preacher"}
       </Text>
-    </View>
+    </TouchableOpacity>
+
   </View>
+</View>
+
 
 </ScrollView>
 </>
@@ -1139,6 +1185,7 @@ quickCard: {
   justifyContent: "center",
   paddingVertical: 10,  
   borderRadius: 10,
+  marginHorizontal: 3,
   gap: 6,
 },
   tabBtnActive: {
