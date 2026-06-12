@@ -68,7 +68,8 @@ const tabsScrollRef = useRef(null);
   const [deleteFlyerModalVisible, setDeleteFlyerModalVisible] = useState(false);
 
   /* ── EVENTS (3-tab) ── */
-  const [eventsTab,    setEventsTab]    = useState("upcoming"); // upcoming | program | preacher
+  const [viewEventModal, setViewEventModal] = useState(false);
+  const [viewingEvent,   setViewingEvent]   = useState(null);
   const [eventsVisible,setEventsVisible]= useState(true);
 
   const [events, setEvents] = useState([
@@ -121,6 +122,9 @@ const tabsScrollRef = useRef(null);
   const tabAnim = useRef(new Animated.Value(0)).current;
    const TAB_WIDTH = (SCREEN_W - 30 - 10) / 3;
    const pressAnim = useRef(new Animated.Value(1)).current;
+   const [eventsTab, setEventsTab] = useState("upcoming");
+   const [activeEventId, setActiveEventId] = useState(null);
+
 
 
 
@@ -284,15 +288,30 @@ const handlePressOut = () => {
   /* ══════════════ EVENTS ══════════════ */
   const activeEvents = events.filter(e => e.active && (!e.expiry || new Date(e.expiry) > now));
 
-  const openEventExpiry = (id) => {
-    setEventExpiryTarget(id);
-    const existing = events.find(e => e.id === id)?.expiry;
-    setEventExpiryDate(existing ? new Date(existing) : new Date());
-    setEventExpiryModal(true);
-  };
-  const saveEventExpiry = () => {
+ const openEventExpiry = (id) => {
 
-  // Update EVENTS
+  const existing = events.find(e => e.id === id)?.expiry;
+
+  setEventExpiryTarget(id);
+
+  setEventExpiryDate(
+    existing ? new Date(existing) : new Date()
+  );
+
+  setTimeout(() => {
+    setEventExpiryModal(true);
+  }, 50);
+
+};
+
+const confirmDelete = () => {
+  setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+  setDeleteModalVisible(false);
+  setEventToDelete(null); 
+};
+const saveEventExpiry = () => {
+
+  // ✅ update events (UPCOMING)
   setEvents(prev =>
     prev.map(e =>
       e.id === eventExpiryTarget
@@ -301,7 +320,7 @@ const handlePressOut = () => {
     )
   );
 
-  // ✅ ALSO UPDATE PROGRAM
+  // ✅ also update program (you already use same modal)
   setProgram(prev =>
     prev.map(p =>
       p.id === eventExpiryTarget
@@ -312,6 +331,7 @@ const handlePressOut = () => {
 
   setEventExpiryModal(false);
 };
+
   const clearEventExpiry = () => {
     setEvents(prev => prev.map(e =>
       e.id === eventExpiryTarget ? { ...e, expiry: null } : e
@@ -336,10 +356,7 @@ const handlePressOut = () => {
     setEditModalVisible(false);
   };
   const deleteEvent   = (event) => { setEventToDelete(event); setDeleteModalVisible(true); };
-  const confirmDelete = () => {
-    setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
-    setDeleteModalVisible(false);
-  };
+
 
   /* ══════════════ PROGRAM ══════════════ */
   const openProgramModal = (item = null) => {
@@ -357,12 +374,11 @@ const handlePressOut = () => {
     }
     setProgramModal(false);
   };
-  const confirmDeleteProgram = () => {
-    setProgram(prev => prev.filter(p => p.id !== programDeleteId));
-    setProgramDeleteModal(false);
-    setProgramDeleteId(null);
-  };
-
+const confirmDeleteProgram = () => {
+  setProgram(prev => prev.filter(p => p.id !== programDeleteId));
+  setProgramDeleteModal(false);
+  setProgramDeleteId(null);
+};
   /* ══════════════ PREACHER PHOTO ══════════════ */
   const pickPreacherPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -721,7 +737,6 @@ const handlePressOut = () => {
 </TouchableOpacity>
 ))}
 </View>
-
 <ScrollView
   ref={tabsScrollRef}
   horizontal
@@ -746,36 +761,67 @@ const handlePressOut = () => {
       <Text style={styles.addBtnText}>Add Event</Text>
     </TouchableOpacity>
 
-   {activeEvents.map(event => (
-  <View key={event.id} style={styles.eventCard}>
+    {activeEvents.map(ev => (
+  <TouchableOpacity
+    key={ev.id}
+    style={styles.eventCard}
     
+    onPress={() => {
+  setViewingEvent(null);
+
+  setTimeout(() => {
+    setViewingEvent(ev);
+    setViewEventModal(true);
+  }, 50);
+}}
+
+  >
     <View style={{ flex: 1 }}>
-      <Text style={styles.eventTitle}>{event.title}</Text>
-      <Text style={styles.eventDate}>{event.date}</Text>
-      <Text style={styles.eventDesc}>{event.desc}</Text>
+      <Text style={styles.eventTitle}>{ev.title}</Text>
+      <Text style={styles.eventDate}>{ev.date}</Text>
+      <Text style={styles.eventDesc}>{ev.desc}</Text>
+      {ev.expiry && (
+        <Text style={styles.expiryBadge}>
+          ⏱ Expires {fmtDateTime(ev.expiry)}
+        </Text>
+      )}
     </View>
 
     <View style={{ justifyContent: "space-between", marginLeft: 8 }}>
-      
-      <TouchableOpacity onPress={() => editEvent(event)}>
-        <Ionicons name="create-outline" size={18} color="#4B3F72" />
-      </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => openEventExpiry(event.id)}>
+      {/* ✅ stopPropagation prevents modal conflict */}
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          openEventExpiry(ev.id);
+        }}
+      >
         <Ionicons name="time-outline" size={18} color="#6c47b8" />
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => deleteEvent(event)}>
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          editEvent(ev);
+        }}
+      >
+        <Ionicons name="create-outline" size={18} color="#4B3F72" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          setEventToDelete(ev);
+          setDeleteModalVisible(true);
+        }}
+      >
         <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
       </TouchableOpacity>
 
     </View>
-
-  </View>   
-
+  </TouchableOpacity>
 ))}
 </View>   
-
 
 {/* ✅ PROGRAM */}
 <View style={{ width: SCREEN_W }}>
@@ -877,28 +923,65 @@ const handlePressOut = () => {
     </TouchableOpacity>
 
   </View>
-</View>
-    </ScrollView>   
-</>             
-)}              
-
-</View>         
-</ScrollView>   
+      
+     </View>   // ✅ CLOSE PREACHER WRAPPER      
+</ScrollView>
+</>        
+)}  </View>   // ✅ CLOSE EVENTS SECTION WRAPPER
 
 
-      {/* ══════════ MODALS ══════════ */}
 
-      {/* Create Event */}
-      <Modal visible={createModalVisible} transparent animationType="fade">
-        <View style={styles.modalWrap}><View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>Create Event</Text>
-          <TextInput style={styles.input} placeholder="Title" value={newTitle} onChangeText={setNewTitle} />
-          <TextInput style={styles.input} placeholder="Date / Time" value={newDate} onChangeText={setNewDate} />
-          <TextInput style={styles.input} placeholder="Description" value={newDesc} onChangeText={setNewDesc} multiline />
-          <TouchableOpacity style={styles.modalBtn} onPress={createEvent}><Text style={styles.white}>Create</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#ccc", marginTop: 6 }]} onPress={() => setCreateModalVisible(false)}><Text>Cancel</Text></TouchableOpacity>
-        </View></View>
-      </Modal>
+
+
+
+{/* ✅ CREATE EVENT MODAL (FIXED) */}
+<Modal visible={createModalVisible} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>Create Event</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Title"
+        value={newTitle}
+        onChangeText={setNewTitle}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Date / Time"
+        value={newDate}
+        onChangeText={setNewDate}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Description"
+        value={newDesc}
+        onChangeText={setNewDesc}
+        multiline
+      />
+
+      <TouchableOpacity style={styles.modalBtn} onPress={createEvent}>
+        <Text style={styles.white}>Create</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.modalBtn, { backgroundColor: "#ccc", marginTop: 6 }]}
+        onPress={() => setCreateModalVisible(false)}
+      >
+        <Text>Cancel</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+   
+
+
+  
 
       {/* Edit Event */}
       <Modal visible={editModalVisible} transparent animationType="fade">
@@ -921,6 +1004,88 @@ const handlePressOut = () => {
           <TouchableOpacity style={[styles.modalBtn, { backgroundColor: "#ccc", marginTop: 6 }]} onPress={() => setDeleteModalVisible(false)}><Text>Cancel</Text></TouchableOpacity>
         </View></View>
       </Modal>
+
+{/* ✅ VIEW EVENT DETAIL MODAL */}
+<Modal
+  visible={viewEventModal && viewingEvent !== null}
+  transparent
+  animationType="slide"
+>
+  <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}>
+
+    <View style={{
+      backgroundColor: "#fff",
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20
+    }}>
+
+      <Text style={{ fontSize: 16, fontWeight: "800", marginBottom: 8 }}>
+        {viewingEvent?.title}
+      </Text>
+
+      <Text style={{ fontSize: 13, color: "#666", marginBottom: 6 }}>
+        {viewingEvent?.date}
+      </Text>
+
+      <Text style={{ fontSize: 13, color: "#444" }}>
+        {viewingEvent?.desc}
+      </Text>
+
+      {viewingEvent?.expiry && (
+        <Text style={{ marginTop: 6, fontSize: 12, color: "#6c47b8" }}>
+          ⏱ Expires {fmtDateTime(viewingEvent.expiry)}
+        </Text>
+      )}
+
+      <TouchableOpacity
+        style={{ marginTop: 15, alignItems: "center" }}
+        onPress={() => {
+  setViewEventModal(false);
+  setViewingEvent(null);
+}}
+      >
+        <Text style={{ color: "#888" }}>Close</Text>
+      </TouchableOpacity>
+
+<View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 15 }}>
+
+  <TouchableOpacity
+    onPress={() => {
+      setViewEventModal(false);
+      openEventExpiry(viewingEvent.id);
+    }}
+  >
+    <Ionicons name="time-outline" size={22} color="#6c47b8" />
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => {
+      setViewEventModal(false);
+      editEvent(viewingEvent);
+    }}
+  >
+    <Ionicons name="create-outline" size={22} color="#4B3F72" />
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() => {
+      setViewEventModal(false);
+      setEventToDelete(viewingEvent);
+      setDeleteModalVisible(true);
+    }}
+  >
+    <Ionicons name="trash-outline" size={22} color="#ff4d4d" />
+  </TouchableOpacity>
+
+</View>
+
+
+    </View>
+  </View>
+</Modal>
+
+
 
       {/* Delete Flyer */}
       <Modal visible={deleteFlyerModalVisible} transparent animationType="fade">
@@ -1115,11 +1280,12 @@ const handlePressOut = () => {
   </View>
 </Modal>
 
-
-
-    </SafeAreaView>
-  );
+</ScrollView>
+</SafeAreaView>
+);
 }
+
+
 
 /* ── STYLES ── */
 const styles = StyleSheet.create({
@@ -1326,7 +1492,12 @@ tabIndicator: {
   preacherPhotoPlaceholderSm: { width: 90, height: 90, borderRadius: 45, backgroundColor: "#f0f0f0", alignItems: "center", justifyContent: "center" },
 
   /* Modals */
-  modalWrap: { flex: 1, backgroundColor: "#000a", justifyContent: "center" },
+  modalWrap: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.6)", 
+  justifyContent: "center",
+},
+
   modalBox: { backgroundColor: "#fff", padding: 20, marginHorizontal: 20, borderRadius: 16 },
   modalTitle: { fontWeight: "800", fontSize: 16, marginBottom: 6, textAlign: "center", color: "#222" },
   modalSubText: { fontSize: 13, color: "#666", textAlign: "center", marginBottom: 12, lineHeight: 19 },
@@ -1341,4 +1512,3 @@ tabIndicator: {
   flyerPreview: { width: "100%", height: 110, borderRadius: 8, resizeMode: "cover", marginTop: 6 },
   fullImage: { width: SCREEN_W, height: SCREEN_W * 1.4 },
 });
-
