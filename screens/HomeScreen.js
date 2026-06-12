@@ -120,6 +120,8 @@ const tabsScrollRef = useRef(null);
   const [editDesc,  setEditDesc]  = useState("");
   const tabAnim = useRef(new Animated.Value(0)).current;
    const TAB_WIDTH = (SCREEN_W - 30 - 10) / 3;
+   const pressAnim = useRef(new Animated.Value(1)).current;
+
 
 
   /* ── CHURCH SWITCH ── */
@@ -213,6 +215,22 @@ const tabsScrollRef = useRef(null);
     setUploadingFlyer(false);
   }
 };
+
+const handlePressIn = () => {
+  Animated.spring(pressAnim, {
+    toValue: 0.94,
+    useNativeDriver: true,
+  }).start();
+};
+
+const handlePressOut = () => {
+  Animated.spring(pressAnim, {
+    toValue: 1,
+    useNativeDriver: true,
+  }).start();
+};
+
+
 
 
   const openFlyerExpiry = (id) => {
@@ -634,22 +652,55 @@ const tabsScrollRef = useRef(null);
     { key: "program", label: "Programme", icon: "list-outline" },
     { key: "preacher", label: "Preacher", icon: "person-outline" },
   ].map(tab => (
-    <TouchableOpacity key={tab.key} style={styles.tabBtn} onPress={() => {
-      setEventsTab(tab.key);
-      const index = ["upcoming", "program", "preacher"].indexOf(tab.key);
-      Animated.spring(tabAnim, {
-        toValue: index,
-        useNativeDriver: false,
-      }).start();
-    }}>
-      <Ionicons name={tab.icon} size={14} color={eventsTab === tab.key ? "#fff" : "#777"} />
-      <Text style={[styles.tabBtnText, eventsTab === tab.key && styles.tabBtnTextActive]}>
-        {tab.label}
-      </Text>
-    </TouchableOpacity>
-  ))}
+    <TouchableOpacity
+  key={tab.key}
+  onPressIn={handlePressIn}
+  onPressOut={handlePressOut}
+  onPress={() => {
+    setEventsTab(tab.key);
+    const index = ["upcoming", "program", "preacher"].indexOf(tab.key);
 
-</View>  
+    Animated.spring(tabAnim, {
+      toValue: index,
+      useNativeDriver: false,
+    }).start();
+
+    tabsScrollRef.current?.scrollTo({
+      x: index * SCREEN_W,
+      animated: true,
+    });
+  }}
+>
+  <Animated.View
+    style={[
+      styles.tabBtn,
+      {
+        transform: [{ scale: pressAnim }],
+        opacity: pressAnim.interpolate({
+          inputRange: [0.94, 1],
+          outputRange: [0.8, 1],
+        }),
+      },
+    ]}
+  >
+    <Ionicons
+      name={tab.icon}
+      size={14}
+      color={eventsTab === tab.key ? "#fff" : "#777"}
+    />
+    <Text
+      style={[
+        styles.tabBtnText,
+        eventsTab === tab.key && styles.tabBtnTextActive,
+      ]}
+    >
+      {tab.label}
+    </Text>
+  </Animated.View>
+</TouchableOpacity>
+))}
+
+</View>
 
 <ScrollView
   ref={tabsScrollRef}
