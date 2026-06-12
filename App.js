@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet } from "react-native";
+import MoreScreen from "./screens/MoreScreen";
 
 /* SCREENS */
 import HomeScreen from "./screens/HomeScreen";
@@ -54,12 +55,12 @@ function MainTabs() {
         },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
-            Home: "home",
-            Members: "people",
-            Attendance: "checkmark-circle",
-            History: "time",
-            Settings: "settings",
-          };
+  Home: "home",
+  Members: "people",
+  Attendance: "checkmark-circle",
+  History: "time",
+  More: "grid",   
+};
 
           return (
             <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
@@ -77,7 +78,7 @@ function MainTabs() {
       <Tab.Screen name="Members" component={MembersStack} />
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );
 }

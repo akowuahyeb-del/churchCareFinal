@@ -558,9 +558,7 @@ const handlePressOut = () => {
   <Text style={styles.sectionTitle}>Quick Actions</Text>
 </View>
 
-          
-
-     <View style={styles.quickGrid}>
+          <View style={styles.quickGrid}>
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Attendance")}>
     <View style={[styles.quickIcon, { backgroundColor: "#27ae60" }]}>
@@ -576,6 +574,13 @@ const handlePressOut = () => {
     <Text style={styles.quickLabel}>Members</Text>
   </TouchableOpacity>
 
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("AdminDashboard")}>
+    <View style={[styles.quickIcon, { backgroundColor: "#8e44ad" }]}>
+      <Ionicons name="bar-chart" size={18} color="#fff" />
+    </View>
+    <Text style={styles.quickLabel}>Report</Text>
+  </TouchableOpacity>
+
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("AdminTransfers")}>
     <View style={[styles.quickIcon, { backgroundColor: "#8e44ad" }]}>
       <Ionicons name="git-branch-outline" size={18} color="#fff" />
@@ -583,11 +588,11 @@ const handlePressOut = () => {
     <Text style={styles.quickLabel}>Transfers</Text>
   </TouchableOpacity>
 
-  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Finance")}>
+  <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("DonateScreen")}>
     <View style={[styles.quickIcon, { backgroundColor: "#e67e22" }]}>
-      <Ionicons name="card" size={18} color="#fff" />
+      <Ionicons name="heart" size={18} color="#fff" />
     </View>
-    <Text style={styles.quickLabel}>Finance</Text>
+    <Text style={styles.quickLabel}>Donate</Text>
   </TouchableOpacity>
 
 </View>
