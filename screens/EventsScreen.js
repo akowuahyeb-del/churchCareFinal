@@ -10,6 +10,7 @@ import { useNavigation } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { db, storage } from "../firebase";
+import AppHeader from "../components/AppHeader";
 import {
   collection, addDoc, onSnapshot, deleteDoc,
   doc, updateDoc, query, orderBy, where
