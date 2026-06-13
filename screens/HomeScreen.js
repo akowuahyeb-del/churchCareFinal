@@ -123,7 +123,8 @@ const tabsScrollRef = useRef(null);
    const TAB_WIDTH = (SCREEN_W - 30 - 10) / 3;
    const pressAnim = useRef(new Animated.Value(1)).current;
    const [eventsTab, setEventsTab] = useState("upcoming");
-   const [activeEventId, setActiveEventId] = useState(null);
+   
+   
 
 
 
@@ -763,60 +764,50 @@ const confirmDeleteProgram = () => {
 
     {activeEvents.map(ev => (
   <TouchableOpacity
-    key={ev.id}
-    style={styles.eventCard}
-    
-   onPress={() => {
-  setActiveEventId(activeEventId === ev.id ? null : ev.id);
-}} 
+  key={ev.id}
+  style={styles.eventCard}
+>
 
-  >
-    <View style={{ flex: 1 }}>
-      <Text style={styles.eventTitle}>{ev.title}</Text>
-      <Text style={styles.eventDate}>{ev.date}</Text>
-      <Text style={styles.eventDesc}>{ev.desc}</Text>
-      {ev.expiry && (
-        <Text style={styles.expiryBadge}>
-          ⏱ Expires {fmtDateTime(ev.expiry)}
-        </Text>
-      )}
-    </View>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.eventTitle}>{ev.title}</Text>
+    <Text style={styles.eventDate}>{ev.date}</Text>
+    <Text style={styles.eventDesc}>{ev.desc}</Text>
 
-    <View style={{ justifyContent: "space-between", marginLeft: 8 }}>
+    {/* ✅ ACTION BUTTONS (ONLY ONCE) */}
+    <View style={{
+      flexDirection: "row",
+      justifyContent: "space-around",
+      marginTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: "#eee",
+      paddingTop: 10
+    }}>
 
-      {/* ✅ stopPropagation prevents modal conflict */}
-      <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation();
-          openEventExpiry(ev.id);
-        }}
-      >
-        <Ionicons name="time-outline" size={18} color="#6c47b8" />
+      <TouchableOpacity onPress={() => openEventExpiry(ev.id)}>
+        <Ionicons name="time-outline" size={20} color="#6c47b8" />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => editEvent(ev)}>
+        <Ionicons name="create-outline" size={20} color="#4B3F72" />
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation();
-          editEvent(ev);
-        }}
-      >
-        <Ionicons name="create-outline" size={18} color="#4B3F72" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation();
+        onPress={() => {
           setEventToDelete(ev);
           setDeleteModalVisible(true);
         }}
       >
-        <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
+        <Ionicons name="trash-outline" size={20} color="#ff4d4d" />
       </TouchableOpacity>
 
     </View>
-  </TouchableOpacity>
+  </View>
+
+</TouchableOpacity>
+
 ))}
 </View>   
+
 
 {/* ✅ PROGRAM */}
 <View style={{ width: SCREEN_W }}>
