@@ -247,6 +247,7 @@ export default function EventsScreen() {
   ══════════════════════════════════════════════ */
   return (
     <SafeAreaView style={styles.safe}>
+        <View style={{ height: Platform.OS === "android" ? 10 : 0 }} />
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
       {/* ── HEADER ── */}
@@ -752,9 +753,14 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#4B3F72" },
   formSafe: { flex: 1, backgroundColor: "#fff" },
 
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 10, paddingTop: 4, gap: 8 },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 10, paddingTop: Platform.OS === "android" ? 30 : 16, gap: 8 },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  headerTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  headerTitle: {
+  color: "#fff",
+  fontSize: 18,   
+  fontWeight: "800",
+  marginTop: 2    
+},
   headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11 },
   headerActions: { flexDirection: "row", gap: 6, alignItems: "center" },
   headerBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
