@@ -93,6 +93,7 @@ function RootStack() {
       <Stack.Screen name="DonateScreen" component={DonateScreen} />
       <Stack.Screen name="Finance" component={AdminFinanceScreen} />
       <Stack.Screen name="TransferRequests" component={TransferRequestsScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
 
       {/* ✅ ADMIN TRANSFER SCREEN */}
       <Stack.Screen

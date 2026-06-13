@@ -25,6 +25,8 @@ const CHURCHES = [
   { id: "church_3", name: "Kumasi Branch", location: "Kumasi" },
 ];
 
+
+
 export default function HomeScreen({ navigation }) {
 
 /* ── CHURCH SWITCH ── */
@@ -594,21 +596,21 @@ const confirmDeleteProgram = () => {
 <View style={styles.quickGrid}>
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Attendance")}>
-    <View style={[styles.quickIcon, { backgroundColor: "#27ae60" }]}>
+    <View style={[styles.quickIcon, { backgroundColor: "#dc143c91" }]}>
       <Ionicons name="checkmark" size={22} color="#fff" />
     </View>
     <Text style={styles.quickLabel}>Attendance</Text>
   </TouchableOpacity>
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("Members")}>
-    <View style={[styles.quickIcon, { backgroundColor: "#2980b9" }]}>
+    <View style={[styles.quickIcon, { backgroundColor: "#0b3856" }]}>
       <Ionicons name="people" size={18} color="#fff" />
     </View>
     <Text style={styles.quickLabel}>Members</Text>
   </TouchableOpacity>
 
   <TouchableOpacity style={styles.quickCard} onPress={() => navigation.navigate("AdminDashboard")}>
-    <View style={[styles.quickIcon, { backgroundColor: "#8e44ad" }]}>
+    <View style={[styles.quickIcon, { backgroundColor: "#17e625" }]}>
       <Ionicons name="bar-chart" size={18} color="#fff" />
     </View>
     <Text style={styles.quickLabel}>Report</Text>
@@ -807,8 +809,6 @@ const confirmDeleteProgram = () => {
 
 ))}
 </View>   
-
-
 {/* ✅ PROGRAM */}
 <View style={{ width: SCREEN_W }}>
   <TouchableOpacity style={styles.addBtn} onPress={() => openProgramModal()}>
@@ -818,6 +818,7 @@ const confirmDeleteProgram = () => {
 
   {program.map((p, idx) => (
     <View key={p.id} style={styles.programRow}>
+
       <View style={styles.programNum}>
         <Text style={styles.programNumText}>{idx + 1}</Text>
       </View>
@@ -825,39 +826,38 @@ const confirmDeleteProgram = () => {
       <View style={{ flex: 1 }}>
         <Text style={styles.programItem}>{p.item}</Text>
       </View>
-     
-      <View style={{ flexDirection: "row", gap: 8 }}>
 
-  {/* EDIT */}
-  <TouchableOpacity onPress={() => openProgramModal(p)}>
-    <Ionicons name="create-outline" size={16} color="#4B3F72" />
-  </TouchableOpacity>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
 
-  {/* ✅ ADD THIS EXPIRY BUTTON */}
-  <TouchableOpacity
-    onPress={() => {
-      setEventExpiryTarget(p.id);
-      setEventExpiryModal(true);
-    }}
-  >
-    <Ionicons name="time-outline" size={16} color="#6c47b8" />
-  </TouchableOpacity>
+        <TouchableOpacity onPress={() => openProgramModal(p)}>
+          <Ionicons name="create-outline" size={18} color="#4B3F72" />
+        </TouchableOpacity>
 
-  {/* DELETE */}
-  <TouchableOpacity onPress={() => {
-    setProgramDeleteId(p.id);
-    setProgramDeleteModal(true);
-  }}>
-    <Ionicons name="trash-outline" size={16} color="#ff4d4d" />
-  </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            setEventExpiryTarget(p.id);
+            setEventExpiryModal(true);
+          }}
+        >
+          <Ionicons name="time-outline" size={18} color="#6c47b8" />
+        </TouchableOpacity>
 
-</View>
+        <TouchableOpacity
+          onPress={() => {
+            setProgramDeleteId(p.id);
+            setProgramDeleteModal(true);
+          }}
+        >
+          <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
+        </TouchableOpacity>
+
+      </View>
 
     </View>
   ))}
-</View>   {/* ✅ THIS LINE WAS MISSING */}
+</View>
 
-
+  
 {/* ✅ PREACHER */}
 <View style={{ width: SCREEN_W }}>
   <View style={styles.preacherCard}>
@@ -939,10 +939,10 @@ const confirmDeleteProgram = () => {
 )}
   </View>
       
-     </View>   // ✅ CLOSE PREACHER WRAPPER      
+     </View>      
 </ScrollView>
 </>        
-)}  </View>   // ✅ CLOSE EVENTS SECTION WRAPPER
+)}  </View>   
 
 
 
