@@ -11,6 +11,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function PreacherModal({
   visible,
@@ -24,6 +25,10 @@ export default function PreacherModal({
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [date, setDate] = useState(null);
+const [expiry, setExpiry] = useState(null);
+const [showPicker, setShowPicker] = useState(false);
+const [pickerType, setPickerType] = useState(null);
 
   // ✅ SYNC WHEN EDITING
   useEffect(() => {
