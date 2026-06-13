@@ -18,7 +18,12 @@ import DonateScreen from "./screens/DonateScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import AdminFinanceScreen from "./screens/AdminFinanceScreen";
 import TransferRequestsScreen from "./screens/TransferRequestsScreen";
-import AdminTransferScreen from "./screens/AdminTransferScreen"; // ✅ FIXED PATH
+import AdminTransferScreen from "./screens/AdminTransferScreen"; 
+import HelpScreen from "./screens/HelpScreen";
+import DepartmentsScreen from "./screens/DepartmentsScreen";
+import EventsScreen from "./screens/EventsScreen";
+
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -29,6 +34,8 @@ function MembersStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MembersMain" component={MembersScreen} />
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
+      <Stack.Screen name="Departments" component={DepartmentsScreen} />
     </Stack.Navigator>
   );
 }
@@ -79,6 +86,7 @@ function MainTabs() {
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="More" component={MoreScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
     </Tab.Navigator>
   );
 }
@@ -94,6 +102,11 @@ function RootStack() {
       <Stack.Screen name="Finance" component={AdminFinanceScreen} />
       <Stack.Screen name="TransferRequests" component={TransferRequestsScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
+      <Stack.Screen name="Departments" component={DepartmentsScreen} />
+      <Stack.Screen name="Events" component={EventsScreen} />
+
+
 
       {/* ✅ ADMIN TRANSFER SCREEN */}
       <Stack.Screen

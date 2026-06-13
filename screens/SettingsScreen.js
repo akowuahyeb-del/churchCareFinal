@@ -150,13 +150,11 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <TouchableOpacity
   style={styles.backBtn}
-  onPress={() =>
-    navigation.navigate("MainTabs", { screen: "Home" })
-  }
-  hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+  onPress={() => navigation.getParent()?.navigate("Home")}
+  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
 >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
+  <Ionicons name="arrow-back" size={20} color="#fff" />
+</TouchableOpacity>
         <View style={{ flex: 1, paddingLeft: 6 }}>
           <Text style={styles.headerTitle}>Settings</Text>
           <Text style={styles.headerSub}>App preferences & controls</Text>
