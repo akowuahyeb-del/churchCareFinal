@@ -251,31 +251,27 @@ export default function EventsScreen() {
         <View style={{ height: Platform.OS === "android" ? 10 : 0 }} />
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Events</Text>
-          <Text style={styles.headerSub}>{filtered.length} event{filtered.length !== 1 ? "s" : ""}</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerBtn} onPress={() => setShowSearch(p => !p)}>
-            <Ionicons name="search-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-          {VIEWS.map(v => (
-            <TouchableOpacity key={v.key} style={[styles.headerBtn, viewMode === v.key && styles.headerBtnActive]} onPress={() => setViewMode(v.key)}>
-              <Ionicons name={v.icon} size={16} color="#fff" />
-            </TouchableOpacity>
-          ))}
-          {canDo("deacon") && (
-            <TouchableOpacity style={styles.addHeaderBtn} onPress={openCreate}>
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <AppHeader
+  title="Events"
+  subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
+  onBack={() => navigation.goBack()}
+  actions={[
+    {
+      icon: "search-outline",
+      onPress: () => setShowSearch(p => !p),
+    },
+    ...VIEWS.map(v => ({
+      icon: v.icon,
+      onPress: () => setViewMode(v.key),
+    })),
+    ...(canDo("deacon")
+      ? [{
+          icon: "add",
+          onPress: openCreate,
+        }]
+      : [])
+  ]}
+/>
 
       {/* ── SEARCH BAR ── */}
       {showSearch && (
@@ -763,11 +759,6 @@ const styles = StyleSheet.create({
   marginTop: 2
 },
 
-  headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11 },
-  headerActions: { flexDirection: "row", gap: 6, alignItems: "center" },
-  headerBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
-  headerBtnActive: { backgroundColor: "rgba(255,255,255,0.3)" },
-  addHeaderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#1BA97F", alignItems: "center", justifyContent: "center", marginLeft: 4 },
 
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", marginHorizontal: 14, marginBottom: 8, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   searchInput: { flex: 1, fontSize: 13, color: "#222", padding: 0 },
