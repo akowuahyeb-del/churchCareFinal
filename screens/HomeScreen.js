@@ -30,7 +30,9 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
- 
+  
+ const [selectedEvent, setSelectedEvent] = useState(null);
+const [eventModalVisible, setEventModalVisible] = useState(false);
 
 const [pastorData, setPastorData] = useState({
   title: "Message from Pastor",
@@ -112,12 +114,15 @@ const styles = StyleSheet.create({
       contentContainerStyle={{ paddingLeft: 14 }}
     >
       {featuredEvents.map(ev => (
-        <FeaturedEventCard
-          key={ev.id}
-          event={ev}
-          onPress={() => navigation.navigate("Events")}
-        />
-      ))}
+  <FeaturedEventCard
+    key={ev.id}
+    event={ev}
+    onPress={() => {
+      setSelectedEvent(ev);
+      setEventModalVisible(true);
+    }}
+  />
+))}
     </ScrollView>
   </Section>
 )}
@@ -209,6 +214,30 @@ const styles = StyleSheet.create({
         </Section>
 
       </ScrollView>
+{/* ✅ FEATURED EVENT EDIT MODAL */}
+{selectedEvent && (
+  <EditableContentModal
+    visible={eventModalVisible}
+    onClose={() => setEventModalVisible(false)}
+    titleValue={selectedEvent.title}
+    messageValue={selectedEvent.description || selectedEvent.desc}
+    onSave={(data) => {
+      setEvents(prev =>
+        prev.map(ev =>
+          ev.id === selectedEvent.id
+            ? { ...ev, title: data.title, desc: data.message }
+            : ev
+        )
+      );
+    }}
+    onDelete={() => {
+      setEvents(prev =>
+        prev.filter(ev => ev.id !== selectedEvent.id)
+      );
+    }}
+  />
+)}
+
 
       {/* ✅ FLYER UPLOAD MODAL */}
       <FlyerUploadModal
