@@ -19,26 +19,29 @@ export default function PreacherModal({
   onSave,
   initialData
 }) {
-  // ✅ LOCAL STATE ONLY (CORRECT)
+  // ✅ STATE
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [date, setDate] = useState(null);
-const [expiry, setExpiry] = useState(null);
-const [showPicker, setShowPicker] = useState(false);
-const [pickerType, setPickerType] = useState(null);
 
-  // ✅ SYNC WHEN EDITING
+  const [date, setDate] = useState(null);
+  const [expiry, setExpiry] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerType, setPickerType] = useState(null);
+
+  // ✅ LOAD DATA WHEN EDITING
   useEffect(() => {
     setName(initialData?.name || "");
     setTopic(initialData?.topic || "");
     setBio(initialData?.bio || "");
     setPhoto(initialData?.photo || null);
+    setDate(initialData?.date || null);
+    setExpiry(initialData?.expiry || null);
   }, [initialData]);
 
-  // ✅ IMAGE PICKER + FIREBASE UPLOAD
+  // ✅ IMAGE PICK
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -66,6 +69,7 @@ const [pickerType, setPickerType] = useState(null);
 
       const url = await getDownloadURL(storageRef);
       setPhoto(url);
+
     } catch (err) {
       console.log("Upload error:", err);
     }
@@ -81,7 +85,7 @@ const [pickerType, setPickerType] = useState(null);
 
           <Text style={styles.title}>Preacher</Text>
 
-          {/* ✅ PHOTO */}
+          {/* ✅ IMAGE */}
           <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
             {photo ? (
               <Image source={{ uri: photo }} style={styles.image} />
@@ -90,7 +94,7 @@ const [pickerType, setPickerType] = useState(null);
             )}
           </TouchableOpacity>
 
-          {/* ✅ NAME */}
+          {/* ✅ INPUTS */}
           <TextInput
             placeholder="Preacher Name"
             style={styles.input}
@@ -98,7 +102,6 @@ const [pickerType, setPickerType] = useState(null);
             onChangeText={setName}
           />
 
-          {/* ✅ SERMON */}
           <TextInput
             placeholder="Sermon Topic"
             style={styles.input}
@@ -106,7 +109,6 @@ const [pickerType, setPickerType] = useState(null);
             onChangeText={setTopic}
           />
 
-          {/* ✅ BIO */}
           <TextInput
             placeholder="Bio"
             style={[styles.input, { height: 80 }]}
@@ -114,6 +116,57 @@ const [pickerType, setPickerType] = useState(null);
             value={bio}
             onChangeText={setBio}
           />
+
+          {/* ✅ SERVICE DATE */}
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => {
+              setPickerType("date");
+              setShowPicker(true);
+            }}
+          >
+            <Text>
+              {date
+                ? new Date(date).toLocaleString()
+                : "Set Service Date"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* ✅ EXPIRY */}
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => {
+              setPickerType("expiry");
+              setShowPicker(true);
+            }}
+          >
+            <Text>
+              {expiry
+                ? new Date(expiry).toLocaleString()
+                : "Set Expiry"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* ✅ DATE PICKER */}
+          {showPicker && (
+            <DateTimePicker
+              value={new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowPicker(false);
+                if (!selectedDate) return;
+
+                if (pickerType === "date") {
+                  setDate(selectedDate.toISOString());
+                }
+
+                if (pickerType === "expiry") {
+                  setExpiry(selectedDate.toISOString());
+                }
+              }}
+            />
+          )}
 
           {/* ✅ SAVE */}
           <TouchableOpacity
@@ -123,14 +176,25 @@ const [pickerType, setPickerType] = useState(null);
                 name,
                 topic,
                 bio,
-                photo
+                photo,
+                date,
+                expiry
               });
               onClose();
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "700" }}>
-              Save
-            </Text>
+            <Text style={styles.white}>Save</Text>
+          </TouchableOpacity>
+
+          {/* ✅ DELETE */}
+          <TouchableOpacity
+            style={styles.delete}
+            onPress={() => {
+              onSave({ delete: true });
+              onClose();
+            }}
+          >
+            <Text style={styles.white}>Delete</Text>
           </TouchableOpacity>
 
           {/* ✅ CANCEL */}
@@ -195,9 +259,22 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
 
+  delete: {
+    backgroundColor: "#e74c3c",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 8
+  },
+
   cancel: {
     textAlign: "center",
     marginTop: 10,
     color: "#777"
+  },
+
+  white: {
+    color: "#fff",
+    fontWeight: "700"
   }
 });
