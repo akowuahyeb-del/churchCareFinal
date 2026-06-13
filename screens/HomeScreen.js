@@ -825,36 +825,31 @@ const confirmDeleteProgram = () => {
       <View style={{ flex: 1 }}>
         <Text style={styles.programItem}>{p.item}</Text>
       </View>
-      <View style={{ flexDirection: "row", gap: 8 }}>
+<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
 
-  {/* EDIT */}
   <TouchableOpacity onPress={() => openProgramModal(p)}>
-    <Ionicons name="create-outline" size={16} color="#4B3F72" />
+    <Ionicons name="create-outline" size={18} color="#4B3F72" />
   </TouchableOpacity>
 
-  {/* ✅ ADD THIS EXPIRY BUTTON */}
   <TouchableOpacity
     onPress={() => {
       setEventExpiryTarget(p.id);
       setEventExpiryModal(true);
     }}
   >
-    <Ionicons name="time-outline" size={16} color="#6c47b8" />
+    <Ionicons name="time-outline" size={18} color="#6c47b8" />
   </TouchableOpacity>
 
-  {/* DELETE */}
-  <TouchableOpacity onPress={() => {
-    setProgramDeleteId(p.id);
-    setProgramDeleteModal(true);
-  }}>
-    <Ionicons name="trash-outline" size={16} color="#ff4d4d" />
+  <TouchableOpacity
+    onPress={() => {
+      setProgramDeleteId(p.id);
+      setProgramDeleteModal(true);
+    }}
+  >
+    <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
   </TouchableOpacity>
 
 </View>
-
-    </View>
-  ))}
-</View>   {/* ✅ THIS LINE WAS MISSING */}
 
 
 {/* ✅ PREACHER */}
@@ -905,6 +900,35 @@ const confirmDeleteProgram = () => {
       />
       <Text style={styles.addBtnText}>
         {preacher.name ? "Edit Preacher" : "Add Preacher"}
+        {preacher.name && (
+  <TouchableOpacity
+    style={[styles.addBtn, { backgroundColor: "#ff4d4d", marginTop: 8 }]}
+    onPress={() => {
+      Alert.alert(
+        "Delete Preacher",
+        "Are you sure?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () =>
+              setPreacher({
+                name: "",
+                title: "",
+                bio: "",
+                topic: "",
+                photo: null
+              }),
+          },
+        ]
+      );
+    }}
+  >
+    <Ionicons name="trash-outline" size={15} color="#fff" />
+    <Text style={styles.addBtnText}>Delete Preacher</Text>
+  </TouchableOpacity>
+)}
       </Text>
     </TouchableOpacity>
 
