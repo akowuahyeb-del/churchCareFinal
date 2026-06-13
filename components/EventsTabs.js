@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet
+  View, Text, TouchableOpacity, StyleSheet
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,7 +19,6 @@ export default function EventsTabs({
 
       {/* ✅ TAB HEADER */}
       <View style={styles.tabRow}>
-
         {[
           { key: "events", label: "Upcoming", icon: "calendar-outline" },
           { key: "program", label: "Program", icon: "list-outline" },
@@ -48,7 +47,6 @@ export default function EventsTabs({
             </Text>
           </TouchableOpacity>
         ))}
-
       </View>
 
       {/* ✅ CONTENT */}
@@ -81,9 +79,19 @@ export default function EventsTabs({
           </>
         )}
 
-        {/* ── PREACHERS ── */}
+        {/* ✅ PREACHERS */}
         {activeTab === "preachers" && (
           <>
+            {/* ADD BUTTON */}
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => onEditPreacher(null)}
+            >
+              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+                + Add Preacher
+              </Text>
+            </TouchableOpacity>
+
             {preachers.map(p => (
               <TouchableOpacity
                 key={p.id}
@@ -103,6 +111,7 @@ export default function EventsTabs({
   );
 }
 
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 14,

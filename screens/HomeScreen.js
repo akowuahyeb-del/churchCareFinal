@@ -19,6 +19,7 @@ import FlyerUploadModal from "../components/FlyerUploadModal";
 import PastorMessageCard from "../components/PastorMessageCard";
 import EditableContentModal from "../components/EditableContentModal";
 import EventsTabs from "../components/EventsTabs";
+import PreacherModal from "../components/PreacherModal";
 
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
@@ -200,16 +201,36 @@ const styles = StyleSheet.create({
 <Section title="Service Flow">
 
   <EventsTabs
-    events={upcomingEvents}
-    program={program}
-    preachers={preachers}
-    onEditProgram={(item) => {
-      console.log("Edit program", item);
-    }}
-    onEditPreacher={(p) => {
-      console.log("Edit preacher", p);
-    }}
-  />
+  events={upcomingEvents}
+  program={program}
+  preachers={preachers}
+  onEditProgram={(item) => {
+    console.log("Edit program", item);
+  }}
+  onEditPreacher={(p) => {
+    setEditingPreacher(p);
+    setPreacherModal(true);
+  }}
+/>
+  <PreacherModal
+  visible={preacherModal}
+  onClose={() => setPreacherModal(false)}
+  initialData={editingPreacher}
+  onSave={(data) => {
+    if (editingPreacher) {
+      setPreachers(prev =>
+        prev.map(p =>
+          p.id === editingPreacher.id ? { ...p, ...data } : p
+        )
+      );
+    } else {
+      setPreachers(prev => [
+        ...prev,
+        { ...data, id: Date.now().toString() }
+      ]);
+    }
+  }}
+/>
 
 </Section>
 
