@@ -180,28 +180,6 @@ const styles = StyleSheet.create({
           </View>
         </Section>
 
-        {/* ✅ FEATURED EVENTS */}
-       {featuredEvents.length > 0 && (
-  <Section title="Featured Events">
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingLeft: 14,
-        paddingRight: 6
-      }}
-    >
-      {featuredEvents.map(ev => (
-        <FeaturedEventCard
-          key={ev.id}
-          event={ev}
-          onPress={() => navigation.navigate("Events")}
-        />
-      ))}
-    </ScrollView>
-  </Section>
-)}
-
         {/* ✅ UPCOMING EVENTS */}
         <Section title="Upcoming Events">
           {upcomingEvents.map(ev => (
