@@ -6,12 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  StyleSheet
+  StyleSheet,
+  Alert
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function PreacherModal({
   visible,
@@ -19,7 +19,6 @@ export default function PreacherModal({
   onSave,
   initialData
 }) {
-  // ✅ STATE
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [bio, setBio] = useState("");
@@ -28,10 +27,8 @@ export default function PreacherModal({
 
   const [date, setDate] = useState(null);
   const [expiry, setExpiry] = useState(null);
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerType, setPickerType] = useState(null);
 
-  // ✅ LOAD DATA WHEN EDITING
+  // ✅ LOAD DATA (EDIT MODE)
   useEffect(() => {
     setName(initialData?.name || "");
     setTopic(initialData?.topic || "");
@@ -41,7 +38,47 @@ export default function PreacherModal({
     setExpiry(initialData?.expiry || null);
   }, [initialData]);
 
-  // ✅ IMAGE PICK
+  // ✅ SIMPLE STABLE DATE PICKER (NO MORE BUGS)
+  const pickDate = (type) => {
+    const now = new Date();
+
+    const tomorrow = new Date();
+    tomorrow.setDate(now.getDate() + 1);
+
+    Alert.alert(
+      "Select Date",
+      "Quick options",
+      [
+        {
+          text: "Today",
+          onPress: () => {
+            if (type === "date") setDate(now.toISOString());
+            else setExpiry(now.toISOString());
+          }
+        },
+        {
+          text: "Tomorrow",
+          onPress: () => {
+            if (type === "date") setDate(tomorrow.toISOString());
+            else setExpiry(tomorrow.toISOString());
+          }
+        },
+        {
+          text: "Clear",
+          onPress: () => {
+            if (type === "date") setDate(null);
+            else setExpiry(null);
+          }
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
+  // ✅ IMAGE UPLOAD
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -94,7 +131,7 @@ export default function PreacherModal({
             )}
           </TouchableOpacity>
 
-          {/* ✅ INPUTS */}
+          {/* ✅ NAME */}
           <TextInput
             placeholder="Preacher Name"
             style={styles.input}
@@ -102,6 +139,7 @@ export default function PreacherModal({
             onChangeText={setName}
           />
 
+          {/* ✅ SERMON */}
           <TextInput
             placeholder="Sermon Topic"
             style={styles.input}
@@ -109,6 +147,7 @@ export default function PreacherModal({
             onChangeText={setTopic}
           />
 
+          {/* ✅ BIO */}
           <TextInput
             placeholder="Bio"
             style={[styles.input, { height: 80 }]}
@@ -120,14 +159,11 @@ export default function PreacherModal({
           {/* ✅ SERVICE DATE */}
           <TouchableOpacity
             style={styles.input}
-            onPress={() => {
-              setPickerType("date");
-              setShowPicker(true);
-            }}
+            onPress={() => pickDate("date")}
           >
             <Text>
               {date
-                ? new Date(date).toLocaleString()
+                ? new Date(date).toLocaleDateString()
                 : "Set Service Date"}
             </Text>
           </TouchableOpacity>
@@ -135,51 +171,20 @@ export default function PreacherModal({
           {/* ✅ EXPIRY */}
           <TouchableOpacity
             style={styles.input}
-            onPress={() => {
-              setPickerType("expiry");
-              setShowPicker(true);
-            }}
+            onPress={() => pickDate("expiry")}
           >
             <Text>
               {expiry
-                ? new Date(expiry).toLocaleString()
+                ? new Date(expiry).toLocaleDateString()
                 : "Set Expiry"}
             </Text>
           </TouchableOpacity>
-
-          {/* ✅ DATE PICKER */}
-          {showPicker && (
-            <DateTimePicker
-              value={new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowPicker(false);
-                if (!selectedDate) return;
-
-                if (pickerType === "date") {
-                  setDate(selectedDate.toISOString());
-                }
-
-                if (pickerType === "expiry") {
-                  setExpiry(selectedDate.toISOString());
-                }
-              }}
-            />
-          )}
 
           {/* ✅ SAVE */}
           <TouchableOpacity
             style={styles.save}
             onPress={() => {
-              onSave({
-                name,
-                topic,
-                bio,
-                photo,
-                date,
-                expiry
-              });
+              onSave({ name, topic, bio, photo, date, expiry });
               onClose();
             }}
           >
@@ -210,11 +215,7 @@ export default function PreacherModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "#0006",
-    justifyContent: "center"
-  },
+  overlay: { flex: 1, backgroundColor: "#0006", justifyContent: "center" },
 
   box: {
     backgroundColor: "#fff",

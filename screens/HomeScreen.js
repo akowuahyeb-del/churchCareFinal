@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   ScrollView,
-   Pressable,
+  Pressable,
   StyleSheet,
   RefreshControl
 } from "react-native";
@@ -13,7 +13,6 @@ import AppHeader from "../components/AppHeader";
 import Section from "../components/Section";
 import StatCard from "../components/StatCard";
 import QuickActionCard from "../components/QuickActionCard";
-import EventCard from "../components/EventCard";
 import FeaturedEventCard from "../components/FeaturedEventCard";
 import FlyerUploadModal from "../components/FlyerUploadModal";
 import PastorMessageCard from "../components/PastorMessageCard";
@@ -31,28 +30,29 @@ export default function HomeScreen() {
   const [events, setEvents] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const [pastorData, setPastorData] = useState({
+    title: "Message from Pastor",
+    message: "Welcome! Stay blessed 🙏",
+    expiry: null,
+  });
+
   const [program, setProgram] = useState([]);
-const [preachers, setPreachers] = useState([]);
-  
- const [selectedEvent, setSelectedEvent] = useState(null);
-const [eventModalVisible, setEventModalVisible] = useState(false);
-const [preacherModal, setPreacherModal] = useState(false);
-const [editingPreacher, setEditingPreacher] = useState(null);
-const [programModalVisible, setProgramModalVisible] = useState(false);
-const [editingProgram, setEditingProgram] = useState(null);
+  const [preachers, setPreachers] = useState([]);
 
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventModalVisible, setEventModalVisible] = useState(false);
 
-const [pastorData, setPastorData] = useState({
-  title: "Message from Pastor",
-  message: "Welcome! Stay blessed 🙏",
-  expiry: null,
-});
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
+  const [preacherModal, setPreacherModal] = useState(false);
+  const [editingPreacher, setEditingPreacher] = useState(null);
 
-  /* ✅ LOAD EVENTS */
+  const [programModalVisible, setProgramModalVisible] = useState(false);
+  const [editingProgram, setEditingProgram] = useState(null);
+
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, "events"), snapshot => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -63,36 +63,9 @@ const [pastorData, setPastorData] = useState({
     return unsubscribe;
   }, []);
 
-  /* ✅ FILTER EVENTS */
   const featuredEvents = events.filter(ev => ev.featured);
   const upcomingEvents = events.slice(0, 5);
 
-  
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#f4f6fb",
-  },
-
-  body: {
-    paddingBottom: 100,
-  },
-
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-  },
-
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-  },
-});
-
-  /* ✅ REFRESH */
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1000);
@@ -106,59 +79,34 @@ const styles = StyleSheet.create({
         title="Dashboard"
         subtitle="Welcome back 👋"
         actions={[
-          {
-            icon: "cloud-upload-outline",
-            onPress: () => setShowUpload(true),
-          }
+          { icon: "cloud-upload-outline", onPress: () => setShowUpload(true) }
         ]}
       />
 
+      {/* ✅ FEATURED EVENTS */}
+      {featuredEvents.length > 0 && (
+        <Section title="Featured Events">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {featuredEvents.map(ev => (
+              <FeaturedEventCard
+                key={ev.id}
+                event={ev}
+                onPress={() => {
+                  setSelectedEvent(ev);
+                  setEventModalVisible(true);
+                }}
+              />
+            ))}
+          </ScrollView>
+        </Section>
+      )}
 
-{/* ✅ FEATURED EVENTS CAROUSEL HERE */}
-{featuredEvents.length > 0 && (
-  <Section title="Featured Events">
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingLeft: 14 }}
-    >
-      {featuredEvents.map(ev => (
-  <FeaturedEventCard
-    key={ev.id}
-    event={ev}
-    onPress={() => {
-      setSelectedEvent(ev);
-      setEventModalVisible(true);
-    }}
-  />
-))}
-    </ScrollView>
-  </Section>
-)}
+      {/* ✅ PASTOR MESSAGE */}
+      <Pressable onPress={() => setEditModalVisible(true)}>
+        <PastorMessageCard {...pastorData} />
+      </Pressable>
 
-
-         <Pressable onPress={() => setEditModalVisible(true)}>
-  <PastorMessageCard
-    title={pastorData.title}
-    message={pastorData.message}
-    expiry={pastorData.expiry}
-  />
-</Pressable>
-<EventsTabs
-  events={upcomingEvents}
-  program={program}
-  preachers={preachers}
-  onEditProgram={(item) => {
-    // reuse your modal
-  }}
-  onEditPreacher={(p) => {
-    // reuse modal
-  }}
-/>
-
-
-
-
+      {/* ✅ MAIN CONTENT */}
       <ScrollView
         contentContainerStyle={styles.body}
         refreshControl={
@@ -166,7 +114,7 @@ const styles = StyleSheet.create({
         }
       >
 
-        {/* ✅ OVERVIEW (LINK TO ADMIN) */}
+        {/* ✅ OVERVIEW */}
         <Section title="Overview">
           <View style={styles.row}>
             <StatCard label="Members" value="245" />
@@ -183,156 +131,149 @@ const styles = StyleSheet.create({
         {/* ✅ QUICK ACTIONS */}
         <Section title="Quick Access">
           <View style={styles.quickGrid}>
-            <QuickActionCard
-              title="Events"
-              icon="calendar-outline"
-              onPress={() => navigation.navigate("Events")}
-            />
-
-            <QuickActionCard
-              title="Members"
-              icon="people-outline"
-              onPress={() => navigation.navigate("Members")}
-            />
-
-            <QuickActionCard
-              title="Attendance"
-              icon="checkmark-circle-outline"
-              onPress={() => navigation.navigate("Attendance")}
-            />
+            <QuickActionCard title="Events" icon="calendar-outline" onPress={() => navigation.navigate("Events")} />
+            <QuickActionCard title="Members" icon="people-outline" onPress={() => navigation.navigate("Members")} />
+            <QuickActionCard title="Attendance" icon="checkmark-circle-outline" onPress={() => navigation.navigate("Attendance")} />
           </View>
         </Section>
 
-       {/* ✅ ✅ EVENTS TABS (FINTECH STYLE) */}
-<Section title="Service Flow">
+        {/* ✅ ✅ ONLY ONE EVENTS TABS (NO DUPLICATES) */}
+        <Section title="Service Flow">
+          <EventsTabs
+            events={upcomingEvents}
+            program={program}
+            preachers={preachers}
 
-  <EventsTabs
-  events={upcomingEvents}
-  program={program}
-  preachers={preachers}
+            onEditProgram={(item) => {
+              setEditingProgram(item);
+              setProgramModalVisible(true);
+            }}
 
-  onEditProgram={(item) => {
-  setEditingProgram(item);
-  setProgramModalVisible(true);
-}}
-
-  onEditPreacher={(p) => {
-    setEditingPreacher(p);
-    setPreacherModal(true);
-  }}
-/>
-  <PreacherModal
-  visible={preacherModal}
-  onClose={() => setPreacherModal(false)}
-  initialData={editingPreacher}
-  onSave={(data) => {
-    if (editingPreacher) {
-      setPreachers(prev =>
-        prev.map(p =>
-          p.id === editingPreacher.id ? { ...p, ...data } : p
-        )
-      );
-    } else {
-      setPreachers(prev => [
-        ...prev,
-        { ...data, id: Date.now().toString() }
-      ]);
-    }
-  }}
-/>
-
-<EditableContentModal
-  visible={programModalVisible}
-  onClose={() => setProgramModalVisible(false)}
-  titleValue={editingProgram?.item || ""}
-  messageValue={""}
-  
-  onSave={(data) => {
-
-    if (data.delete && editingProgram) {
-      setProgram(prev =>
-        prev.filter(p => p.id !== editingProgram.id)
-      );
-      return;
-    }
-
-    if (editingProgram) {
-      setProgram(prev =>
-        prev.map(p =>
-          p.id === editingProgram.id
-            ? { ...p, item: data.title }
-            : p
-        )
-      );
-    } else {
-      setProgram(prev => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          item: data.title
-        }
-      ]);
-    }
-
-  }}
-  onDelete={() => {
-    if (editingProgram) {
-      setProgram(prev =>
-        prev.filter(p => p.id !== editingProgram.id)
-      );
-    }
-  }}
-/>
-</Section>
+            onEditPreacher={(p) => {
+              setEditingPreacher(p);
+              setPreacherModal(true);
+            }}
+          />
+        </Section>
 
       </ScrollView>
-{/* ✅ FEATURED EVENT EDIT MODAL */}
-{selectedEvent && (
-  <EditableContentModal
-    visible={eventModalVisible}
-    onClose={() => setEventModalVisible(false)}
-    titleValue={selectedEvent.title}
-    messageValue={selectedEvent.description || selectedEvent.desc}
-    
-    onSave={async (data) => {
-  try {
-    const ref = doc(db, "events", selectedEvent.id);
 
-    await updateDoc(ref, {
-      title: data.title,
-      desc: data.message,
-      expiry: data.expiry || null,
-    });
+      {/* ✅ FEATURED EVENT MODAL */}
+      {selectedEvent && (
+        <EditableContentModal
+          visible={eventModalVisible}
+          onClose={() => setEventModalVisible(false)}
+          titleValue={selectedEvent.title}
+          messageValue={selectedEvent.description}
 
-    setEventModalVisible(false);
+          onSave={async (data) => {
+            await updateDoc(doc(db, "events", selectedEvent.id), {
+              title: data.title,
+              description: data.message
+            });
+          }}
 
-  } catch (err) {
-    console.log("Update error:", err);
-  }
-}}
-onDelete={async () => {
-  try {
-    await deleteDoc(doc(db, "events", selectedEvent.id));
-    setEventModalVisible(false);
-  } catch (err) {
-    console.log("Delete error:", err);
-  }
-}}
- 
-  />
-)}
+          onDelete={async () => {
+            await deleteDoc(doc(db, "events", selectedEvent.id));
+          }}
+        />
+      )}
 
+      {/* ✅ PROGRAM MODAL */}
+      <EditableContentModal
+        visible={programModalVisible}
+        onClose={() => setProgramModalVisible(false)}
+        titleValue={editingProgram?.item || ""}
+        onSave={(data) => {
 
-      {/* ✅ FLYER UPLOAD MODAL */}
+          if (data.delete && editingProgram) {
+            setProgram(prev => prev.filter(p => p.id !== editingProgram.id));
+            return;
+          }
+
+          if (editingProgram) {
+            setProgram(prev =>
+              prev.map(p =>
+                p.id === editingProgram.id
+                  ? { ...p, item: data.title }
+                  : p
+              )
+            );
+          } else {
+            setProgram(prev => [
+              ...prev,
+              { id: Date.now().toString(), item: data.title }
+            ]);
+          }
+        }}
+      />
+
+      {/* ✅ PREACHER MODAL */}
+      <PreacherModal
+        visible={preacherModal}
+        onClose={() => setPreacherModal(false)}
+        initialData={editingPreacher}
+
+        onSave={(data) => {
+
+          if (data.delete && editingPreacher) {
+            setPreachers(prev =>
+              prev.filter(p => p.id !== editingPreacher.id)
+            );
+            return;
+          }
+
+          if (editingPreacher) {
+            setPreachers(prev =>
+              prev.map(p =>
+                p.id === editingPreacher.id
+                  ? { ...p, ...data }
+                  : p
+              )
+            );
+          } else {
+            setPreachers(prev => [
+              ...prev,
+              { ...data, id: Date.now().toString() }
+            ]);
+          }
+        }}
+      />
+
+      {/* ✅ PASTOR MODAL */}
+      <EditableContentModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        titleValue={pastorData.title}
+        messageValue={pastorData.message}
+        onSave={(data) => setPastorData(data)}
+      />
+
+      {/* ✅ UPLOAD */}
       <FlyerUploadModal
         visible={showUpload}
         onClose={() => setShowUpload(false)}
-        onUpload={() => console.log("Upload flyer")}
       />
 
-
-/
-  
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#f4f6fb" },
+
+  body: { paddingBottom: 100 },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+  },
+
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+  }
+});
