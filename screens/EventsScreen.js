@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,36 +13,59 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
-
+/* ✅ FIRESTORE (only ONCE — clean) */
+import { db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc
+} from "firebase/firestore";
 
 export default function EventsScreen() {
   const navigation = useNavigation();
 
-  const [events, setEvents] = useState([
-    { id: 1, title: "Sunday Service", date: "Tomorrow", location: "Main Hall" },
-    { id: 2, title: "Prayer Meeting", date: "Wednesday", location: "Chapel" },
-  ]);
-
+  /* ✅ STATE */
+  const [events, setEvents] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState("");
   const [newLocation, setNewLocation] = useState("");
 
-  const addEvent = () => {
-    if (!newTitle) return;
+  /* ✅ LOAD EVENTS (REAL-TIME) */
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "events"), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setEvents(list);
+    });
 
-    const newEvent = {
-      id: Date.now(),
+    return unsubscribe;
+  }, []);
+
+  /* ✅ ADD EVENT */
+  const addEvent = async () => {
+    if (!newTitle.trim()) return;
+
+    await addDoc(collection(db, "events"), {
       title: newTitle,
       date: newDate || "TBD",
       location: newLocation || "Unknown",
-    };
+      createdAt: new Date(),
+    });
 
-    setEvents([newEvent, ...events]);
     setModalVisible(false);
     setNewTitle("");
     setNewDate("");
     setNewLocation("");
+  };
+
+  /* ✅ DELETE EVENT */
+  const deleteEvent = async (id) => {
+    await deleteDoc(doc(db, "events", id));
   };
 
   return (
@@ -65,31 +88,44 @@ export default function EventsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ BODY */}
+      {/* ✅ EVENTS LIST */}
       <ScrollView contentContainerStyle={styles.body}>
-        {events.map((event) => (
-          <View key={event.id} style={styles.card}>
-            <View style={styles.iconBox}>
-              <Ionicons name="calendar-outline" size={22} color="#4B3F72" />
-            </View>
+       
+       {events.length === 0 ? (
+  <Text style={{ textAlign: "center", marginTop: 20, color: "#888" }}>
+    No events yet. Tap + to add your first event
+  </Text>
+) : (
+  events.map((event) => (
+    <View key={event.id} style={styles.card}>
+      <View style={styles.iconBox}>
+        <Ionicons name="calendar-outline" size={22} color="#4B3F72" />
+      </View>
 
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{event.title}</Text>
-              <Text style={styles.desc}>{event.date}</Text>
-              <Text style={styles.desc}>{event.location}</Text>
-            </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.title}>{event.title}</Text>
+        <Text style={styles.desc}>
+  {typeof event.date === "object"
+    ? new Date(event.date.seconds * 1000).toLocaleDateString()
+    : event.date}
+</Text>
+        <Text style={styles.desc}>{event.location}</Text>
+      </View>
 
-            <View style={styles.actions}>
-              <TouchableOpacity>
-                <Ionicons name="create-outline" size={18} color="#4B3F72" />
-              </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity>
+          <Ionicons name="create-outline" size={18} color="#4B3F72" />
+        </TouchableOpacity>
 
-              <TouchableOpacity>
-                <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+        <TouchableOpacity onPress={() => deleteEvent(event.id)}>
+          <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  ))
+)}
+
+
       </ScrollView>
 
       {/* ✅ ADD EVENT MODAL */}
@@ -132,6 +168,8 @@ export default function EventsScreen() {
     </SafeAreaView>
   );
 }
+
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#4B3F72" },
 
