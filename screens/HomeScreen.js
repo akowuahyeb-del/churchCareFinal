@@ -39,6 +39,8 @@ const [preachers, setPreachers] = useState([]);
 const [eventModalVisible, setEventModalVisible] = useState(false);
 const [preacherModal, setPreacherModal] = useState(false);
 const [editingPreacher, setEditingPreacher] = useState(null);
+const [programModalVisible, setProgramModalVisible] = useState(false);
+const [editingProgram, setEditingProgram] = useState(null);
 
 
 const [pastorData, setPastorData] = useState({
@@ -156,6 +158,7 @@ const styles = StyleSheet.create({
 
 
 
+
       <ScrollView
         contentContainerStyle={styles.body}
         refreshControl={
@@ -207,9 +210,12 @@ const styles = StyleSheet.create({
   events={upcomingEvents}
   program={program}
   preachers={preachers}
+
   onEditProgram={(item) => {
-    console.log("Edit program", item);
-  }}
+  setEditingProgram(item);
+  setProgramModalVisible(true);
+}}
+
   onEditPreacher={(p) => {
     setEditingPreacher(p);
     setPreacherModal(true);
@@ -235,6 +241,48 @@ const styles = StyleSheet.create({
   }}
 />
 
+<EditableContentModal
+  visible={programModalVisible}
+  onClose={() => setProgramModalVisible(false)}
+  titleValue={editingProgram?.item || ""}
+  messageValue={""}
+  
+  onSave={(data) => {
+
+    if (data.delete && editingProgram) {
+      setProgram(prev =>
+        prev.filter(p => p.id !== editingProgram.id)
+      );
+      return;
+    }
+
+    if (editingProgram) {
+      setProgram(prev =>
+        prev.map(p =>
+          p.id === editingProgram.id
+            ? { ...p, item: data.title }
+            : p
+        )
+      );
+    } else {
+      setProgram(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          item: data.title
+        }
+      ]);
+    }
+
+  }}
+  onDelete={() => {
+    if (editingProgram) {
+      setProgram(prev =>
+        prev.filter(p => p.id !== editingProgram.id)
+      );
+    }
+  }}
+/>
 </Section>
 
       </ScrollView>

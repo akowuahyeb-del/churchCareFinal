@@ -64,20 +64,30 @@ export default function EventsTabs({
           </>
         )}
 
-        {/* ── PROGRAM ── */}
         {activeTab === "program" && (
-          <>
-            {program.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                onPress={() => onEditProgram(item)}
-              >
-                <Text style={styles.title}>{item.item}</Text>
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
+  <>
+    {/* ✅ ADD PROGRAM BUTTON */}
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => onEditProgram(null)}
+    >
+      <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+        + Add Program Item
+      </Text>
+    </TouchableOpacity>
+
+    {/* ✅ LIST */}
+    {program.map(item => (
+      <TouchableOpacity
+        key={item.id}
+        style={styles.card}
+        onPress={() => onEditProgram(item)}
+      >
+        <Text style={styles.title}>{item.item}</Text>
+      </TouchableOpacity>
+    ))}
+  </>
+)}
 
         {/* ✅ PREACHERS */}
         {activeTab === "preachers" && (
