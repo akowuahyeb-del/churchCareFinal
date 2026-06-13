@@ -18,6 +18,7 @@ import FeaturedEventCard from "../components/FeaturedEventCard";
 import FlyerUploadModal from "../components/FlyerUploadModal";
 import PastorMessageCard from "../components/PastorMessageCard";
 import EditableContentModal from "../components/EditableContentModal";
+import EventsTabs from "../components/EventsTabs";
 
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [program, setProgram] = useState([]);
+const [preachers, setPreachers] = useState([]);
   
  const [selectedEvent, setSelectedEvent] = useState(null);
 const [eventModalVisible, setEventModalVisible] = useState(false);
@@ -135,6 +138,19 @@ const styles = StyleSheet.create({
     expiry={pastorData.expiry}
   />
 </Pressable>
+<EventsTabs
+  events={upcomingEvents}
+  program={program}
+  preachers={preachers}
+  onEditProgram={(item) => {
+    // reuse your modal
+  }}
+  onEditPreacher={(p) => {
+    // reuse modal
+  }}
+/>
+
+
 
       <ScrollView
         contentContainerStyle={styles.body}
