@@ -21,7 +21,7 @@ import EditableContentModal from "../components/EditableContentModal";
 
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -199,20 +199,32 @@ const styles = StyleSheet.create({
     onClose={() => setEventModalVisible(false)}
     titleValue={selectedEvent.title}
     messageValue={selectedEvent.description || selectedEvent.desc}
-    onSave={(data) => {
-      setEvents(prev =>
-        prev.map(ev =>
-          ev.id === selectedEvent.id
-            ? { ...ev, title: data.title, desc: data.message }
-            : ev
-        )
-      );
-    }}
-    onDelete={() => {
-      setEvents(prev =>
-        prev.filter(ev => ev.id !== selectedEvent.id)
-      );
-    }}
+    
+    onSave={async (data) => {
+  try {
+    const ref = doc(db, "events", selectedEvent.id);
+
+    await updateDoc(ref, {
+      title: data.title,
+      desc: data.message,
+      expiry: data.expiry || null,
+    });
+
+    setEventModalVisible(false);
+
+  } catch (err) {
+    console.log("Update error:", err);
+  }
+}}
+onDelete={async () => {
+  try {
+    await deleteDoc(doc(db, "events", selectedEvent.id));
+    setEventModalVisible(false);
+  } catch (err) {
+    console.log("Delete error:", err);
+  }
+}}
+ 
   />
 )}
 
