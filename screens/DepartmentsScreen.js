@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-
+import AppHeader from "../components/AppHeader";
 
 
 export default function DepartmentsScreen() {
@@ -48,18 +48,12 @@ export default function DepartmentsScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ✅ HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.getParent()?.navigate("Home")}
-          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-        >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
+      <AppHeader
+  title="Departments"
+  subtitle="App preferences & controls"
+  onBack={() => navigation.goBack()}
+/>
 
-        <Text style={styles.headerTitle}>Departments</Text>
-      </View>
 
       {/* ✅ BODY */}
       <ScrollView contentContainerStyle={styles.body}>

@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AppHeader from "../components/AppHeader";
 
 const MORE_ITEMS = [
   { key: "Departments", icon: "people-circle-outline", color: "#4F46E5", bg: "#EEF2FF", desc: "Manage church departments & groups" },
@@ -21,11 +22,12 @@ export default function MoreScreen() {
     <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-  {/* HEADER */}
-  <View style={styles.header}>
-    <Text style={styles.headerTitle}>More</Text>
-    <Text style={styles.headerSub}>Additional features & settings</Text>
-  </View>
+  <AppHeader
+  title="More Features"
+  subtitle="App preferences & controls"
+  onBack={() => navigation.goBack()}
+/>
+
 
   {/* BODY */}
   <ScrollView contentContainerStyle={styles.body}>

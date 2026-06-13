@@ -757,10 +757,11 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
   headerTitle: {
   color: "#fff",
-  fontSize: 18,   
+  fontSize: 18,
   fontWeight: "800",
-  marginTop: 2    
+  marginTop: 2
 },
+
   headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11 },
   headerActions: { flexDirection: "row", gap: 6, alignItems: "center" },
   headerBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
@@ -848,7 +849,15 @@ const styles = StyleSheet.create({
   closeDetailText: { color: "#888", fontSize: 13 },
 
   /* Form */
-  formHeader: { flexDirection: "row", alignItems: "center", backgroundColor: "#4B3F72", paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  formHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#4B3F72",
+  paddingHorizontal: 14,
+  paddingTop: Platform.OS === "android" ? 28 : 16,   
+  paddingBottom: 12,
+  gap: 10,
+},
   saveFormBtn: { backgroundColor: "#1BA97F", paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20 },
   saveFormBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
   formBody: { backgroundColor: "#f4f6fb", flex: 1 },

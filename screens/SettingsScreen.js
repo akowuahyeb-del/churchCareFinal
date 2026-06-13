@@ -6,6 +6,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AppHeader from "../components/AppHeader";
 
 // ── Role simulation (replace with auth context) ───────────────────
 const USER_ROLE  = "admin"; // admin | pastor | elder | deacon | member
@@ -147,19 +148,12 @@ export default function SettingsScreen() {
       <View style={styles.topSpacer} />
 
       {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <TouchableOpacity
-  style={styles.backBtn}
-  onPress={() => navigation.getParent()?.navigate("Home")}
-  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
->
-  <Ionicons name="arrow-back" size={20} color="#fff" />
-</TouchableOpacity>
-        <View style={{ flex: 1, paddingLeft: 6 }}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSub}>App preferences & controls</Text>
-        </View>
-      </View>
+      <AppHeader
+  title="Settings"
+  subtitle="App preferences & controls"
+  onBack={() => navigation.goBack()}
+/>
+
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
 

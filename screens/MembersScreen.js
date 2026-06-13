@@ -6,6 +6,7 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import AppHeader from "../components/AppHeader";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs,
@@ -311,25 +312,33 @@ export default function MembersScreen({ navigation }) {
   /* ══════════════ RENDER ══════════════ */
   return (
     <View style={styles.container}>
+<AppHeader
+  title="Members"
+  subtitle="Manage church members"
+  onBack={() => navigation.goBack()}
 
-      {/* ── HEADER ── */}
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>Members</Text>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {/* ✅ Donate header button — navigates to DonateScreen */}
-          <TouchableOpacity style={styles.donateHeaderBtn} onPress={() => goToDonate()}>
-            <Ionicons name="heart" size={14} color="#fff" />
-            <Text style={styles.donateHeaderBtnText}>Donate</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.toggleBtn} onPress={toggleActions}>
-            <Ionicons name={showActions ? "eye-off-outline" : "eye-outline"} size={14} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.toggleBtn, { backgroundColor: "#059669" }]}
-            onPress={() => setShowFilters(p => !p)}>
-            <Ionicons name="filter-outline" size={14} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+  actions={[
+    {
+      icon: "heart",
+      label: "Donate",
+      type: "primary",
+      onPress: goToDonate,
+    },
+    {
+      icon: showActions ? "eye-off-outline" : "eye-outline",
+      onPress: toggleActions,
+    },
+    {
+      icon: "filter-outline",
+      onPress: () => setShowFilters(p => !p),
+    }
+  ]}
+/>
+   
+
+
+
+          
 
       {/* ── SEARCH ── */}
       <TextInput placeholder="🔍  Search name or member ID..." value={search}
