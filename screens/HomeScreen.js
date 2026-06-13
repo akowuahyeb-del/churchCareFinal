@@ -196,16 +196,22 @@ const styles = StyleSheet.create({
           </View>
         </Section>
 
-        {/* ✅ UPCOMING EVENTS */}
-        <Section title="Upcoming Events">
-          {upcomingEvents.map(ev => (
-            <EventCard
-              key={ev.id}
-              event={ev}
-              onPress={() => navigation.navigate("Events")}
-            />
-          ))}
-        </Section>
+       {/* ✅ ✅ EVENTS TABS (FINTECH STYLE) */}
+<Section title="Service Flow">
+
+  <EventsTabs
+    events={upcomingEvents}
+    program={program}
+    preachers={preachers}
+    onEditProgram={(item) => {
+      console.log("Edit program", item);
+    }}
+    onEditPreacher={(p) => {
+      console.log("Edit preacher", p);
+    }}
+  />
+
+</Section>
 
       </ScrollView>
 {/* ✅ FEATURED EVENT EDIT MODAL */}
@@ -252,21 +258,8 @@ onDelete={async () => {
         onUpload={() => console.log("Upload flyer")}
       />
 
-{/* ✅ ✅ ✅ PASTE HERE */}
-<EditableContentModal
-  visible={editModalVisible}
-  onClose={() => setEditModalVisible(false)}
-  titleValue={pastorData.title}
-  messageValue={pastorData.message}
-  onSave={(data) => setPastorData(data)}
-  onDelete={() =>
-    setPastorData({
-      title: "",
-      message: "",
-      expiry: null,
-    })
-  }
-/>
+
+/
   
     </View>
   );
