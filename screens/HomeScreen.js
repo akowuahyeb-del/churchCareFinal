@@ -37,6 +37,9 @@ const [preachers, setPreachers] = useState([]);
   
  const [selectedEvent, setSelectedEvent] = useState(null);
 const [eventModalVisible, setEventModalVisible] = useState(false);
+const [preacherModal, setPreacherModal] = useState(false);
+const [editingPreacher, setEditingPreacher] = useState(null);
+
 
 const [pastorData, setPastorData] = useState({
   title: "Message from Pastor",

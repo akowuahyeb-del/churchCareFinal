@@ -1,13 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  View, Text, Modal, TextInput,
-  TouchableOpacity, Image, StyleSheet
+  View,
+  Text,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
-const [preacherModal, setPreacherModal] = useState(false);
-const [editingPreacher, setEditingPreacher] = useState(null);
 
 export default function PreacherModal({
   visible,
@@ -15,16 +18,22 @@ export default function PreacherModal({
   onSave,
   initialData
 }) {
-
-  const [name, setName] = useState(initialData?.name || "");
-  const [topic, setTopic] = useState(initialData?.topic || "");
-  const [bio, setBio] = useState(initialData?.bio || "");
-  const [photo, setPhoto] = useState(initialData?.photo || null);
+  // ✅ LOCAL STATE ONLY (CORRECT)
+  const [name, setName] = useState("");
+  const [topic, setTopic] = useState("");
+  const [bio, setBio] = useState("");
+  const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [preacherModal, setPreacherModal] = useState(false);
-const [editingPreacher, setEditingPreacher] = useState(null);
 
-  // ✅ IMAGE PICKER
+  // ✅ SYNC WHEN EDITING
+  useEffect(() => {
+    setName(initialData?.name || "");
+    setTopic(initialData?.topic || "");
+    setBio(initialData?.bio || "");
+    setPhoto(initialData?.photo || null);
+  }, [initialData]);
+
+  // ✅ IMAGE PICKER + FIREBASE UPLOAD
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
@@ -38,23 +47,22 @@ const [editingPreacher, setEditingPreacher] = useState(null);
     try {
       const uri = result.assets[0].uri;
 
-      const blob = await new Promise((res, rej) => {
+      const blob = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.onload = () => res(xhr.response);
-        xhr.onerror = () => rej();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new Error("Upload failed"));
         xhr.responseType = "blob";
         xhr.open("GET", uri, true);
         xhr.send(null);
       });
 
-      const refStorage = ref(storage, `preachers/${Date.now()}.jpg`);
-      await uploadBytes(refStorage, blob);
+      const storageRef = ref(storage, `preachers/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blob);
 
-      const url = await getDownloadURL(refStorage);
+      const url = await getDownloadURL(storageRef);
       setPhoto(url);
-
     } catch (err) {
-      console.log(err);
+      console.log("Upload error:", err);
     }
 
     setUploading(false);
@@ -68,7 +76,7 @@ const [editingPreacher, setEditingPreacher] = useState(null);
 
           <Text style={styles.title}>Preacher</Text>
 
-          {/* ✅ IMAGE */}
+          {/* ✅ PHOTO */}
           <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
             {photo ? (
               <Image source={{ uri: photo }} style={styles.image} />
@@ -77,14 +85,15 @@ const [editingPreacher, setEditingPreacher] = useState(null);
             )}
           </TouchableOpacity>
 
-          {/* ✅ INPUTS */}
+          {/* ✅ NAME */}
           <TextInput
-            placeholder="Name"
+            placeholder="Preacher Name"
             style={styles.input}
             value={name}
             onChangeText={setName}
           />
 
+          {/* ✅ SERMON */}
           <TextInput
             placeholder="Sermon Topic"
             style={styles.input}
@@ -92,6 +101,7 @@ const [editingPreacher, setEditingPreacher] = useState(null);
             onChangeText={setTopic}
           />
 
+          {/* ✅ BIO */}
           <TextInput
             placeholder="Bio"
             style={[styles.input, { height: 80 }]}
@@ -100,19 +110,27 @@ const [editingPreacher, setEditingPreacher] = useState(null);
             onChangeText={setBio}
           />
 
-          {/* ✅ ACTIONS */}
+          {/* ✅ SAVE */}
           <TouchableOpacity
             style={styles.save}
             onPress={() => {
-              onSave({ name, topic, bio, photo });
+              onSave({
+                name,
+                topic,
+                bio,
+                photo
+              });
               onClose();
             }}
           >
-            <Text style={{ color: "#fff" }}>Save</Text>
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              Save
+            </Text>
           </TouchableOpacity>
 
+          {/* ✅ CANCEL */}
           <TouchableOpacity onPress={onClose}>
-            <Text style={{ textAlign: "center", marginTop: 10 }}>Cancel</Text>
+            <Text style={styles.cancel}>Cancel</Text>
           </TouchableOpacity>
 
         </View>
@@ -151,12 +169,12 @@ const styles = StyleSheet.create({
   },
 
   imageBox: {
-    height: 80,
+    height: 90,
     backgroundColor: "#eee",
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10
+    marginBottom: 12
   },
 
   image: {
@@ -170,5 +188,11 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     alignItems: "center"
+  },
+
+  cancel: {
+    textAlign: "center",
+    marginTop: 10,
+    color: "#777"
   }
 });
