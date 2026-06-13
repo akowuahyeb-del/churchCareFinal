@@ -826,7 +826,34 @@ const confirmDeleteProgram = () => {
         <Text style={styles.programItem}>{p.item}</Text>
       </View>
      
-      <View style={{ flexDirection: "row", gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+
+  {/* EDIT */}
+  <TouchableOpacity onPress={() => openProgramModal(p)}>
+    <Ionicons name="create-outline" size={18} color="#4B3F72" />
+  </TouchableOpacity>
+
+  {/* TIME */}
+  <TouchableOpacity
+    onPress={() => {
+      setEventExpiryTarget(p.id);
+      setEventExpiryModal(true);
+    }}
+  >
+    <Ionicons name="time-outline" size={18} color="#6c47b8" />
+  </TouchableOpacity>
+
+  {/* DELETE ✅ */}
+  <TouchableOpacity
+    onPress={() => {
+      setProgramDeleteId(p.id);
+      setProgramDeleteModal(true);
+    }}
+  >
+    <Ionicons name="trash-outline" size={18} color="#ff4d4d" />
+  </TouchableOpacity>
+
+</View>
 
   {/* EDIT */}
   <TouchableOpacity onPress={() => openProgramModal(p)}>
