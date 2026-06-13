@@ -908,7 +908,35 @@ const confirmDeleteProgram = () => {
         {preacher.name ? "Edit Preacher" : "Add Preacher"}
       </Text>
     </TouchableOpacity>
-
+     {preacher.name && (
+  <TouchableOpacity
+    style={[styles.addBtn, { backgroundColor: "#ff4d4d", marginTop: 8 }]}
+    onPress={() => {
+      Alert.alert(
+        "Delete Preacher",
+        "Are you sure you want to remove this preacher?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () =>
+              setPreacher({
+                name: "",
+                title: "",
+                bio: "",
+                topic: "",
+                photo: null
+              }),
+          },
+        ]
+      );
+    }}
+  >
+    <Ionicons name="trash-outline" size={15} color="#fff" />
+    <Text style={styles.addBtnText}>Delete Preacher</Text>
+  </TouchableOpacity>
+)}
   </View>
       
      </View>   // ✅ CLOSE PREACHER WRAPPER      
