@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import QRCode from "react-native-qrcode-svg";
 import { Ionicons } from "@expo/vector-icons";
+import AppButton from "../components/AppButton";
 
 const MEMBERS_CACHE_KEY = "members_cache_v1";
 
@@ -505,11 +506,10 @@ export default function MembersScreen({ navigation }) {
         }}
       />
 
-      {/* ── FAB ── */}
-      <TouchableOpacity style={styles.fab} onPress={() => setShowForm(true)}>
-        <Ionicons name="person-add-outline" size={16} color="#fff" />
-        <Text style={styles.fabText}> Add Member</Text>
-      </TouchableOpacity>
+      <AppButton
+  title="Add Member"
+  onPress={handleAddMember}
+/>
 
       {/* ══ QR MODAL ══ */}
       <Modal visible={!!selectedMember} transparent animationType="fade">
@@ -594,13 +594,18 @@ export default function MembersScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           )}
+         <AppButton
+  title="Save Member"
+  onPress={handleSaveMember}
+/>
+        <AppButton
+  title="Cancel"
+  type="secondary"
+  onPress={() => setModalVisible(false)}
+/>
+  
 
-          <TouchableOpacity style={[styles.btn, { marginTop: 20 }]} onPress={saveMember}>
-            <Text style={styles.white}>{editingId ? "Update Member" : "Save Member"}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }} onPress={resetForm}>
-            <Text style={{ color: "#e74c3c" }}>Cancel</Text>
-          </TouchableOpacity>
+          
         </ScrollView>
       </Modal>
 
