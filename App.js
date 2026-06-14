@@ -24,6 +24,8 @@ import HelpScreen from "./screens/HelpScreen";
 import DepartmentsScreen from "./screens/DepartmentsScreen";
 import EventsScreen from "./screens/EventsScreen";
 import MoreScreen from "./screens/MoreScreen";
+import CreateChurchScreen from "./screens/CreateChurchScreen";
+
 
 /* NAVIGATORS */
 const Tab = createBottomTabNavigator();
@@ -39,6 +41,7 @@ function MembersStack() {
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
+      <Stack.Screen name="CreateChurch" component={CreateChurchScreen} />
     </Stack.Navigator>
   );
 }

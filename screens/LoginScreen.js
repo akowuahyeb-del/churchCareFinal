@@ -85,16 +85,22 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.socialText}>Continue with Phone</Text>
       </TouchableOpacity>
 
-      {/* ✅ FOOTER */}
-      <View style={styles.footer}>
-        <Text style={{ color: "#555" }}>Don't have an account? </Text>
-        <Text style={styles.register}>Register</Text>
-      </View>
+{/* ✅ FOOTER */}
+<View style={styles.footer}>
+  <Text style={{ color: "#555" }}>Don't have an account? </Text>
+
+  <TouchableOpacity
+    onPress={() => navigation.navigate("CreateChurch")}
+  >
+    <Text style={styles.register}>Register</Text>
+  </TouchableOpacity>
+
+</View>
 
     </View>
   );
 }
-
+  
 /* ✅ STYLES */
 
 const styles = StyleSheet.create({

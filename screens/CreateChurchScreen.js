@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Text,
   TextInput,
@@ -10,9 +10,7 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function CreateChurchScreen({ navigation }) {
 
@@ -24,58 +22,66 @@ export default function CreateChurchScreen({ navigation }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  // ⚠️ Replace with real auth later
+  // ✅ temporary userId (replace later with real auth)
   const userId = "admin_001";
-  const test = await AsyncStorage.getItem("churchId");
-console.log("Loaded churchId:", test);
+
+  // ✅ load saved churchId safely
+  useEffect(() => {
+    const loadData = async () => {
+      const test = await AsyncStorage.getItem("churchId");
+      console.log("Loaded churchId:", test);
+    };
+
+    loadData();
+  }, []);
 
   const handleCreateChurch = async () => {
-  if (!churchName.trim() || !country.trim()) {
-    Alert.alert("Required", "Church name and country are required");
-    return;
-  }
+    if (!churchName.trim() || !country.trim()) {
+      Alert.alert("Required", "Church name and country are required");
+      return;
+    }
 
-  try {
-    // ✅ STEP 1: Create church
-    const docRef = await addDoc(collection(db, "churches"), {
-      name: churchName,
-      country,
-      region,
-      district,
-      gps,
-      phone,
-      email,
-      createdBy: userId,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      // ✅ STEP 1: Create church
+      const docRef = await addDoc(collection(db, "churches"), {
+        name: churchName,
+        country,
+        region,
+        district,
+        gps,
+        phone,
+        email,
+        createdBy: userId,
+        createdAt: new Date().toISOString(),
+      });
 
-    const churchId = docRef.id;
+      const churchId = docRef.id;
 
-    // ✅ STEP 2: Save locally
-    await AsyncStorage.setItem("churchId", churchId);
+      // ✅ STEP 2: Save locally
+      await AsyncStorage.setItem("churchId", churchId);
 
-    // ✅ STEP 3: Create / update user in Firestore
-    await setDoc(doc(db, "users", userId), {
-      id: userId,
-      role: "admin",
-      churchId: churchId,
-      createdAt: new Date().toISOString(),
-    });
+      // ✅ STEP 3: Link user to church
+      await setDoc(doc(db, "users", userId), {
+        id: userId,
+        role: "admin",
+        churchId: churchId,
+        createdAt: new Date().toISOString(),
+      });
 
-    console.log("✅ ChurchId linked to user:", churchId);
+      console.log("✅ ChurchId linked to user:", churchId);
 
-    Alert.alert(
-      "✅ Church Created",
-      `${churchName} registered successfully`
-    );
+      Alert.alert(
+        "✅ Church Created",
+        `${churchName} registered successfully`
+      );
 
-    navigation.goBack();
+      navigation.goBack();
 
-  } catch (error) {
-    console.log("❌ Error:", error);
-    Alert.alert("Error", error.message);
-  }
-};
+    } catch (error) {
+      console.log("❌ Error:", error);
+      Alert.alert("Error", error.message);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
