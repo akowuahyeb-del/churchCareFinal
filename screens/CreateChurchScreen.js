@@ -77,6 +77,9 @@ const formattedPhone = phoneNumber.formatInternational();
 
       // ✅ STEP 2: Save locally
       await AsyncStorage.setItem("churchId", churchId);
+      // ✅ SAVE LOGIN SESSION
+await AsyncStorage.setItem("isLoggedIn", "true");
+await AsyncStorage.setItem("userId", userId);
 
       // ✅ STEP 3: Link user to church
       await setDoc(doc(db, "users", userId), {
