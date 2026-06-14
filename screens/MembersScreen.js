@@ -37,8 +37,16 @@ const ACTIONS = {
   delete:    { label: "Delete",    color: "#e74c3c", required: ["pastor","admin","elder"] },
 };
 
+
+
+
 export default function MembersScreen({ navigation }) {
 
+const [showAddModal, setShowAddModal] = useState(false);
+
+const handleAddMember = () => {
+  navigation.navigate("AddMember");
+};
   /* ── viewer role (pass from auth context in production) ── */
   const viewerRole = "admin"; // change to actual role from auth
   const [churchId, setChurchId] = useState(null);
@@ -531,133 +539,6 @@ export default function MembersScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* ══ ADD / EDIT MEMBER FORM ══ */}
-      <Modal visible={showForm} animationType="slide">
-        <ScrollView style={styles.modalContainer} contentContainerStyle={{ paddingBottom: 60 }}>
-          <Text style={styles.header}>{editingId ? "Edit Member" : "Register Member"}</Text>
-
-          <Input label="Full Name *"           value={member.name}               onChange={t => setMember({ ...member, name: t })} />
-          <Input label="Phone *"               value={member.phone}              onChange={t => setMember({ ...member, phone: t })} keyboardType="phone-pad" />
-          <Input label="Address"               value={member.address}            onChange={t => setMember({ ...member, address: t })} />
-          <Input label="Occupation"            value={member.occupation}         onChange={t => setMember({ ...member, occupation: t })} />
-          <Input label="Emergency Contact"     value={member.emergencyContact}   onChange={t => setMember({ ...member, emergencyContact: t })} />
-          <Input label="Membership Duration"   value={member.membershipDuration} onChange={t => setMember({ ...member, membershipDuration: t })} />
-
-          <ChipRow label="Ministry" list={ministries} value={member.ministry}
-            onSelect={v => setMember({ ...member, ministry: v })}
-            onAdd={() => openModal("ministry")}
-            onEdit={i => openModal("ministry", i, ministries)} />
-
-          <ChipRow label="Baptism Status" list={baptismList} value={member.baptismStatus}
-            onSelect={v => setMember({ ...member, baptismStatus: v })}
-            onAdd={() => openModal("baptism")}
-            onEdit={i => openModal("baptism", i, baptismList)} />
-
-          <ChipRow label="Member Status" list={statusList} value={member.status}
-            onSelect={v => setMember({ ...member, status: v })}
-            onAdd={() => openModal("status")}
-            onEdit={i => openModal("status", i, statusList)} />
-
-          {/* ✅ #4 — Communicant field */}
-          <Text style={styles.fieldLabel}>Communicant * <Text style={styles.required}>(receives communion)</Text></Text>
-          <View style={styles.row}>
-            {["yes", "no"].map(val => (
-              <TouchableOpacity key={val}
-                style={[styles.communicantBtn, member.communicant === val && styles.communicantBtnActive]}
-                onPress={() => handleCommunicantSelect(val)}>
-                <Ionicons
-                  name={member.communicant === val ? "checkbox" : "square-outline"}
-                  size={16}
-                  color={member.communicant === val ? "#fff" : "#555"}
-                />
-                <Text style={[styles.communicantBtnText, member.communicant === val && { color: "#fff" }]}>
-                  {val === "yes" ? "Yes" : "No"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Show communicant status if yes selected */}
-          {member.communicant === "yes" && (
-            <View style={styles.communicantStatus}>
-              <Text style={styles.fieldLabel}>Status</Text>
-              <View style={[styles.commStatusBadge,
-                { backgroundColor: member.communicantStatus === "invalid" ? "#fce8e8" : "#e8f8f0" }]}>
-                <Text style={{ color: member.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60", fontWeight: "700" }}>
-                  {member.communicantStatus === "invalid"
-                    ? `Invalid since ${member.communicantInvalidSince || "—"}`
-                    : "Active"}
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.changeCommBtn} onPress={() => setCommStatusModal(true)}>
-                <Text style={{ color: "#4B3F72", fontSize: 12 }}>Change status</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-         <AppButton
-  title="Save Member"
-  onPress={handleSaveMember}
-/>
-        <AppButton
-  title="Cancel"
-  type="secondary"
-  onPress={() => setModalVisible(false)}
-/>
-  
-
-          
-        </ScrollView>
-      </Modal>
-
-      {/* ══ COMMUNICANT STATUS MODAL ══ */}
-      <Modal visible={commStatusModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Communicant Status</Text>
-            <Text style={{ textAlign: "center", color: "#666", marginBottom: 16 }}>
-              Is this member currently eligible to receive communion?
-            </Text>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: "#27ae60" }]} onPress={() => handleCommStatus("active")}>
-              <Ionicons name="checkmark-circle" size={16} color="#fff" />
-              <Text style={[styles.white, { marginLeft: 6 }]}>Active — eligible</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: "#e74c3c", marginTop: 8 }]} onPress={() => handleCommStatus("invalid")}>
-              <Ionicons name="close-circle" size={16} color="#fff" />
-              <Text style={[styles.white, { marginLeft: 6 }]}>Invalid — not eligible</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 12, alignItems: "center" }} onPress={() => setCommStatusModal(false)}>
-              <Text style={{ color: "#888" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ══ COMMUNICANT INVALID DATE MODAL ══ */}
-      <Modal visible={commInvalidModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Invalid Since</Text>
-            <Text style={{ textAlign: "center", color: "#666", marginBottom: 12 }}>
-              Select the date from which this member's communion eligibility became invalid.
-            </Text>
-            <TouchableOpacity style={styles.datePickerBtn} onPress={() => setShowCommDatePicker(true)}>
-              <Ionicons name="calendar-outline" size={16} color="#4B3F72" />
-              <Text style={styles.datePickerBtnText}>{commInvalidDate.toLocaleDateString()}</Text>
-            </TouchableOpacity>
-            {showCommDatePicker && (
-              <DateTimePicker value={commInvalidDate} mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={handleCommInvalidDate} />
-            )}
-            <TouchableOpacity style={[styles.btn, { marginTop: 12 }]} onPress={confirmCommInvalid}>
-              <Text style={styles.white}>Confirm Date</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 10, alignItems: "center" }} onPress={() => setCommInvalidModal(false)}>
-              <Text style={{ color: "#888" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* ══ APPROVAL MODAL ══ */}
       <Modal visible={approvalModal} transparent animationType="fade">

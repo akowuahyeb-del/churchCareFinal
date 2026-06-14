@@ -27,6 +27,9 @@ import DepartmentsScreen       from "./screens/DepartmentsScreen";
 import EventsScreen            from "./screens/EventsScreen";
 import MoreScreen              from "./screens/MoreScreen";
 import CreateChurchScreen      from "./screens/CreateChurchScreen";
+import AddMemberScreen from "./screens/AddMemberScreen";
+
+
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -110,6 +113,8 @@ function RootStack() {
       <Stack.Screen name="Events"          component={EventsScreen}           />
       <Stack.Screen name="History"         component={HistoryScreen}          />
       <Stack.Screen name="CreateChurch"    component={CreateChurchScreen}     />
+      <Stack.Screen name="AddMember" component={AddMemberScreen} />
+      
     </Stack.Navigator>
   );
 }
