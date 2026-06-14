@@ -5,8 +5,10 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
+  Modal
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function AddMemberScreen({ navigation, route }) {
 
@@ -20,13 +22,16 @@ export default function AddMemberScreen({ navigation, route }) {
       occupation: "",
       emergencyContact: "",
       membershipDuration: "",
-      ministry: "",
-      baptismStatus: "",
-      status: "",
       communicant: "",
-      communicantStatus: "active"
+      communicantStatus: "active",
+      communicantInvalidSince: null
     }
   );
+
+  const [commStatusModal, setCommStatusModal] = useState(false);
+  const [commInvalidModal, setCommInvalidModal] = useState(false);
+  const [commInvalidDate, setCommInvalidDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleSaveMember = () => {
     console.log("Saving member:", member);
@@ -35,6 +40,31 @@ export default function AddMemberScreen({ navigation, route }) {
 
   const handleCommunicantSelect = (val) => {
     setMember({ ...member, communicant: val });
+
+    if (val === "yes") {
+      setCommStatusModal(true);
+    }
+  };
+
+  const handleCommStatus = (status) => {
+    setMember({ ...member, communicantStatus: status });
+    setCommStatusModal(false);
+
+    if (status === "invalid") {
+      setCommInvalidModal(true);
+    }
+  };
+
+  const handleDateChange = (event, date) => {
+    if (date) {
+      setShowDatePicker(false);
+      setCommInvalidDate(date);
+
+      setMember({
+        ...member,
+        communicantInvalidSince: date.toISOString().split("T")[0],
+      });
+    }
   };
 
   return (
@@ -44,7 +74,7 @@ export default function AddMemberScreen({ navigation, route }) {
         {editingId ? "Edit Member" : "Register Member"}
       </Text>
 
-      {/* ✅ INPUTS */}
+      {/* INPUTS */}
 
       <Text style={styles.label}>Full Name *</Text>
       <TextInput
@@ -92,7 +122,7 @@ export default function AddMemberScreen({ navigation, route }) {
         }
       />
 
-      {/* ✅ COMMUNICANT */}
+      {/* COMMUNICANT */}
 
       <Text style={styles.label}>Communicant *</Text>
 
@@ -118,39 +148,104 @@ export default function AddMemberScreen({ navigation, route }) {
         ))}
       </View>
 
-      {/* ✅ BUTTONS */}
+      {/* SHOW STATUS PREVIEW */}
+      {member.communicant === "yes" && (
+        <Text style={{ marginTop: 8, color: "#555" }}>
+          Status: {member.communicantStatus === "invalid"
+            ? `Invalid since ${member.communicantInvalidSince || "—"}`
+            : "Active"}
+        </Text>
+      )}
 
-      <TouchableOpacity
-        style={styles.saveBtn}
-        onPress={handleSaveMember}
-      >
+      {/* BUTTONS */}
+
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMember}>
         <Text style={styles.saveText}>Save Member</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.cancelBtn}
-        onPress={() => navigation.goBack()}
-      >
+      <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
 
+      {/* ✅ COMMUNICANT STATUS MODAL */}
+      <Modal visible={commStatusModal} transparent animationType="fade">
+        <View style={styles.modalWrap}>
+          <View style={styles.modalBox}>
+
+            <Text style={styles.modalTitle}>Communicant Status</Text>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "green" }]}
+              onPress={() => handleCommStatus("active")}
+            >
+              <Text style={styles.white}>Active — Eligible</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "red", marginTop: 10 }]}
+              onPress={() => handleCommStatus("invalid")}
+            >
+              <Text style={styles.white}>Invalid — Not Eligible</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setCommStatusModal(false)}>
+              <Text style={{ textAlign: "center", marginTop: 10 }}>Cancel</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ INVALID DATE MODAL */}
+      <Modal visible={commInvalidModal} transparent animationType="fade">
+        <View style={styles.modalWrap}>
+          <View style={styles.modalBox}>
+
+            <Text style={styles.modalTitle}>Invalid Since</Text>
+
+            <TouchableOpacity
+              style={styles.input}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text>{commInvalidDate.toDateString()}</Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={commInvalidDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
+
+            <TouchableOpacity
+              style={[styles.actionBtn, { marginTop: 10 }]}
+              onPress={() => setCommInvalidModal(false)}
+            >
+              <Text style={styles.white}>Confirm</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
+
+
 }
-
-
-
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#f4f6fb"
+    backgroundColor: "#f4f6fb",
   },
 
   title: {
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 16,
-    color: "#222"
+    color: "#222",
   },
 
   label: {
@@ -158,7 +253,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 4,
-    color: "#444"
+    color: "#444",
   },
 
   input: {
@@ -166,12 +261,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#e0e0e0"
+    borderColor: "#e0e0e0",
   },
 
   row: {
     flexDirection: "row",
-    marginTop: 8
+    marginTop: 8,
   },
 
   communicantBtn: {
@@ -180,16 +275,16 @@ const styles = StyleSheet.create({
     marginRight: 8,
     backgroundColor: "#eee",
     borderRadius: 8,
-    alignItems: "center"
+    alignItems: "center",
   },
 
   activeBtn: {
-    backgroundColor: "#4B3F72"
+    backgroundColor: "#4B3F72",
   },
 
   btnText: {
     color: "#333",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   saveBtn: {
@@ -197,12 +292,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 10,
     marginTop: 20,
-    alignItems: "center"
+    alignItems: "center",
   },
 
   saveText: {
     color: "#fff",
-    fontWeight: "700"
+    fontWeight: "700",
   },
 
   cancelBtn: {
@@ -210,11 +305,43 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     marginTop: 10,
-    alignItems: "center"
+    alignItems: "center",
   },
 
   cancelText: {
     color: "#333",
-    fontWeight: "600"
-  }
+    fontWeight: "600",
+  },
+
+  modalWrap: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "#0007",
+  },
+
+  modalBox: {
+    backgroundColor: "#fff",
+    margin: 20,
+    padding: 20,
+    borderRadius: 12,
+  },
+
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+
+  actionBtn: {
+    padding: 12,
+    backgroundColor: "#4B3F72",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+
+  white: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });
