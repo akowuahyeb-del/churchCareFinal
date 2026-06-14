@@ -70,11 +70,13 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       {/* ✅ LOGIN BUTTON */}
-      <TouchableOpacity
-        style={styles.loginBtn}
-        onPress={() => navigation.replace("MainTabs")}
-
-      >
+      
+<AppButton
+  title="Register"
+  type="secondary"
+  onPress={() => navigation.navigate("CreateChurch")}
+/>
+      
         <Text style={styles.loginText}>Login</Text>
       </TouchableOpacity>
 

@@ -172,13 +172,16 @@ await AsyncStorage.setItem("role", "admin");
         style={styles.input}
       />
 
-      <TouchableOpacity style={styles.btn} onPress={handleCreateChurch}>
-        <Text style={styles.btnText}>Create Church</Text>
-      </TouchableOpacity>
+      <AppButton
+  title="Create Church"
+  onPress={handleCreateChurch}
+/>
 
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.cancel}>Cancel</Text>
-      </TouchableOpacity>
+      <AppButton
+  title="Cancel"
+  type="secondary"
+  onPress={() => navigation.replace("Login")}
+/>
 
     </ScrollView>
   );
