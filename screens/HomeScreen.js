@@ -264,10 +264,11 @@ const styles = StyleSheet.create({
   body: { paddingBottom: 100 },
 
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-  },
+  flexDirection: "row",
+  flexWrap: "wrap",     
+  justifyContent: "space-between",
+},
+
 
   quickGrid: {
     flexDirection: "row",

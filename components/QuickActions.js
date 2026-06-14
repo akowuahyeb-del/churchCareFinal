@@ -97,14 +97,26 @@ const styles = StyleSheet.create({
     color: "#4B3F72",
     flex: 1,
   },
+
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "flex-start",   
+},
+
   item: {
-    flex: 1,
-    alignItems: "center",
-  },
+  width: "33%",      
+  alignItems: "center",
+  marginBottom: 18,
+},
+
+item: {
+  width: "33%",
+  alignItems: "center",
+  marginBottom: 18,
+  paddingVertical: 6,
+},
+
   circle: {
     width: 54,
     height: 54,
@@ -118,6 +130,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 5,
   },
+
+  
   label: {
     fontSize: 10,
     fontWeight: "700",
