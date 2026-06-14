@@ -26,14 +26,13 @@ import EventsScreen from "./screens/EventsScreen";
 import MoreScreen from "./screens/MoreScreen";
 import CreateChurchScreen from "./screens/CreateChurchScreen";
 
-
 /* NAVIGATORS */
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+---
 
-
-/* ── MEMBERS STACK ── */
+/* ✅ MEMBERS STACK */
 function MembersStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -41,18 +40,16 @@ function MembersStack() {
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
-      
     </Stack.Navigator>
   );
 }
 
-const role = route?.params?.role;
+---
 
-/* ── MAIN TAB NAVIGATION ── */
+/* ✅ MAIN TAB NAVIGATION (FIXED ✅) */
 function MainTabs({ route }) {
-  const role = route?.params?.role;
+  const role = route?.params?.role || "member";
 
-  console.log("User role:", role);
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -83,7 +80,11 @@ function MainTabs({ route }) {
           return (
             <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
               <Ionicons
-                name={focused ? icons[route.name] : `${icons[route.name]}-outline`}
+                name={
+                  focused
+                    ? icons[route.name]
+                    : `${icons[route.name]}-outline`
+                }
                 size={20}
                 color={color}
               />
@@ -92,35 +93,40 @@ function MainTabs({ route }) {
         },
       })}
     >
+      {/* ✅ ALWAYS */}
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Members" component={MembersStack} />
-      <Tab.Screen name="Attendance" component={AttendanceScreen} />
+
+      {/* ✅ ADMIN ONLY */}
+      {role === "admin" && (
+        <Tab.Screen name="Members" component={MembersStack} />
+      )}
+
+      {/* ✅ ADMIN ONLY */}
+      {role === "admin" && (
+        <Tab.Screen name="Attendance" component={AttendanceScreen} />
+      )}
+
+      {/* ✅ ALWAYS */}
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );
 }
 
+---
 
-
-/* ── ROOT STACK (ENTRY POINT ✅) ── */
+/* ✅ ROOT STACK */
 function RootStack() {
   return (
     <Stack.Navigator
       initialRouteName="Splash"
       screenOptions={{ headerShown: false }}
     >
-
-      {/* ✅ SPLASH FIRST */}
       <Stack.Screen name="Splash" component={SplashScreen} />
-
-      {/* ✅ LOGIN */}
       <Stack.Screen name="Login" component={LoginScreen} />
-
-      {/* ✅ MAIN APP */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
 
-      {/* ✅ OTHER SCREENS */}
+      {/* OTHER SCREENS */}
       <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
       <Stack.Screen name="DashboardDetails" component={DashboardDetailsScreen} />
       <Stack.Screen name="DonateScreen" component={DonateScreen} />
@@ -132,14 +138,13 @@ function RootStack() {
       <Stack.Screen name="Events" component={EventsScreen} />
       <Stack.Screen name="AdminTransfers" component={AdminTransferScreen} />
       <Stack.Screen name="CreateChurch" component={CreateChurchScreen} />
-
     </Stack.Navigator>
   );
 }
 
+---
 
-
-/* ── APP ROOT ── */
+/* ✅ APP ROOT */
 export default function App() {
   return (
     <NavigationContainer>
@@ -148,9 +153,9 @@ export default function App() {
   );
 }
 
+---
 
-
-/* ── STYLES ── */
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
