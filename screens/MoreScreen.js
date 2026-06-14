@@ -7,6 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
 
+import LogoutButton from "../components/LogoutButton";
+
 const MORE_ITEMS = [
   { key: "Departments", icon: "people-circle-outline", color: "#4F46E5", bg: "#EEF2FF", desc: "Manage church departments & groups" },
   { key: "Events", icon: "calendar-outline", color: "#059669", bg: "#ECFDF5", desc: "Church calendar & programmes" },
@@ -51,7 +53,8 @@ export default function MoreScreen() {
               alert(`${item.key} screen not built yet`);
             }
           }}
-        >
+        > 
+
           <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
             <Ionicons name={item.icon} size={26} color={item.color} />
           </View>
@@ -64,7 +67,7 @@ export default function MoreScreen() {
           <Ionicons name="chevron-forward" size={16} color="#ccc" />
         </TouchableOpacity>
       );
-    })}
+    })}<LogoutButton />
   </ScrollView>
 </SafeAreaView>
 );
