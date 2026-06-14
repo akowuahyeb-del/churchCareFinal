@@ -6,6 +6,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import LogoutButton from "../components/LogoutButton";
 
@@ -19,7 +21,16 @@ const MORE_ITEMS = [
 
 export default function MoreScreen() {
   const navigation = useNavigation();
+const [role, setRole] = useState("");
 
+useEffect(() => {
+  const loadRole = async () => {
+    const storedRole = await AsyncStorage.getItem("role");
+    setRole(storedRole || "User");
+  };
+
+  loadRole();
+}, []);
   return (
     <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
@@ -43,6 +54,24 @@ export default function MoreScreen() {
       };
 
       return (
+  <View style={styles.container}>
+
+    {/* ✅ TOP SECTION */}
+    <View>
+      {/* your menu items */}
+    </View>
+
+    {/* ✅ BOTTOM SECTION */}
+    <View style={styles.footer}>
+      <Text style={styles.userText}>
+        Logged in as {role === "admin" ? "Admin" : "Member"}
+      </Text>
+
+      <LogoutButton />
+    </View>
+
+  </View>
+);
         <TouchableOpacity
           key={item.key}
           style={styles.card}
