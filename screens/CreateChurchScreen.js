@@ -11,8 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
-import { parsePhoneNumberFromString } from "libphonenumber-js";
-
+import { parsePhoneNumberFromString, AsYouType } from "libphonenumber-js";
 export default function CreateChurchScreen({ navigation }) {
 
   const [churchName, setChurchName] = useState("");
@@ -45,17 +44,18 @@ export default function CreateChurchScreen({ navigation }) {
 const phoneRegex = /^\+\d{8,15}$/;
 
 // ✅ SMART PHONE VALIDATION
-const phoneNumber = parsePhoneNumberFromString(phone);
+const phoneNumber = parsePhoneNumberFromString(phone, "GH");
 
 if (!phoneNumber || !phoneNumber.isValid()) {
   Alert.alert(
     "Invalid Phone",
-    "Enter a valid phone with country code (e.g. +233551234567)"
+    "Enter a valid phone (e.g. +233551234567)"
   );
   return;
 }
 
 const formattedPhone = phoneNumber.formatInternational();
+
 
 
     try {
@@ -66,7 +66,8 @@ const formattedPhone = phoneNumber.formatInternational();
         region,
         district,
         gps,
-        phone: phone,
+        phone: formattedPhone,
+
         email,
         createdBy: userId,
         createdAt: new Date().toISOString(),
@@ -140,13 +141,18 @@ const formattedPhone = phoneNumber.formatInternational();
         style={styles.input}
       />
 
-      <TextInput
-  placeholder="Phone (e.g. +233XXXXXXXXX)"
+<TextInput
+  placeholder="Phone (e.g. +233...)"
   value={phone}
-  onChangeText={setPhone}
+  onChangeText={(text) => {
+    const formatter = new AsYouType("GH");   // 🇬🇭 Ghana default
+    const formatted = formatter.input(text);
+    setPhone(formatted);
+  }}
   style={styles.input}
   keyboardType="phone-pad"
 />
+
 
       <TextInput
         placeholder="Email (optional)"
