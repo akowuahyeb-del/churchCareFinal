@@ -73,11 +73,16 @@ export default function SplashScreen({ navigation }) {
     // ✅ ✅ AUTO LOGIN CHECK AFTER SPLASH
     const navTimer = setTimeout(async () => {
       const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+      const role = await AsyncStorage.getItem("role");
+if (isLoggedIn === "true") {
+  console.log("User role:", role);
 
-      if (isLoggedIn === "true") {
-        navigation.replace("MainTabs");   // ✅ go straight to app
-      } else {
-        navigation.replace("Login");      // ✅ go to login
+  navigation.replace("MainTabs", { role }); 
+} else {
+  navigation.replace("Login");
+}
+       else {
+        navigation.replace("Login");      
       }
 
     }, 3400); // sync with animation duration
