@@ -28,6 +28,7 @@
     "expo-sharing": "~56.0.16",
     "expo-status-bar": "~56.0.4",
     "firebase": "^12.13.0",
+    "libphonenumber-js": "^1.13.6",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-chart-kit": "^6.12.3",

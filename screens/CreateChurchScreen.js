@@ -11,6 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export default function CreateChurchScreen({ navigation }) {
 
@@ -43,13 +44,19 @@ export default function CreateChurchScreen({ navigation }) {
 
 const phoneRegex = /^\+\d{8,15}$/;
 
-if (!phoneRegex.test(phone)) {
+// ✅ SMART PHONE VALIDATION
+const phoneNumber = parsePhoneNumberFromString(phone);
+
+if (!phoneNumber || !phoneNumber.isValid()) {
   Alert.alert(
     "Invalid Phone",
-    "Enter phone number with country code (e.g. +233XXXXXXXXX)"
+    "Enter a valid phone with country code (e.g. +233551234567)"
   );
   return;
 }
+
+const formattedPhone = phoneNumber.formatInternational();
+
 
     try {
       // ✅ STEP 1: Create church
@@ -59,7 +66,7 @@ if (!phoneRegex.test(phone)) {
         region,
         district,
         gps,
-        phone,
+        phone: phone,
         email,
         createdBy: userId,
         createdAt: new Date().toISOString(),
