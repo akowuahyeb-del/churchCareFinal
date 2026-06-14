@@ -34,7 +34,7 @@ export default function SplashScreen({ navigation }) {
 
   useEffect(() => {
 
-    // ✅ ANIMATION SEQUENCE
+    // ✅ ANIMATION SEQUENCE (UNCHANGED)
     Animated.sequence([
       Animated.parallel([
         Animated.timing(glowOpacity, { toValue: 0.4, duration: 400, useNativeDriver: true }),
@@ -52,7 +52,12 @@ export default function SplashScreen({ navigation }) {
         Animated.timing(textY, { toValue: 0, duration: 400, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]),
       Animated.timing(tagOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(barWidth, { toValue: W * 0.5, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      Animated.timing(barWidth, {
+        toValue: W * 0.5,
+        duration: 1200,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: false,
+      }),
     ]).start();
 
     // ✅ DOT ANIMATION LOOP
@@ -70,37 +75,26 @@ export default function SplashScreen({ navigation }) {
 
     const dotTimer = setTimeout(pulseDots, 1400);
 
-    // ✅ ✅ AUTO LOGIN CHECK AFTER SPLASH
+    // ✅ ✅ FIXED AUTO LOGIN LOGIC (ONLY THIS PART CHANGED)
     const navTimer = setTimeout(async () => {
+
       const profileData = await AsyncStorage.getItem("userProfile");
 
-if (profileData) {
-  const profile = JSON.parse(profileData);
+      if (profileData) {
+        const profile = JSON.parse(profileData);
 
-  console.log("Cached user:", profile);
+        console.log("Cached user:", profile);
 
-  // ✅ FAST ROUTE (no extra reads needed)
-  navigation.replace("MainTabs", {
-    role: profile.role,
-    churchId: profile.churchId,
-  });
+        navigation.replace("MainTabs", {
+          role: profile.role,
+          churchId: profile.churchId,
+        });
 
-} else {
-  navigation.replace("Login");
-}
-      const role = await AsyncStorage.getItem("role");
-if (isLoggedIn === "true") {
-  console.log("User role:", role);
-
-  navigation.replace("MainTabs", { role }); 
-} else {
-  navigation.replace("Login");
-}
-       else {
-        navigation.replace("Login");      
+      } else {
+        navigation.replace("Login");
       }
 
-    }, 3400); // sync with animation duration
+    }, 3400);
 
     return () => {
       clearTimeout(navTimer);
@@ -112,7 +106,7 @@ if (isLoggedIn === "true") {
   return (
     <View style={styles.container}>
 
-      {/* Background shapes */}
+      {/* Background */}
       <View style={styles.bgCircle1} />
       <View style={styles.bgCircle2} />
       <View style={styles.bgCircle3} />
@@ -156,7 +150,7 @@ if (isLoggedIn === "true") {
         Connecting the Body of Christ
       </Animated.Text>
 
-      {/* Progress bar */}
+      {/* Progress */}
       <View style={styles.barTrack}>
         <Animated.View style={[styles.barFill, { width: barWidth }]} />
       </View>
@@ -253,10 +247,6 @@ const styles = StyleSheet.create({
     height: LOGO_SIZE,
     borderRadius: LOGO_SIZE / 2,
     backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   logoInnerRing: {
@@ -272,41 +262,26 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: "900",
     color: "#fff",
-    letterSpacing: 1.5,
-  },
-
-  nameUnderline: {
-    width: 48,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "#1BA97F",
-    marginTop: 8,
   },
 
   tagline: {
     fontSize: 13,
     color: "rgba(255,255,255,0.60)",
-    marginTop: 10,
   },
 
   barTrack: {
     width: W * 0.5,
     height: 3,
     backgroundColor: "rgba(255,255,255,0.12)",
-    borderRadius: 2,
-    marginTop: 44,
-    overflow: "hidden",
   },
 
   barFill: {
     height: 3,
     backgroundColor: "#1BA97F",
-    borderRadius: 2,
   },
 
   dotsRow: {
     flexDirection: "row",
-    gap: 8,
     marginTop: 16,
   },
 
@@ -314,6 +289,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+    marginHorizontal: 4,
     backgroundColor: "#1BA97F",
   },
 

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import { Feather, AntDesign } from "@expo/vector-icons";
+import AppButton from "../components/AppButton";
 
 export default function LoginScreen({ navigation }) {
  useEffect(() => {
@@ -26,6 +27,11 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const handleLogin = async () => {
+  await AsyncStorage.setItem("isLoggedIn", "true");
+
+  navigation.replace("MainTabs");
+};
 
   return (
     <View style={styles.container}>
@@ -70,15 +76,12 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       {/* ✅ LOGIN BUTTON */}
-      
+
+      {/* ✅ LOGIN BUTTON */}
 <AppButton
-  title="Register"
-  type="secondary"
-  onPress={() => navigation.navigate("CreateChurch")}
+  title="Login"
+  onPress={handleLogin}
 />
-      
-        <Text style={styles.loginText}>Login</Text>
-      </TouchableOpacity>
 
       {/* ✅ DIVIDER */}
       <View style={styles.dividerRow}>

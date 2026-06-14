@@ -30,7 +30,7 @@ import CreateChurchScreen from "./screens/CreateChurchScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
----
+
 
 /* ✅ MEMBERS STACK */
 function MembersStack() {
@@ -44,7 +44,7 @@ function MembersStack() {
   );
 }
 
----
+
 
 /* ✅ MAIN TAB NAVIGATION (FIXED ✅) */
 function MainTabs({ route }) {
@@ -113,7 +113,7 @@ function MainTabs({ route }) {
   );
 }
 
----
+
 
 /* ✅ ROOT STACK */
 function RootStack() {
@@ -142,7 +142,7 @@ function RootStack() {
   );
 }
 
----
+
 
 /* ✅ APP ROOT */
 export default function App() {
@@ -153,7 +153,7 @@ export default function App() {
   );
 }
 
----
+
 
 /* ✅ STYLES */
 const styles = StyleSheet.create({

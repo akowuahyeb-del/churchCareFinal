@@ -102,7 +102,7 @@ export default function MoreScreen() {
   );
 }
 
----
+
 
 const styles = StyleSheet.create({
   safe: {
