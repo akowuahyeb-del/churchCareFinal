@@ -87,13 +87,16 @@ export default function LoginScreen({ navigation }) {
 
 {/* ✅ FOOTER */}
 <View style={styles.footer}>
-  <Text style={{ color: "#555" }}>Don't have an account? </Text>
 
-  <TouchableOpacity
-    onPress={() => navigation.navigate("CreateChurch")}
-  >
-    <Text style={styles.register}>Register</Text>
+  {/* ✅ REGISTER (MAIN ACTION) */}
+  <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
+    <Text style={styles.register}>New Church? Register</Text>
   </TouchableOpacity>
+
+  {/* ✅ INFO TEXT */}
+  <Text style={styles.info}>
+    Already in a church? Contact your admin
+  </Text>
 
 </View>
 
@@ -205,14 +208,17 @@ const styles = StyleSheet.create({
 
   /* ✅ FOOTER */
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 10
-  },
+  marginTop: 30,
+  alignItems: "center",
+  paddingHorizontal: 20,
+},
 
   register: {
-    color: "#4B3F72",
-    fontWeight: "600"
-  }
+  color: "#4B3F72",
+  fontWeight: "700",
+  fontSize: 14,
+  marginBottom: 10,   
+}
+
 
 });

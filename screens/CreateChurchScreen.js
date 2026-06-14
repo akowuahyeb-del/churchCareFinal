@@ -36,10 +36,20 @@ export default function CreateChurchScreen({ navigation }) {
   }, []);
 
   const handleCreateChurch = async () => {
-    if (!churchName.trim() || !country.trim()) {
-      Alert.alert("Required", "Church name and country are required");
-      return;
-    }
+    if (!churchName.trim() || !country.trim() || !phone.trim()) {
+  Alert.alert("Required", "Church name, country and phone are required");
+  return;
+}
+
+const phoneRegex = /^\+\d{8,15}$/;
+
+if (!phoneRegex.test(phone)) {
+  Alert.alert(
+    "Invalid Phone",
+    "Enter phone number with country code (e.g. +233XXXXXXXXX)"
+  );
+  return;
+}
 
     try {
       // ✅ STEP 1: Create church
@@ -124,12 +134,12 @@ export default function CreateChurchScreen({ navigation }) {
       />
 
       <TextInput
-        placeholder="Phone"
-        value={phone}
-        onChangeText={setPhone}
-        style={styles.input}
-        keyboardType="phone-pad"
-      />
+  placeholder="Phone (e.g. +233XXXXXXXXX)"
+  value={phone}
+  onChangeText={setPhone}
+  style={styles.input}
+  keyboardType="phone-pad"
+/>
 
       <TextInput
         placeholder="Email (optional)"
