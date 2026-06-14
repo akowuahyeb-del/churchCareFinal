@@ -46,7 +46,7 @@ function MembersStack() {
   );
 }
 
-
+const role = route?.params?.role;
 
 /* ── MAIN TAB NAVIGATION ── */
 function MainTabs() {
