@@ -93,7 +93,7 @@ const formattedPhone = phoneNumber.formatInternational();
         `${churchName} registered successfully`
       );
 
-      navigation.goBack();
+      navigation.replace("MainTabs");
 
     } catch (error) {
       console.log("❌ Error:", error);
