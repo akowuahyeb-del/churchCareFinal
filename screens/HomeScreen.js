@@ -19,6 +19,7 @@ import PastorMessageCard from "../components/PastorMessageCard";
 import EditableContentModal from "../components/EditableContentModal";
 import EventsTabs from "../components/EventsTabs";
 import PreacherModal from "../components/PreacherModal";
+import QuickActions from "../components/QuickActions";
 
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
@@ -129,13 +130,11 @@ export default function HomeScreen() {
         </Section>
 
         {/* ✅ QUICK ACTIONS */}
-        <Section title="Quick Access">
-          <View style={styles.quickGrid}>
-            <QuickActionCard title="Events" icon="calendar-outline" onPress={() => navigation.navigate("Events")} />
-            <QuickActionCard title="Members" icon="people-outline" onPress={() => navigation.navigate("Members")} />
-            <QuickActionCard title="Attendance" icon="checkmark-circle-outline" onPress={() => navigation.navigate("Attendance")} />
-          </View>
-        </Section>
+        <QuickActions
+  navigation={navigation}
+  churchName="Main Branch"  // you can make this dynamic later
+  onSwitchChurch={() => console.log("switch church")}
+/>
 
         {/* ✅ ✅ ONLY ONE EVENTS TABS (NO DUPLICATES) */}
         <Section title="Service Flow">
