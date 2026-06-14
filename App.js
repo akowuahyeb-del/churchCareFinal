@@ -49,7 +49,10 @@ function MembersStack() {
 const role = route?.params?.role;
 
 /* ── MAIN TAB NAVIGATION ── */
-function MainTabs() {
+function MainTabs({ route }) {
+  const role = route?.params?.role;
+
+  console.log("User role:", role);
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
