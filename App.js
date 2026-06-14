@@ -22,11 +22,25 @@ import AdminTransferScreen from "./screens/AdminTransferScreen";
 import HelpScreen from "./screens/HelpScreen";
 import DepartmentsScreen from "./screens/DepartmentsScreen";
 import EventsScreen from "./screens/EventsScreen";
+import SplashScreen from "./screens/SplashScreen";
+import LoginScreen from "./screens/LoginScreen";
+
+
 
 
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+<Stack.Navigator screenOptions={{ headerShown: false }}>
+
+  {/* ✅ FIRST SCREEN */}
+  <Stack.Screen name="Splash" component={SplashScreen} />
+
+  {/* OTHER SCREENS */}
+  <Stack.Screen name="Login" component={LoginScreen} />
+  <Stack.Screen name="Home" component={HomeScreen} />
+
+</Stack.Navigator>
 
 /* ── MEMBERS STACK ── */
 function MembersStack() {
@@ -36,6 +50,10 @@ function MembersStack() {
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
+      <Stack.Navigator
+  initialRouteName="Splash"
+  screenOptions={{ headerShown: false }}
+></Stack.Navigator>
     </Stack.Navigator>
   );
 }
