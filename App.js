@@ -4,9 +4,10 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet } from "react-native";
-import MoreScreen from "./screens/MoreScreen";
 
-/* SCREENS */
+/* ✅ SCREENS */
+import SplashScreen from "./screens/SplashScreen";
+import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
 import MembersScreen from "./screens/MembersScreen";
 import AttendanceScreen from "./screens/AttendanceScreen";
@@ -18,29 +19,17 @@ import DonateScreen from "./screens/DonateScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import AdminFinanceScreen from "./screens/AdminFinanceScreen";
 import TransferRequestsScreen from "./screens/TransferRequestsScreen";
-import AdminTransferScreen from "./screens/AdminTransferScreen"; 
+import AdminTransferScreen from "./screens/AdminTransferScreen";
 import HelpScreen from "./screens/HelpScreen";
 import DepartmentsScreen from "./screens/DepartmentsScreen";
 import EventsScreen from "./screens/EventsScreen";
-import SplashScreen from "./screens/SplashScreen";
-import LoginScreen from "./screens/LoginScreen";
+import MoreScreen from "./screens/MoreScreen";
 
-
-
-
-
+/* NAVIGATORS */
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-<Stack.Navigator screenOptions={{ headerShown: false }}>
 
-  {/* ✅ FIRST SCREEN */}
-  <Stack.Screen name="Splash" component={SplashScreen} />
 
-  {/* OTHER SCREENS */}
-  <Stack.Screen name="Login" component={LoginScreen} />
-  <Stack.Screen name="Home" component={HomeScreen} />
-
-</Stack.Navigator>
 
 /* ── MEMBERS STACK ── */
 function MembersStack() {
@@ -50,13 +39,11 @@ function MembersStack() {
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
-      <Stack.Navigator
-  initialRouteName="Splash"
-  screenOptions={{ headerShown: false }}
-></Stack.Navigator>
     </Stack.Navigator>
   );
 }
+
+
 
 /* ── MAIN TAB NAVIGATION ── */
 function MainTabs() {
@@ -80,12 +67,12 @@ function MainTabs() {
         },
         tabBarIcon: ({ focused, color }) => {
           const icons = {
-  Home: "home",
-  Members: "people",
-  Attendance: "checkmark-circle",
-  History: "time",
-  More: "grid",   
-};
+            Home: "home",
+            Members: "people",
+            Attendance: "checkmark-circle",
+            History: "time",
+            More: "grid",
+          };
 
           return (
             <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
@@ -104,16 +91,30 @@ function MainTabs() {
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="More" component={MoreScreen} />
-      <Stack.Screen name="Help" component={HelpScreen} />
     </Tab.Navigator>
   );
 }
 
-/* ── ROOT STACK ── */
+
+
+/* ── ROOT STACK (ENTRY POINT ✅) ── */
 function RootStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName="Splash"
+      screenOptions={{ headerShown: false }}
+    >
+
+      {/* ✅ SPLASH FIRST */}
+      <Stack.Screen name="Splash" component={SplashScreen} />
+
+      {/* ✅ LOGIN */}
+      <Stack.Screen name="Login" component={LoginScreen} />
+
+      {/* ✅ MAIN APP */}
       <Stack.Screen name="MainTabs" component={MainTabs} />
+
+      {/* ✅ OTHER SCREENS */}
       <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
       <Stack.Screen name="DashboardDetails" component={DashboardDetailsScreen} />
       <Stack.Screen name="DonateScreen" component={DonateScreen} />
@@ -123,17 +124,13 @@ function RootStack() {
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
       <Stack.Screen name="Events" component={EventsScreen} />
+      <Stack.Screen name="AdminTransfers" component={AdminTransferScreen} />
 
-
-
-      {/* ✅ ADMIN TRANSFER SCREEN */}
-      <Stack.Screen
-        name="AdminTransfers"
-        component={AdminTransferScreen}
-      />
     </Stack.Navigator>
   );
 }
+
+
 
 /* ── APP ROOT ── */
 export default function App() {
@@ -143,6 +140,8 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+
 
 /* ── STYLES ── */
 const styles = StyleSheet.create({
