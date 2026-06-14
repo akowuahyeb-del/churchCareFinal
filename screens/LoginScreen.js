@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -10,6 +11,17 @@ import {
 import { Feather, AntDesign } from "@expo/vector-icons";
 
 export default function LoginScreen({ navigation }) {
+ useEffect(() => {
+  const checkLogin = async () => {
+    const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+
+    if (isLoggedIn === "true") {
+      navigation.replace("MainTabs");
+    }
+  };
+
+  checkLogin();
+}, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
