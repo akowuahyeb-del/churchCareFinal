@@ -83,12 +83,12 @@ await AsyncStorage.setItem("userId", userId);
 
       // ✅ STEP 3: Link user to church
       await setDoc(doc(db, "users", userId), {
-        id: userId,
-        role: "admin",
-        churchId: churchId,
-        createdAt: new Date().toISOString(),
-      });
-
+  id: userId,
+  role: "admin",              
+  churchId: churchId,
+  createdAt: new Date().toISOString(),
+});
+await AsyncStorage.setItem("role", "admin");
       console.log("✅ ChurchId linked to user:", churchId);
 
       Alert.alert(
