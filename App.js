@@ -41,7 +41,7 @@ function MembersStack() {
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
-      <Stack.Screen name="CreateChurch" component={CreateChurchScreen} />
+      
     </Stack.Navigator>
   );
 }
@@ -128,6 +128,7 @@ function RootStack() {
       <Stack.Screen name="Departments" component={DepartmentsScreen} />
       <Stack.Screen name="Events" component={EventsScreen} />
       <Stack.Screen name="AdminTransfers" component={AdminTransferScreen} />
+      <Stack.Screen name="CreateChurch" component={CreateChurchScreen} />
 
     </Stack.Navigator>
   );
