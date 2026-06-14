@@ -80,6 +80,14 @@ const formattedPhone = phoneNumber.formatInternational();
       // ✅ SAVE LOGIN SESSION
 await AsyncStorage.setItem("isLoggedIn", "true");
 await AsyncStorage.setItem("userId", userId);
+await AsyncStorage.setItem(
+  "userProfile",
+  JSON.stringify({
+    userId,
+    role: "admin",
+    churchId,
+  })
+);
 
       // ✅ STEP 3: Link user to church
       await setDoc(doc(db, "users", userId), {

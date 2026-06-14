@@ -72,7 +72,22 @@ export default function SplashScreen({ navigation }) {
 
     // ✅ ✅ AUTO LOGIN CHECK AFTER SPLASH
     const navTimer = setTimeout(async () => {
-      const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+      const profileData = await AsyncStorage.getItem("userProfile");
+
+if (profileData) {
+  const profile = JSON.parse(profileData);
+
+  console.log("Cached user:", profile);
+
+  // ✅ FAST ROUTE (no extra reads needed)
+  navigation.replace("MainTabs", {
+    role: profile.role,
+    churchId: profile.churchId,
+  });
+
+} else {
+  navigation.replace("Login");
+}
       const role = await AsyncStorage.getItem("role");
 if (isLoggedIn === "true") {
   console.log("User role:", role);
