@@ -323,7 +323,7 @@ export default function EventsScreen() {
                       <Text style={styles.heroTitle} numberOfLines={1}>{ev.title}</Text>
                       <View style={styles.heroMeta}>
                         <Ionicons name="calendar-outline" size={11} color="rgba(255,255,255,0.7)" />
-                        <Text style={styles.heroMetaText}>{fmtDate(ev.startDate)}</Text>
+                        {/* <Text style={styles.heroMetaText}>{fmtDate(ev.startDate)}</Text> */}
                         {ev.location && <><Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" /><Text style={styles.heroMetaText} numberOfLines={1}>{ev.location}</Text></>}
                       </View>
                     </View>
