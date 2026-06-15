@@ -9,6 +9,8 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import AppButton from "../components/AppButton";
+
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { parsePhoneNumberFromString, AsYouType } from "libphonenumber-js";

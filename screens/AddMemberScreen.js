@@ -9,6 +9,9 @@ import {
   Modal
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
+
 
 export default function AddMemberScreen({ navigation, route }) {
 
@@ -33,10 +36,28 @@ export default function AddMemberScreen({ navigation, route }) {
   const [commInvalidDate, setCommInvalidDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleSaveMember = () => {
-    console.log("Saving member:", member);
+  const handleSaveMember = async () => {
+  if (!member.name) return;
+
+  try {
+    const churchId = route.params?.churchId;   // ✅ get churchId
+
+    await addDoc(
+      collection(db, "churches", churchId, "members"),  // ✅ SAVE UNDER CHURCH
+      {
+        ...member,
+        churchId,
+        createdAt: new Date().toISOString()
+      }
+    );
+
     navigation.goBack();
-  };
+
+  } catch (error) {
+    console.log("Error saving member:", error);
+  }
+};
+
 
   const handleCommunicantSelect = (val) => {
     setMember({ ...member, communicant: val });

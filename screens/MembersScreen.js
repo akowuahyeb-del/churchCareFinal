@@ -18,6 +18,8 @@ import AppButton from "../components/AppButton";
 
 const MEMBERS_CACHE_KEY = "members_cache_v1";
 
+
+
 // ── Role levels ─────────────────────────────────────────────────
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 
@@ -40,12 +42,16 @@ const ACTIONS = {
 
 
 
-export default function MembersScreen({ navigation }) {
-
+export default function MembersScreen({ navigation, route })
+ {
+const currentChurchId = route.params?.churchId;
 const [showAddModal, setShowAddModal] = useState(false);
 
 const handleAddMember = () => {
-  navigation.navigate("AddMember");
+  navigation.navigate("AddMember", {
+  churchId: currentChurchId   
+})
+
 };
   /* ── viewer role (pass from auth context in production) ── */
   const viewerRole = "admin"; // change to actual role from auth
