@@ -101,10 +101,11 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",  
-  },
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "flex-start",  
+},
+
 
   item: {
     width: "30%",        
