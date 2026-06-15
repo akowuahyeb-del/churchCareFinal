@@ -2,14 +2,39 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 export default function ChurchDashboardScreen({ navigation, route }) {
 
   const churchId = route?.params?.churchId;
+  useEffect(() => {
+  const loadChurch = async () => {
+    if (!churchId) return;
+
+    try {
+      const docRef = doc(db, "churches", churchId);
+      const snap = await getDoc(docRef);
+
+      if (snap.exists()) {
+        setChurchName(snap.data().name);
+      }
+    } catch (err) {
+      console.log("Error loading church:", err);
+    }
+  };
+
+  loadChurch();
+}, [churchId]);
+const [churchName, setChurchName] = useState("");
 
   return (
     <View style={styles.container}>
 
-      <Text style={styles.title}>🏛️ Church Dashboard</Text>
+      <Text style={styles.title}>
+  🏛️ {churchName || "Church Dashboard"}
+</Text>
+
 
       {/* ✅ MEMBERS */}
       <TouchableOpacity
