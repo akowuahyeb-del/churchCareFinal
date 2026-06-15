@@ -106,7 +106,9 @@ await AsyncStorage.setItem("role", "admin");
         `${churchName} registered successfully`
       );
 
-      navigation.replace("MainTabs");
+      navigation.replace("ChurchDashboard", {
+  churchId: churchId   
+});
 
     } catch (error) {
       console.log("❌ Error:", error);
