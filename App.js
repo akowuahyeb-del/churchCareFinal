@@ -29,6 +29,7 @@ import MoreScreen              from "./screens/MoreScreen";
 import CreateChurchScreen      from "./screens/CreateChurchScreen";
 import AddMemberScreen from "./screens/AddMemberScreen";
 import ChurchDashboardScreen from "./screens/ChurchDashboardScreen";
+import OnboardingScreen from "./screens/OnboardingScreen";
 
 
 
@@ -116,8 +117,10 @@ function RootStack() {
       <Stack.Screen name="History"         component={HistoryScreen}          />
       <Stack.Screen name="CreateChurch"    component={CreateChurchScreen}     />
       <Stack.Screen name="AddMember" component={AddMemberScreen} />
-      <Stack.Screen name="ChurchDashboard" component={ChurchDashboardScreen}
-/>
+      <Stack.Screen name="ChurchDashboard" component={ChurchDashboardScreen}/>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen}/>
+
+
     </Stack.Navigator>
   );
 }

@@ -173,10 +173,10 @@ export default function CreateChurchScreen({ navigation }) {
 
       // 4. Go to onboarding
       navigation.replace("Onboarding", {
-        churchId,
-        churchName: churchName.trim(),
-        adminName:  adminName.trim(),
-      });
+  churchId,
+  churchName: churchName.trim(),
+  adminName: adminName.trim(),
+});
 
     } catch (err) {
       console.error("CreateChurch error:", err);
