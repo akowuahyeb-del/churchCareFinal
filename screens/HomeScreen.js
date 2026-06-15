@@ -107,6 +107,7 @@ export default function HomeScreen() {
 
       {/* ✅ PASTOR MESSAGE */}
       <Pressable onPress={() => setEditModalVisible(true)}>
+        <View style={{ marginTop: 20 }} />
         <PastorMessageCard {...pastorData} />
       </Pressable>
 
@@ -125,12 +126,6 @@ export default function HomeScreen() {
             <StatCard label="Attendance" value="180" />
           </View>
 
-
-          <QuickActionCard
-            title="Admin Dashboard"
-            icon="grid-outline"
-            onPress={() => navigation.navigate(".AdminDashboard")}
-          />
         </Section>
 
         {/* ✅ QUICK ACTIONS */}

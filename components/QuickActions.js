@@ -1,60 +1,62 @@
-
-
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import SectionHeader from "../components/SectionHeader"
+import SectionHeader from "../components/SectionHeader";
 
-// ── Each action maps to the EXACT screen name in App.js ──────────
+// ── Actions ───────────────────────────────────────────────
 const ACTIONS = [
-  { id: "Attendance",      label: "Attendance", icon: "checkmark-circle-outline" },
-  { id: "Members",         label: "Members",    icon: "people-outline"            },
-  { id: "AdminDashboard",  label: "Reports",    icon: "bar-chart-outline"         },
-  { id: "Donate",          label: "Donate",     icon: "heart-outline"             },
-  { id: "Help",            label: "Help",       icon: "help-circle-outline"       },
+  { id: "Attendance", label: "Attendance", icon: "checkmark-circle-outline" },
+  { id: "Members", label: "Members", icon: "people-outline" },
+  { id: "AdminDashboard", label: "Dashboard", icon: "speedometer-outline" },
+  { id: "Donate", label: "Donate", icon: "heart-outline" },
+  { id: "Help", label: "Help", icon: "help-circle-outline" },
 ];
 
 export default function QuickActions({ navigation, churchName, onSwitchChurch }) {
   return (
     <View style={styles.section}>
 
-      {/* Header row */}
+      {/* Header */}
       <View style={styles.headerRow}>
         <SectionHeader title="Quick Actions" />
 
-        {/* Church switcher inline */}
         <TouchableOpacity style={styles.switchBtn} onPress={onSwitchChurch}>
           <Ionicons name="swap-horizontal-outline" size={13} color="#4B3F72" />
-          <Text style={styles.switchText} numberOfLines={1}>{churchName || "Select Branch"}</Text>
+          <Text style={styles.switchText} numberOfLines={1}>
+            {churchName || "Select Branch"}
+          </Text>
           <Ionicons name="chevron-down" size={12} color="#4B3F72" />
         </TouchableOpacity>
       </View>
 
-      {/* Action circles */}
+      {/* Grid */}
       <View style={styles.row}>
-        {ACTIONS.map(action => (
+        {ACTIONS.map((action) => (
           <TouchableOpacity
             key={action.id}
             style={styles.item}
             activeOpacity={0.75}
             onPress={() => {
-  if (action.id === "Members") {
-    navigation.navigate("Members");
-  } else if (action.id === "Attendance") {
-    navigation.navigate("Attendance");
-  } else if (action.id === "AdminDashboard") {
-    navigation.navigate("AdminDashboard");
-  } else if (action.id === "Donate") {
-    navigation.navigate("DonateScreen");
-  } else if (action.id === "Help") {
-    navigation.navigate("Help");
-  }
-}}
+              if (action.id === "Members") {
+                navigation.navigate("Members");
+              } else if (action.id === "Attendance") {
+                navigation.navigate("Attendance");
+              } else if (action.id === "AdminDashboard") {
+                navigation.navigate("AdminDashboard");
+              } else if (action.id === "Donate") {
+                navigation.navigate("DonateScreen");
+              } else if (action.id === "Help") {
+                navigation.navigate("Help");
+              }
+            }}
           >
             <View style={styles.circle}>
               <Ionicons name={action.icon} size={24} color="#fff" />
             </View>
-            <Text style={styles.label} numberOfLines={1}>{action.label}</Text>
+
+            <Text style={styles.label} numberOfLines={1}>
+              {action.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -63,23 +65,21 @@ export default function QuickActions({ navigation, churchName, onSwitchChurch })
   );
 }
 
+// ── STYLES ───────────────────────────────────────────────
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,   // ✅ global alignment
     marginTop: 16,
     marginBottom: 6,
   },
+
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 14,
   },
-  heading: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#222",
-  },
+
   switchBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#dde1f5",
   },
+
   switchText: {
     fontSize: 11,
     fontWeight: "700",
@@ -100,31 +101,26 @@ const styles = StyleSheet.create({
   },
 
   row: {
-  flexDirection: "row",
-  flexWrap: "wrap",
-  justifyContent: "flex-start",   
-},
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",  
+  },
 
   item: {
-  width: "30%",      
-  alignItems: "center",
-  marginBottom: 18,
-},
-
-item: {
-  width: "33%",
-  alignItems: "center",
-  marginBottom: 18,
-  paddingVertical: 2,
-},
+    width: "30%",        
+    alignItems: "center",
+    marginBottom: 20,
+  },
 
   circle: {
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: "#3C3A4E",   // dark grey — matches reference image
+    backgroundColor: "#3C3A4E",   
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 6,
+
     shadowColor: "#000",
     shadowOpacity: 0.18,
     shadowRadius: 6,
@@ -132,12 +128,10 @@ item: {
     elevation: 5,
   },
 
-  
   label: {
-  fontSize: 11,           
-  fontWeight: "800",      
-  color: "#222",          
-  marginTop: 6,
-  textAlign: "center",
-},
+    fontSize: 11,
+    fontWeight: "800",   
+    color: "#222",
+    textAlign: "center",
+  },
 });
