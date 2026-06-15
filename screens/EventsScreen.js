@@ -304,7 +304,6 @@ export default function EventsScreen() {
         {/* ── FEATURED EVENTS — large hero cards ── */}
         {viewMode === "featured" && featured.length > 0 && (
           <View style={{ marginBottom: 6 }}>
-            <Text style={styles.sectionLabel}>✨ Featured</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, gap: 12 }}>
               {featured.map(ev => {
                 const cat = categoryOf(ev.category);

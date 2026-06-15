@@ -89,21 +89,25 @@ export default function HomeScreen() {
       
       {/* ✅ FEATURED EVENTS */}
       {featuredEvents.length > 0 && (
-        <Section title="Featured Events">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {featuredEvents.map(ev => (
-              <FeaturedEventCard
-                key={ev.id}
-                event={ev}
-                onPress={() => {
-                  setSelectedEvent(ev);
-                  setEventModalVisible(true);
-                }}
-              />
-            ))}
-          </ScrollView>
-        </Section>
-      )}
+  <View style={{ marginTop: 20 }}>
+    
+    <SectionHeader title="Featured Events" />
+
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {featuredEvents.map(ev => (
+        <FeaturedEventCard
+          key={ev.id}
+          event={ev}
+          onPress={() => {
+            setSelectedEvent(ev);
+            setEventModalVisible(true);
+          }}
+        />
+      ))}
+    </ScrollView>
+
+  </View>
+)}
 
       {/* ✅ PASTOR MESSAGE */}
       <Pressable onPress={() => setEditModalVisible(true)}>
@@ -118,7 +122,7 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      <SectionHeader title="Featured Events" />
+      
         {/* ✅ OVERVIEW */}
         <Section title="Overview">
           <View style={styles.row}>
