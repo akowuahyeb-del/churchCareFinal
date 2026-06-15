@@ -3,16 +3,21 @@ import {
   View, Text, TouchableOpacity, StyleSheet
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import StableEventModal from "../components/StableEventModal";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";   
 
 export default function EventsTabs({
   events,
   program,
   preachers,
-  onEditProgram,
-  onEditPreacher
+  setProgram     // ✅ important (comes from HomeScreen)
 }) {
 
   const [activeTab, setActiveTab] = useState("events");
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   return (
     <View style={styles.container}>
@@ -56,66 +61,138 @@ export default function EventsTabs({
         {activeTab === "events" && (
           <>
             {events.map(ev => (
-              <View key={ev.id} style={styles.card}>
+              <TouchableOpacity
+                key={ev.id}
+                style={styles.card}
+                onPress={() => {
+                  setSelectedItem({ id: ev.id, title: ev.title, date: ev.date });
+                  setModalVisible(true);
+                }}
+              >
                 <Text style={styles.title}>{ev.title}</Text>
                 <Text style={styles.sub}>{ev.date}</Text>
-              </View>
-            ))}
-          </>
-        )}
-
-        {activeTab === "program" && (
-  <>
-    {/* ✅ ADD PROGRAM BUTTON */}
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => onEditProgram(null)}
-    >
-      <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-        + Add Program Item
-      </Text>
-    </TouchableOpacity>
-
-    {/* ✅ LIST */}
-    {program.map(item => (
-      <TouchableOpacity
-        key={item.id}
-        style={styles.card}
-        onPress={() => onEditProgram(item)}
-      >
-        <Text style={styles.title}>{item.item}</Text>
-      </TouchableOpacity>
-    ))}
-  </>
-)}
-
-        {/* ✅ PREACHERS */}
-        {activeTab === "preachers" && (
-          <>
-            {/* ADD BUTTON */}
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => onEditPreacher(null)}
-            >
-              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-                + Add Preacher
-              </Text>
-            </TouchableOpacity>
-
-            {preachers.map(p => (
-              <TouchableOpacity
-                key={p.id}
-                style={styles.card}
-                onPress={() => onEditPreacher(p)}
-              >
-                <Text style={styles.title}>{p.name}</Text>
-                <Text style={styles.sub}>{p.topic}</Text>
               </TouchableOpacity>
             ))}
           </>
         )}
 
+        {/* ── PROGRAM ── */}
+        {activeTab === "program" && (
+          <>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => {
+                setSelectedItem({ title: "", date: null });
+                setModalVisible(true);
+              }}
+            >
+              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+                + Add Program Item
+              </Text>
+            </TouchableOpacity>
+
+            {program.map(item => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.card}
+                onPress={() => {
+                  setSelectedItem(item);
+                  setModalVisible(true);
+                }}
+              >
+                <Text style={styles.title}>{item.title || item.item}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {/* ── PREACHERS (UNCHANGED) ── */}
+        {activeTab === "preachers" && (
+          <>
+            {preachers.map(p => (
+              <View key={p.id} style={styles.card}>
+                <Text style={styles.title}>{p.name}</Text>
+                <Text style={styles.sub}>{p.topic}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
       </View>
+
+      {/* ✅ ✅ STABLE MODAL HERE (IMPORTANT POSITION) */}
+      <StableEventModal
+        visible={modalVisible}
+        data={selectedItem || {}}
+        setData={setSelectedItem}
+        onClose={() => setModalVisible(false)}
+
+        onSave={async () => {
+  if (!selectedItem || !setProgram) return;
+
+  let updated;
+
+  setProgram(prev => {
+    updated = prev.some(p => p.id === selectedItem.id)
+      ? prev.map(p =>
+          p.id === selectedItem.id
+            ? {
+                id: selectedItem.id,
+                title: selectedItem.title || "",   // ✅ FIX
+                date: selectedItem.date || null    // ✅ FIX
+              }
+            : p
+        )
+      : [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            title: selectedItem.title || "",   // ✅ FIX
+            date: selectedItem.date || null    // ✅ FIX
+          }
+        ];
+
+    return updated;
+  });
+
+  // ✅ FINAL CLEANED DATA
+  const cleaned = updated.map(item => ({
+    id: item.id,
+    title: item.title || "",
+    date: item.date || null
+  }));
+
+  await setDoc(doc(db, "settings", "programList"), {
+    items: cleaned
+  });
+
+  setModalVisible(false);
+}}
+
+
+onDelete={async () => {
+  let updated;
+
+  setProgram(prev => {
+    updated = prev.filter(p => p.id !== selectedItem.id);
+    return updated;
+  });
+
+  const cleaned = updated.map(item => ({
+    id: item.id,
+    title: item.title || "",
+    date: item.date || null
+  }));
+
+  await setDoc(doc(db, "settings", "programList"), {
+    items: cleaned
+  });
+
+  setModalVisible(false);
+}}
+
+        
+      />
 
     </View>
   );

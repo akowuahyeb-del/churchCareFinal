@@ -77,6 +77,18 @@ export default function HomeScreen() {
   return unsubscribe;
 }, []);
 
+useEffect(() => {
+  const unsubscribe = onSnapshot(doc(db, "settings", "programList"), (snap) => {
+    if (snap.exists()) {
+      setProgram(snap.data().items || []);
+    }
+  });
+
+  return unsubscribe;
+}, []);
+
+
+
   const featuredEvents = events.filter(ev => ev.featured);
   const upcomingEvents = events.slice(0, 5);
 
@@ -153,20 +165,12 @@ export default function HomeScreen() {
         {/* ✅ ✅ ONLY ONE EVENTS TABS (NO DUPLICATES) */}
         <Section title="Service Flow">
           <EventsTabs
-            events={upcomingEvents}
-            program={program}
-            preachers={preachers}
+  events={upcomingEvents}
+  program={program}
+  preachers={preachers}
+  setProgram={setProgram}   
+/>
 
-            onEditProgram={(item) => {
-              setEditingProgram(item);
-              setProgramModalVisible(true);
-            }}
-
-            onEditPreacher={(p) => {
-              setEditingPreacher(p);
-              setPreacherModal(true);
-            }}
-          />
         </Section>
 
       </ScrollView>
