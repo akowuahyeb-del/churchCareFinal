@@ -5,9 +5,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
-export default function ChurchDashboardScreen({ navigation, route }) {
 
+  export default function ChurchDashboardScreen({ navigation, route }) {
   const churchId = route?.params?.churchId;
+  
   useEffect(() => {
   const loadChurch = async () => {
     if (!churchId) return;
