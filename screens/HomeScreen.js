@@ -20,6 +20,8 @@ import EditableContentModal from "../components/EditableContentModal";
 import EventsTabs from "../components/EventsTabs";
 import PreacherModal from "../components/PreacherModal";
 import QuickActions from "../components/QuickActions";
+import SectionHeader from "../components/SectionHeader";
+
 
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
@@ -84,6 +86,7 @@ export default function HomeScreen() {
         ]}
       />
 
+      
       {/* ✅ FEATURED EVENTS */}
       {featuredEvents.length > 0 && (
         <Section title="Featured Events">
@@ -114,7 +117,7 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-
+      <SectionHeader title="Featured Events" />
         {/* ✅ OVERVIEW */}
         <Section title="Overview">
           <View style={styles.row}>
@@ -122,10 +125,11 @@ export default function HomeScreen() {
             <StatCard label="Attendance" value="180" />
           </View>
 
+
           <QuickActionCard
             title="Admin Dashboard"
             icon="grid-outline"
-            onPress={() => navigation.navigate("AdminDashboard")}
+            onPress={() => navigation.navigate(".AdminDashboard")}
           />
         </Section>
 

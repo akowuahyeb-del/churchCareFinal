@@ -3,6 +3,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import SectionHeader from "../components/SectionHeader"
 
 // ── Each action maps to the EXACT screen name in App.js ──────────
 const ACTIONS = [
@@ -19,7 +20,7 @@ export default function QuickActions({ navigation, churchName, onSwitchChurch })
 
       {/* Header row */}
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>Quick Actions</Text>
+        <SectionHeader title="Quick Actions" />
 
         {/* Church switcher inline */}
         <TouchableOpacity style={styles.switchBtn} onPress={onSwitchChurch}>
