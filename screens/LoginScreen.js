@@ -102,7 +102,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.socialText}>Continue with Phone</Text>
       </TouchableOpacity>
 
-{/* ✅ FOOTER */}
+✅ FOOTER
 <View style={styles.footer}>
 
   {/* ✅ REGISTER (MAIN ACTION) */}
@@ -110,10 +110,8 @@ export default function LoginScreen({ navigation }) {
     <Text style={styles.register}>New Church? Register</Text>
   </TouchableOpacity>
 
-  {/* ✅ INFO TEXT */}
-  <Text style={styles.info}>
-    Already in a church? Contact your admin
-  </Text>
+  
+
 
 </View>
 

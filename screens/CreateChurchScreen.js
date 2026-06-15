@@ -130,6 +130,7 @@ export default function CreateChurchScreen({ navigation }) {
     setSaving(true);
     try {
       // 1. Create church document
+      console.log("👉 Creating church in Firestore...");
       const churchRef = await addDoc(collection(db, "churches"), {
         name:        churchName.trim(),
         denomination:denomination.trim(),
@@ -149,6 +150,8 @@ export default function CreateChurchScreen({ navigation }) {
       });
 
       const churchId = churchRef.id;
+      console.log("✅ Church created:", churchId);
+
       const userId   = `admin_${Date.now()}`;
 
       // 2. Create admin user document
@@ -179,11 +182,14 @@ export default function CreateChurchScreen({ navigation }) {
 });
 
     } catch (err) {
-      console.error("CreateChurch error:", err);
-      Alert.alert("Registration failed", err.message || "Please check your connection and try again.");
-    } finally {
-      setSaving(false);
-    }
+  console.log("❌ FULL ERROR:", err);
+  console.log("❌ ERROR MESSAGE:", err.message);
+
+  Alert.alert(
+    "🔥 Registration Failed",
+    err.message ? err.message : JSON.stringify(err)
+  );
+}
   };
 
   // ── Step content ───────────────────────────────────────────────
