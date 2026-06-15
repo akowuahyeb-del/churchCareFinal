@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
 },
 
   item: {
-  width: "33%",      
+  width: "30%",      
   alignItems: "center",
   marginBottom: 18,
 },
@@ -114,7 +114,7 @@ item: {
   width: "33%",
   alignItems: "center",
   marginBottom: 18,
-  paddingVertical: 6,
+  paddingVertical: 2,
 },
 
   circle: {
@@ -133,10 +133,10 @@ item: {
 
   
   label: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#444",
-    marginTop: 6,
-    textAlign: "center",
-  },
+  fontSize: 11,           
+  fontWeight: "800",      
+  color: "#222",          
+  marginTop: 6,
+  textAlign: "center",
+},
 });
