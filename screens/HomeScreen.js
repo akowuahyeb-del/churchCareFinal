@@ -23,6 +23,7 @@ import QuickActions from "../components/QuickActions";
 import SectionHeader from "../components/SectionHeader";
 
 
+
 /* ✅ FIRESTORE */
 import { db } from "../firebase";
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
@@ -65,6 +66,16 @@ export default function HomeScreen() {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+  const unsubscribe = onSnapshot(doc(db, "settings", "pastorMessage"), (docSnap) => {
+    if (docSnap.exists()) {
+      setPastorData(docSnap.data());
+    }
+  });
+
+  return unsubscribe;
+}, []);
 
   const featuredEvents = events.filter(ev => ev.featured);
   const upcomingEvents = events.slice(0, 5);
@@ -161,25 +172,21 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* ✅ FEATURED EVENT MODAL */}
-      {selectedEvent && (
-        <EditableContentModal
-          visible={eventModalVisible}
-          onClose={() => setEventModalVisible(false)}
-          titleValue={selectedEvent.title}
-          messageValue={selectedEvent.description}
-
-          onSave={async (data) => {
-            await updateDoc(doc(db, "events", selectedEvent.id), {
-              title: data.title,
-              description: data.message
-            });
-          }}
-
-          onDelete={async () => {
-            await deleteDoc(doc(db, "events", selectedEvent.id));
-          }}
-        />
-      )}
+      {<EditableContentModal
+  visible={editModalVisible}
+  onClose={() => setEditModalVisible(false)}
+  titleValue={pastorData.title}
+  messageValue={pastorData.message}
+  onSave={async (data) => {
+    try {
+      await updateDoc(doc(db, "settings", "pastorMessage"), data);
+    } catch {
+      // if doc doesn't exist yet
+      await setDoc(doc(db, "settings", "pastorMessage"), data);
+    }
+    setPastorData(data);
+  }}
+/>}
 
       {/* ✅ PROGRAM MODAL */}
       <EditableContentModal

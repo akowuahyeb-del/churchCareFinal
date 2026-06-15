@@ -660,7 +660,7 @@ export default function EventsScreen() {
                 <View style={styles.switchRow}>
                   <View>
                     <Text style={styles.switchLabel}>Featured Event</Text>
-                    <Text style={styles.switchSub}>Show in the featured carousel</Text>
+                    {/* <Text style={styles.switchSub}>Show in the featured carousel</Text> */}
                   </View>
                   <TouchableOpacity
                     style={[styles.toggle, form.featured && styles.toggleOn]}
