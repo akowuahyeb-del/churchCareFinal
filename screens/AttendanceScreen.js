@@ -391,58 +391,138 @@ const requestTransfer = async (member, newEntityId, reason) => {
   }
 };
 
+/* ══════════ SESSION MANAGEMENT ══════════ */
+
+const fmt12 = (d) => {
+  if (!d) return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const isSessionLocked = sessionStatus === "ended";
+
+
+// ✅ START SESSION (ACTIVE ENTITY)
+const startSession = async () => {
+  if (!startTime) {
+    Alert.alert("Required", "Service start time is required.");
+    return;
+  }
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  setSessionStatus("open");
+  setSessionModal(false);
+
+  try {
+    const ref = await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions"
+      ),
+      {
+        date: today,
+        service: selectedService,
+        type: selectedType,
+        event: selectedEvent,
+
+        entityId,
+        organizationId,
+
+        startTime,
+        endTime,
+        status: "open",
+
+        createdAt: serverTimestamp()
+      }
+    );
+
+    setSessionId(ref.id);
+
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+
+// ✅ END SESSION
+const endSession = async () => {
+  setSessionStatus("ended");
+  setEndServiceModal(false);
+
+  if (sessionId && organizationId && entityId) {
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions",
+        sessionId
+      ),
+      {
+        status: "ended",
+        lockedAt: serverTimestamp(),
+        lockedBy: userRole
+      }
+    ).catch(console.log);
+  }
+
+  Alert.alert(
+    "Service Ended",
+    "Attendance is now locked. Admin can unlock if needed."
+  );
+};
+
+
+// ✅ EXTEND SESSION
+const extendSession = async () => {
+  setSessionStatus("extended");
+  setExtendModal(false);
+
+  if (sessionId && organizationId && entityId) {
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions",
+        sessionId
+      ),
+      {
+        status: "extended",
+        extendedAt: serverTimestamp()
+      }
+    ).catch(console.log);
+  }
+};
+
+
+// ✅ UNLOCK SESSION (LOCAL STATE ONLY)
+const unlockSession = () => {
+  if (adminPin !== ADMIN_PIN) {
+    Alert.alert("Wrong PIN", "Incorrect admin PIN.");
+    return;
+  }
+
+  setSessionStatus("open");
+  setAdminPin("");
+  setUnlockModal(false);
+
+  Alert.alert("Unlocked", "Attendance is now editable again.");
+};
 
 
 
-
-  /* ══════════ SESSION MANAGEMENT ══════════ */
-  const fmt12 = (d) => {
-    if (!d) return "";
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const isSessionLocked = sessionStatus === "ended";
-
-  const startSession = () => {
-    if (!startTime) { Alert.alert("Required", "Service start time is required."); return; }
-    setSessionStatus("open");
-    setSessionModal(false);
-    // Persist session to Firestore
-    addDoc(collection(db, "sessions"), {
-      date: today, service: selectedService, type: selectedType, event: selectedEvent,
-      churchId: selectedChurch, startTime, endTime, status: "open",
-      createdAt: serverTimestamp()
-    }).then(ref => setSessionId(ref.id)).catch(console.log);
-  };
-
-  const endSession = async () => {
-    setSessionStatus("ended");
-    setEndServiceModal(false);
-    if (sessionId) {
-      await updateDoc(doc(db, "sessions", sessionId), {
-        status: "ended", lockedAt: serverTimestamp(), lockedBy: userRole
-      }).catch(console.log);
-    }
-    Alert.alert("Service Ended", "Attendance is now locked. Admin can unlock if needed.");
-  };
-
-  const extendSession = async () => {
-    setSessionStatus("extended");
-    setExtendModal(false);
-    if (sessionId) {
-      await updateDoc(doc(db, "sessions", sessionId), {
-        status: "extended", extendedAt: serverTimestamp()
-      }).catch(console.log);
-    }
-  };
-
-  const unlockSession = () => {
-    if (adminPin !== ADMIN_PIN) { Alert.alert("Wrong PIN", "Incorrect admin PIN."); return; }
-    setSessionStatus("open");
-    setAdminPin("");
-    setUnlockModal(false);
-    Alert.alert("Unlocked", "Attendance is now editable again.");
-  };
 
   /* ══════════ ATTENDANCE WRITE ══════════ */
   const buildRecord = (member, status) => ({
