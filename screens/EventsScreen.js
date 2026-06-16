@@ -90,15 +90,20 @@ const emptyForm = () => ({
 export default function EventsScreen() {
   const navigation = useNavigation();
 
-  const [churchId, setChurchId] = useState(null);
+  const [activeEntity, setActiveEntity] = useState(null);
 
 useEffect(() => {
-  const loadChurchId = async () => {
-    const id = await AsyncStorage.getItem("churchId");
-    console.log("✅ EventsScreen churchId:", id);
-    setChurchId(id);
+  const loadEntity = async () => {
+    const data = await AsyncStorage.getItem("activeEntity");
+
+    if (data) {
+      const parsed = JSON.parse(data);
+      console.log("✅ Active Entity:", parsed);
+      setActiveEntity(parsed);
+    }
   };
-  loadChurchId();
+
+  loadEntity();
 }, []);
 
   const [events,       setEvents]       = useState([]);
@@ -123,23 +128,35 @@ useEffect(() => {
   // ── Load ──────────────────────────────────────────────────────
 
 useEffect(() => {
-  if (!churchId) return;
+  if (!activeEntity) return;
+
+  const { organizationId, entityId } = activeEntity;
 
   const unsub = onSnapshot(
     query(
-      collection(db, "churches", churchId, "events"),
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "events"
+      ),
       orderBy("startDate", "asc")
     ),
-    (snap) => {
-      setEvents(snap.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      })));
+    snap => {
+      setEvents(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }))
+      );
     }
   );
 
   return unsub;
-}, [churchId]);
+
+}, [activeEntity]);
 
 
 
@@ -183,16 +200,20 @@ useEffect(() => {
   };
 
   // ── Save / update ────────────────────────────────────────────
-  const handleSave = async () => {
+ const handleSave = async () => {
   if (!form.title.trim()) {
     Alert.alert("Event title is required");
     return;
   }
 
-  if (!churchId) {
-    Alert.alert("Error", "No active church");
+  const data = await AsyncStorage.getItem("activeEntity");
+
+  if (!data) {
+    Alert.alert("No active church", "Please select a church first");
     return;
   }
+
+  const { organizationId, entityId } = JSON.parse(data);
 
   setSaving(true);
 
@@ -204,13 +225,28 @@ useEffect(() => {
 
     if (editingId) {
       await updateDoc(
-        doc(db, "churches", churchId, "events", editingId),
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "events",
+          editingId
+        ),
         payload
       );
       Alert.alert("✅ Event updated");
     } else {
       await addDoc(
-        collection(db, "churches", churchId, "events"),
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "events"
+        ),
         {
           ...payload,
           createdAt: new Date().toISOString()
@@ -231,28 +267,92 @@ useEffect(() => {
 
 
 
-  // ── Delete ───────────────────────────────────────────────────
-  const handleDelete = (event) => {
-    if (!canDo("pastor")) { Alert.alert("Access denied", "Only pastors and admins can delete events."); return; }
-    Alert.alert("Delete Event?", `"${event.title}" will be permanently removed.`, [
-      { text: "Cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-        try {  await deleteDoc(
-  doc(db, "churches", churchId, "events", event.id)
-);setDetailModal(false); }
-        catch (e) { Alert.alert("Error", e.message); }
-      }}
-    ]);
-  };
 
-  // ── Toggle featured ──────────────────────────────────────────
-  const toggleFeatured = async (event) => {
-    if (!canDo("deacon")) { Alert.alert("Access denied"); return; }
+  // ── Delete ───────────────────────────────────────────────────
+const handleDelete = (event) => {
+  if (!canDo("pastor")) {
+    Alert.alert("Access denied", "Only pastors and admins can delete events.");
+    return;
+  }
+
+  Alert.alert(
+    "Delete Event?",
+    `"${event.title}" will be permanently removed.`,
+    [
+      { text: "Cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const data = await AsyncStorage.getItem("activeEntity");
+
+            if (!data) {
+              Alert.alert("Error", "No active church selected");
+              return;
+            }
+
+            const { organizationId, entityId } = JSON.parse(data);
+
+            await deleteDoc(
+              doc(
+                db,
+                "organizations",
+                organizationId,
+                "entities",
+                entityId,
+                "events",
+                event.id
+              )
+            );
+
+            setDetailModal(false);
+
+          } catch (e) {
+            Alert.alert("Error", e.message);
+          }
+        }
+      }
+    ]
+  );
+};
+
+  
+// ── Toggle featured ──────────────────────────────────────────
+const toggleFeatured = async (event) => {
+  if (!canDo("deacon")) {
+    Alert.alert("Access denied");
+    return;
+  }
+
+  try {
+    const data = await AsyncStorage.getItem("activeEntity");
+
+    if (!data) {
+      Alert.alert("Error", "No active church selected");
+      return;
+    }
+
+    const { organizationId, entityId } = JSON.parse(data);
+
     await updateDoc(
-  doc(db, "churches", churchId, "events", event.id),
-  { featured: !event.featured }
-);
-  };
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "events",
+        event.id
+      ),
+      { featured: !event.featured }
+    );
+
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  }
+};
+
 
   // ── Open form ────────────────────────────────────────────────
   const openCreate = () => {
