@@ -884,61 +884,139 @@ const handleBarCodeScanned = async ({ data: scannedId }) => {
   }, 2500);
 };
 
-  /* ══════════ LOG ══════════ */
-  const openLog = async () => {
-    try {
-      const q = query(collection(db, "attendance"), where("visitingChurchId","==",selectedChurch));
-      const snap = await getDocs(q);
-      const records = snap.docs.map(d => ({ docId: d.id, ...d.data() }))
-        .filter(r => r.date===today && r.service===selectedService && r.type===selectedType)
-        .sort((a,b) => (a.name||"").localeCompare(b.name||""));
-      setLogData(records); setLogVisible(true);
-    } catch (e) { console.log(e); }
-  };
+ /* ══════════ LOG ══════════ */
+const openLog = async () => {
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
 
-  /* ══════════ MANAGE LISTS ══════════ */
-  const saveManage = () => {
-    if (!manageInput.trim()) return;
-    const setter = manageType==="service" ? setServices : manageType==="type" ? setTypes : setEvents;
-    const list   = manageType==="service" ? services    : manageType==="type" ? types    : events;
-    if (manageEditIdx !== null) { const u=[...list]; u[manageEditIdx]=manageInput; setter(u); }
-    else setter([...list, manageInput]);
-    setManageModal(false); setManageEditIdx(null); setManageInput("");
-  };
-  const deleteManage = () => {
-    const setter = manageType==="service" ? setServices : manageType==="type" ? setTypes : setEvents;
-    const list   = manageType==="service" ? services    : manageType==="type" ? types    : events;
-    setter(list.filter((_,i)=>i!==manageEditIdx));
-    setManageModal(false); setManageEditIdx(null); setManageInput("");
-  };
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "attendance"
+      ),
+      where("date", "==", today),
+      where("service", "==", selectedService),
+      where("type", "==", selectedType)
+    );
 
-  /* ══════════ SEARCH & FILTER ══════════ */
-  const ministries = ["All", ...new Set(members.map(m => m.ministry).filter(Boolean))];
+    const snap = await getDocs(q);
 
-  // ✅ #4 — Search by name, phone, memberCode + filter by ministry + filter by status
-  const filtered = members.filter(m => {
-    const q = searchText.toLowerCase().trim();
-    const matchSearch = !q
-      || (m.name     || "").toLowerCase().includes(q)
-      || (m.phone    || "").toLowerCase().includes(q)
-      || (m.memberCode || "").toLowerCase().includes(q);
-    const matchMin    = filterMinistry === "All" || m.ministry === filterMinistry;
-    const attStatus   = attendance[m.id]?.status;
-    const matchStatus =
-      filterStatus === "All"      ? true :
-      filterStatus === "present"  ? attStatus === "present" :
-      filterStatus === "absent"   ? attStatus === "absent" :
-      filterStatus === "unmarked" ? !attStatus : true;
-    return matchSearch && matchMin && matchStatus;
-  });
+    const records = snap.docs
+      .map(d => ({ docId: d.id, ...d.data() }))
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
-  // Recently marked (last 10, sorted by time desc)
-  const recentlyMarked = Object.values(attendance)
-    .sort((a, b) => (b.time || "").localeCompare(a.time || ""))
-    .slice(0, 10);
+    setLogData(records);
+    setLogVisible(true);
 
-  const absentCount   = members.length - presentCount;
-  const attendanceRate = members.length > 0 ? Math.round((presentCount / members.length) * 100) : 0;
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+
+/* ══════════ MANAGE LISTS ══════════ */
+const saveManage = () => {
+  if (!manageInput.trim()) return;
+
+  const setter =
+    manageType === "service" ? setServices :
+    manageType === "type"    ? setTypes :
+                               setEvents;
+
+  const list =
+    manageType === "service" ? services :
+    manageType === "type"    ? types :
+                               events;
+
+  if (manageEditIdx !== null) {
+    const u = [...list];
+    u[manageEditIdx] = manageInput;
+    setter(u);
+  } else {
+    setter([...list, manageInput]);
+  }
+
+  setManageModal(false);
+  setManageEditIdx(null);
+  setManageInput("");
+};
+
+const deleteManage = () => {
+  const setter =
+    manageType === "service" ? setServices :
+    manageType === "type"    ? setTypes :
+                               setEvents;
+
+  const list =
+    manageType === "service" ? services :
+    manageType === "type"    ? types :
+                               events;
+
+  setter(list.filter((_, i) => i !== manageEditIdx));
+
+  setManageModal(false);
+  setManageEditIdx(null);
+  setManageInput("");
+};
+
+
+/* ══════════ SEARCH & FILTER ══════════ */
+
+// ✅ Ministries list
+const ministries = [
+  "All",
+  ...new Set(members.map(m => m.ministry).filter(Boolean))
+];
+
+
+// ✅ FILTER LOGIC (unchanged — already correct)
+const filtered = members.filter(m => {
+  const q = searchText.toLowerCase().trim();
+
+  const matchSearch =
+    !q ||
+    (m.name || "").toLowerCase().includes(q) ||
+    (m.phone || "").toLowerCase().includes(q) ||
+    (m.memberCode || "").toLowerCase().includes(q);
+
+  const matchMin =
+    filterMinistry === "All" ||
+    m.ministry === filterMinistry;
+
+  const attStatus = attendance[m.id]?.status;
+
+  const matchStatus =
+    filterStatus === "All"      ? true :
+    filterStatus === "present"  ? attStatus === "present" :
+    filterStatus === "absent"   ? attStatus === "absent" :
+    filterStatus === "unmarked" ? !attStatus :
+                                  true;
+
+  return matchSearch && matchMin && matchStatus;
+});
+
+
+// ✅ Recently marked
+const recentlyMarked = Object.values(attendance)
+  .sort((a, b) => (b.time || "").localeCompare(a.time || ""))
+  .slice(0, 10);
+
+
+// ✅ Stats
+const absentCount = members.length - presentCount;
+
+const attendanceRate =
+  members.length > 0
+    ? Math.round((presentCount / members.length) * 100)
+    : 0;
+
 
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (
