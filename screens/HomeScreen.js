@@ -40,7 +40,8 @@ const { width: W } = Dimensions.get("window");
 const fmtDT = (iso) => {
   if (!iso) return null;
   const d = new Date(iso);
-  return d.toLocaleDateString() + "  " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString() + "  " +
+         d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
 export default function HomeScreen() {
@@ -190,325 +191,136 @@ useEffect(() => {
     setEditExpiry(base.toISOString());
   };
 
-  /* ══════════════════════════════════ RENDER ══════════════════════ */
-  return (
-    <View style={styles.safe}>
+ /* ══════════════════════════════════ RENDER ══════════════════════ */
+return (
+  <SafeAreaView style={styles.safe}>
+    <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER with notification bell ── */}
-      <SafeAreaView style={{ backgroundColor: "#4B3F72" }}>
-        <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
-        <View style={styles.headerBar}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>ChurchCare</Text>
-            <View style={{ flex: 1 }}>
-  <Text style={styles.headerTitle}>ChurchCare</Text>
+    <AppHeader
+      title="ChurchCare"
+      subtitle="Welcome back 👋"
+      actions={[
+        { custom: <ChurchSwitcher /> },
+        {
+          icon: "notifications-outline",
+          onPress: () => {
+            setNotifModal(true);
+            setNotifCount(0);
+          }
+        },
+        {
+          icon: "cloud-upload-outline",
+          onPress: () => setShowUpload(true)
+        }
+      ]}
+    />
 
-  <ChurchSwitcher />  
-</View>
-            <Text style={styles.headerSub}>Welcome back 👋</Text>
+    <ScrollView
+      contentContainerStyle={styles.body}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
+    >
+      {featuredEvents.length > 0 && (
+        <View style={styles.featuredSection}>
+          <View style={styles.featuredHeader}>
+            <Text style={styles.featuredHeading}>Featured Events</Text>
           </View>
-
-          {/* ── 1. NOTIFICATION BELL ── */}
-          <TouchableOpacity style={styles.headerIcon} onPress={() => { setNotifModal(true); setNotifCount(0); }}>
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
-            {notifCount > 0 && (
-              <View style={styles.notifBadge}>
-                <Text style={styles.notifBadgeText}>{notifCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Flyer upload icon */}
-          <TouchableOpacity style={styles.headerIcon} onPress={() => setShowUpload(true)}>
-            <Ionicons name="cloud-upload-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-
-      <ScrollView
-        contentContainerStyle={styles.body}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* ── 2. FEATURED EVENTS — clean, no extra text ── */}
-        {featuredEvents.length > 0 && (
-          <View style={styles.featuredSection}>
-            <View style={styles.featuredHeader}>
-              <Text style={styles.featuredHeading}>Featured Events</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}>
-              {featuredEvents.map(ev => (
-                <FeaturedEventCard key={ev.id} event={ev}
-                  onPress={() => { setSelectedEvent(ev); setEventModalVisible(true); }} />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── 6. PASTOR MESSAGE — tap to open stable modal ── */}
-        <TouchableOpacity onPress={openPastorModal} activeOpacity={0.85} style={styles.pastorCard}>
-          <View style={styles.pastorCardLeft}>
-            <Ionicons name="book-outline" size={20} color="#4B3F72" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pastorCardTitle} numberOfLines={1}>{pastorData.title}</Text>
-            <Text style={styles.pastorCardMsg} numberOfLines={2}>{pastorData.message}</Text>
-            {pastorData.expiry && (
-              <Text style={styles.pastorExpiry}>⏱ Expires {fmtDT(pastorData.expiry)}</Text>
-            )}
-          </View>
-          <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
-        </TouchableOpacity>
-
-        {/* ── OVERVIEW STATS ── */}
-        <Section title="Overview">
-          <View style={styles.statsRow}>
-            <StatCard label="Members"    value="245" />
-            <StatCard label="Attendance" value="180" />
-          </View>
-        </Section>
-
-        {/* ── 4. QUICK ACTIONS with QR ── */}
-        <View style={styles.qaSection}>
-          <View style={styles.qaHeaderRow}>
-            <Text style={styles.qaHeading}>Quick Actions</Text>
-          </View>
-          <View style={styles.qaRow}>
-            {[
-              { icon: "checkmark-circle-outline", label: "Attendance", onPress: () => navigation.navigate("Attendance") },
-              { icon: "people-outline",            label: "Members",    onPress: () => navigation.navigate("Members")    },
-              { icon: "bar-chart-outline",         label: "Reports",    onPress: () => navigation.navigate("AdminDashboard") },
-              { icon: "heart-outline",             label: "Donate",     onPress: () => navigation.navigate("Donate")    },
-              { icon: "help-circle-outline",       label: "Help",       onPress: () => navigation.navigate("Help")      },
-              { icon: "qr-code-outline",           label: "QR Code",    onPress: () => setQrModal(true)                 },
-            ].map(a => (
-              <TouchableOpacity key={a.label} style={styles.qaItem} onPress={a.onPress} activeOpacity={0.75}>
-                <View style={styles.qaCircle}>
-                  <Ionicons name={a.icon} size={22} color="#fff" />
-                </View>
-                <Text style={styles.qaLabel} numberOfLines={1}>{a.label}</Text>
-              </TouchableOpacity>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
+          >
+            {featuredEvents.map(ev => (
+              <FeaturedEventCard
+                key={ev.id}
+                event={ev}
+                onPress={() => {
+                  setSelectedEvent(ev);
+                  setEventModalVisible(true);
+                }}
+              />
             ))}
-          </View>
+          </ScrollView>
         </View>
-
-        {/* ── SERVICE FLOW / EVENTS TABS ── */}
-        <Section title="Service Flow">
-          <EventsTabs
-            events={upcomingEvents}
-            program={program}
-            preachers={preachers}
-            setProgram={setProgram}
-            /* 3. Preacher modal wired up */
-            onAddPreacher={() => { setEditingPreacher(null); setPreacherModal(true); }}
-            onEditPreacher={(p) => { setEditingPreacher(p); setPreacherModal(true); }}
-          />
-        </Section>
-
-      </ScrollView>
-
-      {/* ══ NOTIFICATION MODAL ══ */}
-      <Modal visible={notifModal} transparent animationType="fade">
-        <Pressable style={styles.overlay} onPress={() => setNotifModal(false)}>
-          <View style={styles.notifSheet}>
-            <View style={styles.notifHeader}>
-              <Text style={styles.notifTitle}>Notifications</Text>
-              <TouchableOpacity onPress={() => setNotifModal(false)}>
-                <Ionicons name="close" size={20} color="#aaa" />
-              </TouchableOpacity>
-            </View>
-            {MOCK_NOTIFS.map(n => (
-              <View key={n.id} style={styles.notifRow}>
-                <View style={[styles.notifIcon, { backgroundColor: n.color + "18" }]}>
-                  <Ionicons name={n.icon} size={18} color={n.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.notifText}>{n.title}</Text>
-                  <Text style={styles.notifTime}>{n.time}</Text>
-                </View>
-              </View>
-            ))}
-            {MOCK_NOTIFS.length === 0 && (
-              <Text style={{ textAlign: "center", color: "#bbb", padding: 20 }}>No notifications</Text>
-            )}
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* ══ 6. PASTOR MESSAGE MODAL — stable, full-featured ══ */}
-      <Modal visible={pastorModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandleRow}><View style={styles.modalHandle} /></View>
-
-            <Text style={styles.modalTitle}>Message from Pastor</Text>
-            <Text style={styles.modalSub}>Edit the heading, message and optional expiry.</Text>
-
-            <Text style={styles.fieldLabel}>Heading *</Text>
-            <TextInput style={styles.input} placeholder="e.g. Message from Pastor"
-              value={editTitle} onChangeText={setEditTitle} />
-
-            <Text style={styles.fieldLabel}>Message</Text>
-            <TextInput style={[styles.input, { height: 90, textAlignVertical: "top" }]}
-              placeholder="Type the pastor's message…"
-              value={editMessage} onChangeText={setEditMessage} multiline />
-
-            {/* Expiry section */}
-            <Text style={styles.fieldLabel}>Auto-hide expiry (optional)</Text>
-            <View style={styles.expiryRow}>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar-outline" size={14} color="#4B3F72" />
-                <Text style={styles.dateBtnText}>
-                  {editExpiry ? new Date(editExpiry).toLocaleDateString() : "Set date"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dateBtn} onPress={() => setShowTimePicker(true)}>
-                <Ionicons name="time-outline" size={14} color="#4B3F72" />
-                <Text style={styles.dateBtnText}>
-                  {editExpiry
-                    ? new Date(editExpiry).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "Set time"
-                  }
-                </Text>
-              </TouchableOpacity>
-              {editExpiry && (
-                <TouchableOpacity style={styles.clearExpiry} onPress={() => setEditExpiry(null)}>
-                  <Ionicons name="close-circle" size={18} color="#e74c3c" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {showDatePicker && (
-              <DateTimePicker value={pickerDate} mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onDateChange} />
-            )}
-            {showTimePicker && (
-              <DateTimePicker value={pickerDate} mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={onTimeChange} />
-            )}
-
-            {editExpiry && (
-              <Text style={styles.expiryPreview}>
-                Message will hide after {fmtDT(editExpiry)}
-              </Text>
-            )}
-
-            <TouchableOpacity style={styles.saveBtn} onPress={savePastorMessage}>
-              <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-              <Text style={styles.saveBtnText}>Save Message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setPastorModal(false)}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ══ 4. QR CODE MODAL ══ */}
-      <Modal visible={qrModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { alignItems: "center" }]}>
-            <View style={styles.modalHandleRow}><View style={styles.modalHandle} /></View>
-            <Text style={styles.modalTitle}>Church QR Code</Text>
-            <Text style={styles.modalSub}>Members scan this to check-in at the entrance</Text>
-
-            {/* QR placeholder — replace with <QRCode value={churchId} size={200} /> when react-native-qrcode-svg is installed */}
-            <View style={styles.qrBox}>
-              <Ionicons name="qr-code-outline" size={120} color="#4B3F72" />
-              <Text style={styles.qrLabel}>Install react-native-qrcode-svg{"\n"}to render the live QR</Text>
-            </View>
-
-            <View style={styles.qrInfoRow}>
-              <Ionicons name="location-outline" size={14} color="#4B3F72" />
-              <Text style={styles.qrInfoText}>Main Branch · Accra</Text>
-            </View>
-
-            <View style={styles.qrActions}>
-              <TouchableOpacity style={styles.qrBtn} onPress={() => Alert.alert("Share", "QR shared!")}>
-                <Ionicons name="share-outline" size={16} color="#fff" />
-                <Text style={styles.qrBtnText}>Share</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.qrBtn, { backgroundColor: "#0984E3" }]}
-                onPress={() => Alert.alert("Download", "QR saved to gallery!")}>
-                <Ionicons name="download-outline" size={16} color="#fff" />
-                <Text style={styles.qrBtnText}>Download</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setQrModal(false)}>
-              <Text style={styles.cancelBtnText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ══ FEATURED EVENT MODAL ══ */}
-      {selectedEvent && (
-        <EditableContentModal
-          visible={eventModalVisible}
-          onClose={() => setEventModalVisible(false)}
-          titleValue={selectedEvent.title}
-          messageValue={selectedEvent.description}
-          onSave={async (data) => {
-            await updateDoc(doc(db, "events", selectedEvent.id), {
-              title: data.title, description: data.message
-            });
-          }}
-          onDelete={async () => {
-            await deleteDoc(doc(db, "events", selectedEvent.id));
-            setEventModalVisible(false);
-          }}
-        />
       )}
 
-      {/* ══ 3. PREACHER MODAL — wired ══ */}
-      <PreacherModal
-        visible={preacherModal}
-        onClose={() => setPreacherModal(false)}
-        initialData={editingPreacher}
-        onSave={(data) => {
-          if (data.delete && editingPreacher) {
-            setPreachers(p => p.filter(x => x.id !== editingPreacher.id));
-            return;
-          }
-          if (editingPreacher) {
-            setPreachers(p => p.map(x => x.id === editingPreacher.id ? { ...x, ...data } : x));
-          } else {
-            setPreachers(p => [...p, { ...data, id: Date.now().toString() }]);
-          }
-          setPreacherModal(false);
-        }}
-      />
+      {/* PASTOR CARD */}
+      <TouchableOpacity onPress={openPastorModal} activeOpacity={0.85} style={styles.pastorCard}>
+        <View style={styles.pastorCardLeft}>
+          <Ionicons name="book-outline" size={20} color="#4B3F72" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pastorCardTitle} numberOfLines={1}>{pastorData.title}</Text>
+          <Text style={styles.pastorCardMsg} numberOfLines={2}>{pastorData.message}</Text>
+          {pastorData.expiry && (
+            <Text style={styles.pastorExpiry}>
+              ⏱ Expires {fmtDT(pastorData.expiry)}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
+      </TouchableOpacity>
 
-      {/* ══ PROGRAMME MODAL ══ */}
-      <EditableContentModal
-        visible={programModalVisible}
-        onClose={() => setProgramModalVisible(false)}
-        titleValue={editingProgram?.item || ""}
-        onSave={(data) => {
-          if (data.delete && editingProgram) {
-            setProgram(p => p.filter(x => x.id !== editingProgram.id));
-            return;
-          }
-          if (editingProgram) {
-            setProgram(p => p.map(x => x.id === editingProgram.id ? { ...x, item: data.title } : x));
-          } else {
-            setProgram(p => [...p, { id: Date.now().toString(), item: data.title }]);
-          }
-          setProgramModalVisible(false);
-        }}
-      />
+      {/* STATS */}
+      <Section title="Overview">
+        <View style={styles.statsRow}>
+          <StatCard label="Members" value="245" />
+          <StatCard label="Attendance" value="180" />
+        </View>
+      </Section>
 
-      {/* ══ FLYER UPLOAD ══ */}
-      <FlyerUploadModal visible={showUpload} onClose={() => setShowUpload(false)} />
+      {/* QUICK ACTIONS */}
+      <View style={styles.qaSection}>
+        <View style={styles.qaHeaderRow}>
+          <Text style={styles.qaHeading}>Quick Actions</Text>
+        </View>
+        <View style={styles.qaRow}>
+          {[
+            { icon: "checkmark-circle-outline", label: "Attendance", onPress: () => navigation.navigate("Attendance") },
+            { icon: "people-outline", label: "Members", onPress: () => navigation.navigate("Members") },
+            { icon: "bar-chart-outline", label: "Reports", onPress: () => navigation.navigate("AdminDashboard") },
+            { icon: "heart-outline", label: "Donate", onPress: () => navigation.navigate("Donate") },
+            { icon: "help-circle-outline", label: "Help", onPress: () => navigation.navigate("Help") },
+            { icon: "qr-code-outline", label: "QR Code", onPress: () => setQrModal(true) }
+          ].map(a => (
+            <TouchableOpacity key={a.label} style={styles.qaItem} onPress={a.onPress}>
+              <View style={styles.qaCircle}>
+                <Ionicons name={a.icon} size={22} color="#fff" />
+              </View>
+              <Text style={styles.qaLabel}>{a.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
-    </View>
-  );
-}
+      <Section title="Service Flow">
+        <EventsTabs
+          events={upcomingEvents}
+          program={program}
+          preachers={preachers}
+          setProgram={setProgram}
+          onAddPreacher={() => {
+            setEditingPreacher(null);
+            setPreacherModal(true);
+          }}
+          onEditPreacher={(p) => {
+            setEditingPreacher(p);
+            setPreacherModal(true);
+          }}
+        />
+      </Section>
+    </ScrollView>
+
+    {/* ✅ KEEP ALL YOUR MODALS HERE (unchanged) */}
+
+    <FlyerUploadModal
+      visible={showUpload}
+      onClose={() => setShowUpload(false)}
+    />
+
+ </SafeAreaView>
+);
+}  
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f4f6fb" },
@@ -587,4 +399,3 @@ const styles = StyleSheet.create({
   qrBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 12, padding: 12, gap: 6 },
   qrBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });
-

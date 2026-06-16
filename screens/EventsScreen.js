@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import ChurchSwitcher from "../components/ChurchSwitcher";
 
 const { width: W } = Dimensions.get("window");
 
@@ -308,30 +309,30 @@ useEffect(() => {
   ══════════════════════════════════════════════ */
   return (
     <SafeAreaView style={styles.safe}>
-        <View style={{ height: Platform.OS === "android" ? 10 : 0 }} />
-      <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
+  <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      <AppHeader
-  title="Events"
-  subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
-  onBack={() => navigation.goBack()}
-  actions={[
-    {
-      icon: "search-outline",
-      onPress: () => setShowSearch(p => !p),
-    },
-    ...VIEWS.map(v => ({
-      icon: v.icon,
-      onPress: () => setViewMode(v.key),
-    })),
-    ...(canDo("deacon")
-      ? [{
-          icon: "add",
-          onPress: openCreate,
-        }]
-      : [])
-  ]}
-/>
+  <AppHeader
+    title="Events"
+    subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
+    onBack={() => navigation.goBack()}
+    actions={[
+      {
+        icon: "search-outline",
+        onPress: () => setShowSearch(p => !p),
+      },
+      ...VIEWS.map(v => ({
+        icon: v.icon,
+        onPress: () => setViewMode(v.key),
+      })),
+      ...(canDo("deacon")
+        ? [{
+            icon: "add",
+            onPress: openCreate,
+          }]
+        : [])
+    ]}
+  />
+
 
       {/* ── SEARCH BAR ── */}
       {showSearch && (

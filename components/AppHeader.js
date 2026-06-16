@@ -81,12 +81,13 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 16,
-  },
+  backgroundColor: "#4B3F72",
+  paddingTop: Platform.OS === "android" ? 40 : 20,
+  paddingBottom: 14,
+  paddingHorizontal: 14,
+  flexDirection: "row",
+  alignItems: "center",
+},
 
   titleContainer: {
     flex: 1,
