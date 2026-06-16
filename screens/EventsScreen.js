@@ -16,6 +16,7 @@ import {
   doc, updateDoc, query, orderBy, where
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width: W } = Dimensions.get("window");
 
@@ -84,8 +85,20 @@ const emptyForm = () => ({
   notes:       "",
 });
 
+
 export default function EventsScreen() {
   const navigation = useNavigation();
+
+  const [churchId, setChurchId] = useState(null);
+
+useEffect(() => {
+  const loadChurchId = async () => {
+    const id = await AsyncStorage.getItem("churchId");
+    console.log("✅ EventsScreen churchId:", id);
+    setChurchId(id);
+  };
+  loadChurchId();
+}, []);
 
   const [events,       setEvents]       = useState([]);
   const [filterCat,    setFilterCat]    = useState("all");
@@ -107,18 +120,29 @@ export default function EventsScreen() {
   const [pickerDate,   setPickerDate]   = useState(new Date());
 
   // ── Load ──────────────────────────────────────────────────────
-  useEffect(() => {
-    const q = query(collection(db, "events"), orderBy("startDate", "asc"));
-    const unsub = onSnapshot(q, snap => {
-      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, () => {
-      // fallback if index not built
-      onSnapshot(collection(db, "events"), snap => {
-        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      });
-    });
-    return () => unsub();
-  }, []);
+
+useEffect(() => {
+  if (!churchId) return;
+
+  const unsub = onSnapshot(
+    query(
+      collection(db, "churches", churchId, "events"),
+      orderBy("startDate", "asc")
+    ),
+    (snap) => {
+      setEvents(snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      })));
+    }
+  );
+
+  return unsub;
+}, [churchId]);
+
+
+
+
 
   // ── Filter ───────────────────────────────────────────────────
   const now = new Date();
@@ -159,21 +183,52 @@ export default function EventsScreen() {
 
   // ── Save / update ────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.title.trim()) { Alert.alert("Event title is required"); return; }
-    setSaving(true);
-    try {
-      const payload = { ...form, updatedAt: new Date().toISOString() };
-      if (editingId) {
-        await updateDoc(doc(db, "events", editingId), payload);
-        Alert.alert("✅ Event updated");
-      } else {
-        await addDoc(collection(db, "events"), { ...payload, createdAt: new Date().toISOString() });
-        Alert.alert("✅ Event created");
-      }
-      closeForm();
-    } catch (e) { Alert.alert("Error", e.message); }
-    finally { setSaving(false); }
-  };
+  if (!form.title.trim()) {
+    Alert.alert("Event title is required");
+    return;
+  }
+
+  if (!churchId) {
+    Alert.alert("Error", "No active church");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const payload = {
+      ...form,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (editingId) {
+      await updateDoc(
+        doc(db, "churches", churchId, "events", editingId),
+        payload
+      );
+      Alert.alert("✅ Event updated");
+    } else {
+      await addDoc(
+        collection(db, "churches", churchId, "events"),
+        {
+          ...payload,
+          createdAt: new Date().toISOString()
+        }
+      );
+      Alert.alert("✅ Event created");
+    }
+
+    closeForm();
+
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  } finally {
+    setSaving(false);
+  }
+};
+
+
+
 
   // ── Delete ───────────────────────────────────────────────────
   const handleDelete = (event) => {
@@ -181,7 +236,9 @@ export default function EventsScreen() {
     Alert.alert("Delete Event?", `"${event.title}" will be permanently removed.`, [
       { text: "Cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
-        try { await deleteDoc(doc(db, "events", event.id)); setDetailModal(false); }
+        try {  await deleteDoc(
+  doc(db, "churches", churchId, "events", event.id)
+);setDetailModal(false); }
         catch (e) { Alert.alert("Error", e.message); }
       }}
     ]);
@@ -190,7 +247,10 @@ export default function EventsScreen() {
   // ── Toggle featured ──────────────────────────────────────────
   const toggleFeatured = async (event) => {
     if (!canDo("deacon")) { Alert.alert("Access denied"); return; }
-    await updateDoc(doc(db, "events", event.id), { featured: !event.featured });
+    await updateDoc(
+  doc(db, "churches", churchId, "events", event.id),
+  { featured: !event.featured }
+);
   };
 
   // ── Open form ────────────────────────────────────────────────

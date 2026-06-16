@@ -4,6 +4,7 @@ import {
   ScrollView, TextInput, Alert, Modal
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs,
@@ -20,6 +21,7 @@ const CATEGORIES = [
   { label: "Welfare",     icon: "heart-outline",       color: "#E11D48" },
   { label: "Other",       icon: "ellipsis-horizontal", color: "#7C3AED" },
 ];
+
 
 export default function DonateScreen({ route, navigation }) {
   // memberId passed when navigating from MembersScreen
@@ -39,16 +41,35 @@ export default function DonateScreen({ route, navigation }) {
 
   useEffect(() => { loadHistory(); }, []);
 
+const [churchId, setChurchId] = useState(null);
+
+/* useEffects*/
+
+useEffect(() => {
+  const loadChurchId = async () => {
+    const id = await AsyncStorage.getItem("churchId");
+    setChurchId(id);
+  };
+  loadChurchId();
+}, []);
+
+useEffect(() => {
+  if (!churchId) return;
+  loadHistory();
+}, [churchId]);
+
+
+
   const loadHistory = async () => {
     try {
       let q;
       if (memberId) {
         q = query(
-          collection(db, "contributions"),
+          collection(db, "churches", churchId, "contributions"),
           where("memberId", "==", memberId)
         );
       } else {
-        q = query(collection(db, "contributions"));
+        q = query(collection(db, "churches", churchId, "contributions"));
       }
       const snap = await getDocs(q);
       const data = snap.docs
@@ -69,7 +90,14 @@ export default function DonateScreen({ route, navigation }) {
     }
     setLoading(true);
     try {
-      await addDoc(collection(db, "contributions"), {
+      if (!churchId) {
+  Alert.alert("Error", "No active church found");
+  return;
+}
+
+await addDoc(
+  collection(db, "churches", churchId, "contributions"),
+   {
         memberId:   memberId   || "anonymous",
         memberName: memberName || "Anonymous",
         amount:     Number(finalAmount),
