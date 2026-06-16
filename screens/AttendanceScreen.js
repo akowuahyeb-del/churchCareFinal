@@ -46,9 +46,13 @@ const CHURCHES = [
 export default function AttendanceScreen({ navigation, route }) {
 
   const userRole = "admin"; // replace with auth context
-  
+
+  const [targetEntities, setTargetEntities] = useState([]);
+
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
+  const entityName = activeEntity?.name || "Attendance";
+
 
   /* ── NETWORK ── */
   const [isOnline,   setIsOnline]   = useState(true);
@@ -148,6 +152,15 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
+  setTargetEntities([
+    { entityId: "church_adum", name: "Adum Congregation" },
+    { entityId: "church_knust", name: "KNUST Campus Church" },
+    { entityId: "church_tema", name: "Tema Branch" }
+  ]);
+}, []);
+
+
+useEffect(() => {
   Camera.requestCameraPermissionsAsync()
     .then(({ status }) => setPermission(status === "granted"));
 
@@ -208,7 +221,7 @@ const syncOfflineQueue = async () => {
         const r = doc(collection(db, "attendance")); // ✅ KEEP TEMP
         batch.set(r, {
           ...item.data,
-          entityId,   // ✅ ADD THIS (important for next step)
+          entityId,   
           syncedAt: serverTimestamp()
         });
 
@@ -603,8 +616,9 @@ const fixOldMembers = async () => {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>
-  {churchName || "Attendance"}
+  {entityName}
 </Text>
+
           {startTime ? (
             <Text style={styles.headerSub} numberOfLines={1}>
               {selectedService} · Started {startTime}{endTime ? ` · Ends ${endTime}` : ""}
@@ -839,8 +853,8 @@ const fixOldMembers = async () => {
 <View style={{ flexDirection: "row", justifyContent: "center", marginVertical: 6 }}>
 
   <TouchableOpacity
-    style={{ backgroundColor: selectedChurch === "church_1" ? "#4B3F72" : "#ccc", padding: 8, margin: 3, borderRadius: 6 }}
-    onPress={() => setSelectedChurch("church_1")}
+    style={{ backgroundColor: entityId ? "#4B3F72" : "#ccc" }}
+onPress={() => Alert.alert("Use the header switch to change church")}
   >
     <Text style={{ color: "#fff", fontSize: 12 }}>Church 1</Text>
   </TouchableOpacity>
@@ -1253,6 +1267,8 @@ const fixOldMembers = async () => {
     </View>
   </View>
 </Modal>
+
+
       {/* ══ CONTACT MODAL ══ */}
       <Modal visible={contactModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -1318,6 +1334,9 @@ const fixOldMembers = async () => {
           </View>
         </View>
         </Modal>
+
+
+
        {/* ══ TRANSFER MEMBER MODAL ══ */}
 <Modal visible={transferModal} transparent animationType="slide">
   <View style={styles.modalOverlay}>
@@ -1331,21 +1350,27 @@ const fixOldMembers = async () => {
       {/* ✅ SELECT CHURCH */}
       <Text style={styles.fieldLabel}>Select Destination Church</Text>
 
-      {CHURCHES
-        .filter(c => c.id !== selectedChurch)
-        .map(c => (
-          <TouchableOpacity
-            key={c.id}
-            style={[
-              styles.transferOption,
-              targetChurch === c.id && styles.transferOptionActive
-            ]}
-            onPress={() => setTargetChurch(c.id)}
-          >
-            <Ionicons name="business-outline" size={16} color="#4B3F72" />
-            <Text style={styles.transferOptionText}>{c.name}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* ✅ SELECT DESTINATION ENTITY */}
+<Text style={styles.fieldLabel}>Select Destination Church</Text>
+
+{targetEntities
+  .filter(e => e.entityId !== entityId)   // ✅ exclude current church
+  .map(e => (
+    <TouchableOpacity
+      key={e.entityId}
+      style={[
+        styles.transferOption,
+        targetChurch === e.entityId && styles.transferOptionActive
+      ]}
+      onPress={() => setTargetChurch(e.entityId)}
+    >
+      <Ionicons name="business-outline" size={16} color="#4B3F72" />
+      <Text style={styles.transferOptionText}>
+        {e.name}
+      </Text>
+    </TouchableOpacity>
+))}
+
 
       {/* ✅ REASON INPUT */}
       <Text style={styles.fieldLabel}>Reason</Text>
