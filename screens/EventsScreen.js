@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ChurchSwitcher from "../components/ChurchSwitcher";
+
 
 const { width: W } = Dimensions.get("window");
 
@@ -89,6 +89,9 @@ const emptyForm = () => ({
 
 export default function EventsScreen() {
   const navigation = useNavigation();
+  const entity = activeEntity || {};
+const { organizationId, entityId } = entity;
+
 
   const [activeEntity, setActiveEntity] = useState(null);
 
@@ -200,20 +203,16 @@ useEffect(() => {
   };
 
   // ── Save / update ────────────────────────────────────────────
- const handleSave = async () => {
+const handleSave = async () => {
   if (!form.title.trim()) {
     Alert.alert("Event title is required");
     return;
   }
 
-  const data = await AsyncStorage.getItem("activeEntity");
-
-  if (!data) {
+  if (!organizationId || !entityId) {
     Alert.alert("No active church", "Please select a church first");
     return;
   }
-
-  const { organizationId, entityId } = JSON.parse(data);
 
   setSaving(true);
 
@@ -265,10 +264,7 @@ useEffect(() => {
 };
 
 
-
-
-
-  // ── Delete ───────────────────────────────────────────────────
+// ── Delete ───────────────────────────────────────────────────
 const handleDelete = (event) => {
   if (!canDo("pastor")) {
     Alert.alert("Access denied", "Only pastors and admins can delete events.");
@@ -285,14 +281,10 @@ const handleDelete = (event) => {
         style: "destructive",
         onPress: async () => {
           try {
-            const data = await AsyncStorage.getItem("activeEntity");
-
-            if (!data) {
+            if (!organizationId || !entityId) {
               Alert.alert("Error", "No active church selected");
               return;
             }
-
-            const { organizationId, entityId } = JSON.parse(data);
 
             await deleteDoc(
               doc(
@@ -317,7 +309,7 @@ const handleDelete = (event) => {
   );
 };
 
-  
+
 // ── Toggle featured ──────────────────────────────────────────
 const toggleFeatured = async (event) => {
   if (!canDo("deacon")) {
@@ -326,14 +318,10 @@ const toggleFeatured = async (event) => {
   }
 
   try {
-    const data = await AsyncStorage.getItem("activeEntity");
-
-    if (!data) {
+    if (!organizationId || !entityId) {
       Alert.alert("Error", "No active church selected");
       return;
     }
-
-    const { organizationId, entityId } = JSON.parse(data);
 
     await updateDoc(
       doc(
@@ -352,7 +340,6 @@ const toggleFeatured = async (event) => {
     Alert.alert("Error", e.message);
   }
 };
-
 
   // ── Open form ────────────────────────────────────────────────
   const openCreate = () => {
