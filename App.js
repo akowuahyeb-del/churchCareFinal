@@ -30,6 +30,7 @@ import CreateChurchScreen      from "./screens/CreateChurchScreen";
 import AddMemberScreen from "./screens/AddMemberScreen";
 import ChurchDashboardScreen from "./screens/ChurchDashboardScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
+import ChurchSelectScreen from "./screens/ChurchSelectScreen";
 
 
 
@@ -119,6 +120,7 @@ function RootStack() {
       <Stack.Screen name="AddMember" component={AddMemberScreen} />
       <Stack.Screen name="ChurchDashboard" component={ChurchDashboardScreen}/>
       <Stack.Screen name="Onboarding" component={OnboardingScreen}/>
+      <Stack.Screen name="ChurchSelect"component={ChurchSelectScreen}/>
 
 
     </Stack.Navigator>

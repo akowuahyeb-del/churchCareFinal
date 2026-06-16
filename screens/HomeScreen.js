@@ -54,6 +54,7 @@ export default function HomeScreen() {
   const [program,     setProgram]     = useState([]);
   const [preachers,   setPreachers]   = useState([]);
   const [churchId, setChurchId] = useState(null);
+  const [churchName, setChurchName] = useState("");
 
   /* ── notifications (mock) ── */
   const [notifCount,  setNotifCount]  = useState(3);
@@ -77,14 +78,27 @@ export default function HomeScreen() {
   /* ── featured event modal ── */
   const [selectedEvent,    setSelectedEvent]    = useState(null);
   const [eventModalVisible,setEventModalVisible]= useState(false);
+  
   useEffect(() => {
   const loadChurchId = async () => {
     const id = await AsyncStorage.getItem("churchId");
-    console.log("✅ Active Church:", id);
     setChurchId(id);
+
+    // ✅ Map ID to Friendly Name
+    const churchMap = {
+      "main": "Main Branch",
+      "kumasi": "Kumasi Branch",
+      "eastlegon": "East Legon Branch",
+      "campus": "Campus Church",
+    };
+
+    setChurchName(churchMap[id] || "Select Church");
   };
+
   loadChurchId();
 }, []);
+
+
   /* ── preacher ── */
   const [preacherModal,   setPreacherModal]   = useState(false);
   const [editingPreacher, setEditingPreacher] = useState(null);
@@ -200,19 +214,56 @@ return (
       title="ChurchCare"
       subtitle="Welcome back 👋"
       actions={[
-        { custom: <ChurchSwitcher /> },
-        {
-          icon: "notifications-outline",
-          onPress: () => {
-            setNotifModal(true);
-            setNotifCount(0);
-          }
-        },
-        {
-          icon: "cloud-upload-outline",
-          onPress: () => setShowUpload(true)
-        }
-      ]}
+  {
+  custom: (
+    <TouchableOpacity
+      onPress={() => navigation.navigate("ChurchSelect")}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#ffffff",   // ✅ SOLID WHITE (fix)
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        marginRight: 8,
+        elevation: 3
+      }}
+    >
+      <Ionicons name="business-outline" size={16} color="#4B3F72" />
+
+      <Text style={{
+        color: "#4B3F72",  // ✅ DARK TEXT NOW VISIBLE
+        marginLeft: 6,
+        fontSize: 12,
+        fontWeight: "700"
+      }}>
+        {churchName || "Select Church"}
+      </Text>
+
+      <Ionicons
+        name="chevron-down"
+        size={14}
+        color="#4B3F72"
+        style={{ marginLeft: 4 }}
+      />
+    </TouchableOpacity>
+  )
+},
+
+
+  {
+    icon: "notifications-outline",
+    onPress: () => {
+      setNotifModal(true);
+      setNotifCount(0);
+    }
+  },
+
+  {
+    icon: "cloud-upload-outline",
+    onPress: () => setShowUpload(true)
+  }
+]}
     />
 
     <ScrollView

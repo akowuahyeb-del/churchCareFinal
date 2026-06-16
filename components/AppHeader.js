@@ -17,46 +17,58 @@ export default function AppHeader({
   return (
     <View style={styles.container}>
 
-      {/* ✅ SAFE TOP SPACE */}
+      {/* SAFE TOP SPACE */}
       <View style={styles.topSafeSpace} />
 
-      {/* ✅ HEADER ROW */}
+      {/* HEADER ROW */}
       <View style={styles.header}>
 
-        {/* ✅ BACK BUTTON */}
+        {/* BACK BUTTON */}
         {onBack && (
           <TouchableOpacity style={styles.iconBtn} onPress={onBack}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
         )}
 
-        {/* ✅ TITLE */}
+        {/* TITLE */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{title}</Text>
           {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
         </View>
 
-        {/* ✅ RIGHT ACTIONS */}
+        {/* RIGHT ACTIONS */}
         <View style={styles.actions}>
           {Array.isArray(actions) &&
-            actions.map((action, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.iconBtn,
-                  action.type === "primary" && styles.primaryBtn
-                ]}
-                onPress={action.onPress}
-              >
-                {action.icon && (
-                  <Ionicons name={action.icon} size={16} color="#fff" />
-                )}
+            actions.map((action, index) => {
 
-                {action.label && (
-                  <Text style={styles.actionText}>{action.label}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+              // ✅ CUSTOM COMPONENT SUPPORT (FIX)
+              if (action.custom) {
+                return (
+                  <View key={index} style={{ marginLeft: 8 }}>
+                    {action.custom}
+                  </View>
+                );
+              }
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.iconBtn,
+                    action.type === "primary" && styles.primaryBtn
+                  ]}
+                  onPress={action.onPress}
+                >
+                  {action.icon && (
+                    <Ionicons name={action.icon} size={16} color="#fff" />
+                  )}
+
+                  {action.label && (
+                    <Text style={styles.actionText}>{action.label}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
         </View>
 
       </View>
@@ -81,13 +93,13 @@ const styles = StyleSheet.create({
   },
 
   header: {
-  backgroundColor: "#4B3F72",
-  paddingTop: Platform.OS === "android" ? 40 : 20,
-  paddingBottom: 14,
-  paddingHorizontal: 14,
-  flexDirection: "row",
-  alignItems: "center",
-},
+    backgroundColor: "#4B3F72",
+    paddingTop: Platform.OS === "android" ? 40 : 20,
+    paddingBottom: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
 
   titleContainer: {
     flex: 1,
@@ -109,7 +121,6 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
   },
 
   iconBtn: {
@@ -121,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 5,
+    marginLeft: 8,   // ✅ spacing fix (gap unreliable)
   },
 
   primaryBtn: {
@@ -132,5 +143,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
+    marginLeft: 4,
   },
 });
