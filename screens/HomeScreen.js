@@ -143,55 +143,6 @@ useEffect(() => {
   /* ── QR modal ── */
   const [qrModal, setQrModal] = useState(false);
 
-  /* ── firestore listeners ── */
-//   useEffect(() => {
-//     const u1 = onSnapshotcollection(db, "churches", churchId, "events")
-// snap => {
-//       setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-//     });
-//     const u2 = onSnapshot(doc(db, "settings", "pastorMessage"), snap => {
-//       if (snap.exists()) setPastorData(snap.data());
-//     });
-//     const u3 = onSnapshot(doc(db, "churches", churchId, "settings", "programList")
-// , snap => {
-//       if (snap.exists()) setProgram(snap.data().items || []);
-//     });
-//     return () => { u1(); u2(); u3(); };
-//   }, []);
-
-
-
-// useEffect(() => {
-//   if (!churchId) return;   // ✅ prevents crash
-
-//   const u1 = onSnapshot(
-//     collection(db, "churches", churchId, "events"),
-//     snap => {
-//       setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-//     }
-//   );
-
-//   const u2 = onSnapshot(
-//     doc(db, "churches", churchId, "settings", "pastorMessage"),
-//     snap => {
-//       if (snap.exists()) setPastorData(snap.data());
-//     }
-//   );
-
-//   const u3 = onSnapshot(
-//     doc(db, "churches", churchId, "settings", "programList"),
-//     snap => {
-//       if (snap.exists()) setProgram(snap.data().items || []);
-//     }
-//   );
-
-//   return () => { u1(); u2(); u3(); };
-
-// }, [churchId]);
-
-
-
-
   const featuredEvents = events.filter(ev => ev.featured);
   const upcomingEvents = events.slice(0, 5);
 
@@ -202,41 +153,83 @@ useEffect(() => {
 
   /* ── open pastor modal ── */
   const openPastorModal = () => {
-    setEditTitle(pastorData.title || "");
-    setEditMessage(pastorData.message || "");
-    setEditExpiry(pastorData.expiry || null);
-    setPickerDate(pastorData.expiry ? new Date(pastorData.expiry) : new Date());
-    setPastorModal(true);
+  setEditTitle(pastorData.title || "");
+  setEditMessage(pastorData.message || "");
+  setEditExpiry(pastorData.expiry || null);
+  setPickerDate(pastorData.expiry ? new Date(pastorData.expiry) : new Date());
+  setPastorModal(true);
+};
+
+/* ── save pastor message ── */
+const savePastorMessage = async () => {
+  if (!editTitle.trim()) {
+    Alert.alert("Required", "Heading is required");
+    return;
+  }
+
+  const data = await AsyncStorage.getItem("activeEntity");
+
+  if (!data) {
+    Alert.alert("Error", "No active church selected");
+    return;
+  }
+
+  const { organizationId, entityId } = JSON.parse(data);
+
+  const updated = {
+    title: editTitle.trim(),
+    message: editMessage.trim(),
+    expiry: editExpiry
   };
 
-  /* ── save pastor message ── */
-  const savePastorMessage = async () => {
-    if (!editTitle.trim()) { Alert.alert("Required", "Heading is required"); return; }
-    const updated = { title: editTitle.trim(), message: editMessage.trim(), expiry: editExpiry };
-    try {
-      await setDoc(doc(db, "churches", churchId, "settings", "pastorMessage"), updated);
-      setPastorData(updated);
-      setPastorModal(false);
-    } catch (e) { Alert.alert("Save failed", e.message); }
-  };
+  try {
+    await setDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "settings",
+        "pastorMessage"
+      ),
+      updated
+    );
 
-  /* ── date / time picker handlers ── */
-  const onDateChange = (e, selected) => {
-    setShowDatePicker(false);
-    if (!selected) return;
-    const base = editExpiry ? new Date(editExpiry) : new Date();
-    base.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
-    setPickerDate(base);
-    setEditExpiry(base.toISOString());
-  };
-  const onTimeChange = (e, selected) => {
-    setShowTimePicker(false);
-    if (!selected) return;
-    const base = editExpiry ? new Date(editExpiry) : new Date();
-    base.setHours(selected.getHours(), selected.getMinutes());
-    setPickerDate(base);
-    setEditExpiry(base.toISOString());
-  };
+    setPastorData(updated);
+    setPastorModal(false);
+
+  } catch (e) {
+    Alert.alert("Save failed", e.message);
+  }
+};
+
+/* ── date / time picker handlers ── */
+const onDateChange = (e, selected) => {
+  setShowDatePicker(false);
+  if (!selected) return;
+
+  const base = editExpiry ? new Date(editExpiry) : new Date();
+  base.setFullYear(
+    selected.getFullYear(),
+    selected.getMonth(),
+    selected.getDate()
+  );
+
+  setPickerDate(base);
+  setEditExpiry(base.toISOString());
+};
+
+const onTimeChange = (e, selected) => {
+  setShowTimePicker(false);
+  if (!selected) return;
+
+  const base = editExpiry ? new Date(editExpiry) : new Date();
+  base.setHours(selected.getHours(), selected.getMinutes());
+
+  setPickerDate(base);
+  setEditExpiry(base.toISOString());
+};
 
  /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
