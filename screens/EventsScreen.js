@@ -94,6 +94,9 @@ const { organizationId, entityId } = entity;
 
 
   const [activeEntity, setActiveEntity] = useState(null);
+  // ✅ Extract values once (use everywhere)
+const entity = activeEntity || {};
+const { organizationId, entityId } = entity;
 
 useEffect(() => {
   const loadEntity = async () => {
