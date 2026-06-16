@@ -23,6 +23,7 @@ import PreacherModal    from "../components/PreacherModal";
 import QuickActions     from "../components/QuickActions";
 import SectionHeader    from "../components/SectionHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import ChurchSwitcher from "../components/ChurchSwitcher";
 
 
 /* ── firebase ── */
@@ -199,6 +200,11 @@ useEffect(() => {
         <View style={styles.headerBar}>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>ChurchCare</Text>
+            <View style={{ flex: 1 }}>
+  <Text style={styles.headerTitle}>ChurchCare</Text>
+
+  <ChurchSwitcher />  
+</View>
             <Text style={styles.headerSub}>Welcome back 👋</Text>
           </View>
 
