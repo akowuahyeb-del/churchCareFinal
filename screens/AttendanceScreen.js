@@ -271,56 +271,92 @@ const syncOfflineQueue = async () => {
   }
 };
 
+/* ══════════ DATA ══════════ */
 
-  /* ══════════ DATA ══════════ */
-  const loadMembers = async () => {
-    try {
-      const q    = query(collection(db, "members"), where("churchId", "==", selectedChurch));
-      const snap = await getDocs(q);
-      let data = snap.docs.map(d => {
-  const member = { id: d.id, ...d.data() };
+// ✅ LOAD MEMBERS (ACTIVE ENTITY)
+const loadMembers = async () => {
+  if (!entityId) return;
 
-  // ✅ Auto-assign missing churchId (non-destructive)
-  if (!member.churchId) {
-    member.churchId = "church_1";
-  }
-
-  return member;
-});
-      
-      setMembers(data);
-    } catch (e) { console.log(e); }
-  };
-
-  const loadAttendance = async () => {
-    if (!isOnline) return;
-    try {
-      const q    = query(collection(db, "attendance"), where("visitingChurchId", "==", selectedChurch));
-      const snap = await getDocs(q);
-      let map = {}; let present = 0;
-      snap.docs.forEach(d => {
-        const x = d.data();
-        if (x.date === today && x.service === selectedService && x.type === selectedType) {
-          map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
-          if (x.status === "present") present++;
-        }
-      });
-      setAttendance(map);
-      setPresentCount(present);
-    } catch (e) { console.log(e); }
-  };
-
-
-  /* TRANSFER */
-  const transferMember = async (member, newChurchId) => {
   try {
-    await updateDoc(doc(db, "members", member.id), {
-      churchId: newChurchId
+    const q = query(
+      collection(db, "members"),
+      where("entityId", "==", entityId)
+    );
+
+    const snap = await getDocs(q);
+
+    const data = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    setMembers(data);
+
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+
+// ✅ LOAD ATTENDANCE (NEW STRUCTURE)
+const loadAttendance = async () => {
+  if (!isOnline || !organizationId || !entityId) return;
+
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "attendance"
+      ),
+      where("date", "==", today),
+      where("service", "==", selectedService),
+      where("type", "==", selectedType)
+    );
+
+    const snap = await getDocs(q);
+
+    let map = {};
+    let present = 0;
+
+    snap.docs.forEach(d => {
+      const x = d.data();
+
+      map[x.memberId] = {
+        id: d.id,
+        status: x.status,
+        name: x.name,
+        time: x.timestamp
+      };
+
+      if (x.status === "present") present++;
     });
+
+    setAttendance(map);
+    setPresentCount(present);
+
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+/* TRANSFER */
+const transferMember = async (member, newEntityId) => {
+  try {
+    await updateDoc(
+      doc(db, "members", member.id),
+      {
+        entityId: newEntityId   // ✅ NEW SYSTEM
+      }
+    );
 
     Alert.alert("✅ Success", `${member.name} moved successfully`);
 
     loadMembers(); // refresh list
+
   } catch (e) {
     console.log(e);
     Alert.alert("Error", "Transfer failed");
@@ -328,19 +364,24 @@ const syncOfflineQueue = async () => {
 };
 
 
-/* Transfer request*/
-const requestTransfer = async (member, newChurchId, reason) => {
+/* TRANSFER REQUEST */
+const requestTransfer = async (member, newEntityId, reason) => {
   try {
-    await addDoc(collection(db, "transfer_requests"), {
-      memberId: member.id,
-      memberName: member.name,
-      fromChurchId: member.churchId,
-      toChurchId: newChurchId,
-      reason: reason,
-      requestedBy: userRole, // ✅ keep this
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
+    await addDoc(
+      collection(db, "transfer_requests"),
+      {
+        memberId: member.id,
+        memberName: member.name,
+
+        fromEntityId: member.entityId,   // ✅ NEW
+        toEntityId: newEntityId,         // ✅ NEW
+
+        reason: reason,
+        requestedBy: userRole,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      }
+    );
 
     Alert.alert("✅ Request Sent", "Transfer request submitted for approval");
 
@@ -350,36 +391,6 @@ const requestTransfer = async (member, newChurchId, reason) => {
   }
 };
 
-
-
-/* Test functions*/
-const fixOldMembers = async () => {
-  try {
-    const snap = await getDocs(collection(db, "members"));
-
-    const batch = writeBatch(db);
-
-    snap.docs.forEach(d => {
-      const data = d.data();
-
-      // ✅ Only update records WITHOUT churchId
-      if (!data.churchId) {
-        batch.update(doc(db, "members", d.id), {
-          churchId: "church_1"
-        });
-      }
-    });
-
-    await batch.commit();
-
-    Alert.alert("✅ Fixed", "All old members assigned to Main Branch");
-
-    loadMembers();
-  } catch (e) {
-    console.log(e);
-  }
-};
-/* End test fucntion*/
 
 
 
