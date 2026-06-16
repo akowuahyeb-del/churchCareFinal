@@ -1026,52 +1026,73 @@ const attendanceRate =
   <View style={{ flex: 1 }}>
 
     {/* ── HEADER ── */}
-    <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
-  {entityName}
-</Text>
+<View style={styles.header}>
+  <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+    <Ionicons name="arrow-back" size={20} color="#fff" />
+  </TouchableOpacity>
 
-          {startTime ? (
-            <Text style={styles.headerSub} numberOfLines={1}>
-              {selectedService} · Started {startTime}{endTime ? ` · Ends ${endTime}` : ""}
-              {isSessionLocked ? " · 🔒 Locked" : sessionStatus === "extended" ? " · ⏱ Extended" : ""}
-            </Text>
-          ) : (
-            <Text style={styles.headerSub}>Tap Setup to begin</Text>
-          )}
-        </View>
-        <View style={styles.headerActions}>
-          {/* Online/Offline */}
-          <TouchableOpacity style={[styles.pill, { backgroundColor: isOnline ? "#27ae60" : "#e74c3c" }]}
-            onPress={() => setIsOnline(p => !p)}>
-            <Ionicons name="wifi-outline" size={11} color="#fff" />
-            <Text style={styles.pillText}>{isOnline ? "Live" : "Off"}</Text>
-          </TouchableOpacity>
-          {/* Sync badge */}
-          {syncQueue.length > 0 && (
-            <TouchableOpacity style={[styles.pill, { backgroundColor: "#e67e22" }]}
-              onPress={syncOfflineQueue} disabled={syncing || !isOnline}>
-              {syncing ? <ActivityIndicator size={10} color="#fff" /> : <Ionicons name="sync-outline" size={12} color="#fff" />}
-              <Text style={styles.pillText}>{syncQueue.length}</Text>
-            </TouchableOpacity>
-          )}
-<TouchableOpacity
-  style={styles.iconBtn}
-  onPress={() => navigation.navigate("AdminTransfers")}
->
-  <Ionicons name="git-branch-outline" size={16} color="#fff" />
-</TouchableOpacity>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.headerTitle}>
+      {entityName}
+    </Text>
 
-          {/* Log */}
-          <TouchableOpacity style={styles.iconBtn} onPress={openLog}>
-            <Ionicons name="list-outline" size={15} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+    {/* ✅ FIXED HEADER SUBTEXT */}
+    <Text style={styles.headerSub} numberOfLines={1}>
+      {selectedService || "Service"} · 
+      {startTime ? ` Started ${startTime}` : " Not started"}
+      {endTime ? ` · Ends ${endTime}` : ""}
+      {isSessionLocked
+        ? " · 🔒 Locked"
+        : sessionStatus === "extended"
+        ? " · ⏱ Extended"
+        : ""}
+    </Text>
+  </View>
+
+  <View style={styles.headerActions}>
+
+    {/* Online/Offline */}
+    <TouchableOpacity
+      style={[styles.pill, { backgroundColor: isOnline ? "#27ae60" : "#e74c3c" }]}
+      onPress={() => setIsOnline(p => !p)}
+    >
+      <Ionicons name="wifi-outline" size={11} color="#fff" />
+      <Text style={styles.pillText}>
+        {isOnline ? "Live" : "Off"}
+      </Text>
+    </TouchableOpacity>
+
+    {/* Sync badge */}
+    {syncQueue.length > 0 && (
+      <TouchableOpacity
+        style={[styles.pill, { backgroundColor: "#e67e22" }]}
+        onPress={syncOfflineQueue}
+        disabled={syncing || !isOnline}
+      >
+        {syncing
+          ? <ActivityIndicator size={10} color="#fff" />
+          : <Ionicons name="sync-outline" size={12} color="#fff" />
+        }
+        <Text style={styles.pillText}>{syncQueue.length}</Text>
+      </TouchableOpacity>
+    )}
+
+    {/* Transfers */}
+    <TouchableOpacity
+      style={styles.iconBtn}
+      onPress={() => navigation.navigate("AdminTransfers")}
+    >
+      <Ionicons name="git-branch-outline" size={16} color="#fff" />
+    </TouchableOpacity>
+
+    {/* Log */}
+    <TouchableOpacity style={styles.iconBtn} onPress={openLog}>
+      <Ionicons name="list-outline" size={15} color="#fff" />
+    </TouchableOpacity>
+
+  </View>
+</View>
+    
 
    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
