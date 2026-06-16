@@ -192,7 +192,6 @@ useEffect(() => {
   if (entityId) loadAttendance();
 }, [dateObj, selectedService, selectedType, entityId]);
 
-
 /* ══════════ OFFLINE ══════════ */
 const loadOfflineQueue = async () => {
   try {
@@ -207,9 +206,14 @@ const saveOfflineQueue = async (q) => {
 };
 
 
-/* ✅ STEP 1: KEEP OLD STRUCTURE FOR NOW (DO NOT MOVE PATH YET) */
+/* ✅ STEP 2: MOVE TO ORGANIZATIONS/ENTITIES */
 const syncOfflineQueue = async () => {
   if (syncing || syncQueue.length === 0) return;
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
 
   setSyncing(true);
 
@@ -217,17 +221,39 @@ const syncOfflineQueue = async () => {
     const batch = writeBatch(db);
 
     syncQueue.forEach(item => {
+
       if (item.action === "add") {
-        const r = doc(collection(db, "attendance")); // ✅ KEEP TEMP
-        batch.set(r, {
+        const refDoc = doc(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "attendance"
+          )
+        );
+
+        batch.set(refDoc, {
           ...item.data,
-          entityId,   
           syncedAt: serverTimestamp()
         });
-
-      } else if (item.action === "delete" && item.docId) {
-        batch.delete(doc(db, "attendance", item.docId)); // ✅ KEEP TEMP
       }
+
+      if (item.action === "delete" && item.docId) {
+        batch.delete(
+          doc(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "attendance",
+            item.docId
+          )
+        );
+      }
+
     });
 
     await batch.commit();
@@ -244,6 +270,7 @@ const syncOfflineQueue = async () => {
     setSyncing(false);
   }
 };
+
 
   /* ══════════ DATA ══════════ */
   const loadMembers = async () => {
