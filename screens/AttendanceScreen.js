@@ -522,147 +522,367 @@ const unlockSession = () => {
 };
 
 
+/* ══════════ ATTENDANCE WRITE ══════════ */
+
+// ✅ BUILD RECORD (ACTIVE ENTITY)
+const buildRecord = (member, status) => ({
+  memberId: member.id,
+  name: member.name,
+  phone: member.phone || "",
+  ministry: member.ministry || "",
+  memberCode: member.memberCode || "",
+
+  entityId,
+  organizationId,
+
+  service: selectedService,
+  type: selectedType,
+  event: selectedEvent,
+  date: today,
+  status,
+  method: mode,
+  timestamp: new Date().toISOString(),
+  sessionId: sessionId || null,
+});
 
 
-  /* ══════════ ATTENDANCE WRITE ══════════ */
-  const buildRecord = (member, status) => ({
-    memberId:         member.id,
-    name:             member.name,
-    phone:            member.phone || "",
-    ministry:         member.ministry || "",
-    memberCode:       member.memberCode || "",
-    homeChurchId:     member.churchId || selectedChurch,
-    visitingChurchId: selectedChurch,
-    service:          selectedService,
-    type:             selectedType,
-    event:            selectedEvent,
-    date:             today,
-    status,
-    method:           mode,
-    timestamp:        new Date().toISOString(),
-    sessionId:        sessionId || null,
-  });
+// ✅ ADD RECORD
+const writeAdd = async (data) => {
+  if (!organizationId || !entityId) return;
 
-  const writeAdd = async (data) => {
-    if (isOnline) {
-      try { const r = await addDoc(collection(db, "attendance"), data); return r.id; } catch (_) {}
-    }
-    const tempId = `offline_${Date.now()}`;
-    await saveOfflineQueue([...syncQueue, { action: "add", data, tempId }]);
-    return tempId;
-  };
-
-  const writeDelete = async (docId) => {
-    if (!docId || docId.startsWith("offline_")) {
-      await saveOfflineQueue(syncQueue.filter(q => q.tempId !== docId)); return;
-    }
-    if (isOnline) { try { await deleteDoc(doc(db, "attendance", docId)); return; } catch (_) {} }
-    await saveOfflineQueue([...syncQueue, { action: "delete", docId }]);
-  };
-
-  const toggleAttendance = async (member, status) => {
-    if (isSessionLocked && userRole !== "admin") {
-      Alert.alert("Locked", "Service has ended. Contact admin to make changes."); return;
-    }
-    const existing = attendance[member.id];
-    setUndoMap(prev => ({ ...prev, [member.id]: { prevRecord: existing ? { ...existing } : null } }));
-    const record = buildRecord(member, status);
-
-    if (existing && existing.status === status) {
-      await writeDelete(existing.id);
-      setAttendance(prev => { const n = { ...prev }; delete n[member.id]; return n; });
-      setPresentCount(p => status === "present" ? p - 1 : p);
-    } else {
-      if (existing) await writeDelete(existing.id);
-      const newId = await writeAdd(record);
-      setAttendance(prev => ({ ...prev, [member.id]: { id: newId, status, name: member.name, time: new Date().toISOString() } }));
-      setPresentCount(p => {
-        if (!existing && status === "present") return p + 1;
-        if (existing?.status === "present" && status === "absent") return p - 1;
-        if (existing?.status === "absent"  && status === "present") return p + 1;
-        return p;
-      });
-      if (status === "absent") checkAbsenceStreak(member);
-    }
-  };
-
-  const undoMember = async (member) => {
-    const snap = undoMap[member.id];
-    if (!snap) return;
-    const current = attendance[member.id];
-    if (current) await writeDelete(current.id);
-    if (snap.prevRecord) {
-      const record = buildRecord(member, snap.prevRecord.status);
-      const newId = await writeAdd(record);
-      setAttendance(prev => ({ ...prev, [member.id]: { id: newId, status: snap.prevRecord.status } }));
-      setPresentCount(p => {
-        if (current?.status === "present" && snap.prevRecord.status === "absent") return p - 1;
-        if (current?.status === "absent"  && snap.prevRecord.status === "present") return p + 1;
-        return p;
-      });
-    } else {
-      setAttendance(prev => { const n = { ...prev }; delete n[member.id]; return n; });
-      if (current?.status === "present") setPresentCount(p => p - 1);
-    }
-    setUndoMap(prev => { const n = { ...prev }; delete n[member.id]; return n; });
-  };
-
-  /* ══════════ ABSENCE CHECK ══════════ */
-  const checkAbsenceStreak = async (member) => {
+  if (isOnline) {
     try {
-      const q = query(collection(db, "attendance"), where("memberId","==",member.id), where("status","==","absent"));
-      const snap = await getDocs(q);
-      const count = snap.docs.length;
-      if (count >= 3) { setRedFlagMember(member); setRedFlagCount(count); setRedFlagModal(true); }
-      else if (count >= 2) { setContactMember(member); setContactModal(true); }
-    } catch (_) {}
-  };
+      const ref = await addDoc(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "attendance"
+        ),
+        data
+      );
+      return ref.id;
+    } catch {}
+  }
+
+  const tempId = `offline_${Date.now()}`;
+
+  await saveOfflineQueue([
+    ...syncQueue,
+    { action: "add", data, tempId }
+  ]);
+
+  return tempId;
+};
 
 
-  /* ══════════ CONTACT ══════════ */
-  const sendSMS = (m) => Linking.openURL(`sms:${m.phone||""}?body=${encodeURIComponent(`Hi ${m.name}, we missed you at ${selectedService} service.`)}`);
-  const sendWhatsApp = (m) => Linking.openURL(`https://wa.me/${(m.phone||"").replace(/\D/g,"")}?text=${encodeURIComponent(`Hi ${m.name}, we missed you at ${selectedService} service.`)}`);
-  const callMember = (m) => Linking.openURL(`tel:${m.phone||""}`);
+// ✅ DELETE RECORD
+const writeDelete = async (docId) => {
+  if (!docId) return;
 
-  /* ══════════ GEO ══════════ */
-  const getDistance = (la1, lo1, la2, lo2) => {
-    const R = 6371000, dLa = (la2-la1)*Math.PI/180, dLo = (lo2-lo1)*Math.PI/180;
-    const a = Math.sin(dLa/2)**2 + Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  };
+  if (docId.startsWith("offline_")) {
+    await saveOfflineQueue(syncQueue.filter(q => q.tempId !== docId));
+    return;
+  }
 
-  const handleGeoAttendance = async () => {
-    if (!locationPerm) { Alert.alert("Permission needed"); return; }
-    if (!memberGeoCode.trim()) { Alert.alert("Member ID required"); return; }
+  if (isOnline) {
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const dist = getDistance(loc.coords.latitude, loc.coords.longitude, CHURCH_GEOFENCE.latitude, CHURCH_GEOFENCE.longitude);
-      if (dist > CHURCH_GEOFENCE.radiusMetres) {
-        setGeoStatus("outside");
-        Alert.alert("Not at church", `You are ${Math.round(dist)}m away. Must be within ${CHURCH_GEOFENCE.radiusMetres}m.`);
-        return;
+      await deleteDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "attendance",
+          docId
+        )
+      );
+      return;
+    } catch {}
+  }
+
+  await saveOfflineQueue([
+    ...syncQueue,
+    { action: "delete", docId }
+  ]);
+};
+
+
+// ✅ TOGGLE ATTENDANCE
+const toggleAttendance = async (member, status) => {
+  if (isSessionLocked && userRole !== "admin") {
+    Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
+    return;
+  }
+
+  const existing = attendance[member.id];
+
+  setUndoMap(prev => ({
+    ...prev,
+    [member.id]: existing ? { ...existing } : null
+  }));
+
+  const record = buildRecord(member, status);
+
+  if (existing && existing.status === status) {
+    await writeDelete(existing.id);
+
+    setAttendance(prev => {
+      const n = { ...prev };
+      delete n[member.id];
+      return n;
+    });
+
+    if (status === "present") {
+      setPresentCount(p => p - 1);
+    }
+
+  } else {
+    if (existing) await writeDelete(existing.id);
+
+    const newId = await writeAdd(record);
+
+    setAttendance(prev => ({
+      ...prev,
+      [member.id]: {
+        id: newId,
+        status,
+        name: member.name,
+        time: new Date().toISOString()
       }
-      setGeoStatus("inside");
-      const member = members.find(m => m.id === memberGeoCode.trim() || m.memberCode === memberGeoCode.trim());
-      if (!member) { Alert.alert("Not found", "No member with that ID."); return; }
-      if (attendance[member.id]) { Alert.alert("Already marked", `${member.name} already recorded.`); return; }
-      await toggleAttendance(member, "present");
-      Alert.alert("✅ Recorded", `${member.name} marked Present.`);
-      setMemberGeoCode("");
-    } catch (e) { Alert.alert("Location error", "Could not get your location."); }
-  };
+    }));
 
-  /* ══════════ QR ══════════ */
-  const handleBarCodeScanned = async ({ data: scannedId }) => {
-    if (scanned) return;
-    setScanned(true);
-    const found = members.find(m => m.id === scannedId || m.memberCode === scannedId);
-    if (found) {
-      if (attendance[found.id]) setScanFeedback(`⚠️ ${found.name} already marked`);
-      else { await toggleAttendance(found, "present"); setScanFeedback(`✅ ${found.name} marked Present`); }
-    } else setScanFeedback("❌ Member not found");
-    setTimeout(() => { setScanned(false); setScanFeedback(""); }, 2500);
-  };
+    setPresentCount(p => {
+      if (!existing && status === "present") return p + 1;
+      if (existing?.status === "present" && status === "absent") return p - 1;
+      if (existing?.status === "absent" && status === "present") return p + 1;
+      return p;
+    });
+
+    if (status === "absent") checkAbsenceStreak(member);
+  }
+};
+
+
+// ✅ UNDO MEMBER ACTION
+const undoMember = async (member) => {
+  const snap = undoMap[member.id];
+  if (!snap) return;
+
+  const current = attendance[member.id];
+
+  if (current) await writeDelete(current.id);
+
+  if (snap) {
+    const record = buildRecord(member, snap.status);
+    const newId = await writeAdd(record);
+
+    setAttendance(prev => ({
+      ...prev,
+      [member.id]: {
+        id: newId,
+        status: snap.status
+      }
+    }));
+
+    setPresentCount(p => {
+      if (current?.status === "present" && snap.status === "absent") return p - 1;
+      if (current?.status === "absent" && snap.status === "present") return p + 1;
+      return p;
+    });
+
+  } else {
+    setAttendance(prev => {
+      const n = { ...prev };
+      delete n[member.id];
+      return n;
+    });
+
+    if (current?.status === "present") {
+      setPresentCount(p => p - 1);
+    }
+  }
+
+  setUndoMap(prev => {
+    const n = { ...prev };
+    delete n[member.id];
+    return n;
+  });
+};
+
+
+/* ══════════ ABSENCE CHECK ══════════ */
+const checkAbsenceStreak = async (member) => {
+  if (!organizationId || !entityId) return;
+
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "attendance"
+      ),
+      where("memberId", "==", member.id),
+      where("status", "==", "absent")
+    );
+
+    const snap = await getDocs(q);
+
+    const count = snap.docs.length;
+
+    if (count >= 3) {
+      setRedFlagMember(member);
+      setRedFlagCount(count);
+      setRedFlagModal(true);
+
+    } else if (count >= 2) {
+      setContactMember(member);
+      setContactModal(true);
+    }
+
+  } catch {}
+};
+
+  
+
+/* ══════════ CONTACT ══════════ */
+
+const sendSMS = (m) =>
+  Linking.openURL(
+    `sms:${m.phone || ""}?body=${encodeURIComponent(
+      `Hi ${m.name}, we missed you at ${selectedService} service.`
+    )}`
+  );
+
+const sendWhatsApp = (m) =>
+  Linking.openURL(
+    `https://wa.me/${(m.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(
+      `Hi ${m.name}, we missed you at ${selectedService} service.`
+    )}`
+  );
+
+const callMember = (m) =>
+  Linking.openURL(`tel:${m.phone || ""}`);
+
+
+/* ══════════ GEO ══════════ */
+
+const getDistance = (la1, lo1, la2, lo2) => {
+  const R = 6371000;
+  const dLa = (la2 - la1) * Math.PI / 180;
+  const dLo = (lo2 - lo1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLa / 2) ** 2 +
+    Math.cos(la1 * Math.PI / 180) *
+    Math.cos(la2 * Math.PI / 180) *
+    Math.sin(dLo / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+
+const handleGeoAttendance = async () => {
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  if (!locationPerm) {
+    Alert.alert("Permission needed");
+    return;
+  }
+
+  if (!memberGeoCode.trim()) {
+    Alert.alert("Member ID required");
+    return;
+  }
+
+  try {
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High
+    });
+
+    const dist = getDistance(
+      loc.coords.latitude,
+      loc.coords.longitude,
+      CHURCH_GEOFENCE.latitude,
+      CHURCH_GEOFENCE.longitude
+    );
+
+    if (dist > CHURCH_GEOFENCE.radiusMetres) {
+      setGeoStatus("outside");
+      Alert.alert(
+        "Not at church",
+        `You are ${Math.round(dist)}m away`
+      );
+      return;
+    }
+
+    setGeoStatus("inside");
+
+    const member = members.find(
+      m =>
+        m.id === memberGeoCode.trim() ||
+        m.memberCode === memberGeoCode.trim()
+    );
+
+    if (!member) {
+      Alert.alert("Not found", "No member with that ID.");
+      return;
+    }
+
+    if (attendance[member.id]) {
+      Alert.alert("Already marked", `${member.name} already recorded.`);
+      return;
+    }
+
+    await toggleAttendance(member, "present");
+
+    Alert.alert("✅ Recorded", `${member.name} marked Present.`);
+    setMemberGeoCode("");
+
+  } catch (e) {
+    Alert.alert("Location error", "Could not get your location.");
+  }
+};
+
+
+/* ══════════ QR ══════════ */
+
+const handleBarCodeScanned = async ({ data: scannedId }) => {
+  if (!organizationId || !entityId) return;
+
+  if (scanned) return;
+
+  setScanned(true);
+
+  const found = members.find(
+    m => m.id === scannedId || m.memberCode === scannedId
+  );
+
+  if (found) {
+    if (attendance[found.id]) {
+      setScanFeedback(`⚠️ ${found.name} already marked`);
+    } else {
+      await toggleAttendance(found, "present");
+      setScanFeedback(`✅ ${found.name} marked Present`);
+    }
+  } else {
+    setScanFeedback("❌ Member not found");
+  }
+
+  setTimeout(() => {
+    setScanned(false);
+    setScanFeedback("");
+  }, 2500);
+};
 
   /* ══════════ LOG ══════════ */
   const openLog = async () => {
