@@ -46,7 +46,7 @@ const CHURCHES = [
 export default function AttendanceScreen({ navigation, route }) {
 
   const userRole = "admin"; // replace with auth context
-  const { churchId, churchName } = route.params || {};
+  
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
 
@@ -85,7 +85,7 @@ export default function AttendanceScreen({ navigation, route }) {
   const ADMIN_PIN = "1234";
 
   /* ── CHURCH ── */
-  const [selectedChurch, setSelectedChurch] = useState(churchId || "church_1");
+  
 
 
   /* ── SERVICES / TYPES / EVENTS ── */
@@ -134,54 +134,103 @@ const [targetChurch, setTargetChurch] = useState(null);
   /* ── LOG ── */
   const [logVisible, setLogVisible] = useState(false);
   const [logData,    setLogData]    = useState([]);
+  const [activeEntity, setActiveEntity] = useState(null);
 
-  /* ══════════ INIT ══════════ */
-  useEffect(() => {
-    const unsub = NetInfo.addEventListener(s => setIsOnline(s.isConnected && s.isInternetReachable));
-    return () => unsub();
-  }, []);
+const entity = activeEntity || {};
+const { organizationId, entityId } = entity;
 
-  useEffect(() => {
-    Camera.requestCameraPermissionsAsync().then(({ status }) => setPermission(status === "granted"));
-    Location.requestForegroundPermissionsAsync().then(({ status }) => setLocationPerm(status === "granted"));
-    loadOfflineQueue();
-  }, []);
-/*tEMP USEeFFECT*/
-  useEffect(() => {
-  fixOldMembers();
+/* ══════════ INIT ══════════ */
+useEffect(() => {
+  const unsub = NetInfo.addEventListener(s =>
+    setIsOnline(s.isConnected && s.isInternetReachable)
+  );
+  return () => unsub();
 }, []);
 
-  useEffect(() => { if (isOnline && syncQueue.length > 0) syncOfflineQueue(); }, [isOnline]);
-  useEffect(() => { loadMembers(); }, [selectedChurch]);
-  useEffect(() => { loadAttendance(); }, [dateObj, selectedService, selectedType, selectedChurch]);
+useEffect(() => {
+  Camera.requestCameraPermissionsAsync()
+    .then(({ status }) => setPermission(status === "granted"));
 
-  /* ══════════ OFFLINE ══════════ */
-  const loadOfflineQueue = async () => {
-    try { const r = await AsyncStorage.getItem(OFFLINE_KEY); if (r) setSyncQueue(JSON.parse(r)); } catch (_) {}
-  };
-  const saveOfflineQueue = async (q) => {
-    try { await AsyncStorage.setItem(OFFLINE_KEY, JSON.stringify(q)); setSyncQueue(q); } catch (_) {}
-  };
-  const syncOfflineQueue = async () => {
-    if (syncing || syncQueue.length === 0) return;
-    setSyncing(true);
-    try {
-      const batch = writeBatch(db);
-      syncQueue.forEach(item => {
-        if (item.action === "add") {
-          const r = doc(collection(db, "attendance"));
-          batch.set(r, { ...item.data, syncedAt: serverTimestamp() });
-        } else if (item.action === "delete" && item.docId) {
-          batch.delete(doc(db, "attendance", item.docId));
-        }
-      });
-      await batch.commit();
-      await saveOfflineQueue([]);
-      Alert.alert("Synced ✅", `${syncQueue.length} record(s) synced.`);
-      loadAttendance();
-    } catch (e) { Alert.alert("Sync failed", "Will retry when online."); }
-    finally { setSyncing(false); }
-  };
+  Location.requestForegroundPermissionsAsync()
+    .then(({ status }) => setLocationPerm(status === "granted"));
+
+  loadOfflineQueue();
+}, []);
+
+/* ❌ REMOVE OLD TEST FIX (churchId based) */
+/*
+useEffect(() => {
+  fixOldMembers();
+}, []);
+*/
+
+useEffect(() => {
+  if (isOnline && syncQueue.length > 0) {
+    syncOfflineQueue();
+  }
+}, [isOnline]);
+
+/* ✅ USE activeEntity (entityId) */
+useEffect(() => {
+  if (entityId) loadMembers();
+}, [entityId]);
+
+useEffect(() => {
+  if (entityId) loadAttendance();
+}, [dateObj, selectedService, selectedType, entityId]);
+
+
+/* ══════════ OFFLINE ══════════ */
+const loadOfflineQueue = async () => {
+  try {
+    const r = await AsyncStorage.getItem(OFFLINE_KEY);
+    if (r) setSyncQueue(JSON.parse(r));
+  } catch {}
+};
+
+const saveOfflineQueue = async (q) => {
+  await AsyncStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
+  setSyncQueue(q);
+};
+
+
+/* ✅ STEP 1: KEEP OLD STRUCTURE FOR NOW (DO NOT MOVE PATH YET) */
+const syncOfflineQueue = async () => {
+  if (syncing || syncQueue.length === 0) return;
+
+  setSyncing(true);
+
+  try {
+    const batch = writeBatch(db);
+
+    syncQueue.forEach(item => {
+      if (item.action === "add") {
+        const r = doc(collection(db, "attendance")); // ✅ KEEP TEMP
+        batch.set(r, {
+          ...item.data,
+          entityId,   // ✅ ADD THIS (important for next step)
+          syncedAt: serverTimestamp()
+        });
+
+      } else if (item.action === "delete" && item.docId) {
+        batch.delete(doc(db, "attendance", item.docId)); // ✅ KEEP TEMP
+      }
+    });
+
+    await batch.commit();
+
+    await saveOfflineQueue([]);
+
+    Alert.alert("Synced ✅", `${syncQueue.length} record(s) synced.`);
+
+    loadAttendance();
+
+  } catch (e) {
+    Alert.alert("Sync failed", "Will retry when online.");
+  } finally {
+    setSyncing(false);
+  }
+};
 
   /* ══════════ DATA ══════════ */
   const loadMembers = async () => {
