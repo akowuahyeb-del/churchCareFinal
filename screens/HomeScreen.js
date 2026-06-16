@@ -53,7 +53,7 @@ export default function HomeScreen() {
   const [showUpload,  setShowUpload]  = useState(false);
   const [program,     setProgram]     = useState([]);
   const [preachers,   setPreachers]   = useState([]);
-  const [churchId, setChurchId] = useState(null);
+  const [activeEntity, setActiveEntity] = useState(null);
   const [churchName, setChurchName] = useState("");
 
   /* ── notifications (mock) ── */
@@ -78,25 +78,58 @@ export default function HomeScreen() {
   /* ── featured event modal ── */
   const [selectedEvent,    setSelectedEvent]    = useState(null);
   const [eventModalVisible,setEventModalVisible]= useState(false);
-  
+ 
+
+  /*useEffect*/
+
   useEffect(() => {
-  const loadChurchId = async () => {
-    const id = await AsyncStorage.getItem("churchId");
-    setChurchId(id);
+  const loadEntity = async () => {
+    const data = await AsyncStorage.getItem("activeEntity");
 
-    // ✅ Map ID to Friendly Name
-    const churchMap = {
-      "main": "Main Branch",
-      "kumasi": "Kumasi Branch",
-      "eastlegon": "East Legon Branch",
-      "campus": "Campus Church",
-    };
-
-    setChurchName(churchMap[id] || "Select Church");
+    if (data) {
+      const parsed = JSON.parse(data);
+      setActiveEntity(parsed);
+    }
   };
 
-  loadChurchId();
+  loadEntity();
 }, []);
+
+
+useEffect(() => {
+  if (!activeEntity) return;
+
+  const { organizationId, entityId } = activeEntity;
+
+  const u1 = onSnapshot(
+    collection(db, "organizations", organizationId, "entities", entityId, "events"),
+    snap => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+  );
+
+  const u2 = onSnapshot(
+    doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
+    snap => {
+      if (snap.exists()) setPastorData(snap.data());
+    }
+  );
+
+  const u3 = onSnapshot(
+    doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
+    snap => {
+      if (snap.exists()) setProgram(snap.data().items || []);
+    }
+  );
+
+  return () => {
+    u1();
+    u2();
+    u3();
+  };
+
+}, [activeEntity]);
+
 
 
   /* ── preacher ── */
@@ -128,33 +161,33 @@ export default function HomeScreen() {
 
 
 
-useEffect(() => {
-  if (!churchId) return;   // ✅ prevents crash
+// useEffect(() => {
+//   if (!churchId) return;   // ✅ prevents crash
 
-  const u1 = onSnapshot(
-    collection(db, "churches", churchId, "events"),
-    snap => {
-      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }
-  );
+//   const u1 = onSnapshot(
+//     collection(db, "churches", churchId, "events"),
+//     snap => {
+//       setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+//     }
+//   );
 
-  const u2 = onSnapshot(
-    doc(db, "churches", churchId, "settings", "pastorMessage"),
-    snap => {
-      if (snap.exists()) setPastorData(snap.data());
-    }
-  );
+//   const u2 = onSnapshot(
+//     doc(db, "churches", churchId, "settings", "pastorMessage"),
+//     snap => {
+//       if (snap.exists()) setPastorData(snap.data());
+//     }
+//   );
 
-  const u3 = onSnapshot(
-    doc(db, "churches", churchId, "settings", "programList"),
-    snap => {
-      if (snap.exists()) setProgram(snap.data().items || []);
-    }
-  );
+//   const u3 = onSnapshot(
+//     doc(db, "churches", churchId, "settings", "programList"),
+//     snap => {
+//       if (snap.exists()) setProgram(snap.data().items || []);
+//     }
+//   );
 
-  return () => { u1(); u2(); u3(); };
+//   return () => { u1(); u2(); u3(); };
 
-}, [churchId]);
+// }, [churchId]);
 
 
 
