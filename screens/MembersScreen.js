@@ -515,32 +515,33 @@ const filtered = members.filter(m => {
   return matchSearch && matchMin && matchStat && matchComm;
 });
 
-  /* ══════════════ RENDER ══════════════ */
-  return (
-    <View style={styles.container}>
-<AppHeader
-  title="Members"
-  subtitle="Manage church members"
-  onBack={() => navigation.goBack()}
+/* ══════════════ RENDER ══════════════ */
+return (
+  <View style={styles.container}>
 
-  actions={[
-    {
-      icon: "heart",
-      label: "Donate",
-      type: "primary",
-      onPress: goToDonate,
-    },
-    {
-      icon: showActions ? "eye-off-outline" : "eye-outline",
-      onPress: toggleActions,
-    },
-    {
-      icon: "filter-outline",
-      onPress: () => setShowFilters(p => !p),
-    }
-  ]}
-/>
-   
+    <AppHeader
+      title="Members"
+      subtitle={activeEntity?.name || "Manage church members"}  // ✅ better context
+
+      onBack={() => navigation.goBack()}
+
+      actions={[
+        {
+          icon: "heart",
+          label: "Donate",
+          type: "primary",
+          onPress: () => goToDonate(),  // ✅ fixed safe call
+        },
+        {
+          icon: showActions ? "eye-off-outline" : "eye-outline",
+          onPress: toggleActions,
+        },
+        {
+          icon: "filter-outline",
+          onPress: () => setShowFilters(p => !p),
+        }
+      ]}
+    />
 
 
 
