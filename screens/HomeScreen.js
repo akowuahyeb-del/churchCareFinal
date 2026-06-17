@@ -55,6 +55,8 @@ export default function HomeScreen() {
   const [preachers,   setPreachers]   = useState([]);
   const [activeEntity, setActiveEntity] = useState(null);
   const [churchName, setChurchName] = useState("");
+  const [entities, setEntities] = useState([]);
+const [activeEntity, setActiveEntity] = useState(null);
 
   /* ── notifications (mock) ── */
   const [notifCount,  setNotifCount]  = useState(3);
@@ -81,6 +83,29 @@ export default function HomeScreen() {
  
 
   /*useEffect*/
+
+useEffect(() => {
+  const loadEntities = async () => {
+    try {
+      const storedEntities = await AsyncStorage.getItem("userEntities");
+      const storedActive = await AsyncStorage.getItem("activeEntity");
+
+      if (storedEntities) {
+        setEntities(JSON.parse(storedEntities));
+      }
+
+      if (storedActive) {
+        setActiveEntity(JSON.parse(storedActive));
+      }
+
+    } catch (e) {
+      console.log("❌ Load entity error:", e);
+    }
+  };
+
+  loadEntities();
+}, []);
+
 
   useEffect(() => {
   const loadEntity = async () => {
@@ -263,7 +288,8 @@ return (
         fontSize: 12,
         fontWeight: "700"
       }}>
-        {churchName || "Select Church"}
+        {activeEntity?.name || "Select Church"}
+
       </Text>
 
       <Ionicons
