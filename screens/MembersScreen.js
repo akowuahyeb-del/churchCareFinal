@@ -543,64 +543,110 @@ return (
       ]}
     />
 
+{/* ── SEARCH ── */}
+<TextInput
+  placeholder="🔍 Search name or member ID..."
+  value={search}
+  onChangeText={setSearch}
+  style={styles.search}
+/>
 
 
-          
+{/* ── FILTERS ── */}
+{showFilters && (
+  <View style={styles.filterPanel}>
 
-      {/* ── SEARCH ── */}
-      <TextInput placeholder="🔍  Search name or member ID..." value={search}
-        onChangeText={setSearch} style={styles.search} />
+    <Text style={styles.filterLabel}>Ministry</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {["All", ...ministries].map(m => (
+        <TouchableOpacity
+          key={m}
+          style={[
+            styles.filterChip,
+            filterMinistry === m && styles.filterChipActive
+          ]}
+          onPress={() => setFilterMinistry(m)}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              filterMinistry === m && { color: "#fff" }
+            ]}
+          >
+            {m}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
 
-      {/* ── FILTERS ── */}
-      {showFilters && (
-        <View style={styles.filterPanel}>
-          <Text style={styles.filterLabel}>Ministry</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {["All", ...ministries].map(m => (
-              <TouchableOpacity key={m}
-                style={[styles.filterChip, filterMinistry === m && styles.filterChipActive]}
-                onPress={() => setFilterMinistry(m)}>
-                <Text style={[styles.filterChipText, filterMinistry === m && { color: "#fff" }]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
-          <Text style={styles.filterLabel}>Status</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {["All", ...statusList].map(s => (
-              <TouchableOpacity key={s}
-                style={[styles.filterChip, filterStatus === s && styles.filterChipActive]}
-                onPress={() => setFilterStatus(s)}>
-                <Text style={[styles.filterChipText, filterStatus === s && { color: "#fff" }]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+    <Text style={styles.filterLabel}>Status</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {["All", ...statusList].map(s => (
+        <TouchableOpacity
+          key={s}
+          style={[
+            styles.filterChip,
+            filterStatus === s && styles.filterChipActive
+          ]}
+          onPress={() => setFilterStatus(s)}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              filterStatus === s && { color: "#fff" }
+            ]}
+          >
+            {s}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
 
-          <Text style={styles.filterLabel}>Communicant</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {["All", "yes", "no"].map(c => (
-              <TouchableOpacity key={c}
-                style={[styles.filterChip, filterCommun === c && styles.filterChipActive]}
-                onPress={() => setFilterCommun(c)}>
-                <Text style={[styles.filterChipText, filterCommun === c && { color: "#fff" }]}>
-                  {c === "All" ? "All" : c === "yes" ? "Communicant" : "Non-communicant"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
 
-      {/* ── ERROR ── */}
-      {error && (
-        <View style={styles.errorBox}>
-          <Ionicons name="cloud-offline-outline" size={36} color="#bbb" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={loadMembers}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+    <Text style={styles.filterLabel}>Communicant</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {["All", "yes", "no"].map(c => (
+        <TouchableOpacity
+          key={c}
+          style={[
+            styles.filterChip,
+            filterCommun === c && styles.filterChipActive
+          ]}
+          onPress={() => setFilterCommun(c)}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              filterCommun === c && { color: "#fff" }
+            ]}
+          >
+            {c === "All" ? "All" : c === "yes" ? "Communicant" : "Non-communicant"}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+
+  </View>
+)}
+
+
+{/* ── ERROR ── */}
+{error && (
+  <View style={styles.errorBox}>
+    <Ionicons name="cloud-offline-outline" size={36} color="#bbb" />
+
+    {/* ✅ SAFE TEXT FIX */}
+    <Text style={styles.errorText}>
+      {error}
+    </Text>
+
+    <TouchableOpacity style={styles.retryBtn} onPress={loadMembers}>
+      <Text style={styles.retryText}>Retry</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
 
       {/* ── MEMBER LIST ── */}
       <FlatList
