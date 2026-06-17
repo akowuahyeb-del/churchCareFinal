@@ -5,7 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,  Alert
 } from "react-native";
 
 import { Feather, AntDesign } from "@expo/vector-icons";
