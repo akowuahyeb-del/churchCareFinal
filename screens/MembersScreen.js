@@ -844,107 +844,203 @@ return (
 />
      
 
+{/* ══ QR MODAL ══ */}
+<Modal visible={!!selectedMember} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={[styles.modalBox, { alignItems: "center" }]}>
+      
+      <Text style={styles.modalTitle}>
+        {selectedMember?.name || "Member"}
+      </Text>
 
-      {/* ══ QR MODAL ══ */}
-      <Modal visible={!!selectedMember} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={[styles.modalBox, { alignItems: "center" }]}>
-            <Text style={styles.modalTitle}>{selectedMember?.name}</Text>
-            {/* Human-readable ID */}
-            <View style={styles.memberIdBadge}>
-              <Text style={styles.memberIdText}>{selectedMember?.memberCode || selectedMember?.id}</Text>
-            </View>
-            <View style={{ marginVertical: 16 }}>
-              <QRCode value={selectedMember?.id || "placeholder"} size={220} />
-            </View>
-            <Text style={styles.qrScanHint}>Members scan this at the entrance to mark attendance</Text>
-            <TouchableOpacity style={[styles.btn, { marginTop: 12, width: "100%" }]} onPress={() => setSelectedMember(null)}>
-              <Text style={styles.white}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* ✅ Safe ID display */}
+      <View style={styles.memberIdBadge}>
+        <Text style={styles.memberIdText}>
+          {selectedMember?.memberCode || selectedMember?.id || ""}
+        </Text>
+      </View>
+
+      <View style={{ marginVertical: 16 }}>
+        <QRCode
+          value={selectedMember?.id || "placeholder"}
+          size={220}
+        />
+      </View>
+
+      <Text style={styles.qrScanHint}>
+        Members scan this at the entrance to mark attendance
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.btn, { marginTop: 12, width: "100%" }]}
+        onPress={() => setSelectedMember(null)}
+      >
+        <Text style={styles.white}>Close</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
 
 
-      {/* ══ APPROVAL MODAL ══ */}
-      <Modal visible={approvalModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <View style={{ alignItems: "center", marginBottom: 8 }}>
-              <Ionicons name="shield-checkmark-outline" size={36}
-                color={ACTIONS[approvalAction]?.color || "#4B3F72"} />
-            </View>
-            <Text style={styles.modalTitle}>{ACTIONS[approvalAction]?.label} — Approval Required</Text>
-            <Text style={styles.approvalTarget}>{approvalTarget?.name}</Text>
-            <Text style={styles.approvalInfo}>
-              This action requires approval from:{" "}
-              <Text style={{ fontWeight: "700" }}>
-                {ACTIONS[approvalAction]?.required?.join(", ")}
+{/* ══ APPROVAL MODAL ══ */}
+<Modal visible={approvalModal} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <View style={{ alignItems: "center", marginBottom: 8 }}>
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={36}
+          color={ACTIONS[approvalAction]?.color || "#4B3F72"}
+        />
+      </View>
+
+      <Text style={styles.modalTitle}>
+        {ACTIONS[approvalAction]?.label || "Action"} — Approval Required
+      </Text>
+
+      <Text style={styles.approvalTarget}>
+        {approvalTarget?.name || ""}
+      </Text>
+
+      <Text style={styles.approvalInfo}>
+        This action requires approval from:{" "}
+        <Text style={{ fontWeight: "700" }}>
+          {ACTIONS[approvalAction]?.required?.join(", ") || ""}
+        </Text>
+      </Text>
+
+      {/* Approval progress */}
+      <View style={styles.approvalChain}>
+        {(ACTIONS[approvalAction]?.required || []).map(role => {
+          const granted =
+            getApprovals(approvalTarget?.id, approvalAction).includes(role);
+
+          return (
+            <View
+              key={role}
+              style={[
+                styles.approvalPill,
+                { backgroundColor: granted ? "#e8f8f0" : "#f5f5f5" }
+              ]}
+            >
+              <Ionicons
+                name={granted ? "checkmark-circle" : "ellipse-outline"}
+                size={13}
+                color={granted ? "#27ae60" : "#bbb"}
+              />
+              <Text
+                style={[
+                  styles.approvalPillText,
+                  { color: granted ? "#27ae60" : "#999" }
+                ]}
+              >
+                {role}
               </Text>
-            </Text>
-
-            {/* Show who has approved so far */}
-            <View style={styles.approvalChain}>
-              {(ACTIONS[approvalAction]?.required || []).map(role => {
-                const granted = getApprovals(approvalTarget?.id, approvalAction).includes(role);
-                return (
-                  <View key={role} style={[styles.approvalPill, { backgroundColor: granted ? "#e8f8f0" : "#f5f5f5" }]}>
-                    <Ionicons name={granted ? "checkmark-circle" : "ellipse-outline"} size={13}
-                      color={granted ? "#27ae60" : "#bbb"} />
-                    <Text style={[styles.approvalPillText, { color: granted ? "#27ae60" : "#999" }]}>{role}</Text>
-                  </View>
-                );
-              })}
             </View>
+          );
+        })}
+      </View>
 
-            <Text style={styles.fieldLabel}>Reason / Notes</Text>
-            <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-              placeholder="Describe the reason for this action..."
-              value={approvalNote} onChangeText={setApprovalNote} multiline />
+      <Text style={styles.fieldLabel}>Reason / Notes</Text>
 
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: ACTIONS[approvalAction]?.color, marginTop: 12 }]}
-              onPress={grantApproval}>
-              <Text style={styles.white}>Grant My Approval ({viewerRole})</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
-              onPress={() => setApprovalModal(false)}>
-              <Text style={styles.white}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TextInput
+        style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+        placeholder="Describe the reason for this action..."
+        value={approvalNote}
+        onChangeText={setApprovalNote}
+        multiline
+      />
 
-      {/* ══ REINSTATE MODAL ══ */}
-      <Modal visible={reinstateModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <View style={{ alignItems: "center", marginBottom: 8 }}>
-              <Ionicons name="refresh-circle" size={36} color="#27ae60" />
-            </View>
-            <Text style={styles.modalTitle}>Reinstate Member</Text>
-            <Text style={styles.approvalTarget}>{reinstateTarget?.name}</Text>
-            <Text style={{ textAlign: "center", color: "#666", fontSize: 12, marginBottom: 12 }}>
-              Current status: <Text style={{ fontWeight: "700", color: "#e74c3c" }}>
-                {reinstateTarget?.disciplinaryStatus?.toUpperCase()}
-              </Text>
-            </Text>
-            <Text style={styles.fieldLabel}>Reinstatement Notes</Text>
-            <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-              placeholder="Reason for reinstatement..."
-              value={reinstateNote} onChangeText={setReinstateNote} multiline />
-            <TouchableOpacity style={[styles.btn, { backgroundColor: "#27ae60", marginTop: 12 }]}
-              onPress={executeReinstate}>
-              <Ionicons name="checkmark-circle" size={16} color="#fff" />
-              <Text style={[styles.white, { marginLeft: 6 }]}>Confirm Reinstatement</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
-              onPress={() => setReinstateModal(false)}>
-              <Text style={styles.white}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TouchableOpacity
+        style={[
+          styles.btn,
+          {
+            backgroundColor:
+              ACTIONS[approvalAction]?.color || "#4B3F72",
+            marginTop: 12,
+          }
+        ]}
+        onPress={grantApproval}
+      >
+        <Text style={styles.white}>
+          Grant My Approval ({viewerRole})
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
+        onPress={() => setApprovalModal(false)}
+      >
+        <Text style={styles.white}>Cancel</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+
+{/* ══ REINSTATE MODAL ══ */}
+<Modal visible={reinstateModal} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <View style={{ alignItems: "center", marginBottom: 8 }}>
+        <Ionicons name="refresh-circle" size={36} color="#27ae60" />
+      </View>
+
+      <Text style={styles.modalTitle}>Reinstate Member</Text>
+
+      <Text style={styles.approvalTarget}>
+        {reinstateTarget?.name || ""}
+      </Text>
+
+      <Text style={{
+        textAlign: "center",
+        color: "#666",
+        fontSize: 12,
+        marginBottom: 12
+      }}>
+        Current status:{" "}
+        <Text style={{ fontWeight: "700", color: "#e74c3c" }}>
+          {reinstateTarget?.disciplinaryStatus?.toUpperCase() || ""}
+        </Text>
+      </Text>
+
+      <Text style={styles.fieldLabel}>Reinstatement Notes</Text>
+
+      <TextInput
+        style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+        placeholder="Reason for reinstatement..."
+        value={reinstateNote}
+        onChangeText={setReinstateNote}
+        multiline
+      />
+
+      <TouchableOpacity
+        style={[
+          styles.btn,
+          { backgroundColor: "#27ae60", marginTop: 12 }
+        ]}
+        onPress={executeReinstate}
+      >
+        <Ionicons name="checkmark-circle" size={16} color="#fff" />
+        <Text style={[styles.white, { marginLeft: 6 }]}>
+          Confirm Reinstatement
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
+        onPress={() => setReinstateModal(false)}
+      >
+        <Text style={styles.white}>Cancel</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
 
       {/* ══ LIST ITEM EDIT MODAL ══ */}
       <Modal visible={modal.visible} transparent animationType="fade">
