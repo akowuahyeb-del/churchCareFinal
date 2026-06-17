@@ -436,41 +436,84 @@ const executeAction = async (member, action, note) => {
   }
 };
   /* ══════════════ REINSTATE ══════════════ */
-  const openReinstate = (member) => { setReinstateTarget(member); setReinstateNote(""); setReinstateModal(true); };
 
-  const executeReinstate = async () => {
-    if (!reinstateTarget) return;
-    try {
-      await updateDoc(doc(db, "members", reinstateTarget.id), {
+const openReinstate = (member) => {
+  setReinstateTarget(member);
+  setReinstateNote("");
+  setReinstateModal(true);
+};
+
+const executeReinstate = async () => {
+  if (!reinstateTarget) return;
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  try {
+    await updateDoc(
+      doc(db, "members", reinstateTarget.id),
+      {
         disciplinaryStatus: null,
         disciplinaryNote: null,
         disciplinaryDate: null,
+
         reinstateNote,
         reinstateDate: new Date().toISOString().split("T")[0],
-      });
-      Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
-      setReinstateModal(false);
-      loadMembers();
-    } catch (e) { Alert.alert("Error", e.message); }
-  };
 
-  /* ══════════════ DONATE NAVIGATION ══════════════ */
-  // ✅ #8 fix — navigate up to RootStack then to Donate
-  const goToDonate = (memberId, memberName) => {
-    navigation.getParent()?.navigate("Donate", memberId ? { memberId, memberName } : undefined);
-  };
+        entityId,        // ✅ ensure consistency
+        organizationId   // ✅ ensure consistency
+      }
+    );
 
-  /* ══════════════ FILTER ══════════════ */
-  const filtered = members.filter(m => {
-    const matchSearch = (m.name || "").toLowerCase().includes(search.toLowerCase())
-      || (m.memberCode || "").toLowerCase().includes(search.toLowerCase());
-    const matchMin = filterMinistry === "All" || m.ministry === filterMinistry;
-    const matchStat = filterStatus === "All" || m.status === filterStatus;
-    const matchComm = filterCommun === "All"
-      || (filterCommun === "yes" && m.communicant === "yes")
-      || (filterCommun === "no"  && m.communicant === "no");
-    return matchSearch && matchMin && matchStat && matchComm;
-  });
+    Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
+
+    setReinstateModal(false);
+    loadMembers();
+
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  }
+};
+
+
+/* ══════════════ DONATE NAVIGATION ══════════════ */
+
+const goToDonate = (memberId, memberName) => {
+  navigation
+    .getParent()
+    ?.navigate(
+      "Donate",
+      memberId ? { memberId, memberName } : undefined
+    );
+};
+
+
+/* ══════════════ FILTER ══════════════ */
+
+const filtered = members.filter(m => {
+  const q = search.toLowerCase();
+
+  const matchSearch =
+    (m.name || "").toLowerCase().includes(q) ||
+    (m.memberCode || "").toLowerCase().includes(q);
+
+  const matchMin =
+    filterMinistry === "All" ||
+    m.ministry === filterMinistry;
+
+  const matchStat =
+    filterStatus === "All" ||
+    m.status === filterStatus;
+
+  const matchComm =
+    filterCommun === "All" ||
+    (filterCommun === "yes" && m.communicant === "yes") ||
+    (filterCommun === "no" && m.communicant === "no");
+
+  return matchSearch && matchMin && matchStat && matchComm;
+});
 
   /* ══════════════ RENDER ══════════════ */
   return (
