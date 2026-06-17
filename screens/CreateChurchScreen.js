@@ -386,7 +386,7 @@ export default function CreateChurchScreen({ navigation }) {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.nextBtn, { backgroundColor: "#00B894" }, saving && { opacity: 0.6 }]}
-            onPress={handleCreate} disabled={saving}>
+            onPress={handleCreateChurch} disabled={saving}>
             {saving
               ? <ActivityIndicator color="#fff" />
               : <><Ionicons name="checkmark-circle-outline" size={18} color="#fff" /><Text style={styles.nextBtnText}>Create Church</Text></>
