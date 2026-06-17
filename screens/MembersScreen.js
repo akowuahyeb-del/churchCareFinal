@@ -1111,35 +1111,69 @@ return (
   </View>
 </Modal>
 
-{/* ✅ ADD MEMBER FLOATING BUTTON (CORRECT PLACEMENT) */}
-<TouchableOpacity
-  onPress={handleAddMember}
+{/* ✅ FLOATING ACTIONS */}
+<View
   style={{
     position: "absolute",
     bottom: 90,
     right: 20,
-    backgroundColor: "#4B3F72",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 6
+    alignItems: "flex-end",
+    gap: 10
   }}
 >
-  <Ionicons name="person-add-outline" size={20} color="#fff" />
 
-  <Text
+  {/* ✅ IMPORT MEMBERS */}
+  <TouchableOpacity
+    onPress={() =>
+      navigation.navigate("ImportMembers", {
+        entityId,
+        organizationId
+      })
+    }
     style={{
-      color: "#fff",
-      marginLeft: 6,
-      fontWeight: "700",
-      fontSize: 13
+      backgroundColor: "#0984E3",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 25,
+      flexDirection: "row",
+      alignItems: "center",
+      elevation: 6
     }}
   >
-    Add Member
-  </Text>
-</TouchableOpacity>
+    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+    <Text style={{ color: "#fff", marginLeft: 6, fontWeight: "700" }}>
+      Import
+    </Text>
+  </TouchableOpacity>
+
+  {/* ✅ ADD MEMBER */}
+  <TouchableOpacity
+    onPress={handleAddMember}
+    style={{
+      backgroundColor: "#4B3F72",
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      borderRadius: 30,
+      flexDirection: "row",
+      alignItems: "center",
+      elevation: 6
+    }}
+  >
+    <Ionicons name="person-add-outline" size={20} color="#fff" />
+    <Text
+      style={{
+        color: "#fff",
+        marginLeft: 6,
+        fontWeight: "700",
+        fontSize: 13
+      }}
+    >
+      Add Member
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
 
 
 </View>
