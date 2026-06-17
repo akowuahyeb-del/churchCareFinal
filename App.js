@@ -118,7 +118,6 @@ function RootStack() {
       <Stack.Screen name="History"         component={HistoryScreen}          />
       <Stack.Screen name="CreateChurch"    component={CreateChurchScreen}     />
       <Stack.Screen name="AddMember" component={AddMemberScreen} />
-      <Stack.Screen name="ChurchDashboard" component={ChurchDashboardScreen}/>
       <Stack.Screen name="Onboarding" component={OnboardingScreen}/>
       <Stack.Screen name="ChurchSelect"component={ChurchSelectScreen}/>
 

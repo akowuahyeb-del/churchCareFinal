@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }) {
   await AsyncStorage.setItem("isLoggedIn", "true");
   await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-  navigation.replace("MainTabs");
+  navigation.replace("Home");
 };
 
   // ✅ TEMP USER (simulate auth for now)

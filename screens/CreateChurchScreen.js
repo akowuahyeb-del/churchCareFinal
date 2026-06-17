@@ -251,11 +251,7 @@ export default function CreateChurchScreen({ navigation }) {
       ]);
 
       // 4. Go to onboarding
-      navigation.replace("Onboarding", {
-  churchId,
-  churchName: churchName.trim(),
-  adminName: adminName.trim(),
-});
+    navigation.replace("Home");
 
     } catch (err) {
   console.log("❌ FULL ERROR:", err);
