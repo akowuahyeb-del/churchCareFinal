@@ -119,6 +119,24 @@ export default function MembersScreen({ navigation, route }) {
   const [showActions, setShowActions] = useState(true);
 
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [approvalModal, setApprovalModal] = useState(false);
+  const [approvals, setApprovals] = useState({});
+  const [approvalAction, setApprovalAction] = useState(null);
+const [approvalTarget, setApprovalTarget] = useState(null);
+const [approvalNote, setApprovalNote] = useState("");
+
+const [reinstateModal, setReinstateModal] = useState(false);
+const [reinstateTarget, setReinstateTarget] = useState(null);
+const [reinstateNote, setReinstateNote] = useState("");
+
+const [modal, setModal] = useState({
+  visible: false,
+  type: null,
+  input: "",
+  index: null
+});
 
 
 
@@ -1180,16 +1198,36 @@ const ChipRow = ({ label, list = [], value, onSelect, onAdd, onEdit }) => (
       </Text>
     </TouchableOpacity>
   </>
-);
+)}
+
+
 
 
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15, backgroundColor: "#f4f6fb", paddingTop: 50 },
+  container: {
+  flex: 1,
+  paddingHorizontal: 15,
+  paddingTop: 50,
+  backgroundColor: "#f4f6fb",
+},
 
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   header: { fontSize: 20, fontWeight: "700", color: "#222" },
+  iconBtn: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: "rgba(255,255,255,0.15)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+listContent: {
+  paddingBottom: 120,
+},
+
 
   donateHeaderBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#E11D48", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, gap: 5 },
   donateHeaderBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
@@ -1272,8 +1310,35 @@ const styles = StyleSheet.create({
   datePickerBtnText: { fontSize: 14, fontWeight: "600", color: "#333" },
 
   approvalTarget: { textAlign: "center", fontWeight: "700", fontSize: 15, color: "#333", marginBottom: 6 },
-  approvalInfo: { textAlign: "center", fontSize: 12, color: "#666", marginBottom: 12 },
-  approvalChain: { flexDirection: "row", justifyContent: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" },
-  approvalPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  approvalPillText: { fontSize: 11, fontWeight: "600" },
+  approvalChain: {
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: 8,
+  marginBottom: 12,
+  flexWrap: "wrap",
+},
+
+approvalPill: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 20,
+},
+
+approvalPillText: {
+  fontSize: 11,
+  fontWeight: "600",
+},
+
+iconBtn: {
+  width: 36,
+  height: 36,
+  borderRadius: 18,
+  backgroundColor: "rgba(255,255,255,0.15)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
 });
