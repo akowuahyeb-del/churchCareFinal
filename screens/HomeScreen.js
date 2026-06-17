@@ -80,7 +80,8 @@ export default function HomeScreen() {
   /* ── featured event modal ── */
   const [selectedEvent,    setSelectedEvent]    = useState(null);
   const [eventModalVisible,setEventModalVisible]= useState(false);
- 
+ const [churchModalVisible, setChurchModalVisible] = useState(false);
+
 
   /*useEffect*/
 
@@ -283,16 +284,19 @@ return (
 
           {/* 🔹 CURRENT SELECTED CHURCH BUTTON */}
           <TouchableOpacity
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#ffffff",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 20,
-              marginRight: 8,
-              elevation: 3
-            }}
+  onPress={() => setChurchModalVisible(true)}  
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    elevation: 3
+  }}
+>
+
           >
             <Ionicons name="business-outline" size={16} color="#4B3F72" />
 
@@ -468,7 +472,80 @@ return (
       visible={showUpload}
       onClose={() => setShowUpload(false)}
     />
+   <Modal
+  visible={churchModalVisible}
+  transparent
+  animationType="fade"
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "center",
+      alignItems: "center"
+    }}
+  >
+    <View
+      style={{
+        width: "85%",
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 16
+      }}
+    >
+      <Text
+        style={{
+          fontWeight: "700",
+          fontSize: 16,
+          marginBottom: 12,
+          textAlign: "center"
+        }}
+      >
+        Select Church
+      </Text>
 
+      {entities.map((item) => (
+        <TouchableOpacity
+          key={item.entityId}
+          onPress={async () => {
+            await handleSelectChurch(item);
+            setChurchModalVisible(false);
+          }}
+          style={{
+            padding: 12,
+            borderRadius: 10,
+            marginBottom: 8,
+            backgroundColor:
+              activeEntity?.entityId === item.entityId
+                ? "#4B3F72"
+                : "#f0f0f0"
+          }}
+        >
+          <Text
+            style={{
+              color:
+                activeEntity?.entityId === item.entityId
+                  ? "#fff"
+                  : "#333",
+              fontWeight: "600"
+            }}
+          >
+            {item.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity
+        onPress={() => setChurchModalVisible(false)}
+        style={{ marginTop: 10, alignItems: "center" }}
+      >
+        <Text style={{ color: "#E11D48", fontWeight: "600" }}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
  </SafeAreaView>
 );
 }  
