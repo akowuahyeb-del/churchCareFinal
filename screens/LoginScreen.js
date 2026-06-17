@@ -35,6 +35,19 @@ export default function LoginScreen({ navigation }) {
     return;
   }
 
+  const userData = {
+    email,
+    role: "admin",
+    organizationId: "demo_org",
+    name: "Admin User"
+  };
+
+  await AsyncStorage.setItem("isLoggedIn", "true");
+  await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+
+  navigation.replace("MainTabs");
+};
+
   // ✅ TEMP USER (simulate auth for now)
   const userData = {
     email,
