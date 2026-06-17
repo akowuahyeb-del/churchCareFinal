@@ -129,25 +129,101 @@ export default function CreateChurchScreen({ navigation }) {
     if (!validate()) return;
     setSaving(true);
     try {
-      // 1. Create church document
-      console.log("👉 Creating church in Firestore...");
-      const churchRef = await addDoc(collection(db, "churches"), {
-        name:        churchName.trim(),
-        denomination:denomination.trim(),
-        foundedYear: foundedYear.trim(),
-        motto:       motto.trim(),
-        country:     country.trim(),
-        region:      region.trim(),
-        district:    district.trim(),
-        address:     address.trim(),
-        gps:         gps.trim(),
-        phone:       phone.trim(),
-        email:       email.trim(),
-        website:     website.trim(),
-        adminEmail:  adminEmail.trim(),
-        status:      "active",
-        createdAt:   new Date().toISOString(),
-      });
+  setSaving(true);
+
+  // ✅ 1. CREATE ORGANIZATION
+  const orgRef = await addDoc(collection(db, "organizations"), {
+    name: denomination.trim() || churchName.trim(),
+    createdAt: new Date().toISOString(),
+  });
+
+  const organizationId = orgRef.id;
+
+  // ✅ 2. CREATE ENTITY (CHURCH)
+  const entityRef = await addDoc(
+    collection(db, "organizations", organizationId, "entities"),
+    {
+      name: churchName.trim(),
+      denomination: denomination.trim(),
+      foundedYear: foundedYear.trim(),
+      motto: motto.trim(),
+
+      country: country.trim(),
+      region: region.trim(),
+      district: district.trim(),
+      address: address.trim(),
+      gps: gps.trim(),
+
+      phone: phone.trim(),
+      email: email.trim(),
+      website: website.trim(),
+
+      status: "active",
+      createdAt: new Date().toISOString(),
+    }
+  );
+
+  const entityId = entityRef.id;
+
+  // ✅ 3. CREATE ADMIN USER (BASIC)
+  const userId = `admin_${Date.now()}`;
+
+  await setDoc(doc(db, "users", userId), {
+    id: userId,
+    name: adminName.trim(),
+    email: adminEmail.trim(),
+    phone: adminPhone.trim(),
+    role: "admin",
+    organizationId,
+    entities: [entityId],
+    createdAt: new Date().toISOString(),
+  });
+
+  // ✅ 4. SAVE ACTIVE ENTITY (CRITICAL 🔥)
+  const entityData = {
+    organizationId,
+    entityId,
+    name: churchName.trim(),
+  };
+
+  await AsyncStorage.setItem(
+    "activeEntity",
+    JSON.stringify(entityData)
+  );
+
+  // ✅ 5. SAVE USER ENTITIES (FOR DASHBOARD)
+  await AsyncStorage.setItem(
+    "userEntities",
+    JSON.stringify([
+      {
+        entityId,
+        name: churchName.trim(),
+      },
+    ])
+  );
+
+  // ✅ 6. SAVE USER SESSION
+  await AsyncStorage.setItem(
+    "currentUser",
+    JSON.stringify({
+      name: adminName.trim(),
+      role: "admin",
+      organizationId,
+    })
+  );
+
+  await AsyncStorage.setItem("isLoggedIn", "true");
+
+  // ✅ 7. GO TO DASHBOARD
+  navigation.replace("MainTabs");
+
+} catch (err) {
+  console.log("❌ FULL ERROR:", err);
+  Alert.alert("Error", err.message);
+} finally {
+  setSaving(false);
+}
+
 
       const churchId = churchRef.id;
       console.log("✅ Church created:", churchId);
