@@ -56,7 +56,7 @@ export default function HomeScreen() {
   const [activeEntity, setActiveEntity] = useState(null);
   const [churchName, setChurchName] = useState("");
   const [entities, setEntities] = useState([]);
-const [activeEntity, setActiveEntity] = useState(null);
+
 
   /* ── notifications (mock) ── */
   const [notifCount,  setNotifCount]  = useState(3);
@@ -256,67 +256,115 @@ const onTimeChange = (e, selected) => {
   setEditExpiry(base.toISOString());
 };
 
+const handleSelectChurch = async (entity) => {
+  setActiveEntity(entity);
+
+  await AsyncStorage.setItem(
+    "activeEntity",
+    JSON.stringify(entity)
+  );
+
+  console.log("✅ Switched to:", entity.name);
+};
+
+
+
  /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
   <SafeAreaView style={styles.safe}>
     <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
+<AppHeader
+  title="ChurchCare"
+  subtitle="Welcome back 👋"
+  actions={[
+    {
+      custom: (
+        <View>
 
-    <AppHeader
-      title="ChurchCare"
-      subtitle="Welcome back 👋"
-      actions={[
-  {
-  custom: (
-    <TouchableOpacity
-      onPress={() => navigation.navigate("ChurchSelect")}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#ffffff",   // ✅ SOLID WHITE (fix)
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginRight: 8,
-        elevation: 3
-      }}
-    >
-      <Ionicons name="business-outline" size={16} color="#4B3F72" />
+          {/* 🔹 CURRENT SELECTED CHURCH BUTTON */}
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#ffffff",
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 20,
+              marginRight: 8,
+              elevation: 3
+            }}
+          >
+            <Ionicons name="business-outline" size={16} color="#4B3F72" />
 
-      <Text style={{
-        color: "#4B3F72",  // ✅ DARK TEXT NOW VISIBLE
-        marginLeft: 6,
-        fontSize: 12,
-        fontWeight: "700"
-      }}>
-        {activeEntity?.name || "Select Church"}
+            <Text
+              style={{
+                color: "#4B3F72",
+                marginLeft: 6,
+                fontSize: 12,
+                fontWeight: "700"
+              }}
+            >
+              {activeEntity?.name || "Select Church"}
+            </Text>
 
-      </Text>
+            <Ionicons
+              name="chevron-down"
+              size={14}
+              color="#4B3F72"
+              style={{ marginLeft: 4 }}
+            />
+          </TouchableOpacity>
 
-      <Ionicons
-        name="chevron-down"
-        size={14}
-        color="#4B3F72"
-        style={{ marginLeft: 4 }}
-      />
-    </TouchableOpacity>
-  )
-},
+          {/* 🔹 CHURCH LIST (DYNAMIC SWITCHER) */}
+          <View style={{ marginTop: 10 }}>
+            {entities.map((item) => (
+              <TouchableOpacity
+                key={item.entityId}
+                onPress={() => handleSelectChurch(item)}
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  marginBottom: 6,
+                  backgroundColor:
+                    activeEntity?.entityId === item.entityId
+                      ? "#4B3F72"
+                      : "#eee"
+                }}
+              >
+                <Text
+                  style={{
+                    color:
+                      activeEntity?.entityId === item.entityId
+                        ? "#fff"
+                        : "#333",
+                    fontWeight: "600"
+                  }}
+                >
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
+        </View>
+      )
+    },
 
-  {
-    icon: "notifications-outline",
-    onPress: () => {
-      setNotifModal(true);
-      setNotifCount(0);
+    {
+      icon: "notifications-outline",
+      onPress: () => {
+        setNotifModal(true);
+        setNotifCount(0);
+      }
+    },
+
+    {
+      icon: "cloud-upload-outline",
+      onPress: () => setShowUpload(true)
     }
-  },
+  ]}
+/>
 
-  {
-    icon: "cloud-upload-outline",
-    onPress: () => setShowUpload(true)
-  }
-]}
-    />
 
     <ScrollView
       contentContainerStyle={styles.body}
