@@ -39,125 +39,174 @@ const ACTIONS = {
   delete:    { label: "Delete",    color: "#e74c3c", required: ["pastor","admin","elder"] },
 };
 
+export default function MembersScreen({ navigation, route }) {
+
+  /* ── ACTIVE ENTITY (NEW SYSTEM) ── */
+  const [activeEntity, setActiveEntity] = useState(null);
+
+  const entity = activeEntity || {};
+  const { organizationId, entityId } = entity;
+
+  /* ── LOAD ACTIVE ENTITY ── */
+  useEffect(() => {
+    const loadEntity = async () => {
+      try {
+        const data = await AsyncStorage.getItem("activeEntity");
+
+        if (data) {
+          const parsed = JSON.parse(data);
+          console.log("✅ Members entity:", parsed);
+          setActiveEntity(parsed);
+        }
+      } catch (e) {
+        console.log("Entity load error", e);
+      }
+    };
+
+    loadEntity();
+  }, []);
 
 
+  /* ── ADD MEMBER NAVIGATION ── */
+  const handleAddMember = () => {
+    if (!organizationId || !entityId) {
+      Alert.alert("No active church", "Please select a church first");
+      return;
+    }
 
-export default function MembersScreen({ navigation, route })
- {
-const currentChurchId = route.params?.churchId;
-const [showAddModal, setShowAddModal] = useState(false);
-
-const handleAddMember = () => {
-  navigation.navigate("AddMember", {
-  churchId: currentChurchId   
-})
-
-};
-  /* ── viewer role (pass from auth context in production) ── */
-  const viewerRole = "admin"; // change to actual role from auth
-  const [churchId, setChurchId] = useState(null);
-  /* ── member form defaults ── */
-  const defaultMember = {
-    name: "", phone: "", address: "", occupation: "",
-    ministry: "", baptismStatus: "", status: "Regular",
-    emergencyContact: "", membershipDuration: "",
-    communicant: null,          // "yes" | "no"
-    communicantStatus: "active",// "active" | "invalid"
-    communicantInvalidSince: null,
-    memberCode: "",             // human-readable ID
-    churchId: "church_1",       // home church
+    navigation.navigate("AddMember", {
+      entityId,
+      organizationId
+    });
   };
 
-  const [member,    setMember]    = useState(defaultMember);
-  const [members,   setMembers]   = useState([]);
-  const [error,     setError]     = useState(null);
-  const [loading,   setLoading]   = useState(false);
 
-  const [showForm,   setShowForm]   = useState(false);
-  const [editingId,  setEditingId]  = useState(null);
+  /* ── viewer role ── */
+  const viewerRole = "admin"; 
+
+
+  /* ── member form defaults ── */
+  const defaultMember = {
+    name: "",
+    phone: "",
+    address: "",
+    occupation: "",
+    ministry: "",
+    baptismStatus: "",
+    status: "Regular",
+    emergencyContact: "",
+    membershipDuration: "",
+
+    communicant: null,
+    communicantStatus: "active",
+    communicantInvalidSince: null,
+
+    memberCode: "",
+
+    entityId: "",          // ✅ CHANGED
+    organizationId: "",    // ✅ NEW
+  };
+
+
+  const [member, setMember] = useState(defaultMember);
+  const [members, setMembers] = useState([]);
+
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [showActions, setShowActions] = useState(true);
 
   const [search, setSearch] = useState("");
 
-  /* ── filters ── */
-  const [filterMinistry, setFilterMinistry] = useState("All");
-  const [filterStatus,   setFilterStatus]   = useState("All");
-  const [filterCommun,   setFilterCommun]   = useState("All");
-  const [showFilters,    setShowFilters]     = useState(false);
 
-  /* ── QR modal ── */
-  const [selectedMember, setSelectedMember] = useState(null); // full member obj for QR modal
-
-  /* ── list-item edit modal ── */
-  const [modal, setModal] = useState({ visible: false, type: null, input: "", index: null });
-
-  /* ── communicant modals ── */
-  const [commStatusModal,  setCommStatusModal]  = useState(false); // show Active/Invalid choice
-  const [commInvalidModal, setCommInvalidModal] = useState(false); // date picker for invalid since
-  const [commInvalidDate,  setCommInvalidDate]  = useState(new Date());
-  const [showCommDatePicker, setShowCommDatePicker] = useState(false);
-
-  /* ── approval system ── */
-  const [approvalModal,   setApprovalModal]   = useState(false);
-  const [approvalAction,  setApprovalAction]  = useState(null);  // key of ACTIONS
-  const [approvalTarget,  setApprovalTarget]  = useState(null);  // member obj
-  const [approvalNote,    setApprovalNote]    = useState("");
-  const [approvals,       setApprovals]       = useState({});
-  // { [memberId_action]: [role1, role2, ...] }
-
-  /* ── reinstate modal ── */
-  const [reinstateModal,  setReinstateModal]  = useState(false);
-  const [reinstateTarget, setReinstateTarget] = useState(null);
-  const [reinstateNote,   setReinstateNote]   = useState("");
-
-  /* ── options lists ── */
-  const [ministries,   setMinistries]   = useState(["Choir", "Ushering", "Youth", "Media", "Protocol"]);
-  const [baptismList,  setBaptismList]  = useState(["Baptised", "Not Baptised"]);
-  const [statusList,   setStatusList]   = useState(["Regular", "Visitor", "New Convert"]);
 
   /* ══════════════ LOAD ══════════════ */
-  useEffect(() => {
+
+// ✅ Load members when entity changes
+useEffect(() => {
+  if (entityId) {
     loadMembers();
-    AsyncStorage.getItem("showActions").then(v => { if (v !== null) setShowActions(JSON.parse(v)); });
-  }, []);
-  useEffect(() => {
+  }
+
+  AsyncStorage.getItem("showActions").then(v => {
+    if (v !== null) setShowActions(JSON.parse(v));
+  });
+
+}, [entityId]);
+
+
+// ❌ REMOVE this entire old block
+/*
+useEffect(() => {
   if (churchId) {
     loadMembers();
   }
 }, [churchId]);
 
-  useEffect(() => {
+useEffect(() => {
   AsyncStorage.getItem("churchId").then(id => {
     console.log("churchId loaded:", id);
     setChurchId(id);
   });
 }, []);
+*/
 
-  const loadMembers = async () => {
-    setLoading(true); setError(null);
-    try {
-      const snap = await getDocs(collection(db, "members"), where("churchId", "==", churchId));
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setMembers(data);
-      await AsyncStorage.setItem(MEMBERS_CACHE_KEY, JSON.stringify(data));
-    } catch (err) {
-      const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
-      if (cached) {
-        setMembers(JSON.parse(cached));
-        setError("Showing offline data.");
-      } else {
-        setError("Unable to load members. Check your connection.");
-      }
-    } finally { setLoading(false); }
-  };
 
-  const toggleActions = () => {
-    setShowActions(prev => {
-      const next = !prev;
-      AsyncStorage.setItem("showActions", JSON.stringify(next));
-      return next;
-    });
-  };
+// ✅ LOAD MEMBERS (ACTIVE ENTITY)
+const loadMembers = async () => {
+  if (!entityId) return;
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    const q = query(
+      collection(db, "members"),
+      where("entityId", "==", entityId)
+    );
+
+    const snap = await getDocs(q);
+
+    const data = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    setMembers(data);
+
+    await AsyncStorage.setItem(
+      MEMBERS_CACHE_KEY,
+      JSON.stringify(data)
+    );
+
+  } catch (err) {
+
+    const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
+
+    if (cached) {
+      setMembers(JSON.parse(cached));
+      setError("Showing offline data.");
+    } else {
+      setError("Unable to load members. Check your connection.");
+    }
+
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+// ✅ TOGGLE ACTION VISIBILITY
+const toggleActions = () => {
+  setShowActions(prev => {
+    const next = !prev;
+    AsyncStorage.setItem("showActions", JSON.stringify(next));
+    return next;
+  });
+};
+
 
   /* ══════════════ SAVE MEMBER ══════════════ */
   const saveMember = async () => {
