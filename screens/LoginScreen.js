@@ -27,11 +27,28 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  
+
   const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert("Error", "Enter email and password");
+    return;
+  }
+
+  // ✅ TEMP USER (simulate auth for now)
+  const userData = {
+    email,
+    role: "admin",
+    organizationId: "demo_org",
+    name: "Admin User"
+  };
+
   await AsyncStorage.setItem("isLoggedIn", "true");
+  await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
   navigation.replace("MainTabs");
 };
+
 
   return (
     <View style={styles.container}>
