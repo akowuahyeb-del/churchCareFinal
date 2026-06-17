@@ -130,7 +130,15 @@ export default function CreateChurchScreen({ navigation }) {
   setSaving(true);
 
   try {
-    // ✅ 1. CREATE ORGANIZATION / CHURCH
+    // ✅ 1. CREATE ORGANIZATION FIRST
+    const orgRef = await addDoc(collection(db, "organizations"), {
+      name: churchName.trim(),
+      createdAt: new Date().toISOString(),
+    });
+
+    const organizationId = orgRef.id;
+
+    // ✅ 2. CREATE CHURCH (ENTITY)
     const churchRef = await addDoc(
       collection(db, "organizations", organizationId, "entities"),
       {
@@ -142,7 +150,7 @@ export default function CreateChurchScreen({ navigation }) {
     const entityId = churchRef.id;
     const userId = `admin_${Date.now()}`;
 
-    // ✅ 2. CREATE ADMIN USER
+    // ✅ 3. CREATE ADMIN USER
     await setDoc(doc(db, "users", userId), {
       id: userId,
       name: adminName.trim(),
@@ -154,7 +162,7 @@ export default function CreateChurchScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     });
 
-    // ✅ 3. SAVE TO STORAGE
+    // ✅ 4. SAVE SESSION DATA
     await AsyncStorage.multiSet([
       ["isLoggedIn", "true"],
 
@@ -181,8 +189,8 @@ export default function CreateChurchScreen({ navigation }) {
       ])]
     ]);
 
-    // ✅ 4. NAVIGATE
-    navigation.replace("Home");
+    // ✅ 5. NAVIGATE
+    navigation.replace("MainTabs");
 
   } catch (err) {
     console.log("❌ FULL ERROR:", err);
@@ -192,7 +200,6 @@ export default function CreateChurchScreen({ navigation }) {
     setSaving(false);
   }
 };
-
 
       
 
