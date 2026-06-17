@@ -124,145 +124,77 @@ export default function CreateChurchScreen({ navigation }) {
     setStep(s => s - 1);
   };
 
-  // ── Final submit ───────────────────────────────────────────────
-  const handleCreate = async () => {
-    if (!validate()) return;
-    setSaving(true);
-    try {
+  const handleCreateChurch = async () => {
+  if (!validate()) return;
+
   setSaving(true);
 
-  // ✅ 1. CREATE ORGANIZATION
-  const orgRef = await addDoc(collection(db, "organizations"), {
-    name: denomination.trim() || churchName.trim(),
-    createdAt: new Date().toISOString(),
-  });
-
-  const organizationId = orgRef.id;
-
-  // ✅ 2. CREATE ENTITY (CHURCH)
-  const entityRef = await addDoc(
-    collection(db, "organizations", organizationId, "entities"),
-    {
-      name: churchName.trim(),
-      denomination: denomination.trim(),
-      foundedYear: foundedYear.trim(),
-      motto: motto.trim(),
-
-      country: country.trim(),
-      region: region.trim(),
-      district: district.trim(),
-      address: address.trim(),
-      gps: gps.trim(),
-
-      phone: phone.trim(),
-      email: email.trim(),
-      website: website.trim(),
-
-      status: "active",
-      createdAt: new Date().toISOString(),
-    }
-  );
-
-  const entityId = entityRef.id;
-
-  // ✅ 3. CREATE ADMIN USER (BASIC)
-  const userId = `admin_${Date.now()}`;
-
-  await setDoc(doc(db, "users", userId), {
-    id: userId,
-    name: adminName.trim(),
-    email: adminEmail.trim(),
-    phone: adminPhone.trim(),
-    role: "admin",
-    organizationId,
-    entities: [entityId],
-    createdAt: new Date().toISOString(),
-  });
-
-  // ✅ 4. SAVE ACTIVE ENTITY (CRITICAL 🔥)
-  const entityData = {
-    organizationId,
-    entityId,
-    name: churchName.trim(),
-  };
-
-  await AsyncStorage.setItem(
-    "activeEntity",
-    JSON.stringify(entityData)
-  );
-
-  // ✅ 5. SAVE USER ENTITIES (FOR DASHBOARD)
-  await AsyncStorage.setItem(
-    "userEntities",
-    JSON.stringify([
+  try {
+    // ✅ 1. CREATE ORGANIZATION / CHURCH
+    const churchRef = await addDoc(
+      collection(db, "organizations", organizationId, "entities"),
       {
-        entityId,
         name: churchName.trim(),
-      },
-    ])
-  );
+        createdAt: new Date().toISOString(),
+      }
+    );
 
-  // ✅ 6. SAVE USER SESSION
-  await AsyncStorage.setItem(
-    "currentUser",
-    JSON.stringify({
+    const entityId = churchRef.id;
+    const userId = `admin_${Date.now()}`;
+
+    // ✅ 2. CREATE ADMIN USER
+    await setDoc(doc(db, "users", userId), {
+      id: userId,
       name: adminName.trim(),
+      phone: adminPhone.trim(),
+      email: adminEmail.trim(),
       role: "admin",
       organizationId,
-    })
-  );
+      entityId,
+      createdAt: new Date().toISOString(),
+    });
 
-  await AsyncStorage.setItem("isLoggedIn", "true");
+    // ✅ 3. SAVE TO STORAGE
+    await AsyncStorage.multiSet([
+      ["isLoggedIn", "true"],
 
-  // ✅ 7. GO TO DASHBOARD
-  navigation.replace("MainTabs");
+      ["currentUser", JSON.stringify({
+        userId,
+        name: adminName.trim(),
+        email: adminEmail.trim(),
+        role: "admin",
+        organizationId,
+        entityId
+      })],
 
-} catch (err) {
-  console.log("❌ FULL ERROR:", err);
-  Alert.alert("Error", err.message);
-} finally {
-  setSaving(false);
-}
+      ["activeEntity", JSON.stringify({
+        organizationId,
+        entityId,
+        name: churchName.trim()
+      })],
 
+      ["userEntities", JSON.stringify([
+        {
+          entityId,
+          name: churchName.trim()
+        }
+      ])]
+    ]);
 
-      const churchId = churchRef.id;
-      console.log("✅ Church created:", churchId);
-
-      const userId   = `admin_${Date.now()}`;
-
-      // 2. Create admin user document
-      await setDoc(doc(db, "users", userId), {
-        id:        userId,
-        name:      adminName.trim(),
-        phone:     adminPhone.trim(),
-        email:     adminEmail.trim(),
-        role:      "admin",
-        churchId,
-        createdAt: new Date().toISOString(),
-      });
-
-      // 3. Persist session locally
-      await AsyncStorage.multiSet([
-        ["churchId",    churchId],
-        ["userId",      userId],
-        ["role",        "admin"],
-        ["isLoggedIn",  "true"],
-        ["userProfile", JSON.stringify({ userId, role: "admin", churchId, name: adminName.trim() })],
-      ]);
-
-      // 4. Go to onboarding
+    // ✅ 4. NAVIGATE
     navigation.replace("Home");
 
-    } catch (err) {
-  console.log("❌ FULL ERROR:", err);
-  console.log("❌ ERROR MESSAGE:", err.message);
+  } catch (err) {
+    console.log("❌ FULL ERROR:", err);
+    Alert.alert("Error", err.message);
 
-  Alert.alert(
-    "🔥 Registration Failed",
-    err.message ? err.message : JSON.stringify(err)
-  );
-}
-  };
+  } finally {
+    setSaving(false);
+  }
+};
+
+
+      
 
   // ── Step content ───────────────────────────────────────────────
   const steps = [

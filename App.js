@@ -28,7 +28,6 @@ import EventsScreen            from "./screens/EventsScreen";
 import MoreScreen              from "./screens/MoreScreen";
 import CreateChurchScreen      from "./screens/CreateChurchScreen";
 import AddMemberScreen from "./screens/AddMemberScreen";
-import ChurchDashboardScreen from "./screens/ChurchDashboardScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import ChurchSelectScreen from "./screens/ChurchSelectScreen";
 
