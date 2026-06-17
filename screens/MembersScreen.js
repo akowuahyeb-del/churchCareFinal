@@ -535,6 +535,7 @@ const filtered = members.filter(m => {
 
 /* ══════════════ RENDER ══════════════ */
 return (
+  
   <View style={styles.container}>
 
     <AppHeader
@@ -645,9 +646,10 @@ return (
       ))}
     </ScrollView>
 
+
+
   </View>
 )}
-
 
 {/* ── ERROR ── */}
 {error && (
@@ -1108,6 +1110,36 @@ return (
     </View>
   </View>
 </Modal>
+
+{/* ✅ ADD MEMBER FLOATING BUTTON (CORRECT PLACEMENT) */}
+<TouchableOpacity
+  onPress={handleAddMember}
+  style={{
+    position: "absolute",
+    bottom: 90,
+    right: 20,
+    backgroundColor: "#4B3F72",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 6
+  }}
+>
+  <Ionicons name="person-add-outline" size={20} color="#fff" />
+
+  <Text
+    style={{
+      color: "#fff",
+      marginLeft: 6,
+      fontWeight: "700",
+      fontSize: 13
+    }}
+  >
+    Add Member
+  </Text>
+</TouchableOpacity>
 
 
 </View>
