@@ -647,121 +647,203 @@ return (
   </View>
 )}
 
+{/* ── MEMBER LIST ── */}
+<FlatList
+  data={filtered}
+  keyExtractor={item => item.id}
+  contentContainerStyle={{ paddingBottom: 120 }}
 
-      {/* ── MEMBER LIST ── */}
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        renderItem={({ item }) => {
-          const isDisciplined = !!item.disciplinaryStatus;
-          const pendingApprovals = Object.keys(ACTIONS).filter(a =>
-            getApprovals(item.id, a).length > 0 && !isFullyApproved(item.id, a)
-          );
+  renderItem={({ item }) => {
+    const isDisciplined = !!item.disciplinaryStatus;
 
-          return (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate("MemberProfile", { memberId: item.id, role: viewerRole })}
-            >
-              <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
+    const pendingApprovals = Object.keys(ACTIONS).filter(a =>
+      getApprovals(item.id, a).length > 0 &&
+      !isFullyApproved(item.id, a)
+    );
 
-                {/* Name row */}
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    {/* ✅ #1 — Human-readable ID */}
-                    {item.memberCode && (
-                      <Text style={styles.memberCode}>ID: {item.memberCode}</Text>
-                    )}
-                    {item.ministry && <Text style={styles.memberMeta}>{item.ministry}</Text>}
-                    {/* Communicant badge */}
-                    {item.communicant === "yes" && (
-                      <View style={[styles.commBadge, { backgroundColor: item.communicantStatus === "invalid" ? "#fce8e8" : "#e8f8f0" }]}>
-                        <Text style={[styles.commBadgeText, { color: item.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60" }]}>
-                          🍞 Communicant — {item.communicantStatus === "invalid" ? `Invalid since ${item.communicantInvalidSince}` : "Active"}
-                        </Text>
-                      </View>
-                    )}
-                    {/* Disciplinary badge */}
-                    {isDisciplined && (
-                      <View style={styles.disciplineBadge}>
-                        <Text style={styles.disciplineBadgeText}>
-                          ⚠️ {item.disciplinaryStatus?.toUpperCase()}
-                          {item.disciplinaryDate ? ` · ${item.disciplinaryDate}` : ""}
-                        </Text>
-                      </View>
-                    )}
-                    {/* Pending approval badges */}
-                    {pendingApprovals.map(a => (
-                      <View key={a} style={styles.pendingBadge}>
-                        <Text style={styles.pendingBadgeText}>⏳ {ACTIONS[a].label} pending approval</Text>
-                      </View>
-                    ))}
-                  </View>
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate("MemberProfile", {
+            memberId: item.id,
+            role: viewerRole
+          })
+        }
+      >
+        <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
 
-                  {/* Per-member donate icon */}
-                  <TouchableOpacity style={styles.memberDonateBtn}
-                    onPress={() => goToDonate(item.id, item.name)}>
-                    <Ionicons name="heart-outline" size={20} color="#E11D48" />
-                  </TouchableOpacity>
+          {/* Name section */}
+          <View style={styles.cardHeader}>
+            <View style={{ flex: 1 }}>
+
+              <Text style={styles.name}>{item.name}</Text>
+
+              {item.memberCode && (
+                <Text style={styles.memberCode}>
+                  ID: {item.memberCode}
+                </Text>
+              )}
+
+              {item.ministry && (
+                <Text style={styles.memberMeta}>
+                  {item.ministry}
+                </Text>
+              )}
+
+              {/* Communicant badge */}
+              {item.communicant === "yes" && (
+                <View
+                  style={[
+                    styles.commBadge,
+                    {
+                      backgroundColor:
+                        item.communicantStatus === "invalid"
+                          ? "#fce8e8"
+                          : "#e8f8f0"
+                    }
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.commBadgeText,
+                      {
+                        color:
+                          item.communicantStatus === "invalid"
+                            ? "#e74c3c"
+                            : "#27ae60"
+                      }
+                    ]}
+                  >
+                    🍞 Communicant —{" "}
+                    {item.communicantStatus === "invalid"
+                      ? `Invalid since ${item.communicantInvalidSince}`
+                      : "Active"}
+                  </Text>
                 </View>
+              )}
 
-                {showActions && (
-                  <>
-                    {/* ✅ #2 — QR code + human ID display */}
-                    <TouchableOpacity onPress={() => setSelectedMember(item)} style={styles.qrRow}>
-                      <QRCode value={item.id} size={70} />
-                      <View style={styles.qrInfo}>
-                        <Text style={styles.qrLabel}>Member QR</Text>
-                        <Text style={styles.qrCode}>{item.memberCode || item.id}</Text>
-                        <Text style={styles.qrSub}>Tap to enlarge</Text>
-                      </View>
-                    </TouchableOpacity>
+              {/* Discipline badge */}
+              {isDisciplined && (
+                <View style={styles.disciplineBadge}>
+                  <Text style={styles.disciplineBadgeText}>
+                    ⚠️ {item.disciplinaryStatus?.toUpperCase()}
+                    {item.disciplinaryDate
+                      ? ` · ${item.disciplinaryDate}`
+                      : ""}
+                  </Text>
+                </View>
+              )}
 
-                    {/* Edit row */}
-                    <View style={styles.row}>
-                      <TouchableOpacity style={styles.editBtn} onPress={() => editMember(item)}>
-                        <Ionicons name="create-outline" size={13} color="#fff" />
-                        <Text style={styles.white}> Edit</Text>
-                      </TouchableOpacity>
-                      {/* ✅ #5 — Delete requires approval */}
-                      <TouchableOpacity style={styles.deleteBtn} onPress={() => openApproval(item, "delete")}>
-                        <Ionicons name="trash-outline" size={13} color="#fff" />
-                        <Text style={styles.white}> Delete</Text>
-                      </TouchableOpacity>
-                    </View>
+              {/* Pending approvals */}
+              {pendingApprovals.map(a => (
+                <View key={a} style={styles.pendingBadge}>
+                  <Text style={styles.pendingBadgeText}>
+                    ⏳ {ACTIONS[a].label} pending approval
+                  </Text>
+                </View>
+              ))}
 
-                    {/* Action buttons */}
-                    <View style={styles.row}>
-                      {["suspend", "reprimand", "demote"].map(action => (
-                        <TouchableOpacity key={action}
-                          style={[styles.actionBtn, { backgroundColor: ACTIONS[action].color }]}
-                          onPress={() => openApproval(item, action)}>
-                          <Text style={styles.white}>{ACTIONS[action].label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+            </View>
 
-                    {/* ✅ #6 — Reinstate button */}
-                    {isDisciplined && (
-                      <TouchableOpacity style={styles.reinstateBtn} onPress={() => openReinstate(item)}>
-                        <Ionicons name="refresh-circle-outline" size={14} color="#fff" />
-                        <Text style={styles.white}> Reinstate</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-              </View>
+
+            {/* ✅ Donate button */}
+            <TouchableOpacity
+              style={styles.memberDonateBtn}
+              onPress={() => goToDonate(item.id, item.name)}
+            >
+              <Ionicons name="heart-outline" size={20} color="#E11D48" />
             </TouchableOpacity>
-          );
-        }}
-      />
 
-      <AppButton
-  title="Add Member"
-  onPress={handleAddMember}
+          </View>
+
+
+          {showActions && (
+            <>
+              {/* QR section */}
+              <TouchableOpacity
+                onPress={() => setSelectedMember(item)}
+                style={styles.qrRow}
+              >
+                <QRCode value={item.id} size={70} />
+
+                <View style={styles.qrInfo}>
+                  <Text style={styles.qrLabel}>Member QR</Text>
+
+                  <Text style={styles.qrCode}>
+                    {item.memberCode || item.id}
+                  </Text>
+
+                  <Text style={styles.qrSub}>
+                    Tap to enlarge
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+
+              {/* Edit / Delete */}
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => editMember(item)}
+                >
+                  <Ionicons name="create-outline" size={13} color="#fff" />
+                  <Text style={styles.white}> Edit</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => openApproval(item, "delete")}
+                >
+                  <Ionicons name="trash-outline" size={13} color="#fff" />
+                  <Text style={styles.white}> Delete</Text>
+                </TouchableOpacity>
+              </View>
+
+
+              {/* Actions */}
+              <View style={styles.row}>
+                {["suspend", "reprimand", "demote"].map(action => (
+                  <TouchableOpacity
+                    key={action}
+                    style={[
+                      styles.actionBtn,
+                      { backgroundColor: ACTIONS[action].color }
+                    ]}
+                    onPress={() => openApproval(item, action)}
+                  >
+                    <Text style={styles.white}>
+                      {ACTIONS[action].label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+
+              {/* Reinstate */}
+              {isDisciplined && (
+                <TouchableOpacity
+                  style={styles.reinstateBtn}
+                  onPress={() => openReinstate(item)}
+                >
+                  <Ionicons
+                    name="refresh-circle-outline"
+                    size={14}
+                    color="#fff"
+                  />
+                  <Text style={styles.white}> Reinstate</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+        </View>
+      </TouchableOpacity>
+    );
+  }}
 />
+     
+
 
       {/* ══ QR MODAL ══ */}
       <Modal visible={!!selectedMember} transparent animationType="fade">
