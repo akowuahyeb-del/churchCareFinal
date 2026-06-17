@@ -1043,72 +1043,146 @@ return (
 </Modal>
 
       {/* ══ LIST ITEM EDIT MODAL ══ */}
-      <Modal visible={modal.visible} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>{modal.index != null ? "Edit" : "Add"} {modal.type}</Text>
-            <TextInput value={modal.input}
-              onChangeText={t => setModal({ ...modal, input: t })}
-              style={styles.input} placeholder="Enter value..." autoFocus />
-            <TouchableOpacity style={[styles.btn, { marginTop: 10 }]}
-              onPress={() => saveList(
-                modal.type === "ministry" ? ministries :
-                  modal.type === "baptism" ? baptismList : statusList,
-                modal.type === "ministry" ? setMinistries :
-                  modal.type === "baptism" ? setBaptismList : setStatusList
-              )}>
-              <Text style={styles.white}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 10, alignItems: "center" }} onPress={closeModal}>
-              <Text style={{ color: "#e74c3c" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+<Modal visible={modal.visible} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        {modal.index != null ? "Edit" : "Add"} {modal.type || ""}
+      </Text>
+
+      <TextInput
+        value={modal.input}
+        onChangeText={t => setModal({ ...modal, input: t })}
+        style={styles.input}
+        placeholder="Enter value..."
+        autoFocus
+      />
+
+      <TouchableOpacity
+        style={[styles.btn, { marginTop: 10 }]}
+        onPress={() =>
+          saveList(
+            modal.type === "ministry"
+              ? ministries
+              : modal.type === "baptism"
+              ? baptismList
+              : statusList,
+
+            modal.type === "ministry"
+              ? setMinistries
+              : modal.type === "baptism"
+              ? setBaptismList
+              : setStatusList
+          )
+        }
+      >
+        <Text style={styles.white}>Save</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={{ marginTop: 10, alignItems: "center" }}
+        onPress={closeModal}
+      >
+        <Text style={{ color: "#e74c3c" }}>Cancel</Text>
+      </TouchableOpacity>
 
     </View>
-  );
+  </View>
+</Modal>
+
+
+</View>
+);
+
 
   function openModal(type, index = null, list = []) {
-    setModal({ visible: true, type, input: index != null ? list[index] : "", index });
-  }
-  function closeModal() {
-    setModal({ visible: false, type: null, input: "", index: null });
-  }
-  function saveList(list, setList) {
-    if (!modal.input.trim()) return;
-    if (modal.index != null) {
-      const u = [...list]; u[modal.index] = modal.input; setList(u);
-    } else { setList(prev => [...prev, modal.input]); }
-    closeModal();
-  }
+  setModal({
+    visible: true,
+    type,
+    input: index != null ? (list[index] || "") : "",
+    index
+  });
 }
 
+function closeModal() {
+  setModal({
+    visible: false,
+    type: null,
+    input: "",
+    index: null
+  });
+}
+
+function saveList(list, setList) {
+  if (!modal.input.trim()) return;
+
+  if (modal.index != null) {
+    const updated = [...list];
+    updated[modal.index] = modal.input;
+    setList(updated);
+  } else {
+    setList(prev => [...prev, modal.input]);
+  }
+
+  closeModal();
+}
+
+
+
+
 /* ── Sub-components ── */
+
 const Input = ({ label, value, onChange, keyboardType }) => (
   <>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <TextInput style={styles.input} value={value} onChangeText={onChange}
-      keyboardType={keyboardType || "default"} />
+
+    <TextInput
+      style={styles.input}
+      value={value}
+      onChangeText={onChange}
+      keyboardType={keyboardType || "default"}
+    />
   </>
 );
 
-const ChipRow = ({ label, list, value, onSelect, onAdd, onEdit }) => (
+
+const ChipRow = ({ label, list = [], value, onSelect, onAdd, onEdit }) => (
   <>
     <Text style={styles.fieldLabel}>{label}</Text>
+
     <View style={styles.chipRow}>
       {list.map((m, i) => (
-        <TouchableOpacity key={i} onPress={() => onSelect(m)} onLongPress={() => onEdit(i)}
-          style={[styles.chip, value === m && styles.activeChip]}>
-          <Text style={[{ fontSize: 12 }, value === m && { color: "#fff", fontWeight: "600" }]}>{m}</Text>
+        <TouchableOpacity
+          key={i}
+          onPress={() => onSelect(m)}
+          onLongPress={() => onEdit(i)}
+          style={[
+            styles.chip,
+            value === m && styles.activeChip
+          ]}
+        >
+          <Text
+            style={[
+              { fontSize: 12 },
+              value === m && { color: "#fff", fontWeight: "600" }
+            ]}
+          >
+            {m}
+          </Text>
         </TouchableOpacity>
       ))}
     </View>
+
     <TouchableOpacity onPress={onAdd} style={{ marginTop: 4 }}>
-      <Text style={{ color: "#4B3F72", fontSize: 12 }}>+ Add option</Text>
+      <Text style={{ color: "#4B3F72", fontSize: 12 }}>
+        + Add option
+      </Text>
     </TouchableOpacity>
   </>
 );
+
+
 
 /* ── Styles ── */
 const styles = StyleSheet.create({
