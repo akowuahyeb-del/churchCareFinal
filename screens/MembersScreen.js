@@ -208,134 +208,233 @@ const toggleActions = () => {
 };
 
 
-  /* ══════════════ SAVE MEMBER ══════════════ */
-  const saveMember = async () => {
-    if (!member.name.trim() || !member.phone.trim()) {
-      Alert.alert("Required", "Name and phone are required."); return;
+/* ══════════════ SAVE MEMBER ══════════════ */
+const saveMember = async () => {
+  if (!member.name.trim() || !member.phone.trim()) {
+    Alert.alert("Required", "Name and phone are required.");
+    return;
+  }
+
+  if (member.communicant === null) {
+    Alert.alert("Required", "Communicant field is required.");
+    return;
+  }
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  try {
+    const payload = {
+      ...member,
+      entityId,           // ✅ NEW
+      organizationId      // ✅ NEW
+    };
+
+    if (editingId) {
+      await updateDoc(
+        doc(db, "members", editingId),
+        payload
+      );
+      Alert.alert("✅ Updated");
+
+    } else {
+      const code = generateMemberCode(members.length);
+
+      await addDoc(
+        collection(db, "members"),
+        {
+          ...payload,
+          memberCode: code
+        }
+      );
+
+      Alert.alert("✅ Saved", `Member ID: ${code}`);
     }
-    if (member.communicant === null) {
-      Alert.alert("Required", "Communicant field is required."); return;
-    }
 
-    try {
-      if (editingId) {
-        await updateDoc(doc(db, "members", editingId), member);
-        Alert.alert("✅ Updated");
-      } else {
-        // Generate human-readable member code
-        const code = generateMemberCode(members.length);
-        await addDoc(collection(db, "members"), { ...member, memberCode: code });
-        Alert.alert("✅ Saved", `Member ID: ${code}`);
-      }
-      resetForm();
-      loadMembers();
-    } catch (e) { Alert.alert("Error", e.message); }
-  };
+    resetForm();
+    loadMembers();
 
-  const resetForm = () => {
-    setMember(defaultMember); setEditingId(null); setShowForm(false);
-    setCommStatusModal(false); setCommInvalidModal(false);
-  };
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  }
+};
 
-  const editMember = (item) => { setMember(item); setEditingId(item.id); setShowForm(true); };
+
+/* ══════════════ RESET FORM ══════════════ */
+const resetForm = () => {
+  setMember(defaultMember);
+  setEditingId(null);
+  setShowForm(false);
+
+  setCommStatusModal(false);
+  setCommInvalidModal(false);
+};
+
+
+/* ══════════════ EDIT MEMBER ══════════════ */
+const editMember = (item) => {
+  setMember(item);
+  setEditingId(item.id);
+  setShowForm(true);
+};
 
   /* ══════════════ COMMUNICANT LOGIC ══════════════ */
-  const handleCommunicantSelect = (val) => {
-    setMember(prev => ({ ...prev, communicant: val }));
-    if (val === "yes") setCommStatusModal(true);
+
+const handleCommunicantSelect = (val) => {
+  setMember(prev => ({ ...prev, communicant: val }));
+  if (val === "yes") setCommStatusModal(true);
+};
+
+const handleCommStatus = (status) => {
+  setMember(prev => ({ ...prev, communicantStatus: status }));
+  setCommStatusModal(false);
+
+  if (status === "invalid") {
+    setCommInvalidModal(true);
+  }
+};
+
+const handleCommInvalidDate = (e, d) => {
+  if (Platform.OS === "android") setShowCommDatePicker(false);
+
+  if (d) {
+    setCommInvalidDate(d);
+    setMember(prev => ({
+      ...prev,
+      communicantInvalidSince: d.toISOString().split("T")[0]
+    }));
+  }
+};
+
+const confirmCommInvalid = () => {
+  setMember(prev => ({
+    ...prev,
+    communicantInvalidSince: commInvalidDate.toISOString().split("T")[0]
+  }));
+
+  setCommInvalidModal(false);
+};
+
+
+/* ══════════════ APPROVAL SYSTEM ══════════════ */
+
+const approvalKey = (memberId, action) => `${memberId}_${action}`;
+
+const getApprovals = (memberId, action) =>
+  approvals[approvalKey(memberId, action)] || [];
+
+const isFullyApproved = (memberId, action) => {
+  const required = ACTIONS[action]?.required || [];
+  const granted = getApprovals(memberId, action);
+
+  return required.every(r => granted.includes(r));
+};
+
+const canApproveAction = (action) => {
+  const required = ACTIONS[action]?.required || [];
+  return required.includes(viewerRole) || viewerRole === "admin";
+};
+
+
+const grantApproval = () => {
+  if (!approvalAction || !approvalTarget) return;
+
+  const key = approvalKey(approvalTarget.id, approvalAction);
+  const current = approvals[key] || [];
+
+  if (current.includes(viewerRole)) {
+    Alert.alert("Already approved", "You have already approved this action.");
+    return;
+  }
+
+  const updated = {
+    ...approvals,
+    [key]: [...current, viewerRole]
   };
 
-  const handleCommStatus = (status) => {
-    setMember(prev => ({ ...prev, communicantStatus: status }));
-    setCommStatusModal(false);
-    if (status === "invalid") setCommInvalidModal(true);
-  };
+  setApprovals(updated);
 
-  const handleCommInvalidDate = (e, d) => {
-    if (Platform.OS === "android") setShowCommDatePicker(false);
-    if (d) {
-      setCommInvalidDate(d);
-      setMember(prev => ({ ...prev, communicantInvalidSince: d.toISOString().split("T")[0] }));
-    }
-  };
+  const required = ACTIONS[approvalAction]?.required || [];
+  const granted = updated[key];
 
-  const confirmCommInvalid = () => {
-    setMember(prev => ({ ...prev, communicantInvalidSince: commInvalidDate.toISOString().split("T")[0] }));
-    setCommInvalidModal(false);
-  };
+  const allDone = required.every(r => granted.includes(r));
 
-  /* ══════════════ APPROVAL SYSTEM ══════════════ */
-  const approvalKey = (memberId, action) => `${memberId}_${action}`;
+  if (allDone) {
+    setApprovalModal(false);
+    executeAction(approvalTarget, approvalAction, approvalNote);
 
-  const getApprovals = (memberId, action) => approvals[approvalKey(memberId, action)] || [];
+  } else {
+    const remaining = required.filter(r => !granted.includes(r));
 
-  const isFullyApproved = (memberId, action) => {
-    const required = ACTIONS[action]?.required || [];
-    const granted  = getApprovals(memberId, action);
-    return required.every(r => granted.includes(r));
-  };
+    Alert.alert(
+      "Approval recorded",
+      `Still waiting for: ${remaining.join(", ")}`
+    );
 
-  const canApproveAction = (action) => {
-    const required = ACTIONS[action]?.required || [];
-    return required.includes(viewerRole) || viewerRole === "admin";
-  };
+    setApprovalModal(false);
+  }
 
-  const grantApproval = () => {
-    if (!approvalAction || !approvalTarget) return;
-    const key     = approvalKey(approvalTarget.id, approvalAction);
-    const current = approvals[key] || [];
-    if (current.includes(viewerRole)) {
-      Alert.alert("Already approved", "You have already approved this action."); return;
-    }
-    const updated = { ...approvals, [key]: [...current, viewerRole] };
-    setApprovals(updated);
+  setApprovalNote("");
+};
 
-    const required = ACTIONS[approvalAction]?.required || [];
-    const granted  = updated[key];
-    const allDone  = required.every(r => granted.includes(r));
 
-    if (allDone) {
-      setApprovalModal(false);
-      executeAction(approvalTarget, approvalAction, approvalNote);
+const openApproval = (member, action) => {
+  if (!canApproveAction(action)) {
+    Alert.alert(
+      "Access denied",
+      `You need ${ACTIONS[action].required.join(" or ")} role`
+    );
+    return;
+  }
+
+  setApprovalTarget(member);
+  setApprovalAction(action);
+  setApprovalNote("");
+  setApprovalModal(true);
+};
+
+
+/* ✅ UPDATED ACTION EXECUTION (ACTIVE ENTITY SAFE) */
+const executeAction = async (member, action, note) => {
+  try {
+    if (action === "delete") {
+      await deleteDoc(doc(db, "members", member.id));
+
+      Alert.alert("Deleted", `${member.name} has been removed`);
+
     } else {
-      const remaining = required.filter(r => !granted.includes(r));
-      Alert.alert("Approval recorded", `Still waiting for: ${remaining.join(", ")}`);
-      setApprovalModal(false);
-    }
-    setApprovalNote("");
-  };
-
-  const openApproval = (member, action) => {
-    if (!canApproveAction(action)) {
-      Alert.alert("Access denied", `You need ${ACTIONS[action].required.join(" or ")} role to approve this action.`);
-      return;
-    }
-    setApprovalTarget(member);
-    setApprovalAction(action);
-    setApprovalNote("");
-    setApprovalModal(true);
-  };
-
-  const executeAction = async (member, action, note) => {
-    try {
-      if (action === "delete") {
-        await deleteDoc(doc(db, "members", member.id));
-        Alert.alert("Deleted", `${member.name} has been removed.`);
-      } else {
-        await updateDoc(doc(db, "members", member.id), {
+      await updateDoc(
+        doc(db, "members", member.id),
+        {
           disciplinaryStatus: action,
           disciplinaryNote: note,
           disciplinaryDate: new Date().toISOString().split("T")[0],
-        });
-        Alert.alert("Done", `${member.name} has been ${action}ed.`);
-      }
-      // Clear approvals for this action
-      const key = approvalKey(member.id, action);
-      setApprovals(prev => { const n = { ...prev }; delete n[key]; return n; });
-      loadMembers();
-    } catch (e) { Alert.alert("Error", e.message); }
-  };
 
+          entityId,        // ✅ ensure consistency
+          organizationId   // ✅ ensure consistency
+        }
+      );
+
+      Alert.alert("Done", `${member.name} has been ${action}ed`);
+    }
+
+    // ✅ Clear approvals
+    const key = approvalKey(member.id, action);
+
+    setApprovals(prev => {
+      const n = { ...prev };
+      delete n[key];
+      return n;
+    });
+
+    loadMembers();
+
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  }
+};
   /* ══════════════ REINSTATE ══════════════ */
   const openReinstate = (member) => { setReinstateTarget(member); setReinstateNote(""); setReinstateModal(true); };
 
