@@ -18,11 +18,34 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function LoginScreen({ navigation }) {
 
+  // ✅ CHECK EXISTING SESSION
   useEffect(() => {
     const checkLogin = async () => {
       const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
       if (isLoggedIn === "true") {
+
+        const userData = JSON.parse(
+          await AsyncStorage.getItem("currentUser")
+        );
+
+        // ✅ PROFILE NOT COMPLETE → WELCOME
+        if (
+          !userData?.name?.trim() ||
+          !userData?.phone?.trim() ||
+          userData.phone.length < 10
+        ) {
+          navigation.replace("Welcome");
+          return;
+        }
+
+        // ✅ NO CHURCH
+        if (!userData?.organizationId || !userData?.entityId) {
+          navigation.replace("CreateChurch");
+          return;
+        }
+
+        // ✅ READY
         navigation.replace("MainTabs");
       }
     };
@@ -34,107 +57,84 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // ✅ LOGIN HANDLER
   const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert("Error", "Enter email and password");
-    return;
-  }
+    if (!email || !password) {
+      Alert.alert("Error", "Enter email and password");
+      return;
+    }
 
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    const uid = userCredential.user.uid;
-
-    // ✅ FETCH USER
-    const userRef = doc(db, "users", uid);
-    const userSnap = await getDoc(userRef);
-
-    let userData;
-
-    if (!userSnap.exists()) {
-      // ✅ AUTO-CREATE USER
-      userData = {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
         email,
-        role: "member",
-        organizationId: "",
-        entityId: "",
-        entityName: "",
-        name: "",
-        phone: "",
-        uid   // ✅ VERY IMPORTANT
-      };
+        password
+      );
 
-      await setDoc(userRef, userData);
-      console.log("✅ New user profile created");
+      const uid = userCredential.user.uid;
 
-    } else {
-      userData = { ...userSnap.data(), uid }; ✅ ensure uid is included
-    }
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
 
-    // ✅ SAVE LOGIN STATUS
-    await AsyncStorage.setItem("isLoggedIn", "true");
-    await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+      let userData;
 
-    // ✅ FORCE PROFILE COMPLETION
-    if (!userData.name || !userData.phone) {
-      navigation.replace("CompleteProfile");
-      return;
-    }
+      // ✅ AUTO-CREATE USER
+      if (!userSnap.exists()) {
+        userData = {
+          email,
+          role: "member",
+          organizationId: "",
+          entityId: "",
+          entityName: "",
+          name: "",
+          phone: "",
+          uid
+        };
 
-    // ✅ FORCE CHURCH SELECTION
-    if (!userData.organizationId || !userData.entityId) {
-      navigation.replace("CreateChurch");
-      return;
-    }
+        await setDoc(userRef, userData);
+        console.log("✅ New user profile created");
 
-    // ✅ SAVE ACTIVE ENTITY
-    await AsyncStorage.setItem(
-      "activeEntity",
-      JSON.stringify({
-        organizationId: userData.organizationId,
-        entityId: userData.entityId,
-        name: userData.entityName || "Church"
-      })
-    );
+      } else {
+        userData = { ...userSnap.data(), uid };
+      }
 
-    // ✅ ENTER APP
-    navigation.replace("MainTabs");
+      // ✅ SAVE SESSION
+      await AsyncStorage.setItem("isLoggedIn", "true");
+      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-  } catch (error) {
-    console.log("LOGIN ERROR:", error.code);
-    Alert.alert("Login Failed", error.message);
-  }
-};
+      // ✅ PROFILE NOT COMPLETE
+      if (
+        !userData?.name?.trim() ||
+        !userData?.phone?.trim() ||
+        userData.phone.length < 10
+      ) {
+        navigation.replace("Welcome");
+        return;
+      }
 
-      // ✅ CHECK IF USER HAS CHURCH
-if (!userData.organizationId || !userData.entityId) {
-  navigation.replace("CreateChurch");
-  return;
-}
+      // ✅ NO CHURCH
+      if (!userData?.organizationId || !userData?.entityId) {
+        navigation.replace("CreateChurch");
+        return;
+      }
 
-// ✅ SAVE ACTIVE ENTITY
-await AsyncStorage.setItem(
-  "activeEntity",
-  JSON.stringify({
-    organizationId: userData.organizationId,
-    entityId: userData.entityId,
-    name: userData.entityName
-  })
-);
+      // ✅ SAVE ACTIVE ENTITY
+      await AsyncStorage.setItem(
+        "activeEntity",
+        JSON.stringify({
+          organizationId: userData.organizationId,
+          entityId: userData.entityId,
+          name: userData.entityName || "Church"
+        })
+      );
 
-navigation.replace("MainTabs");
-
+      // ✅ ENTER APP
       navigation.replace("MainTabs");
-} catch (error) {
-  console.log("LOGIN ERROR:", error.code);   
-  Alert.alert("Login Failed", error.message);
-}
 
-    
+    } catch (error) {
+      console.log("LOGIN ERROR:", error.code);
+      Alert.alert("Login Failed", error.message);
+    }
   };
 
   return (
@@ -147,7 +147,7 @@ navigation.replace("MainTabs");
       </Text>
 
       <TextInput
-        placeholder="Email / Phone"
+        placeholder="Email"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -210,9 +210,7 @@ navigation.replace("MainTabs");
   );
 }
 
-
-/* ✅ STYLES */
-
+// ✅ STYLES
 const styles = StyleSheet.create({
   container: {
     flex: 1,

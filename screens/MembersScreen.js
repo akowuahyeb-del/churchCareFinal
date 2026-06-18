@@ -1,1418 +1,953 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  FlatList, Modal, Alert, ScrollView, Platform
+  FlatList, Modal, Alert, ScrollView, Platform,
+  ActivityIndicator, Image
 } from "react-native";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import AppHeader from "../components/AppHeader";
+import { Ionicons } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg";
 import { db } from "../firebase";
 import {
-  collection, addDoc, getDocs,
-  updateDoc, deleteDoc, doc, query, where
+  collection, addDoc, getDocs, updateDoc,
+  deleteDoc, doc, query, where
 } from "firebase/firestore";
-import QRCode from "react-native-qrcode-svg";
-import { Ionicons } from "@expo/vector-icons";
-import AppButton from "../components/AppButton";
+import AppHeader from "../components/AppHeader";
 
+// ── Constants ─────────────────────────────────────────────────────
 const MEMBERS_CACHE_KEY = "members_cache_v1";
-
-
-
-// ── Role levels ─────────────────────────────────────────────────
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 
-// ── Human-readable ID generator ─────────────────────────────────
-// Format:  CC-YYYY-NNNN   e.g. CC-2024-0042
-const generateMemberCode = (existingCount) => {
+const ACTIONS = {
+  suspend:   { label: "Suspend",   color: "#f39c12", required: ["pastor", "elder"] },
+  reprimand: { label: "Reprimand", color: "#e67e22", required: ["elder"] },
+  demote:    { label: "Demote",    color: "#8e44ad", required: ["pastor", "admin"] },
+  delete:    { label: "Delete",    color: "#e74c3c", required: ["pastor", "admin", "elder"] },
+};
+
+const generateMemberCode = (count) => {
   const year = new Date().getFullYear();
-  const seq  = String(existingCount + 1).padStart(4, "0");
+  const seq  = String(count + 1).padStart(4, "0");
   return `CC-${year}-${seq}`;
 };
 
-// ── Action types that need approval ─────────────────────────────
-const ACTIONS = {
-  suspend:   { label: "Suspend",   color: "#f39c12", required: ["pastor","elder"] },
-  reprimand: { label: "Reprimand", color: "#e67e22", required: ["elder"] },
-  demote:    { label: "Demote",    color: "#8e44ad", required: ["pastor","admin"] },
-  delete:    { label: "Delete",    color: "#e74c3c", required: ["pastor","admin","elder"] },
+const DEFAULT_MEMBER = {
+  name: "", phone: "", address: "", occupation: "",
+  ministry: "", baptismStatus: "", status: "Regular",
+  emergencyContact: "", membershipDuration: "",
+  communicant: null, communicantStatus: "active",
+  communicantInvalidSince: null, memberCode: "",
+  entityId: "", organizationId: "",
 };
 
-export default function MembersScreen({ navigation, route }) {
+// ── Sub-components ────────────────────────────────────────────────
+function FieldInput({ label, value, onChange, keyboardType, placeholder }) {
+  return (
+    <>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChange}
+        keyboardType={keyboardType || "default"}
+        placeholder={placeholder || ""}
+        placeholderTextColor="#bbb"
+      />
+    </>
+  );
+}
 
-  /* ── ACTIVE ENTITY (NEW SYSTEM) ── */
-  const [activeEntity, setActiveEntity] = useState(null);
+function ChipRow({ label, list = [], value, onSelect, onAdd, onEdit }) {
+  return (
+    <>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.chipRow}>
+        {list.map((item, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={() => onSelect(item)}
+            onLongPress={() => onEdit && onEdit(i)}
+            style={[styles.chip, value === item && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, value === item && styles.chipTextActive]}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {onAdd && (
+        <TouchableOpacity onPress={onAdd} style={{ marginTop: 4 }}>
+          <Text style={{ color: "#4B3F72", fontSize: 12, fontWeight: "600" }}>+ Add option</Text>
+        </TouchableOpacity>
+      )}
+    </>
+  );
+}
 
-  const entity = activeEntity || {};
-  const { organizationId, entityId } = entity;
+// ── Main screen ───────────────────────────────────────────────────
+export default function MembersScreen({ navigation }) {
 
-  /* ── LOAD ACTIVE ENTITY ── */
+  const viewerRole = "admin"; // replace with auth context
+
+  // ── Entity / church ──
+  const [activeEntity,  setActiveEntity]  = useState(null);
+  const entityId       = activeEntity?.entityId       || "";
+  const organizationId = activeEntity?.organizationId || "";
+
+  // ── Members data ──
+  const [members,  setMembers]  = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState(null);
+
+  // ── UI toggles ──
+  const [showActions,  setShowActions]  = useState(true);
+  const [showFilters,  setShowFilters]  = useState(false);
+  const [showForm,     setShowForm]     = useState(false);
+
+  // ── Form state ──
+  const [member,     setMember]     = useState(DEFAULT_MEMBER);
+  const [editingId,  setEditingId]  = useState(null);
+
+  // ── Communicant pickers ──
+  const [commStatusModal,   setCommStatusModal]   = useState(false);
+  const [commInvalidModal,  setCommInvalidModal]  = useState(false);
+  const [commInvalidDate,   setCommInvalidDate]   = useState(new Date());
+  const [showCommDatePicker,setShowCommDatePicker]= useState(false);
+
+  // ── Search & filters ──
+  const [search,         setSearch]         = useState("");
+  const [filterMinistry, setFilterMinistry] = useState("All");
+  const [filterStatus,   setFilterStatus]   = useState("All");
+  const [filterCommun,   setFilterCommun]   = useState("All");
+
+  // ── Dropdown lists ──
+  const [ministries,  setMinistries]  = useState(["Choir", "Youth", "Ushers", "Media"]);
+  const [statusList,  setStatusList]  = useState(["Regular", "Visiting", "Inactive"]);
+  const [baptismList, setBaptismList] = useState(["Baptized", "Not Baptized"]);
+
+  // ── Approvals ──
+  const [approvals,      setApprovals]      = useState({});
+  const [approvalModal,  setApprovalModal]  = useState(false);
+  const [approvalTarget, setApprovalTarget] = useState(null);
+  const [approvalAction, setApprovalAction] = useState(null);
+  const [approvalNote,   setApprovalNote]   = useState("");
+
+  // ── Reinstate ──
+  const [reinstateModal,  setReinstateModal]  = useState(false);
+  const [reinstateTarget, setReinstateTarget] = useState(null);
+  const [reinstateNote,   setReinstateNote]   = useState("");
+
+  // ── QR modal ──
+  const [selectedMember, setSelectedMember] = useState(null);
+
+  // ── List item edit modal ──
+  const [listModal, setListModal] = useState({ visible: false, type: null, input: "", index: null });
+
+  /* ── Load entity ── */
   useEffect(() => {
-    const loadEntity = async () => {
-      try {
-        const data = await AsyncStorage.getItem("activeEntity");
-
-        if (data) {
-          const parsed = JSON.parse(data);
-          console.log("✅ Members entity:", parsed);
-          setActiveEntity(parsed);
-        }
-      } catch (e) {
-        console.log("Entity load error", e);
+    AsyncStorage.getItem("activeEntity").then(data => {
+      if (data) {
+        try { setActiveEntity(JSON.parse(data)); } catch (_) {}
       }
-    };
-
-    loadEntity();
+    });
+    AsyncStorage.getItem("showActions").then(v => {
+      if (v !== null) setShowActions(JSON.parse(v));
+    });
   }, []);
 
+  /* ── Load members when entity ready ── */
+  useEffect(() => {
+    if (entityId) loadMembers();
+  }, [entityId]);
 
-  /* ── ADD MEMBER NAVIGATION ── */
-  const handleAddMember = () => {
-    if (!organizationId || !entityId) {
-      Alert.alert("No active church", "Please select a church first");
+  const loadMembers = useCallback(async () => {
+    if (!entityId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const q    = query(collection(db, "members"), where("entityId", "==", entityId));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setMembers(data);
+      await AsyncStorage.setItem(MEMBERS_CACHE_KEY, JSON.stringify(data));
+    } catch (_) {
+      const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
+      if (cached) {
+        setMembers(JSON.parse(cached));
+        setError("Showing offline data.");
+      } else {
+        setError("Unable to load members. Check your connection.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId]);
+
+  const toggleActions = () => {
+    setShowActions(prev => {
+      const next = !prev;
+      AsyncStorage.setItem("showActions", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  /* ── Form helpers ── */
+  const setField = (key, val) => setMember(prev => ({ ...prev, [key]: val }));
+
+  const resetForm = () => {
+    setMember(DEFAULT_MEMBER);
+    setEditingId(null);
+    setShowForm(false);
+    setCommStatusModal(false);
+    setCommInvalidModal(false);
+  };
+
+  const editMember = (item) => {
+    setMember({ ...DEFAULT_MEMBER, ...item });
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  /* ── Save member ── */
+  const saveMember = async () => {
+    if (!member.name.trim() || !member.phone.trim()) {
+      Alert.alert("Required", "Name and phone are required."); return;
+    }
+    if (member.communicant === null) {
+      Alert.alert("Required", "Communicant field is required."); return;
+    }
+    if (!entityId) {
+      Alert.alert("No active church", "Please select a church first."); return;
+    }
+    try {
+      const payload = { ...member, entityId, organizationId };
+      if (editingId) {
+        await updateDoc(doc(db, "members", editingId), payload);
+        Alert.alert("✅ Updated");
+      } else {
+        const code = generateMemberCode(members.length);
+        await addDoc(collection(db, "members"), { ...payload, memberCode: code });
+        Alert.alert("✅ Saved", `Member ID: ${code}`);
+      }
+      resetForm();
+      loadMembers();
+    } catch (e) {
+      Alert.alert("Error", e.message);
+    }
+  };
+
+  /* ── Communicant logic ── */
+  const handleCommunicantSelect = (val) => {
+    setField("communicant", val);
+    if (val === "yes") setCommStatusModal(true);
+    if (val === "no")  setField("communicantStatus", "");
+  };
+
+  const handleCommStatus = (status) => {
+    setField("communicantStatus", status);
+    setCommStatusModal(false);
+    if (status === "invalid") setCommInvalidModal(true);
+  };
+
+  const handleCommInvalidDate = (e, d) => {
+    if (Platform.OS === "android") setShowCommDatePicker(false);
+    if (d) {
+      setCommInvalidDate(d);
+      setField("communicantInvalidSince", d.toISOString().split("T")[0]);
+    }
+  };
+
+  /* ── Approval system ── */
+  const approvalKey   = (mId, action) => `${mId}_${action}`;
+  const getApprovals  = (mId, action) => approvals[approvalKey(mId, action)] || [];
+  const isFullyApproved = (mId, action) => {
+    const required = ACTIONS[action]?.required || [];
+    const granted  = getApprovals(mId, action);
+    return required.every(r => granted.includes(r));
+  };
+  const canApproveAction = (action) => {
+    const required = ACTIONS[action]?.required || [];
+    return required.includes(viewerRole) || viewerRole === "admin";
+  };
+
+  const openApproval = (m, action) => {
+    if (!canApproveAction(action)) {
+      Alert.alert("Access denied", `Requires: ${ACTIONS[action].required.join(" or ")}`);
       return;
     }
-
-    navigation.navigate("AddMember", {
-      entityId,
-      organizationId
-    });
+    setApprovalTarget(m);
+    setApprovalAction(action);
+    setApprovalNote("");
+    setApprovalModal(true);
   };
 
-
-  /* ── viewer role ── */
-  const viewerRole = "admin"; 
-
-
-  /* ── member form defaults ── */
-  const defaultMember = {
-    name: "",
-    phone: "",
-    address: "",
-    occupation: "",
-    ministry: "",
-    baptismStatus: "",
-    status: "Regular",
-    emergencyContact: "",
-    membershipDuration: "",
-
-    communicant: null,
-    communicantStatus: "active",
-    communicantInvalidSince: null,
-
-    memberCode: "",
-
-    entityId: "",          // ✅ CHANGED
-    organizationId: "",    // ✅ NEW
-  };
-
-
-  const [member, setMember] = useState(defaultMember);
-  const [members, setMembers] = useState([]);
-
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [showActions, setShowActions] = useState(true);
-
-  const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [approvalModal, setApprovalModal] = useState(false);
-  const [approvals, setApprovals] = useState({});
-  const [approvalAction, setApprovalAction] = useState(null);
-const [approvalTarget, setApprovalTarget] = useState(null);
-const [approvalNote, setApprovalNote] = useState("");
-
-const [reinstateModal, setReinstateModal] = useState(false);
-const [reinstateTarget, setReinstateTarget] = useState(null);
-const [reinstateNote, setReinstateNote] = useState("");
-const [filterMinistry, setFilterMinistry] = useState("All");
-const [filterStatus, setFilterStatus] = useState("All");
-const [filterCommun, setFilterCommun] = useState("All");
-
-const [ministries, setMinistries] = useState(["Choir", "Youth"]);
-const [statusList, setStatusList] = useState(["Regular", "Visiting"]);
-const [baptismList, setBaptismList] = useState(["Baptized", "Not Baptized"]);
-
-
-const [modal, setModal] = useState({
-  visible: false,
-  type: null,
-  input: "",
-  index: null
-});
-
-
-
-  /* ══════════════ LOAD ══════════════ */
-
-// ✅ Load members when entity changes
-useEffect(() => {
-  if (entityId) {
-    loadMembers();
-  }
-
-  AsyncStorage.getItem("showActions").then(v => {
-    if (v !== null) setShowActions(JSON.parse(v));
-  });
-
-}, [entityId]);
-
-
-// ❌ REMOVE this entire old block
-/*
-useEffect(() => {
-  if (churchId) {
-    loadMembers();
-  }
-}, [churchId]);
-
-useEffect(() => {
-  AsyncStorage.getItem("churchId").then(id => {
-    console.log("churchId loaded:", id);
-    setChurchId(id);
-  });
-}, []);
-*/
-
-
-// ✅ LOAD MEMBERS (ACTIVE ENTITY)
-const loadMembers = async () => {
-  if (!entityId) return;
-
-  setLoading(true);
-  setError(null);
-
-  try {
-    const q = query(
-      collection(db, "members"),
-      where("entityId", "==", entityId)
-    );
-
-    const snap = await getDocs(q);
-
-    const data = snap.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
-
-    setMembers(data);
-
-    await AsyncStorage.setItem(
-      MEMBERS_CACHE_KEY,
-      JSON.stringify(data)
-    );
-
-  } catch (err) {
-
-    const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
-
-    if (cached) {
-      setMembers(JSON.parse(cached));
-      setError("Showing offline data.");
-    } else {
-      setError("Unable to load members. Check your connection.");
+  const grantApproval = () => {
+    if (!approvalAction || !approvalTarget) return;
+    const key     = approvalKey(approvalTarget.id, approvalAction);
+    const current = approvals[key] || [];
+    if (current.includes(viewerRole)) {
+      Alert.alert("Already approved", "You have already approved this action."); return;
     }
-
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-// ✅ TOGGLE ACTION VISIBILITY
-const toggleActions = () => {
-  setShowActions(prev => {
-    const next = !prev;
-    AsyncStorage.setItem("showActions", JSON.stringify(next));
-    return next;
-  });
-};
-
-
-/* ══════════════ SAVE MEMBER ══════════════ */
-const saveMember = async () => {
-  if (!member.name.trim() || !member.phone.trim()) {
-    Alert.alert("Required", "Name and phone are required.");
-    return;
-  }
-
-  if (member.communicant === null) {
-    Alert.alert("Required", "Communicant field is required.");
-    return;
-  }
-
-  if (!organizationId || !entityId) {
-    Alert.alert("No active church", "Please select a church first");
-    return;
-  }
-
-  try {
-    const payload = {
-      ...member,
-      entityId,           // ✅ NEW
-      organizationId      // ✅ NEW
-    };
-
-    if (editingId) {
-      await updateDoc(
-        doc(db, "members", editingId),
-        payload
-      );
-      Alert.alert("✅ Updated");
-
+    const updated = { ...approvals, [key]: [...current, viewerRole] };
+    setApprovals(updated);
+    const required = ACTIONS[approvalAction]?.required || [];
+    const allDone  = required.every(r => updated[key].includes(r));
+    if (allDone) {
+      setApprovalModal(false);
+      executeAction(approvalTarget, approvalAction, approvalNote);
     } else {
-      const code = generateMemberCode(members.length);
-
-      await addDoc(
-        collection(db, "members"),
-        {
-          ...payload,
-          memberCode: code
-        }
-      );
-
-      Alert.alert("✅ Saved", `Member ID: ${code}`);
+      const remaining = required.filter(r => !updated[key].includes(r));
+      Alert.alert("Approval recorded", `Still waiting for: ${remaining.join(", ")}`);
+      setApprovalModal(false);
     }
-
-    resetForm();
-    loadMembers();
-
-  } catch (e) {
-    Alert.alert("Error", e.message);
-  }
-};
-
-
-/* ══════════════ RESET FORM ══════════════ */
-const resetForm = () => {
-  setMember(defaultMember);
-  setEditingId(null);
-  setShowForm(false);
-
-  setCommStatusModal(false);
-  setCommInvalidModal(false);
-};
-
-
-/* ══════════════ EDIT MEMBER ══════════════ */
-const editMember = (item) => {
-  setMember(item);
-  setEditingId(item.id);
-  setShowForm(true);
-};
-
-  /* ══════════════ COMMUNICANT LOGIC ══════════════ */
-
-const handleCommunicantSelect = (val) => {
-  setMember(prev => ({ ...prev, communicant: val }));
-  if (val === "yes") setCommStatusModal(true);
-};
-
-const handleCommStatus = (status) => {
-  setMember(prev => ({ ...prev, communicantStatus: status }));
-  setCommStatusModal(false);
-
-  if (status === "invalid") {
-    setCommInvalidModal(true);
-  }
-};
-
-const handleCommInvalidDate = (e, d) => {
-  if (Platform.OS === "android") setShowCommDatePicker(false);
-
-  if (d) {
-    setCommInvalidDate(d);
-    setMember(prev => ({
-      ...prev,
-      communicantInvalidSince: d.toISOString().split("T")[0]
-    }));
-  }
-};
-
-const confirmCommInvalid = () => {
-  setMember(prev => ({
-    ...prev,
-    communicantInvalidSince: commInvalidDate.toISOString().split("T")[0]
-  }));
-
-  setCommInvalidModal(false);
-};
-
-
-/* ══════════════ APPROVAL SYSTEM ══════════════ */
-
-const approvalKey = (memberId, action) => `${memberId}_${action}`;
-
-const getApprovals = (memberId, action) =>
-  approvals[approvalKey(memberId, action)] || [];
-
-const isFullyApproved = (memberId, action) => {
-  const required = ACTIONS[action]?.required || [];
-  const granted = getApprovals(memberId, action);
-
-  return required.every(r => granted.includes(r));
-};
-
-const canApproveAction = (action) => {
-  const required = ACTIONS[action]?.required || [];
-  return required.includes(viewerRole) || viewerRole === "admin";
-};
-
-
-const grantApproval = () => {
-  if (!approvalAction || !approvalTarget) return;
-
-  const key = approvalKey(approvalTarget.id, approvalAction);
-  const current = approvals[key] || [];
-
-  if (current.includes(viewerRole)) {
-    Alert.alert("Already approved", "You have already approved this action.");
-    return;
-  }
-
-  const updated = {
-    ...approvals,
-    [key]: [...current, viewerRole]
+    setApprovalNote("");
   };
 
-  setApprovals(updated);
-
-  const required = ACTIONS[approvalAction]?.required || [];
-  const granted = updated[key];
-
-  const allDone = required.every(r => granted.includes(r));
-
-  if (allDone) {
-    setApprovalModal(false);
-    executeAction(approvalTarget, approvalAction, approvalNote);
-
-  } else {
-    const remaining = required.filter(r => !granted.includes(r));
-
-    Alert.alert(
-      "Approval recorded",
-      `Still waiting for: ${remaining.join(", ")}`
-    );
-
-    setApprovalModal(false);
-  }
-
-  setApprovalNote("");
-};
-
-
-const openApproval = (member, action) => {
-  if (!canApproveAction(action)) {
-    Alert.alert(
-      "Access denied",
-      `You need ${ACTIONS[action].required.join(" or ")} role`
-    );
-    return;
-  }
-
-  setApprovalTarget(member);
-  setApprovalAction(action);
-  setApprovalNote("");
-  setApprovalModal(true);
-};
-
-
-/* ✅ UPDATED ACTION EXECUTION (ACTIVE ENTITY SAFE) */
-const executeAction = async (member, action, note) => {
-  try {
-    if (action === "delete") {
-      await deleteDoc(doc(db, "members", member.id));
-
-      Alert.alert("Deleted", `${member.name} has been removed`);
-
-    } else {
-      await updateDoc(
-        doc(db, "members", member.id),
-        {
-          disciplinaryStatus: action,
-          disciplinaryNote: note,
+  const executeAction = async (m, action, note) => {
+    try {
+      if (action === "delete") {
+        await deleteDoc(doc(db, "members", m.id));
+        Alert.alert("Deleted", `${m.name} has been removed`);
+      } else {
+        await updateDoc(doc(db, "members", m.id), {
+          disciplinaryStatus: action, disciplinaryNote: note,
           disciplinaryDate: new Date().toISOString().split("T")[0],
-
-          entityId,        // ✅ ensure consistency
-          organizationId   // ✅ ensure consistency
-        }
-      );
-
-      Alert.alert("Done", `${member.name} has been ${action}ed`);
-    }
-
-    // ✅ Clear approvals
-    const key = approvalKey(member.id, action);
-
-    setApprovals(prev => {
-      const n = { ...prev };
-      delete n[key];
-      return n;
-    });
-
-    loadMembers();
-
-  } catch (e) {
-    Alert.alert("Error", e.message);
-  }
-};
-  /* ══════════════ REINSTATE ══════════════ */
-
-const openReinstate = (member) => {
-  setReinstateTarget(member);
-  setReinstateNote("");
-  setReinstateModal(true);
-};
-
-const executeReinstate = async () => {
-  if (!reinstateTarget) return;
-
-  if (!organizationId || !entityId) {
-    Alert.alert("No active church", "Please select a church first");
-    return;
-  }
-
-  try {
-    await updateDoc(
-      doc(db, "members", reinstateTarget.id),
-      {
-        disciplinaryStatus: null,
-        disciplinaryNote: null,
-        disciplinaryDate: null,
-
-        reinstateNote,
-        reinstateDate: new Date().toISOString().split("T")[0],
-
-        entityId,        // ✅ ensure consistency
-        organizationId   // ✅ ensure consistency
+          entityId, organizationId,
+        });
+        Alert.alert("Done", `${m.name} has been ${action}ed`);
       }
-    );
+      const key = approvalKey(m.id, action);
+      setApprovals(prev => { const n = { ...prev }; delete n[key]; return n; });
+      loadMembers();
+    } catch (e) { Alert.alert("Error", e.message); }
+  };
 
-    Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
+  /* ── Reinstate ── */
+  const openReinstate = (m) => { setReinstateTarget(m); setReinstateNote(""); setReinstateModal(true); };
 
-    setReinstateModal(false);
-    loadMembers();
+  const executeReinstate = async () => {
+    if (!reinstateTarget) return;
+    if (!entityId) { Alert.alert("No active church", "Please select a church first."); return; }
+    try {
+      await updateDoc(doc(db, "members", reinstateTarget.id), {
+        disciplinaryStatus: null, disciplinaryNote: null, disciplinaryDate: null,
+        reinstateNote, reinstateDate: new Date().toISOString().split("T")[0],
+        entityId, organizationId,
+      });
+      Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
+      setReinstateModal(false);
+      loadMembers();
+    } catch (e) { Alert.alert("Error", e.message); }
+  };
 
-  } catch (e) {
-    Alert.alert("Error", e.message);
-  }
-};
+  /* ── Donate nav ── */
+  const goToDonate = (memberId, memberName) => {
+    navigation.getParent()?.navigate("Donate", memberId ? { memberId, memberName } : undefined);
+  };
 
-
-/* ══════════════ DONATE NAVIGATION ══════════════ */
-
-const goToDonate = (memberId, memberName) => {
-  navigation
-    .getParent()
-    ?.navigate(
-      "Donate",
-      memberId ? { memberId, memberName } : undefined
-    );
-};
-
-
-/* ══════════════ FILTER ══════════════ */
-
-const filtered = members.filter(m => {
-  const q = search.toLowerCase();
-
-  const matchSearch =
-    (m.name || "").toLowerCase().includes(q) ||
-    (m.memberCode || "").toLowerCase().includes(q);
-
-  const matchMin =
-    filterMinistry === "All" ||
-    m.ministry === filterMinistry;
-
-  const matchStat =
-    filterStatus === "All" ||
-    m.status === filterStatus;
-
-  const matchComm =
-    filterCommun === "All" ||
-    (filterCommun === "yes" && m.communicant === "yes") ||
-    (filterCommun === "no" && m.communicant === "no");
-
-  return matchSearch && matchMin && matchStat && matchComm;
-});
-
-
-
-/* ══════════════ RENDER ══════════════ */
-const openModal = (type, index = null, list = []) => {
-  setModal({
-    visible: true,
-    type,
-    input: index != null ? (list[index] || "") : "",
-    index
+  /* ── Filter ── */
+  const filtered = members.filter(m => {
+    const q = search.toLowerCase();
+    const matchSearch   = (m.name || "").toLowerCase().includes(q) || (m.memberCode || "").toLowerCase().includes(q);
+    const matchMinistry = filterMinistry === "All" || m.ministry === filterMinistry;
+    const matchStatus   = filterStatus   === "All" || m.status   === filterStatus;
+    const matchCommun   = filterCommun   === "All"
+      || (filterCommun === "yes" && m.communicant === "yes")
+      || (filterCommun === "no"  && m.communicant === "no");
+    return matchSearch && matchMinistry && matchStatus && matchCommun;
   });
-};
 
-const closeModal = () => {
-  setModal({
-    visible: false,
-    type: null,
-    input: "",
-    index: null
-  });
-};
+  /* ── List modal helpers ── */
+  const openListModal = (type, index = null, list = []) => {
+    setListModal({ visible: true, type, input: index != null ? (list[index] || "") : "", index });
+  };
+  const closeListModal = () => setListModal({ visible: false, type: null, input: "", index: null });
 
-const saveList = (list, setList) => {
-  if (!modal.input.trim()) return;
+  const saveListItem = () => {
+    if (!listModal.input.trim()) return;
+    const { type, index, input } = listModal;
+    const map = { ministry: [ministries, setMinistries], status: [statusList, setStatusList], baptism: [baptismList, setBaptismList] };
+    const [list, setList] = map[type] || [];
+    if (!list || !setList) return;
+    if (index != null) {
+      const updated = [...list]; updated[index] = input; setList(updated);
+    } else {
+      setList(prev => [...prev, input]);
+    }
+    closeListModal();
+  };
 
-  if (modal.index != null) {
-    const updated = [...list];
-    updated[modal.index] = modal.input;
-    setList(updated);
-  } else {
-    setList(prev => [...prev, modal.input]);
-  }
+  /* ══════════════════════════════════════ RENDER ══════════════════════════════════════ */
+  return (
+    <View style={styles.container}>
 
-  closeModal();
-};return (
+      <AppHeader
+        title="Members"
+        subtitle={activeEntity?.name || "Manage church members"}
+        onBack={() => navigation.goBack()}
+        actions={[
+          { icon: "heart", onPress: () => goToDonate() },
+          { icon: showActions ? "eye-off-outline" : "eye-outline", onPress: toggleActions },
+          { icon: "filter-outline", onPress: () => setShowFilters(p => !p) },
+        ]}
+      />
 
-  
-  <View style={styles.container}>
+      {/* ── SEARCH ── */}
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color="#aaa" style={{ marginRight: 6 }} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search name or member ID…"
+          value={search}
+          onChangeText={setSearch}
+          placeholderTextColor="#bbb"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch("")}>
+            <Ionicons name="close-circle" size={16} color="#ccc" />
+          </TouchableOpacity>
+        )}
+      </View>
 
-    <AppHeader
-      title="Members"
-      subtitle={activeEntity?.name || "Manage church members"}  
-
-      onBack={() => navigation.goBack()}
-
-      actions={[
-        {
-          icon: "heart",
-          label: "Donate",
-          type: "primary",
-          onPress: () => goToDonate(),  
-        },
-        {
-          icon: showActions ? "eye-off-outline" : "eye-outline",
-          onPress: toggleActions,
-        },
-        {
-          icon: "filter-outline",
-          onPress: () => setShowFilters(p => !p),
-        }
-      ]}
-    />
-
-{/* ── SEARCH ── */}
-<TextInput
-  placeholder="🔍 Search name or member ID..."
-  value={search}
-  onChangeText={setSearch}
-  style={styles.search}
-/>
-
-
-{/* ── FILTERS ── */}
-{showFilters && (
-  <View style={styles.filterPanel}>
-
-    <Text style={styles.filterLabel}>Ministry</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {["All", ...ministries].map(m => (
-        <TouchableOpacity
-          key={m}
-          style={[
-            styles.filterChip,
-            filterMinistry === m && styles.filterChipActive
-          ]}
-          onPress={() => setFilterMinistry(m)}
-        >
-          <Text
-            style={[
-              styles.filterChipText,
-              filterMinistry === m && { color: "#fff" }
-            ]}
-          >
-            {m}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-
-
-    <Text style={styles.filterLabel}>Status</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {["All", ...statusList].map(s => (
-        <TouchableOpacity
-          key={s}
-          style={[
-            styles.filterChip,
-            filterStatus === s && styles.filterChipActive
-          ]}
-          onPress={() => setFilterStatus(s)}
-        >
-          <Text
-            style={[
-              styles.filterChipText,
-              filterStatus === s && { color: "#fff" }
-            ]}
-          >
-            {s}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-
-
-    <Text style={styles.filterLabel}>Communicant</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {["All", "yes", "no"].map(c => (
-        <TouchableOpacity
-          key={c}
-          style={[
-            styles.filterChip,
-            filterCommun === c && styles.filterChipActive
-          ]}
-          onPress={() => setFilterCommun(c)}
-        >
-          <Text
-            style={[
-              styles.filterChipText,
-              filterCommun === c && { color: "#fff" }
-            ]}
-          >
-            {c === "All" ? "All" : c === "yes" ? "Communicant" : "Non-communicant"}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-
-
-
-  </View>
-)}
-
-{/* ── ERROR ── */}
-{error && (
-  <View style={styles.errorBox}>
-    <Ionicons name="cloud-offline-outline" size={36} color="#bbb" />
-
-    {/* ✅ SAFE TEXT FIX */}
-    <Text style={styles.errorText}>
-      {error}
-    </Text>
-
-    <TouchableOpacity style={styles.retryBtn} onPress={loadMembers}>
-      <Text style={styles.retryText}>Retry</Text>
-    </TouchableOpacity>
-  </View>
-)}
-
-{/* ── MEMBER LIST ── */}
-<FlatList
-  data={filtered}
-  keyExtractor={item => item.id}
-  contentContainerStyle={{ paddingBottom: 120 }}
-
-  renderItem={({ item }) => {
-    const isDisciplined = !!item.disciplinaryStatus;
-
-    const pendingApprovals = Object.keys(ACTIONS).filter(a =>
-      getApprovals(item.id, a).length > 0 &&
-      !isFullyApproved(item.id, a)
-    );
-
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate("MemberProfile", {
-            memberId: item.id,
-            role: viewerRole
-          })
-        }
-      >
-        <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
-
-          {/* Name section */}
-          <View style={styles.cardHeader}>
-            <View style={{ flex: 1 }}>
-
-              <Text style={styles.name}>{item.name}</Text>
-
-              {item.memberCode && (
-                <Text style={styles.memberCode}>
-                  ID: {item.memberCode}
-                </Text>
-              )}
-
-              {item.ministry && (
-                <Text style={styles.memberMeta}>
-                  {item.ministry}
-                </Text>
-              )}
-
-              {/* Communicant badge */}
-              {item.communicant === "yes" && (
-                <View
-                  style={[
-                    styles.commBadge,
-                    {
-                      backgroundColor:
-                        item.communicantStatus === "invalid"
-                          ? "#fce8e8"
-                          : "#e8f8f0"
-                    }
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.commBadgeText,
-                      {
-                        color:
-                          item.communicantStatus === "invalid"
-                            ? "#e74c3c"
-                            : "#27ae60"
-                      }
-                    ]}
-                  >
-                    🍞 Communicant —{" "}
-                    {item.communicantStatus === "invalid"
-                      ? `Invalid since ${item.communicantInvalidSince}`
-                      : "Active"}
-                  </Text>
-                </View>
-              )}
-
-              {/* Discipline badge */}
-              {isDisciplined && (
-                <View style={styles.disciplineBadge}>
-                  <Text style={styles.disciplineBadgeText}>
-                    ⚠️ {item.disciplinaryStatus?.toUpperCase()}
-                    {item.disciplinaryDate
-                      ? ` · ${item.disciplinaryDate}`
-                      : ""}
-                  </Text>
-                </View>
-              )}
-
-              {/* Pending approvals */}
-              {pendingApprovals.map(a => (
-                <View key={a} style={styles.pendingBadge}>
-                  <Text style={styles.pendingBadgeText}>
-                    ⏳ {ACTIONS[a].label} pending approval
-                  </Text>
-                </View>
-              ))}
-
+      {/* ── FILTER PANEL ── */}
+      {showFilters && (
+        <View style={styles.filterPanel}>
+          {[
+            { label: "Ministry",    list: ["All", ...ministries],              value: filterMinistry, setter: setFilterMinistry },
+            { label: "Status",      list: ["All", ...statusList],              value: filterStatus,   setter: setFilterStatus   },
+            { label: "Communicant", list: ["All", "yes", "no"],                value: filterCommun,   setter: setFilterCommun,
+              display: (v) => v === "All" ? "All" : v === "yes" ? "Communicant" : "Non-communicant" },
+          ].map(f => (
+            <View key={f.label} style={{ marginBottom: 8 }}>
+              <Text style={styles.filterLabel}>{f.label}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {f.list.map(item => (
+                  <TouchableOpacity key={item}
+                    style={[styles.filterChip, f.value === item && styles.filterChipActive]}
+                    onPress={() => f.setter(item)}>
+                    <Text style={[styles.filterChipText, f.value === item && { color: "#fff" }]}>
+                      {f.display ? f.display(item) : item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
+          ))}
+        </View>
+      )}
 
+      {/* ── ERROR ── */}
+      {error && (
+        <View style={styles.errorBox}>
+          <Ionicons name="cloud-offline-outline" size={32} color="#bbb" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadMembers}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-            {/* ✅ Donate button */}
-            <TouchableOpacity
-              style={styles.memberDonateBtn}
-              onPress={() => goToDonate(item.id, item.name)}
-            >
-              <Ionicons name="heart-outline" size={20} color="#E11D48" />
+      {/* ── LOADING ── */}
+      {loading && <ActivityIndicator color="#4B3F72" style={{ marginTop: 20 }} />}
+
+      {/* ── MEMBER LIST ── */}
+      <FlatList
+        data={filtered}
+        keyExtractor={item => item.id}
+        contentContainerStyle={{ paddingBottom: 140, paddingTop: 4 }}
+        ListEmptyComponent={!loading && (
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color="#ddd" />
+            <Text style={styles.emptyTitle}>No members yet</Text>
+            <Text style={styles.emptyText}>Tap "Add Member" to get started</Text>
+          </View>
+        )}
+        renderItem={({ item }) => {
+          const isDisciplined    = !!item.disciplinaryStatus;
+          const pendingApprovals = Object.keys(ACTIONS).filter(a =>
+            getApprovals(item.id, a).length > 0 && !isFullyApproved(item.id, a)
+          );
+          return (
+            <TouchableOpacity activeOpacity={0.88}
+              onPress={() => navigation.navigate("MemberProfile", { memberId: item.id, role: viewerRole })}>
+              <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
+
+                {/* ── Card header ── */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.memberAvatar}>
+                    <Text style={styles.memberAvatarText}>
+                      {(item.name || "?").charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.memberName}>{item.name}</Text>
+                    {item.memberCode && (
+                      <Text style={styles.memberCode}>ID: {item.memberCode}</Text>
+                    )}
+                    {item.ministry && (
+                      <Text style={styles.memberMeta}>{item.ministry}</Text>
+                    )}
+
+                    {/* Communicant badge */}
+                    {item.communicant === "yes" && (
+                      <View style={[styles.commBadge, {
+                        backgroundColor: item.communicantStatus === "invalid" ? "#fce8e8" : "#e8f8f0"
+                      }]}>
+                        <Text style={[styles.commBadgeText, {
+                          color: item.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60"
+                        }]}>
+                          🍞 Communicant — {item.communicantStatus === "invalid"
+                            ? `Invalid since ${item.communicantInvalidSince}` : "Active"}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Discipline badge */}
+                    {isDisciplined && (
+                      <View style={styles.disciplineBadge}>
+                        <Text style={styles.disciplineBadgeText}>
+                          ⚠️ {item.disciplinaryStatus?.toUpperCase()}
+                          {item.disciplinaryDate ? ` · ${item.disciplinaryDate}` : ""}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Pending approval pills */}
+                    {pendingApprovals.map(a => (
+                      <View key={a} style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>⏳ {ACTIONS[a].label} pending</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity onPress={() => goToDonate(item.id, item.name)} style={styles.donateBtn}>
+                    <Ionicons name="heart-outline" size={18} color="#E11D48" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* ── Actions area ── */}
+                {showActions && (
+                  <>
+                    {/* QR code */}
+                    <TouchableOpacity onPress={() => setSelectedMember(item)} style={styles.qrRow}>
+                      <QRCode value={item.id || "placeholder"} size={64} />
+                      <View style={styles.qrInfo}>
+                        <Text style={styles.qrLabel}>Member QR Code</Text>
+                        <Text style={styles.qrCode}>{item.memberCode || item.id}</Text>
+                        <Text style={styles.qrSub}>Tap to enlarge</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Edit / Delete */}
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#4B3F72", flex: 1 }]}
+                        onPress={() => editMember(item)}>
+                        <Ionicons name="create-outline" size={13} color="#fff" />
+                        <Text style={styles.actionBtnText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#e74c3c", flex: 1 }]}
+                        onPress={() => openApproval(item, "delete")}>
+                        <Ionicons name="trash-outline" size={13} color="#fff" />
+                        <Text style={styles.actionBtnText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Disciplinary actions */}
+                    <View style={styles.actionRow}>
+                      {["suspend", "reprimand", "demote"].map(action => (
+                        <TouchableOpacity key={action}
+                          style={[styles.actionBtn, { backgroundColor: ACTIONS[action].color, flex: 1 }]}
+                          onPress={() => openApproval(item, action)}>
+                          <Text style={styles.actionBtnText}>{ACTIONS[action].label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Reinstate */}
+                    {isDisciplined && (
+                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#27ae60", marginTop: 4 }]}
+                        onPress={() => openReinstate(item)}>
+                        <Ionicons name="refresh-circle-outline" size={14} color="#fff" />
+                        <Text style={styles.actionBtnText}>Reinstate</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </View>
             </TouchableOpacity>
+          );
+        }}
+      />
 
+      {/* ══ MEMBER FORM MODAL ══ */}
+      <Modal visible={showForm} animationType="slide">
+        <View style={styles.formSafe}>
+          <View style={styles.formHeader}>
+            <TouchableOpacity onPress={resetForm} style={styles.formCloseBtn}>
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.formHeaderTitle}>{editingId ? "Edit Member" : "Add Member"}</Text>
+            <TouchableOpacity style={styles.formSaveBtn} onPress={saveMember}>
+              <Text style={styles.formSaveBtnText}>Save</Text>
+            </TouchableOpacity>
           </View>
 
+          <ScrollView style={{ flex: 1, backgroundColor: "#f4f6fb" }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 80 }}>
 
-          {showActions && (
-            <>
-              {/* QR section */}
-              <TouchableOpacity
-                onPress={() => setSelectedMember(item)}
-                style={styles.qrRow}
-              >
-                <QRCode value={item.id} size={70} />
+            <View style={styles.formSection}>
+              <Text style={styles.formSectionTitle}>Personal Details</Text>
+              <FieldInput label="Full Name *"           value={member.name}              onChange={v => setField("name", v)} />
+              <FieldInput label="Phone *"               value={member.phone}             onChange={v => setField("phone", v)} keyboardType="phone-pad" />
+              <FieldInput label="Address"               value={member.address}           onChange={v => setField("address", v)} />
+              <FieldInput label="Occupation"            value={member.occupation}        onChange={v => setField("occupation", v)} />
+              <FieldInput label="Emergency Contact"     value={member.emergencyContact}  onChange={v => setField("emergencyContact", v)} keyboardType="phone-pad" />
+              <FieldInput label="Membership Duration"   value={member.membershipDuration} onChange={v => setField("membershipDuration", v)} />
+            </View>
 
-                <View style={styles.qrInfo}>
-                  <Text style={styles.qrLabel}>Member QR</Text>
+            <View style={styles.formSection}>
+              <Text style={styles.formSectionTitle}>Church Details</Text>
+              <ChipRow label="Ministry" list={ministries} value={member.ministry}
+                onSelect={v => setField("ministry", v)}
+                onAdd={() => openListModal("ministry")}
+                onEdit={(i) => openListModal("ministry", i, ministries)} />
+              <ChipRow label="Status" list={statusList} value={member.status}
+                onSelect={v => setField("status", v)}
+                onAdd={() => openListModal("status")}
+                onEdit={(i) => openListModal("status", i, statusList)} />
+              <ChipRow label="Baptism Status" list={baptismList} value={member.baptismStatus}
+                onSelect={v => setField("baptismStatus", v)}
+                onAdd={() => openListModal("baptism")}
+                onEdit={(i) => openListModal("baptism", i, baptismList)} />
+            </View>
 
-                  <Text style={styles.qrCode}>
-                    {item.memberCode || item.id}
-                  </Text>
-
-                  <Text style={styles.qrSub}>
-                    Tap to enlarge
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-
-              {/* Edit / Delete */}
-              <View style={styles.row}>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() => editMember(item)}
-                >
-                  <Ionicons name="create-outline" size={13} color="#fff" />
-                  <Text style={styles.white}> Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => openApproval(item, "delete")}
-                >
-                  <Ionicons name="trash-outline" size={13} color="#fff" />
-                  <Text style={styles.white}> Delete</Text>
-                </TouchableOpacity>
-              </View>
-
-
-              {/* Actions */}
-              <View style={styles.row}>
-                {["suspend", "reprimand", "demote"].map(action => (
-                  <TouchableOpacity
-                    key={action}
-                    style={[
-                      styles.actionBtn,
-                      { backgroundColor: ACTIONS[action].color }
-                    ]}
-                    onPress={() => openApproval(item, action)}
-                  >
-                    <Text style={styles.white}>
-                      {ACTIONS[action].label}
+            <View style={styles.formSection}>
+              <Text style={styles.formSectionTitle}>Communicant Status</Text>
+              <Text style={styles.fieldLabel}>Is this member a communicant? *</Text>
+              <View style={styles.actionRow}>
+                {["yes", "no"].map(v => (
+                  <TouchableOpacity key={v}
+                    style={[styles.actionBtn, { flex: 1, backgroundColor: member.communicant === v ? "#4B3F72" : "#eee" }]}
+                    onPress={() => handleCommunicantSelect(v)}>
+                    <Text style={[styles.actionBtnText, { color: member.communicant === v ? "#fff" : "#333" }]}>
+                      {v === "yes" ? "Yes" : "No"}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-
-              {/* Reinstate */}
-              {isDisciplined && (
-                <TouchableOpacity
-                  style={styles.reinstateBtn}
-                  onPress={() => openReinstate(item)}
-                >
-                  <Ionicons
-                    name="refresh-circle-outline"
-                    size={14}
-                    color="#fff"
-                  />
-                  <Text style={styles.white}> Reinstate</Text>
-                </TouchableOpacity>
+              {member.communicant === "yes" && (
+                <View style={[styles.infoBanner, { marginTop: 8 }]}>
+                  <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />
+                  <Text style={styles.infoBannerText}>
+                    Status: {member.communicantStatus === "invalid"
+                      ? `Invalid since ${member.communicantInvalidSince || "—"}`
+                      : "Active"}
+                  </Text>
+                  <TouchableOpacity onPress={() => setCommStatusModal(true)}>
+                    <Text style={{ color: "#4B3F72", fontSize: 11, fontWeight: "700" }}>Change</Text>
+                  </TouchableOpacity>
+                </View>
               )}
-            </>
-          )}
-
-        </View>
-      </TouchableOpacity>
-    );
-  }}
-/>
-     
-
-{/* ══ QR MODAL ══ */}
-<Modal visible={!!selectedMember} transparent animationType="fade">
-  <View style={styles.modalWrap}>
-    <View style={[styles.modalBox, { alignItems: "center" }]}>
-      
-      <Text style={styles.modalTitle}>
-        {selectedMember?.name || "Member"}
-      </Text>
-
-      {/* ✅ Safe ID display */}
-      <View style={styles.memberIdBadge}>
-        <Text style={styles.memberIdText}>
-          {selectedMember?.memberCode || selectedMember?.id || ""}
-        </Text>
-      </View>
-
-      <View style={{ marginVertical: 16 }}>
-        <QRCode
-          value={selectedMember?.id || "placeholder"}
-          size={220}
-        />
-      </View>
-
-      <Text style={styles.qrScanHint}>
-        Members scan this at the entrance to mark attendance
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.btn, { marginTop: 12, width: "100%" }]}
-        onPress={() => setSelectedMember(null)}
-      >
-        <Text style={styles.white}>Close</Text>
-      </TouchableOpacity>
-
-    </View>
-  </View>
-</Modal>
-
-
-{/* ══ APPROVAL MODAL ══ */}
-<Modal visible={approvalModal} transparent animationType="fade">
-  <View style={styles.modalWrap}>
-    <View style={styles.modalBox}>
-
-      <View style={{ alignItems: "center", marginBottom: 8 }}>
-        <Ionicons
-          name="shield-checkmark-outline"
-          size={36}
-          color={ACTIONS[approvalAction]?.color || "#4B3F72"}
-        />
-      </View>
-
-      <Text style={styles.modalTitle}>
-        {ACTIONS[approvalAction]?.label || "Action"} — Approval Required
-      </Text>
-
-      <Text style={styles.approvalTarget}>
-        {approvalTarget?.name || ""}
-      </Text>
-
-      <Text style={styles.approvalInfo}>
-        This action requires approval from:{" "}
-        <Text style={{ fontWeight: "700" }}>
-          {ACTIONS[approvalAction]?.required?.join(", ") || ""}
-        </Text>
-      </Text>
-
-      {/* Approval progress */}
-      <View style={styles.approvalChain}>
-        {(ACTIONS[approvalAction]?.required || []).map(role => {
-          const granted =
-            getApprovals(approvalTarget?.id, approvalAction).includes(role);
-
-          return (
-            <View
-              key={role}
-              style={[
-                styles.approvalPill,
-                { backgroundColor: granted ? "#e8f8f0" : "#f5f5f5" }
-              ]}
-            >
-              <Ionicons
-                name={granted ? "checkmark-circle" : "ellipse-outline"}
-                size={13}
-                color={granted ? "#27ae60" : "#bbb"}
-              />
-              <Text
-                style={[
-                  styles.approvalPillText,
-                  { color: granted ? "#27ae60" : "#999" }
-                ]}
-              >
-                {role}
-              </Text>
             </View>
-          );
-        })}
-      </View>
 
-      <Text style={styles.fieldLabel}>Reason / Notes</Text>
+          </ScrollView>
+        </View>
+      </Modal>
 
-      <TextInput
-        style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-        placeholder="Describe the reason for this action..."
-        value={approvalNote}
-        onChangeText={setApprovalNote}
-        multiline
-      />
+      {/* ══ QR ENLARGED MODAL ══ */}
+      <Modal visible={!!selectedMember} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={[styles.modalBox, { alignItems: "center" }]}>
+            <Text style={styles.modalTitle}>{selectedMember?.name || "Member"}</Text>
+            <View style={styles.memberIdBadge}>
+              <Text style={styles.memberIdText}>{selectedMember?.memberCode || selectedMember?.id || ""}</Text>
+            </View>
+            <View style={{ marginVertical: 16 }}>
+              <QRCode value={selectedMember?.id || "placeholder"} size={220} />
+            </View>
+            <Text style={styles.qrHint}>Scan to mark attendance at the entrance</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => setSelectedMember(null)}>
+              <Text style={styles.primaryBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      <TouchableOpacity
-        style={[
-          styles.btn,
-          {
-            backgroundColor:
-              ACTIONS[approvalAction]?.color || "#4B3F72",
-            marginTop: 12,
-          }
-        ]}
-        onPress={grantApproval}
-      >
-        <Text style={styles.white}>
-          Grant My Approval ({viewerRole})
-        </Text>
-      </TouchableOpacity>
+      {/* ══ APPROVAL MODAL ══ */}
+      <Modal visible={approvalModal} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={styles.modalBox}>
+            <View style={{ alignItems: "center", marginBottom: 8 }}>
+              <Ionicons name="shield-checkmark-outline" size={36} color={ACTIONS[approvalAction]?.color || "#4B3F72"} />
+            </View>
+            <Text style={styles.modalTitle}>{ACTIONS[approvalAction]?.label} — Approval Required</Text>
+            <Text style={styles.modalTarget}>{approvalTarget?.name}</Text>
+            <Text style={styles.modalInfo}>
+              Requires: <Text style={{ fontWeight: "700" }}>{ACTIONS[approvalAction]?.required?.join(", ")}</Text>
+            </Text>
 
-      <TouchableOpacity
-        style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
-        onPress={() => setApprovalModal(false)}
-      >
-        <Text style={styles.white}>Cancel</Text>
-      </TouchableOpacity>
+            <View style={styles.approvalChain}>
+              {(ACTIONS[approvalAction]?.required || []).map(role => {
+                const granted = getApprovals(approvalTarget?.id, approvalAction).includes(role);
+                return (
+                  <View key={role} style={[styles.approvalPill, { backgroundColor: granted ? "#e8f8f0" : "#f5f5f5" }]}>
+                    <Ionicons name={granted ? "checkmark-circle" : "ellipse-outline"} size={13} color={granted ? "#27ae60" : "#bbb"} />
+                    <Text style={[styles.approvalPillText, { color: granted ? "#27ae60" : "#999" }]}>{role}</Text>
+                  </View>
+                );
+              })}
+            </View>
 
-    </View>
-  </View>
-</Modal>
+            <Text style={styles.fieldLabel}>Reason / Notes</Text>
+            <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+              placeholder="Describe the reason…" value={approvalNote} onChangeText={setApprovalNote} multiline />
 
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: ACTIONS[approvalAction]?.color || "#4B3F72", marginTop: 12 }]}
+              onPress={grantApproval}>
+              <Text style={styles.primaryBtnText}>Grant My Approval ({viewerRole})</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 8 }]}
+              onPress={() => setApprovalModal(false)}>
+              <Text style={styles.primaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-{/* ══ REINSTATE MODAL ══ */}
-<Modal visible={reinstateModal} transparent animationType="fade">
-  <View style={styles.modalWrap}>
-    <View style={styles.modalBox}>
+      {/* ══ REINSTATE MODAL ══ */}
+      <Modal visible={reinstateModal} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={styles.modalBox}>
+            <View style={{ alignItems: "center", marginBottom: 8 }}>
+              <Ionicons name="refresh-circle" size={36} color="#27ae60" />
+            </View>
+            <Text style={styles.modalTitle}>Reinstate Member</Text>
+            <Text style={styles.modalTarget}>{reinstateTarget?.name}</Text>
+            <Text style={styles.modalInfo}>
+              Current: <Text style={{ fontWeight: "700", color: "#e74c3c" }}>
+                {reinstateTarget?.disciplinaryStatus?.toUpperCase()}
+              </Text>
+            </Text>
+            <Text style={styles.fieldLabel}>Reinstatement Notes</Text>
+            <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+              placeholder="Reason for reinstatement…" value={reinstateNote} onChangeText={setReinstateNote} multiline />
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#27ae60", marginTop: 12 }]}
+              onPress={executeReinstate}>
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <Text style={styles.primaryBtnText}>Confirm Reinstatement</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 8 }]}
+              onPress={() => setReinstateModal(false)}>
+              <Text style={styles.primaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      <View style={{ alignItems: "center", marginBottom: 8 }}>
-        <Ionicons name="refresh-circle" size={36} color="#27ae60" />
-      </View>
+      {/* ══ COMMUNICANT STATUS MODAL ══ */}
+      <Modal visible={commStatusModal} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Communicant Status</Text>
+            {["active", "invalid"].map(s => (
+              <TouchableOpacity key={s} style={[styles.primaryBtn, {
+                backgroundColor: s === "active" ? "#27ae60" : "#e74c3c", marginTop: 10
+              }]} onPress={() => handleCommStatus(s)}>
+                <Text style={styles.primaryBtnText}>{s === "active" ? "Active Communicant" : "Mark as Invalid"}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 8 }]}
+              onPress={() => setCommStatusModal(false)}>
+              <Text style={styles.primaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      <Text style={styles.modalTitle}>Reinstate Member</Text>
-
-      <Text style={styles.approvalTarget}>
-        {reinstateTarget?.name || ""}
-      </Text>
-
-      <Text style={{
-        textAlign: "center",
-        color: "#666",
-        fontSize: 12,
-        marginBottom: 12
-      }}>
-        Current status:{" "}
-        <Text style={{ fontWeight: "700", color: "#e74c3c" }}>
-          {reinstateTarget?.disciplinaryStatus?.toUpperCase() || ""}
-        </Text>
-      </Text>
-
-      <Text style={styles.fieldLabel}>Reinstatement Notes</Text>
-
-      <TextInput
-        style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-        placeholder="Reason for reinstatement..."
-        value={reinstateNote}
-        onChangeText={setReinstateNote}
-        multiline
-      />
-
-      <TouchableOpacity
-        style={[
-          styles.btn,
-          { backgroundColor: "#27ae60", marginTop: 12 }
-        ]}
-        onPress={executeReinstate}
-      >
-        <Ionicons name="checkmark-circle" size={16} color="#fff" />
-        <Text style={[styles.white, { marginLeft: 6 }]}>
-          Confirm Reinstatement
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.btn, { backgroundColor: "#888", marginTop: 8 }]}
-        onPress={() => setReinstateModal(false)}
-      >
-        <Text style={styles.white}>Cancel</Text>
-      </TouchableOpacity>
-
-    </View>
-  </View>
-</Modal>
+      {/* ══ COMMUNICANT INVALID DATE MODAL ══ */}
+      <Modal visible={commInvalidModal} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Invalid Since</Text>
+            <Text style={{ color: "#888", fontSize: 12, textAlign: "center", marginBottom: 12 }}>
+              When did this communicant become invalid?
+            </Text>
+            {Platform.OS === "ios" ? (
+              <DateTimePicker value={commInvalidDate} mode="date" display="spinner" onChange={handleCommInvalidDate} />
+            ) : (
+              <>
+                <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowCommDatePicker(true)}>
+                  <Ionicons name="calendar-outline" size={15} color="#fff" />
+                  <Text style={styles.primaryBtnText}>{commInvalidDate.toLocaleDateString()}</Text>
+                </TouchableOpacity>
+                {showCommDatePicker && (
+                  <DateTimePicker value={commInvalidDate} mode="date" display="default" onChange={handleCommInvalidDate} />
+                )}
+              </>
+            )}
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#27ae60", marginTop: 12 }]}
+              onPress={() => {
+                setField("communicantInvalidSince", commInvalidDate.toISOString().split("T")[0]);
+                setCommInvalidModal(false);
+              }}>
+              <Text style={styles.primaryBtnText}>Confirm Date</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 8 }]}
+              onPress={() => setCommInvalidModal(false)}>
+              <Text style={styles.primaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ══ LIST ITEM EDIT MODAL ══ */}
-<Modal visible={modal.visible} transparent animationType="fade">
-  <View style={styles.modalWrap}>
-    <View style={styles.modalBox}>
+      <Modal visible={listModal.visible} transparent animationType="fade">
+        <View style={styles.centeredOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>
+              {listModal.index != null ? "Edit" : "Add"} {listModal.type || ""}
+            </Text>
+            <TextInput
+              style={[styles.input, { marginTop: 10 }]}
+              value={listModal.input}
+              onChangeText={t => setListModal(p => ({ ...p, input: t }))}
+              placeholder="Enter value…"
+              autoFocus
+            />
+            <TouchableOpacity style={[styles.primaryBtn, { marginTop: 12 }]} onPress={saveListItem}>
+              <Text style={styles.primaryBtnText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#888", marginTop: 8 }]} onPress={closeListModal}>
+              <Text style={styles.primaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      <Text style={styles.modalTitle}>
-        {modal.index != null ? "Edit" : "Add"} {modal.type || ""}
-      </Text>
-
-      <TextInput
-        value={modal.input}
-        onChangeText={t => setModal({ ...modal, input: t })}
-        style={styles.input}
-        placeholder="Enter value..."
-        autoFocus
-      />
-
-      <TouchableOpacity
-        style={[styles.btn, { marginTop: 10 }]}
-        onPress={() =>
-          saveList(
-            modal.type === "ministry"
-              ? ministries
-              : modal.type === "baptism"
-              ? baptismList
-              : statusList,
-
-            modal.type === "ministry"
-              ? setMinistries
-              : modal.type === "baptism"
-              ? setBaptismList
-              : setStatusList
-          )
-        }
-      >
-        <Text style={styles.white}>Save</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={{ marginTop: 10, alignItems: "center" }}
-        onPress={closeModal}
-      >
-        <Text style={{ color: "#e74c3c" }}>Cancel</Text>
-      </TouchableOpacity>
-
-    </View>
-  </View>
-</Modal>
-
-{/* ✅ FLOATING ACTIONS */}
-<View
-  style={{
-    position: "absolute",
-    bottom: 90,
-    right: 20,
-    alignItems: "flex-end",
-    gap: 10
-  }}
->
-
-  {/* ✅ IMPORT */}
-  <TouchableOpacity
-    onPress={() =>
-      navigation.navigate("ImportMembers", {
-        entityId,
-        organizationId
-      })
-    }
-    style={{
-      backgroundColor: "#0984E3",
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 25,
-      flexDirection: "row",
-      alignItems: "center",
-      elevation: 6
-    }}
-  >
-    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-    <Text style={{ color: "#fff", marginLeft: 6, fontWeight: "700" }}>
-      Import
-    </Text>
-  </TouchableOpacity>
-
-  {/* ✅ ADD MEMBER */}
-  <TouchableOpacity
-    onPress={handleAddMember}
-    style={{
-      backgroundColor: "#4B3F72",
-      paddingVertical: 14,
-      paddingHorizontal: 18,
-      borderRadius: 30,
-      flexDirection: "row",
-      alignItems: "center",
-      elevation: 6
-    }}
-  >
-    <Ionicons name="person-add-outline" size={20} color="#fff" />
-    <Text style={{ color: "#fff", marginLeft: 6, fontWeight: "700", fontSize: 13 }}>
-      Add Member
-    </Text>
-  </TouchableOpacity>
-
-</View>
-</View>
-);
-}   // ✅ end component
-
-
-// ✅ INPUT COMPONENT
-const Input = ({ label, value, onChange, keyboardType }) => (
-  <>
-    <Text style={styles.fieldLabel}>{label}</Text>
-
-    <TextInput
-      style={styles.input}
-      value={value}
-      onChangeText={onChange}
-      keyboardType={keyboardType || "default"}
-    />
-  </>
-);
-
-const ChipRow = ({
-  label,
-  list = [],
-  value,
-  onSelect,
-  onAdd,
-  onEdit
-}) => (
-  <>
-    <Text style={styles.fieldLabel}>{label}</Text>
-
-    <View style={styles.chipRow}>
-      {list.map((m, i) => (
+      {/* ══ FLOATING ACTION BUTTONS ══ */}
+      <View style={styles.fab}>
         <TouchableOpacity
-          key={i}
-          onPress={() => onSelect(m)}
-          onLongPress={() => onEdit(i)}
-          style={[
-            styles.chip,
-            value === m && styles.activeChip
-          ]}
-        >
-          <Text
-            style={[
-              { fontSize: 12 },
-              value === m && { color: "#fff", fontWeight: "600" }
-            ]}
-          >
-            {m}
-          </Text>
+          style={[styles.fabBtn, { backgroundColor: "#0984E3" }]}
+          onPress={() => navigation.navigate("ImportMembers", { entityId, organizationId })}>
+          <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+          <Text style={styles.fabBtnText}>Import</Text>
         </TouchableOpacity>
-      ))}
+        <TouchableOpacity
+          style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
+          onPress={() => { resetForm(); setShowForm(true); }}>
+          <Ionicons name="person-add-outline" size={18} color="#fff" />
+          <Text style={styles.fabBtnText}>Add Member</Text>
+        </TouchableOpacity>
+      </View>
+
     </View>
+  );
+}
 
-    <TouchableOpacity onPress={onAdd} style={{ marginTop: 4 }}>
-      <Text style={{ color: "#4B3F72", fontSize: 12 }}>
-        + Add option
-      </Text>
-    </TouchableOpacity>
-  </>
-);
-
+// ── Styles ────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 15,
-    paddingTop: 50,
-    backgroundColor: "#f4f6fb",
-  },
+  container: { flex: 1, backgroundColor: "#f4f6fb" },
 
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10
-  },
+  // Search
+  searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", marginHorizontal: 14, marginVertical: 8, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 6, elevation: 1 },
+  searchInput: { flex: 1, fontSize: 13, color: "#222", padding: 0 },
 
-  header: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222"
-  },
+  // Filters
+  filterPanel: { backgroundColor: "#fff", marginHorizontal: 14, marginBottom: 8, borderRadius: 12, padding: 14, elevation: 1 },
+  filterLabel: { fontSize: 11, fontWeight: "700", color: "#aaa", textTransform: "uppercase", marginBottom: 6, marginTop: 6 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#f5f5f5", borderRadius: 16, marginRight: 6, borderWidth: 1.5, borderColor: "#eee" },
+  filterChipActive: { backgroundColor: "#4B3F72", borderColor: "#4B3F72" },
+  filterChipText: { fontSize: 11, fontWeight: "600", color: "#555" },
 
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center"
-  },
+  // Error
+  errorBox: { alignItems: "center", padding: 20 },
+  errorText: { color: "#aaa", fontSize: 13, marginTop: 8, textAlign: "center" },
+  retryBtn: { marginTop: 10, backgroundColor: "#4B3F72", borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 },
+  retryText: { color: "#fff", fontWeight: "700" },
 
-  listContent: {
-    paddingBottom: 120
-  },
+  // Empty
+  emptyState: { alignItems: "center", paddingTop: 60 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#333", marginTop: 12 },
+  emptyText: { fontSize: 13, color: "#aaa", marginTop: 4 },
 
-
-  donateHeaderBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#E11D48", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, gap: 5 },
-  donateHeaderBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  toggleBtn: { backgroundColor: "#4B3F72", padding: 8, borderRadius: 8 },
-
-  search: { backgroundColor: "#fff", padding: 12, borderRadius: 10, marginBottom: 8, fontSize: 13 },
-
-  filterPanel: { backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 8 },
-  filterLabel: { fontSize: 11, fontWeight: "700", color: "#aaa", textTransform: "uppercase", marginBottom: 6, marginTop: 8 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#f0f0f0", borderRadius: 20, marginRight: 6 },
-  filterChipActive: { backgroundColor: "#4B3F72" },
-  filterChipText: { fontSize: 12, color: "#555" },
-
-  card: { backgroundColor: "#fff", padding: 14, marginBottom: 10, borderRadius: 12,
-    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  // Cards
+  card: { backgroundColor: "#fff", padding: 14, marginHorizontal: 14, marginBottom: 8, borderRadius: 14, elevation: 2 },
   cardDisciplined: { borderLeftWidth: 4, borderLeftColor: "#e74c3c" },
   cardHeader: { flexDirection: "row", alignItems: "flex-start" },
-  name: { fontWeight: "700", fontSize: 15, color: "#222" },
-  memberCode: { fontSize: 11, color: "#4B3F72", fontWeight: "600", marginTop: 1 },
-  memberMeta: { fontSize: 11, color: "#888", marginTop: 1 },
-  memberDonateBtn: { padding: 6 },
-
-  commBadge: { marginTop: 5, alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  memberAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#4B3F72", alignItems: "center", justifyContent: "center" },
+  memberAvatarText: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  memberName: { fontSize: 15, fontWeight: "700", color: "#222" },
+  memberCode: { fontSize: 11, color: "#4B3F72", fontWeight: "600", marginTop: 2 },
+  memberMeta: { fontSize: 11, color: "#888", marginTop: 2 },
+  donateBtn: { padding: 6 },
+  commBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 5, alignSelf: "flex-start" },
   commBadgeText: { fontSize: 10, fontWeight: "600" },
-  disciplineBadge: { marginTop: 4, backgroundColor: "#fff3e0", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  disciplineBadgeText: { fontSize: 10, fontWeight: "700", color: "#e67e22" },
-  pendingBadge: { marginTop: 3, backgroundColor: "#f0edf9", alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-  pendingBadgeText: { fontSize: 10, color: "#6c47b8" },
+  disciplineBadge: { backgroundColor: "#fce8e8", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 4, alignSelf: "flex-start" },
+  disciplineBadgeText: { fontSize: 10, fontWeight: "700", color: "#e74c3c" },
+  pendingBadge: { backgroundColor: "#fff8e1", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 3, alignSelf: "flex-start" },
+  pendingBadgeText: { fontSize: 10, fontWeight: "600", color: "#f39c12" },
 
-  qrRow: { flexDirection: "row", alignItems: "center", marginTop: 10, gap: 12 },
+  // QR row
+  qrRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#f9f9f9", borderRadius: 10, padding: 10, marginTop: 10, gap: 12 },
   qrInfo: { flex: 1 },
-  qrLabel: { fontSize: 11, fontWeight: "700", color: "#4B3F72" },
-  qrCode: { fontSize: 13, fontWeight: "800", color: "#222", marginTop: 2 },
-  qrSub: { fontSize: 10, color: "#aaa", marginTop: 1 },
+  qrLabel: { fontSize: 12, fontWeight: "700", color: "#222" },
+  qrCode: { fontSize: 11, color: "#4B3F72", fontWeight: "600", marginTop: 2 },
+  qrSub: { fontSize: 10, color: "#aaa", marginTop: 2 },
+  qrHint: { fontSize: 12, color: "#888", textAlign: "center", marginBottom: 8 },
 
-  row: { flexDirection: "row", gap: 6, marginTop: 8 },
-  editBtn: { flex: 1, flexDirection: "row", backgroundColor: "#3498db", padding: 8, alignItems: "center", justifyContent: "center", borderRadius: 6 },
-  deleteBtn: { flex: 1, flexDirection: "row", backgroundColor: "#e74c3c", padding: 8, alignItems: "center", justifyContent: "center", borderRadius: 6 },
-  actionBtn: { flex: 1, padding: 8, alignItems: "center", borderRadius: 6 },
-  reinstateBtn: { flexDirection: "row", backgroundColor: "#27ae60", padding: 8, alignItems: "center", justifyContent: "center", borderRadius: 6, marginTop: 6 },
+  // Action buttons
+  actionRow: { flexDirection: "row", gap: 6, marginTop: 8 },
+  actionBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 8, gap: 4 },
+  actionBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 
-  fab: { position: "absolute", bottom: 90, right: 20, backgroundColor: "#4B3F72", flexDirection: "row", padding: 13, borderRadius: 30, zIndex: 999, elevation: 10, alignItems: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-  fabText: { color: "#fff", fontWeight: "600" },
+  // FAB
+  fab: { position: "absolute", bottom: 24, right: 16, flexDirection: "row", gap: 10 },
+  fabBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 28, elevation: 6, gap: 6 },
+  fabBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 
-  errorBox: { alignItems: "center", marginTop: 30 },
-  errorText: { marginTop: 8, color: "#888", textAlign: "center", paddingHorizontal: 30 },
-  retryBtn: { marginTop: 12, backgroundColor: "#4B3F72", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  retryText: { color: "#fff", fontWeight: "600" },
+  // Form modal
+  formSafe: { flex: 1, backgroundColor: "#fff" },
+  formHeader: { flexDirection: "row", alignItems: "center", backgroundColor: "#4B3F72", paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  formCloseBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  formHeaderTitle: { flex: 1, color: "#fff", fontSize: 15, fontWeight: "800" },
+  formSaveBtn: { backgroundColor: "#1BA97F", paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20 },
+  formSaveBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  formSection: { backgroundColor: "#fff", marginBottom: 12, borderRadius: 14, padding: 14, elevation: 1 },
+  formSectionTitle: { fontSize: 12, fontWeight: "800", color: "#4B3F72", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
 
-  modalWrap: { flex: 1, justifyContent: "center", backgroundColor: "#0007" },
-  modalBox: { backgroundColor: "#fff", padding: 20, margin: 20, borderRadius: 14 },
-  modalTitle: { fontWeight: "700", fontSize: 16, marginBottom: 8, textAlign: "center", color: "#222" },
+  // Shared modals
+  centeredOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalBox: { backgroundColor: "#fff", borderRadius: 16, padding: 20, width: "100%", maxWidth: 380 },
+  modalTitle: { fontSize: 16, fontWeight: "800", color: "#222", textAlign: "center", marginBottom: 4 },
+  modalTarget: { fontSize: 14, color: "#4B3F72", fontWeight: "700", textAlign: "center", marginBottom: 4 },
+  modalInfo: { fontSize: 12, color: "#666", textAlign: "center", marginBottom: 10 },
+  memberIdBadge: { backgroundColor: "#EEF0FA", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 6, marginTop: 6 },
+  memberIdText: { fontSize: 13, fontWeight: "800", color: "#4B3F72" },
 
-  memberIdBadge: { backgroundColor: "#EEF2FF", paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginTop: 4 },
-  memberIdText: { fontSize: 16, fontWeight: "800", color: "#4F46E5", letterSpacing: 1 },
-  qrScanHint: { fontSize: 11, color: "#888", textAlign: "center", marginTop: 8 },
+  // Approval chain
+  approvalChain: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginVertical: 8 },
+  approvalPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16 },
+  approvalPillText: { fontSize: 11, fontWeight: "600" },
 
-  modalContainer: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  // Form fields
+  fieldLabel: { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", marginTop: 10, marginBottom: 4 },
+  input: { backgroundColor: "#f5f5f5", borderRadius: 10, padding: 12, fontSize: 13, color: "#222", borderWidth: 1.5, borderColor: "#eee" },
 
-  fieldLabel: { marginTop: 12, marginBottom: 4, fontWeight: "600", fontSize: 13, color: "#444" },
-  required: { fontWeight: "400", color: "#888", fontSize: 11 },
-  input: { backgroundColor: "#f0f0f0", padding: 11, borderRadius: 10, fontSize: 13 },
-  btn: { flexDirection: "row", backgroundColor: "#4B3F72", padding: 12, marginTop: 6, alignItems: "center", justifyContent: "center", borderRadius: 10 },
-  white: { color: "#fff", fontWeight: "600" },
+  // Chips
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+  chip: { backgroundColor: "#f0f0f0", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1.5, borderColor: "#eee" },
+  chipActive: { backgroundColor: "#4B3F72", borderColor: "#4B3F72" },
+  chipText: { fontSize: 12, color: "#555", fontWeight: "600" },
+  chipTextActive: { color: "#fff", fontWeight: "700" },
 
-  chipRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
-  chip: { backgroundColor: "#eee", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, margin: 3 },
-  activeChip: { backgroundColor: "#4B3F72" },
+  // Primary button
+  primaryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 12, padding: 13, marginTop: 6, gap: 6 },
+  primaryBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 
-  communicantBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    backgroundColor: "#f0f0f0", padding: 12, borderRadius: 10, marginRight: 6 },
-  communicantBtnActive: { backgroundColor: "#4B3F72" },
-  communicantBtnText: { fontSize: 14, fontWeight: "600", color: "#555" },
-  communicantStatus: { backgroundColor: "#f9f9f9", borderRadius: 10, padding: 10, marginTop: 8 },
-  commStatusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, alignSelf: "flex-start", marginTop: 4 },
-  changeCommBtn: { marginTop: 6 },
-
-  datePickerBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#f0f0f0", padding: 12, borderRadius: 10 },
-  datePickerBtnText: { fontSize: 14, fontWeight: "600", color: "#333" },
-
-  approvalTarget: { textAlign: "center", fontWeight: "700", fontSize: 15, color: "#333", marginBottom: 6 },
-  approvalChain: {
-  flexDirection: "row",
-  justifyContent: "center",
-  gap: 8,
-  marginBottom: 12,
-  flexWrap: "wrap",
-},
-
-approvalPill: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 4,
-  paddingHorizontal: 10,
-  paddingVertical: 5,
-  borderRadius: 20,
-},
-
-approvalPillText: {
-  fontSize: 11,
-  fontWeight: "600",
-},
-
-iconBtn: {
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  backgroundColor: "rgba(255,255,255,0.15)",
-  alignItems: "center",
-  justifyContent: "center",
-},
-
+  // Info banner
+  infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10 },
+  infoBannerText: { flex: 1, fontSize: 12, color: "#4B3F72" },
 });
