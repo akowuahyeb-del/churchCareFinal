@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }) {
   await AsyncStorage.setItem("isLoggedIn", "true");
   await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-  navigation.replace("Home"); 
+  navigation.replace("MainTabs");
 };
 
   return (
@@ -240,6 +240,4 @@ const styles = StyleSheet.create({
   fontSize: 14,
   marginBottom: 10,   
 }
-
-
 });

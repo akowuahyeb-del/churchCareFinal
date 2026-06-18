@@ -4,6 +4,7 @@ import {
   Text,
   View,
   TextInput,
+  Alert,
   TouchableOpacity,
   StyleSheet,
   Modal
