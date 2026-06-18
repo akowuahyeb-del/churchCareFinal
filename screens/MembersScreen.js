@@ -533,8 +533,42 @@ const filtered = members.filter(m => {
   return matchSearch && matchMin && matchStat && matchComm;
 });
 
+
+
 /* ══════════════ RENDER ══════════════ */
-return (
+// ✅ MODAL HELPERS (INSIDE COMPONENT)
+const openModal = (type, index = null, list = []) => {
+  setModal({
+    visible: true,
+    type,
+    input: index != null ? (list[index] || "") : "",
+    index
+  });
+};
+
+const closeModal = () => {
+  setModal({
+    visible: false,
+    type: null,
+    input: "",
+    index: null
+  });
+};
+
+const saveList = (list, setList) => {
+  if (!modal.input.trim()) return;
+
+  if (modal.index != null) {
+    const updated = [...list];
+    updated[modal.index] = modal.input;
+    setList(updated);
+  } else {
+    setList(prev => [...prev, modal.input]);
+  }
+
+  closeModal();
+};return (
+
   
   <View style={styles.container}>
 
@@ -549,7 +583,7 @@ return (
           icon: "heart",
           label: "Donate",
           type: "primary",
-          onPress: () => goToDonate(),  // ✅ fixed safe call
+          onPress: () => goToDonate(),  
         },
         {
           icon: showActions ? "eye-off-outline" : "eye-outline",
@@ -1122,7 +1156,7 @@ return (
   }}
 >
 
-  {/* ✅ IMPORT MEMBERS */}
+  {/* ✅ IMPORT */}
   <TouchableOpacity
     onPress={() =>
       navigation.navigate("ImportMembers", {
@@ -1160,63 +1194,18 @@ return (
     }}
   >
     <Ionicons name="person-add-outline" size={20} color="#fff" />
-    <Text
-      style={{
-        color: "#fff",
-        marginLeft: 6,
-        fontWeight: "700",
-        fontSize: 13
-      }}
-    >
+    <Text style={{ color: "#fff", marginLeft: 6, fontWeight: "700", fontSize: 13 }}>
       Add Member
     </Text>
   </TouchableOpacity>
 
 </View>
-
-
-
 </View>
 );
+}   // ✅ end component
 
 
-  function openModal(type, index = null, list = []) {
-  setModal({
-    visible: true,
-    type,
-    input: index != null ? (list[index] || "") : "",
-    index
-  });
-}
-
-function closeModal() {
-  setModal({
-    visible: false,
-    type: null,
-    input: "",
-    index: null
-  });
-}
-
-function saveList(list, setList) {
-  if (!modal.input.trim()) return;
-
-  if (modal.index != null) {
-    const updated = [...list];
-    updated[modal.index] = modal.input;
-    setList(updated);
-  } else {
-    setList(prev => [...prev, modal.input]);
-  }
-
-  closeModal();
-}
-
-
-
-
-/* ── Sub-components ── */
-
+// ✅ INPUT COMPONENT
 const Input = ({ label, value, onChange, keyboardType }) => (
   <>
     <Text style={styles.fieldLabel}>{label}</Text>
@@ -1230,8 +1219,14 @@ const Input = ({ label, value, onChange, keyboardType }) => (
   </>
 );
 
-
-const ChipRow = ({ label, list = [], value, onSelect, onAdd, onEdit }) => (
+const ChipRow = ({
+  label,
+  list = [],
+  value,
+  onSelect,
+  onAdd,
+  onEdit
+}) => (
   <>
     <Text style={styles.fieldLabel}>{label}</Text>
 
@@ -1264,35 +1259,41 @@ const ChipRow = ({ label, list = [], value, onSelect, onAdd, onEdit }) => (
       </Text>
     </TouchableOpacity>
   </>
-)}
+);
 
-
-
-
-
-/* ── Styles ── */
 const styles = StyleSheet.create({
   container: {
-  flex: 1,
-  paddingHorizontal: 15,
-  paddingTop: 50,
-  backgroundColor: "#f4f6fb",
-},
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingTop: 50,
+    backgroundColor: "#f4f6fb",
+  },
 
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  header: { fontSize: 20, fontWeight: "700", color: "#222" },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10
+  },
+
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#222"
+  },
+
   iconBtn: {
-  width: 36,
-  height: 36,
-  borderRadius: 18,
-  backgroundColor: "rgba(255,255,255,0.15)",
-  alignItems: "center",
-  justifyContent: "center",
-},
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center"
+  },
 
-listContent: {
-  paddingBottom: 120,
-},
+  listContent: {
+    paddingBottom: 120
+  },
 
 
   donateHeaderBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#E11D48", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, gap: 5 },

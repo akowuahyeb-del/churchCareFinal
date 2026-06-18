@@ -16,6 +16,7 @@ import { collection, addDoc } from "firebase/firestore";
 export default function AddMemberScreen({ navigation, route }) {
 
   const { memberData, editingId } = route.params || {};
+  const { entityId, organizationId } = route.params || {};
 
   const [member, setMember] = useState(
     memberData || {
@@ -35,59 +36,78 @@ export default function AddMemberScreen({ navigation, route }) {
   const [commInvalidModal, setCommInvalidModal] = useState(false);
   const [commInvalidDate, setCommInvalidDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
 
-  const handleSaveMember = async () => {
-  if (!member.name) return;
+
+ // ✅ SAVE MEMBER (CLEAN + FIXED)
+const handleSaveMember = async () => {
+  if (!member.name) {
+    Alert.alert("Required", "Name is required");
+    return;
+  }
 
   try {
-    const churchId = route.params?.churchId;   // ✅ get churchId
+    if (!entityId || !organizationId) {
+      Alert.alert("Error", "No active church selected");
+      return;
+    }
 
-    await addDoc(
-      collection(db, "churches", churchId, "members"),  // ✅ SAVE UNDER CHURCH
-      {
-        ...member,
-        churchId,
-        createdAt: new Date().toISOString()
-      }
-    );
+    console.log("✅ Saving member:", {
+      entityId,
+      organizationId,
+      member
+    });
 
+    await addDoc(collection(db, "members"), {
+      ...member,
+      entityId,
+      organizationId,
+      createdAt: new Date().toISOString()
+    });
+
+    Alert.alert("✅ Member saved");
     navigation.goBack();
 
-  } catch (error) {
-    console.log("Error saving member:", error);
+  } catch (e) {
+    console.log("❌ SAVE ERROR:", e);
+    Alert.alert("Error", e.message);
   }
 };
 
 
-  const handleCommunicantSelect = (val) => {
-    setMember({ ...member, communicant: val });
+// ✅ COMMUNICANT SELECT
+const handleCommunicantSelect = (val) => {
+  setMember({ ...member, communicant: val });
 
-    if (val === "yes") {
-      setCommStatusModal(true);
-    }
-  };
+  if (val === "yes") {
+    setCommStatusModal(true);
+  }
+};
 
-  const handleCommStatus = (status) => {
-    setMember({ ...member, communicantStatus: status });
-    setCommStatusModal(false);
 
-    if (status === "invalid") {
-      setCommInvalidModal(true);
-    }
-  };
+// ✅ COMMUNICANT STATUS
+const handleCommStatus = (status) => {
+  setMember({ ...member, communicantStatus: status });
+  setCommStatusModal(false);
 
-  const handleDateChange = (event, date) => {
-    if (date) {
-      setShowDatePicker(false);
-      setCommInvalidDate(date);
+  if (status === "invalid") {
+    setCommInvalidModal(true);
+  }
+};
 
-      setMember({
-        ...member,
-        communicantInvalidSince: date.toISOString().split("T")[0],
-      });
-    }
-  };
 
+// ✅ DATE CHANGE
+const handleDateChange = (event, date) => {
+  if (date) {
+    setShowDatePicker(false);
+    setCommInvalidDate(date);
+
+    setMember({
+      ...member,
+      communicantInvalidSince: date.toISOString().split("T")[0],
+    });
+  }
+};
   return (
     <ScrollView style={styles.container}>
 
