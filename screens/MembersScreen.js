@@ -130,6 +130,14 @@ const [approvalNote, setApprovalNote] = useState("");
 const [reinstateModal, setReinstateModal] = useState(false);
 const [reinstateTarget, setReinstateTarget] = useState(null);
 const [reinstateNote, setReinstateNote] = useState("");
+const [filterMinistry, setFilterMinistry] = useState("All");
+const [filterStatus, setFilterStatus] = useState("All");
+const [filterCommun, setFilterCommun] = useState("All");
+
+const [ministries, setMinistries] = useState(["Choir", "Youth"]);
+const [statusList, setStatusList] = useState(["Regular", "Visiting"]);
+const [baptismList, setBaptismList] = useState(["Baptized", "Not Baptized"]);
+
 
 const [modal, setModal] = useState({
   visible: false,
@@ -536,7 +544,6 @@ const filtered = members.filter(m => {
 
 
 /* ══════════════ RENDER ══════════════ */
-// ✅ MODAL HELPERS (INSIDE COMPONENT)
 const openModal = (type, index = null, list = []) => {
   setModal({
     visible: true,
@@ -574,7 +581,7 @@ const saveList = (list, setList) => {
 
     <AppHeader
       title="Members"
-      subtitle={activeEntity?.name || "Manage church members"}  // ✅ better context
+      subtitle={activeEntity?.name || "Manage church members"}  
 
       onBack={() => navigation.goBack()}
 

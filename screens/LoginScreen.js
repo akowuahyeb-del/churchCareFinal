@@ -49,91 +49,82 @@ export default function LoginScreen({ navigation }) {
 };
 
   return (
-    <View style={styles.container}>
+  <View style={styles.container}>
 
-      {/* ✅ HEADER TEXT */}
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>
-        Sign in to continue
-      </Text>
+    <Text style={styles.title}>Welcome Back</Text>
 
-      {/* ✅ EMAIL FIELD */}
+    <Text style={styles.subtitle}>
+      Sign in to continue
+    </Text>
+
+    {/* ✅ EMAIL FIELD */}
+    <TextInput
+      placeholder="Email / Phone"
+      value={email}
+      onChangeText={setEmail}
+      style={styles.input}
+      placeholderTextColor="#999"
+    />
+
+    {/* ✅ PASSWORD FIELD */}
+    <View style={styles.passwordBox}>
       <TextInput
-        placeholder="Email / Phone"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry={!showPassword}
+        style={styles.passwordInput}
         placeholderTextColor="#999"
       />
 
-      {/* ✅ PASSWORD FIELD WITH TOGGLE */}
-      <View style={styles.passwordBox}>
-
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={styles.passwordInput}
-          placeholderTextColor="#999"
+      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+        <Feather
+          name={showPassword ? "eye" : "eye-off"}
+          size={18}
+          color="#555"
         />
-
-        <TouchableOpacity
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Feather
-            name={showPassword ? "eye" : "eye-off"}
-            size={18}
-            color="#555"
-          />
-        </TouchableOpacity>
-
-      </View>
-
-      {/* ✅ LOGIN BUTTON */}
-
-      {/* ✅ LOGIN BUTTON */}
-<AppButton
-  title="Login"
-  onPress={handleLogin}
-/>
-
-      {/* ✅ DIVIDER */}
-      <View style={styles.dividerRow}>
-        <View style={styles.line} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <View style={styles.line} />
-      </View>
-
-      {/* ✅ GOOGLE BUTTON */}
-      <TouchableOpacity style={styles.socialBtn}>
-        <AntDesign name="google" size={18} color="#DB4437" />
-        <Text style={styles.socialText}>Continue with Google</Text>
       </TouchableOpacity>
-
-      {/* ✅ PHONE BUTTON */}
-      <TouchableOpacity style={styles.socialBtn}>
-        <Feather name="phone" size={18} color="#4B3F72" />
-        <Text style={styles.socialText}>Continue with Phone</Text>
-      </TouchableOpacity>
-
-✅ FOOTER
-<View style={styles.footer}>
-
-  {/* ✅ REGISTER (MAIN ACTION) */}
-  <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
-    <Text style={styles.register}>New Church? Register</Text>
-  </TouchableOpacity>
-
-  
-
-
-</View>
-
     </View>
-  );
+
+    {/* ✅ LOGIN BUTTON */}
+    <AppButton
+      title="Login"
+      onPress={handleLogin}
+    />
+
+    {/* ✅ DIVIDER */}
+    <View style={styles.dividerRow}>
+      <View style={styles.line} />
+      <Text style={styles.dividerText}>or continue with</Text>
+      <View style={styles.line} />
+    </View>
+
+    {/* ✅ GOOGLE */}
+    <TouchableOpacity style={styles.socialBtn}>
+      <AntDesign name="google" size={18} color="#DB4437" />
+      <Text style={styles.socialText}>Continue with Google</Text>
+    </TouchableOpacity>
+
+    {/* ✅ PHONE */}
+    <TouchableOpacity style={styles.socialBtn}>
+      <Feather name="phone" size={18} color="#4B3F72" />
+      <Text style={styles.socialText}>Continue with Phone</Text>
+    </TouchableOpacity>
+
+    
+{/* ✅ FOOTER */}
+    <View style={styles.footer}>
+      <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
+        <Text style={styles.register}>
+          New Church? Register
+        </Text>
+      </TouchableOpacity>
+    </View>
+
+  </View>   // ✅ MAIN SCREEN CLOSE
+);
 }
-  
+
 /* ✅ STYLES */
 
 const styles = StyleSheet.create({
