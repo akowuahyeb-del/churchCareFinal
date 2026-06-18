@@ -35,64 +35,98 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Enter email and password");
+  if (!email || !password) {
+    Alert.alert("Error", "Enter email and password");
+    return;
+  }
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    const uid = userCredential.user.uid;
+
+    // ✅ FETCH USER
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+
+    let userData;
+
+    if (!userSnap.exists()) {
+      // ✅ AUTO-CREATE USER
+      userData = {
+        email,
+        role: "member",
+        organizationId: "",
+        entityId: "",
+        entityName: "",
+        name: "",
+        phone: "",
+        uid   // ✅ VERY IMPORTANT
+      };
+
+      await setDoc(userRef, userData);
+      console.log("✅ New user profile created");
+
+    } else {
+      userData = { ...userSnap.data(), uid }; ✅ ensure uid is included
+    }
+
+    // ✅ SAVE LOGIN STATUS
+    await AsyncStorage.setItem("isLoggedIn", "true");
+    await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+
+    // ✅ FORCE PROFILE COMPLETION
+    if (!userData.name || !userData.phone) {
+      navigation.replace("CompleteProfile");
       return;
     }
 
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+    // ✅ FORCE CHURCH SELECTION
+    if (!userData.organizationId || !userData.entityId) {
+      navigation.replace("CreateChurch");
+      return;
+    }
 
-     const userRef = doc(db, "users", uid);
-const userSnap = await getDoc(userRef);
+    // ✅ SAVE ACTIVE ENTITY
+    await AsyncStorage.setItem(
+      "activeEntity",
+      JSON.stringify({
+        organizationId: userData.organizationId,
+        entityId: userData.entityId,
+        name: userData.entityName || "Church"
+      })
+    );
 
-let userData;
+    // ✅ ENTER APP
+    navigation.replace("MainTabs");
 
-if (!userSnap.exists()) {
-  // ✅ AUTO-CREATE NEW USER
-  userData = {
-    email,
-    role: "member", // default role
-    organizationId: "",
-    entityId: "",
-    entityName: "",
-    name: email.split("@")[0],
-    phone: ""
-  };
+  } catch (error) {
+    console.log("LOGIN ERROR:", error.code);
+    Alert.alert("Login Failed", error.message);
+  }
+};
 
-  await setDoc(userRef, userData);
-
-  console.log("✅ New user profile created");
-
-} else {
-  userData = userSnap.data();
+      // ✅ CHECK IF USER HAS CHURCH
+if (!userData.organizationId || !userData.entityId) {
+  navigation.replace("CreateChurch");
+  return;
 }
 
+// ✅ SAVE ACTIVE ENTITY
+await AsyncStorage.setItem(
+  "activeEntity",
+  JSON.stringify({
+    organizationId: userData.organizationId,
+    entityId: userData.entityId,
+    name: userData.entityName
+  })
+);
 
-      if (!userSnap.exists()) {
-        Alert.alert("Error", "User profile not found");
-        return;
-      }
-
-      const userData = userSnap.data();
-
-      await AsyncStorage.setItem("isLoggedIn", "true");
-      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
-
-      if (userData.organizationId && userData.entityId) {
-        await AsyncStorage.setItem(
-          "activeEntity",
-          JSON.stringify({
-            organizationId: userData.organizationId,
-            entityId: userData.entityId,
-            name: userData.entityName || "Church"
-          })
-        );
-      }
+navigation.replace("MainTabs");
 
       navigation.replace("MainTabs");
 } catch (error) {

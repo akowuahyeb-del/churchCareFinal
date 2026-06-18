@@ -121,6 +121,8 @@ function RootStack() {
       <Stack.Screen name="Onboarding" component={OnboardingScreen}/>
       <Stack.Screen name="ChurchSelect"component={ChurchSelectScreen}/>
       <Stack.Screen name="ImportMembers" component={ImportMembersScreen} />
+      <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+
 
 
     </Stack.Navigator>
