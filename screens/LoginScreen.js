@@ -17,7 +17,7 @@ export default function LoginScreen({ navigation }) {
     const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
     if (isLoggedIn === "true") {
-      navigation.replace("MainTabs");
+      navigation.replace("Home");
     }
   };
 
