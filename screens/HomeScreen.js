@@ -127,12 +127,19 @@ useEffect(() => {
 
   const { organizationId, entityId } = activeEntity;
 
-  const u1 = onSnapshot(
-    collection(db, "organizations", organizationId, "entities", entityId, "events"),
-    snap => {
-      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }
-  );
+  if (!organizationId || !entityId) return;
+
+const u1 = onSnapshot(
+  collection(db, "organizations", organizationId, "entities", entityId, "events"),
+  snap => {
+    setEvents(
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }))
+    );
+  }
+);
 
   const u2 = onSnapshot(
     doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),

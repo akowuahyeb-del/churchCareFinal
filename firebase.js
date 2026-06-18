@@ -1,24 +1,23 @@
-// ✅ firebase.js
-
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";   // ✅ ADD THIS
 
-/* ✅ YOUR FIREBASE CONFIG */
 const firebaseConfig = {
-  apiKey: "AIzaSy...", // keep your real key
+  apiKey: "AIzaSyATDviX7L_tAURjhVbkPUrrgHNsQVhjnW4",
   authDomain: "churchcarefinal.firebaseapp.com",
   projectId: "churchcarefinal",
-  storageBucket: "churchcarefinal.appspot.com",
+  storageBucket: "churchcarefinal.firebasestorage.app",
   messagingSenderId: "120675440611",
-  appId: "1:120675440611:web:..."
+  appId: "1:120675440611:web:af20b8b2a976d71559f2d6"
 };
 
-/* ✅ INITIALISE FIREBASE */
 const app = initializeApp(firebaseConfig);
 
-/* ✅ EXPORT SERVICES */
+// ✅ SERVICES
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);   // ✅ ADD THIS
 
-export { db, storage };
+// ✅ EXPORT ALL
+export { db, storage, auth };

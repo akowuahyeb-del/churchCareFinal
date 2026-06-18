@@ -5,130 +5,181 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,  Alert
+  StyleSheet,
+  Alert
 } from "react-native";
 
 import { Feather, AntDesign } from "@expo/vector-icons";
 import AppButton from "../components/AppButton";
 
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
 export default function LoginScreen({ navigation }) {
- useEffect(() => {
-  const checkLogin = async () => {
-    const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
-    if (isLoggedIn === "true") {
-      navigation.replace("Home");
-    }
-  };
+  useEffect(() => {
+    const checkLogin = async () => {
+      const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
-  checkLogin();
-}, []);
+      if (isLoggedIn === "true") {
+        navigation.replace("MainTabs");
+      }
+    };
+
+    checkLogin();
+  }, []);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
 
   const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert("Error", "Enter email and password");
-    return;
-  }
+    if (!email || !password) {
+      Alert.alert("Error", "Enter email and password");
+      return;
+    }
 
-  const userData = {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+     const userRef = doc(db, "users", uid);
+const userSnap = await getDoc(userRef);
+
+let userData;
+
+if (!userSnap.exists()) {
+  // ✅ AUTO-CREATE NEW USER
+  userData = {
     email,
-    role: "admin",
-    organizationId: "demo_org",
-    name: "Admin User"
+    role: "member", // default role
+    organizationId: "",
+    entityId: "",
+    entityName: "",
+    name: email.split("@")[0],
+    phone: ""
   };
 
-  await AsyncStorage.setItem("isLoggedIn", "true");
-  await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+  await setDoc(userRef, userData);
 
-  navigation.replace("MainTabs");
-};
+  console.log("✅ New user profile created");
+
+} else {
+  userData = userSnap.data();
+}
+
+
+      if (!userSnap.exists()) {
+        Alert.alert("Error", "User profile not found");
+        return;
+      }
+
+      const userData = userSnap.data();
+
+      await AsyncStorage.setItem("isLoggedIn", "true");
+      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+
+      if (userData.organizationId && userData.entityId) {
+        await AsyncStorage.setItem(
+          "activeEntity",
+          JSON.stringify({
+            organizationId: userData.organizationId,
+            entityId: userData.entityId,
+            name: userData.entityName || "Church"
+          })
+        );
+      }
+
+      navigation.replace("MainTabs");
+} catch (error) {
+  console.log("LOGIN ERROR:", error.code);   
+  Alert.alert("Login Failed", error.message);
+}
+
+    
+  };
 
   return (
-  <View style={styles.container}>
+    <View style={styles.container}>
 
-    <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.title}>Welcome Back</Text>
 
-    <Text style={styles.subtitle}>
-      Sign in to continue
-    </Text>
+      <Text style={styles.subtitle}>
+        Sign in to continue
+      </Text>
 
-    {/* ✅ EMAIL FIELD */}
-    <TextInput
-      placeholder="Email / Phone"
-      value={email}
-      onChangeText={setEmail}
-      style={styles.input}
-      placeholderTextColor="#999"
-    />
-
-    {/* ✅ PASSWORD FIELD */}
-    <View style={styles.passwordBox}>
       <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={!showPassword}
-        style={styles.passwordInput}
+        placeholder="Email / Phone"
+        value={email}
+        onChangeText={setEmail}
+        style={styles.input}
         placeholderTextColor="#999"
       />
 
-      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-        <Feather
-          name={showPassword ? "eye" : "eye-off"}
-          size={18}
-          color="#555"
+      <View style={styles.passwordBox}>
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          style={styles.passwordInput}
+          placeholderTextColor="#999"
         />
+
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Feather
+            name={showPassword ? "eye" : "eye-off"}
+            size={18}
+            color="#555"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <AppButton
+        title="Login"
+        onPress={handleLogin}
+      />
+
+      {/* ✅ DIVIDER */}
+      <View style={styles.dividerRow}>
+        <View style={styles.line} />
+        <Text style={styles.dividerText}>or continue with</Text>
+        <View style={styles.line} />
+      </View>
+
+      {/* ✅ GOOGLE */}
+      <TouchableOpacity style={styles.socialBtn}>
+        <AntDesign name="google" size={18} color="#DB4437" />
+        <Text style={styles.socialText}>Continue with Google</Text>
       </TouchableOpacity>
-    </View>
 
-    {/* ✅ LOGIN BUTTON */}
-    <AppButton
-      title="Login"
-      onPress={handleLogin}
-    />
-
-    {/* ✅ DIVIDER */}
-    <View style={styles.dividerRow}>
-      <View style={styles.line} />
-      <Text style={styles.dividerText}>or continue with</Text>
-      <View style={styles.line} />
-    </View>
-
-    {/* ✅ GOOGLE */}
-    <TouchableOpacity style={styles.socialBtn}>
-      <AntDesign name="google" size={18} color="#DB4437" />
-      <Text style={styles.socialText}>Continue with Google</Text>
-    </TouchableOpacity>
-
-    {/* ✅ PHONE */}
-    <TouchableOpacity style={styles.socialBtn}>
-      <Feather name="phone" size={18} color="#4B3F72" />
-      <Text style={styles.socialText}>Continue with Phone</Text>
-    </TouchableOpacity>
-
-    
-{/* ✅ FOOTER */}
-    <View style={styles.footer}>
-      <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
-        <Text style={styles.register}>
-          New Church? Register
-        </Text>
+      {/* ✅ PHONE */}
+      <TouchableOpacity style={styles.socialBtn}>
+        <Feather name="phone" size={18} color="#4B3F72" />
+        <Text style={styles.socialText}>Continue with Phone</Text>
       </TouchableOpacity>
-    </View>
 
-  </View>   // ✅ MAIN SCREEN CLOSE
-);
+      {/* ✅ FOOTER */}
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
+          <Text style={styles.register}>
+            New Church? Register
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+    </View>
+  );
 }
+
 
 /* ✅ STYLES */
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 20,
@@ -158,7 +209,6 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0"
   },
 
-  /* ✅ PASSWORD FIELD */
   passwordBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -175,22 +225,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12
   },
 
-  /* ✅ LOGIN BUTTON (MATCH DASHBOARD PURPLE) */
-  loginBtn: {
-    backgroundColor: "#4B3F72",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 5
-  },
-
-  loginText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14
-  },
-
-  /* ✅ DIVIDER */
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -209,7 +243,6 @@ const styles = StyleSheet.create({
     color: "#888"
   },
 
-  /* ✅ SOCIAL BUTTONS */
   socialBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,17 +260,14 @@ const styles = StyleSheet.create({
     color: "#333"
   },
 
-  /* ✅ FOOTER */
   footer: {
-  marginTop: 30,
-  alignItems: "center",
-  paddingHorizontal: 20,
-},
+    marginTop: 30,
+    alignItems: "center"
+  },
 
   register: {
-  color: "#4B3F72",
-  fontWeight: "700",
-  fontSize: 14,
-  marginBottom: 10,   
-}
+    color: "#4B3F72",
+    fontWeight: "700",
+    fontSize: 14
+  }
 });
