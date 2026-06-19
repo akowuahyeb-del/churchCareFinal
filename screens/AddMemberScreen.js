@@ -287,6 +287,44 @@ return (
 
     {/* ✅ STEP ENGINE */}
     {steps[step]}
+{/* ✅ COMMUNICANT STATUS MODAL */}
+<Modal visible={commStatusModal} transparent animationType="fade">
+
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>Communicant Status</Text>
+
+      {/* ✅ ACTIVE */}
+      <TouchableOpacity
+        style={[styles.actionBtn, { backgroundColor: "#22c55e" }]}
+        onPress={() => handleCommStatus("active")}
+      >
+        <Text style={styles.white}>Active (Eligible)</Text>
+      </TouchableOpacity>
+
+      {/* ✅ INVALID */}
+      <TouchableOpacity
+        style={[styles.actionBtn, { backgroundColor: "#ef4444", marginTop: 10 }]}
+        onPress={() => handleCommStatus("invalid")}
+      >
+        <Text style={styles.white}>Invalid (Sick / Restricted)</Text>
+      </TouchableOpacity>
+
+      {/* ✅ CLOSE */}
+      <TouchableOpacity
+        onPress={() => setCommStatusModal(false)}
+        style={{ marginTop: 10 }}
+      >
+        <Text style={{ textAlign: "center", color: "#888" }}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+
+</Modal>
 
   </SafeAreaView>
 );
