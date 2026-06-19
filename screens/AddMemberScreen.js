@@ -16,6 +16,10 @@ export default function AddMemberScreen({ navigation, route }) {
   const [step, setStep] = useState(0);
  const [commNote, setCommNote] = useState("");
 
+const [editMinistryModal, setEditMinistryModal] = useState(false);
+const [selectedMinistryIndex, setSelectedMinistryIndex] = useState(null);
+const [editMinistryValue, setEditMinistryValue] = useState("");
+
   const [member, setMember] = useState(
     memberData || {
       name: "",
@@ -244,15 +248,20 @@ const steps = [
 <Text style={styles.label}>MINISTRY / GROUP</Text>
 
 <View style={styles.chipRow}>
-  {ministries.map((item) => (
+  {ministries.map((item,index) => (
     <TouchableOpacity
-      key={item}
-      onPress={() =>
-        setMember((prev) => ({
-          ...prev,
-          ministry: item,
-        }))
-      }
+  key={item}
+  onPress={() =>
+    setMember((prev) => ({
+      ...prev,
+      ministry: item,
+    }))
+  }
+  onLongPress={() => {
+    setSelectedMinistryIndex(index);
+    setEditMinistryValue(item);
+    setEditMinistryModal(true);
+  }}
       style={[
         styles.chip,
         member.ministry === item && styles.chipActive,
