@@ -95,52 +95,51 @@ const steps = [
 
   // ─── STEP 0: Basic Info ───────────────
   <ScrollView
-    key={0}
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={styles.container}
-  >
-    <Text style={styles.title}>
-      {editingId ? "Edit Member" : "Register Member"}
-    </Text>
+  key={0}
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={styles.container}
+>
+  <View style={styles.card}>
 
-    <Text style={{ marginBottom: 10, color: "#888" }}>
-      Step 1 of 2
-    </Text>
+    <Text style={styles.cardTitle}>PERSONAL DETAILS</Text>
 
-    <Text style={styles.label}>Full Name *</Text>
+    <Text style={styles.label}>FULL NAME *</Text>
     <TextInput
       style={styles.input}
       value={member.name}
       onChangeText={(t) => setMember({ ...member, name: t })}
     />
 
-    <Text style={styles.label}>Phone *</Text>
+    <Text style={styles.label}>PHONE *</Text>
     <TextInput
       style={styles.input}
       value={member.phone}
       onChangeText={(t) => setMember({ ...member, phone: t })}
     />
 
-    <Text style={styles.label}>Address</Text>
+    <Text style={styles.label}>ADDRESS</Text>
     <TextInput
       style={styles.input}
       value={member.address}
       onChangeText={(t) => setMember({ ...member, address: t })}
     />
 
-    <TouchableOpacity
-      style={styles.saveBtn}
-      onPress={() => {
-        if (!member.name || !member.phone) {
-          Alert.alert("Required", "Name and phone are required");
-          return;
-        }
-        setStep(1);
-      }}
-    >
-      <Text style={styles.saveText}>Next</Text>
-    </TouchableOpacity>
-  </ScrollView>,
+  </View>
+
+  <TouchableOpacity
+    style={styles.saveBtn}
+    onPress={() => {
+      if (!member.name || !member.phone) {
+        Alert.alert("Required", "Name and phone required");
+        return;
+      }
+      setStep(1);
+    }}
+  >
+    <Text style={styles.saveText}>Next</Text>
+  </TouchableOpacity>
+
+</ScrollView>,
 
   // ─── STEP 1: Extra Info ───────────────
   <ScrollView
