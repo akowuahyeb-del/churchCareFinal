@@ -20,6 +20,16 @@ const [editMinistryModal, setEditMinistryModal] = useState(false);
 const [selectedMinistryIndex, setSelectedMinistryIndex] = useState(null);
 const [editMinistryValue, setEditMinistryValue] = useState("");
 
+const [statusModal, setStatusModal] = useState(false);
+const [newStatus, setNewStatus] = useState("");
+
+const [statusList, setStatusList] = useState([
+  "Regular",
+  "Visiting",
+  "Inactive",
+]);
+
+
   const [member, setMember] = useState(
     memberData || {
       name: "",
@@ -461,6 +471,45 @@ return (
         style={{ marginTop: 10 }}
       >
         <Text style={{ textAlign: "center", color: "#888" }}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+
+</Modal>
+
+{/* ✅ STATUS MODAL */}
+<Modal visible={statusModal} transparent animationType="fade">
+
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>Add Status</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter status"
+        value={newStatus}
+        onChangeText={setNewStatus}
+      />
+
+      <TouchableOpacity
+        style={[styles.actionBtn, { marginTop: 10 }]}
+        onPress={() => {
+          if (!newStatus) return;
+
+          setStatusList((prev) => [...prev, newStatus]);
+          setNewStatus("");
+          setStatusModal(false);
+        }}
+      >
+        <Text style={styles.white}>Save</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setStatusModal(false)}>
+        <Text style={{ textAlign: "center", marginTop: 10 }}>
           Cancel
         </Text>
       </TouchableOpacity>
