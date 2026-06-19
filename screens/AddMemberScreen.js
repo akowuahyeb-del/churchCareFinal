@@ -254,12 +254,15 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "600", marginTop: 12, marginBottom: 4, color: "#444" },
 
   input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
+  backgroundColor: "#ffffff",
+  padding: 14,
+  borderRadius: 12,
+  borderWidth: 1.5,
+  borderColor: "#d1d5db",   
+  fontSize: 14,
+  color: "#222",            
+},
+
 
   row: { flexDirection: "row", marginTop: 8 },
 
@@ -298,5 +301,32 @@ const styles = StyleSheet.create({
 
   actionBtn: { padding: 12, backgroundColor: "#4B3F72", borderRadius: 8, alignItems: "center" },
   white: { color: "#fff", fontWeight: "600" },
+
+card: {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 16,
+  elevation: 4,
+  borderWidth: 1,
+  borderColor: "#eee",
+},
+
+cardTitle: {
+  fontSize: 14,
+  fontWeight: "800",
+  color: "#4B3F72",
+  marginBottom: 10,
+},
+
+label: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#555",   
+  marginTop: 12,
+  marginBottom: 6,
+},
+
+
 });
 
