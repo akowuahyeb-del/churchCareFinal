@@ -14,7 +14,7 @@ export default function AddMemberScreen({ navigation, route }) {
 
   const { memberData, editingId, entityId, organizationId } = route.params || {};
   const [step, setStep] = useState(0);
-
+ const [commNote, setCommNote] = useState("");
 
   const [member, setMember] = useState(
     memberData || {
@@ -69,10 +69,19 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
-  const handleCommunicantSelect = (val) => {
-    setMember({ ...member, communicant: val });
-    if (val === "yes") setCommStatusModal(true);
-  };
+  const handleCommStatus = (status) => {
+  setMember((prev) => ({
+    ...prev,
+    communicantStatus: status,
+  }));
+
+  setCommStatusModal(false);
+
+  if (status === "invalid") {
+    setCommInvalidModal(true);  // ✅ open 2nd modal
+  }
+};
+
 
   const handleCommStatus = (status) => {
     setMember({ ...member, communicantStatus: status });
@@ -80,16 +89,21 @@ export default function AddMemberScreen({ navigation, route }) {
     if (status === "invalid") setCommInvalidModal(true);
   };
 
-  const handleDateChange = (event, date) => {
-    if (Platform.OS === "android") setShowDatePicker(false);
-    if (date) {
-      setCommInvalidDate(date);
-      setMember({
-        ...member,
-        communicantInvalidSince: date.toISOString().split("T")[0],
-      });
-    }
-  };
+ const handleDateChange = (event, selectedDate) => {
+  setShowDatePicker(false);
+
+  if (selectedDate) {
+    setCommInvalidDate(selectedDate);
+
+    setMember((prev) => ({
+      ...prev,
+      communicantInvalidSince: selectedDate
+        .toISOString()
+        .split("T")[0],
+    }));
+  }
+};
+
 
 const steps = [
 
@@ -287,6 +301,61 @@ return (
 
     {/* ✅ STEP ENGINE */}
     {steps[step]}
+<Modal visible={commInvalidModal} transparent animationType="fade">
+
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>Invalid Communicant</Text>
+
+      {/* DATE */}
+      <Text style={styles.label}>Invalid Since</Text>
+
+      <TouchableOpacity
+        style={styles.input}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text>{commInvalidDate.toDateString()}</Text>
+      </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={commInvalidDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+
+      {/* NOTE */}
+      <Text style={styles.label}>Reason / Note</Text>
+
+      <TextInput
+        style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+        multiline
+        placeholder="Describe situation..."
+        value={member.communicantNote || ""}
+        onChangeText={(t) =>
+          setMember((prev) => ({
+            ...prev,
+            communicantNote: t,
+          }))
+        }
+      />
+
+      {/* SAVE */}
+      <TouchableOpacity
+        style={[styles.actionBtn, { marginTop: 12 }]}
+        onPress={() => setCommInvalidModal(false)}
+      >
+        <Text style={styles.white}>Save</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+
+</Modal>
+
 {/* ✅ COMMUNICANT STATUS MODAL */}
 <Modal visible={commStatusModal} transparent animationType="fade">
 
