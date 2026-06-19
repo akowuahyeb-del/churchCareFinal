@@ -69,6 +69,18 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
+const handleCommunicantSelect = (val) => {
+  setMember((prev) => ({
+    ...prev,
+    communicant: val,
+  }));
+
+  if (val === "yes") {
+    setCommStatusModal(true); // ✅ open status modal
+  }
+};
+
+
   const handleCommStatus = (status) => {
   setMember((prev) => ({
     ...prev,
@@ -82,12 +94,6 @@ export default function AddMemberScreen({ navigation, route }) {
   }
 };
 
-
-  const handleCommStatus = (status) => {
-    setMember({ ...member, communicantStatus: status });
-    setCommStatusModal(false);
-    if (status === "invalid") setCommInvalidModal(true);
-  };
 
  const handleDateChange = (event, selectedDate) => {
   setShowDatePicker(false);
