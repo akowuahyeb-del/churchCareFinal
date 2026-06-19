@@ -521,17 +521,19 @@ entityBar: {
 entityBtn: {
   flexDirection: "row",
   alignItems: "center",
-  backgroundColor: "#f4f6fb",
+  backgroundColor: "#edeef2",   
   paddingHorizontal: 12,
   paddingVertical: 8,
-  borderRadius: 20,
+  borderRadius: 15,
   alignSelf: "flex-start",
+  borderWidth: 1,
+  borderColor: "#E0E3F5",       
 },
 
 entityText: {
   color: "#4B3F72",
   fontWeight: "700",
-  fontSize: 12,
+  fontSize: 14,
   marginHorizontal: 6,
 },
 
