@@ -108,20 +108,6 @@ useEffect(() => {
 }, []);
 
 
-  useEffect(() => {
-  const loadEntity = async () => {
-    const data = await AsyncStorage.getItem("activeEntity");
-
-    if (data) {
-      const parsed = JSON.parse(data);
-      setActiveEntity(parsed);
-    }
-  };
-
-  loadEntity();
-}, []);
-
-
 useEffect(() => {
   if (!activeEntity) return;
 
@@ -281,100 +267,41 @@ const handleSelectChurch = async (entity) => {
 return (
   <SafeAreaView style={styles.safe}>
     <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
-<AppHeader
-  title="ChurchCare"
-  subtitle="Welcome back 👋"
-  actions={[
-    {
-      custom: (
-        <View>
 
-          
-          <TouchableOpacity
-  onPress={() => setChurchModalVisible(true)}  
-  style={{
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    elevation: 3
-  }}
->
+    {/* ✅ CLEAN HEADER (NO CUSTOM UI INSIDE) */}
+    <AppHeader
+      title="ChurchCare"
+      subtitle="Welcome back 👋"
+      actions={[
+        {
+          icon: "notifications-outline",
+          onPress: () => {
+            setNotifModal(true);
+            setNotifCount(0);
+          },
+        },
+        {
+          icon: "cloud-upload-outline",
+          onPress: () => setShowUpload(true),
+        },
+      ]}
+    />
 
-          >
-            <Ionicons name="business-outline" size={16} color="#4B3F72" />
+    {/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
+    <View style={styles.entityBar}>
+      <TouchableOpacity
+        onPress={() => setChurchModalVisible(true)}
+        style={styles.entityBtn}
+      >
+        <Ionicons name="business-outline" size={16} color="#4B3F72" />
 
-            <Text
-              style={{
-                color: "#4B3F72",
-                marginLeft: 6,
-                fontSize: 12,
-                fontWeight: "700"
-              }}
-            >
-              {activeEntity?.name || "Select Church"}
-            </Text>
+        <Text style={styles.entityText}>
+          {activeEntity?.name || "Select Church"}
+        </Text>
 
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color="#4B3F72"
-              style={{ marginLeft: 4 }}
-            />
-          </TouchableOpacity>
-
-          {/* 🔹 CHURCH LIST (DYNAMIC SWITCHER) */}
-          <View style={{ marginTop: 10 }}>
-            {entities.map((item) => (
-              <TouchableOpacity
-                key={item.entityId}
-                onPress={() => handleSelectChurch(item)}
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  marginBottom: 6,
-                  backgroundColor:
-                    activeEntity?.entityId === item.entityId
-                      ? "#4B3F72"
-                      : "#eee"
-                }}
-              >
-                <Text
-                  style={{
-                    color:
-                      activeEntity?.entityId === item.entityId
-                        ? "#fff"
-                        : "#333",
-                    fontWeight: "600"
-                  }}
-                >
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-        </View>
-      )
-    },
-
-    {
-      icon: "notifications-outline",
-      onPress: () => {
-        setNotifModal(true);
-        setNotifCount(0);
-      }
-    },
-
-    {
-      icon: "cloud-upload-outline",
-      onPress: () => setShowUpload(true)
-    }
-  ]}
-/>
+        <Ionicons name="chevron-down" size={14} color="#4B3F72" />
+      </TouchableOpacity>
+    </View>
 
 
     <ScrollView
@@ -583,6 +510,32 @@ const styles = StyleSheet.create({
 
   /* Stats */
   statsRow: { flexDirection: "row", gap: 10, paddingHorizontal: 14 },
+
+/*Entity styles*/
+entityBar: {
+  backgroundColor: "#fff",
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+},
+
+entityBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#f4f6fb",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+  alignSelf: "flex-start",
+},
+
+entityText: {
+  color: "#4B3F72",
+  fontWeight: "700",
+  fontSize: 12,
+  marginHorizontal: 6,
+},
+
+
 
   /* Quick actions */
   qaSection: { paddingHorizontal: 14, marginTop: 18, marginBottom: 6 },
