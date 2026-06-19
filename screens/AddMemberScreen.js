@@ -30,6 +30,16 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   );
 
+const [ministries, setMinistries] = useState([
+  "YPG",
+  "Prayer Tower"
+]);
+
+const [ministryModal, setMinistryModal] = useState(false);
+const [newMinistry, setNewMinistry] = useState("");
+
+
+
   const [commStatusModal, setCommStatusModal]   = useState(false);
   const [commInvalidModal, setCommInvalidModal] = useState(false);
   const [commInvalidDate, setCommInvalidDate]   = useState(new Date());
@@ -205,32 +215,72 @@ const steps = [
       }
     />
 
-    {/* COMMUNICANT */}
-    <Text style={styles.label}>COMMUNICANT *</Text>
-    <View style={styles.row}>
-      {["yes", "no"].map((val) => (
-        <TouchableOpacity
-          key={val}
-          onPress={() => handleCommunicantSelect(val)}
-          style={[
-            styles.communicantBtn,
-            member.communicant === val && styles.activeBtn,
-          ]}
-        >
-          <Text
-            style={[
-              styles.btnText,
-              member.communicant === val && { color: "#fff" },
-            ]}
-          >
-            {val.toUpperCase()}
-          </Text>
-        </TouchableOpacity>
-        
-      ))}
-    </View>
+   {/* ✅ COMMUNICANT */}
+<Text style={styles.label}>COMMUNICANT *</Text>
 
-  </View>
+<View style={styles.row}>
+  {["yes", "no"].map((val) => (
+    <TouchableOpacity
+      key={val}
+      onPress={() => handleCommunicantSelect(val)}
+      style={[
+        styles.communicantBtn,
+        member.communicant === val && styles.activeBtn,
+      ]}
+    >
+      <Text
+        style={[
+          styles.btnText,
+          member.communicant === val && { color: "#fff" },
+        ]}
+      >
+        {val.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
+{/* ✅ ✅ MINISTRY / GROUP */}
+<Text style={styles.label}>MINISTRY / GROUP</Text>
+
+<View style={styles.chipRow}>
+  {ministries.map((item) => (
+    <TouchableOpacity
+      key={item}
+      onPress={() =>
+        setMember((prev) => ({
+          ...prev,
+          ministry: item,
+        }))
+      }
+      style={[
+        styles.chip,
+        member.ministry === item && styles.chipActive,
+      ]}
+    >
+      <Text
+        style={
+          member.ministry === item
+            ? styles.chipTextActive
+            : styles.chipText
+        }
+      >
+        {item}
+      </Text>
+    </TouchableOpacity>
+  ))}
+
+  {/* ✅ ADD BUTTON */}
+  <TouchableOpacity
+    style={styles.chipAdd}
+    onPress={() => setMinistryModal(true)}
+  >
+    <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+      + Add
+    </Text>
+  </TouchableOpacity>
+</View>
+  </View>   // ✅ THIS CLOSES styles.card
 
 {member.communicant === "yes" && (
   <View style={styles.infoBanner}>
