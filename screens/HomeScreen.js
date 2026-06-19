@@ -289,7 +289,7 @@ return (
       custom: (
         <View>
 
-          {/* 🔹 CURRENT SELECTED CHURCH BUTTON */}
+          
           <TouchableOpacity
   onPress={() => setChurchModalVisible(true)}  
   style={{

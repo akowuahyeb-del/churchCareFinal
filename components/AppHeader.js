@@ -2,9 +2,10 @@ import React from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Platform
+  TouchableOpacity,
+  Platform,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -12,65 +13,46 @@ export default function AppHeader({
   title,
   subtitle,
   onBack,
-  actions = []
+  actions = [],
 }) {
+
   return (
     <View style={styles.container}>
 
-      {/* SAFE TOP SPACE */}
-      <View style={styles.topSafeSpace} />
+      {/* ✅ TRUE STATUS BAR SPACING (ONLY SOURCE OF TRUTH) */}
+      <View style={{ height: Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0 }} />
 
-      {/* HEADER ROW */}
+      {/* ✅ HEADER */}
       <View style={styles.header}>
-
-        {/* BACK BUTTON */}
-        {onBack && (
-          <TouchableOpacity style={styles.iconBtn} onPress={onBack}>
+        {onBack ? (
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onBack}
+          >
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
+        ) : (
+          <View style={styles.backBtnSpacer} />
         )}
 
-        {/* TITLE */}
-        <View style={styles.titleContainer}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.title}>{title}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
 
-        {/* RIGHT ACTIONS */}
-        <View style={styles.actions}>
-          {Array.isArray(actions) &&
-            actions.map((action, index) => {
-
-              // ✅ CUSTOM COMPONENT SUPPORT (FIX)
-              if (action.custom) {
-                return (
-                  <View key={index} style={{ marginLeft: 8 }}>
-                    {action.custom}
-                  </View>
-                );
-              }
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.iconBtn,
-                    action.type === "primary" && styles.primaryBtn
-                  ]}
-                  onPress={action.onPress}
-                >
-                  {action.icon && (
-                    <Ionicons name={action.icon} size={16} color="#fff" />
-                  )}
-
-                  {action.label && (
-                    <Text style={styles.actionText}>{action.label}</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-        </View>
-
+        {actions.length > 0 && (
+          <View style={styles.actionsRow}>
+            {actions.map((a, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.actionBtn}
+                onPress={a.onPress}
+              >
+                <Ionicons name={a.icon} size={18} color="#fff" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
     </View>
@@ -80,71 +62,55 @@ export default function AppHeader({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#4B3F72",
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-
-  topSafeSpace: {
-    height: Platform.OS === "android" ? 25 : 0,
   },
 
   header: {
-    backgroundColor: "#4B3F72",
-    paddingTop: Platform.OS === "android" ? 40 : 20,
-    paddingBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
+    paddingVertical: 16, // ✅ nice breathing space
   },
 
-  titleContainer: {
-    flex: 1,
-    marginLeft: 8,
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
-  },
-
-  subtitle: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-  },
-
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  iconBtn: {
-    height: 40,
-    minWidth: 40,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    marginLeft: 8,   // ✅ spacing fix (gap unreliable)
+    marginRight: 12,
   },
 
-  primaryBtn: {
-    backgroundColor: "#1BA97F",
+  backBtnSpacer: {
+    width: 38,
+    height: 38,
+    marginRight: 12,
   },
 
-  actionText: {
+  title: {
     color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-    marginLeft: 4,
+    fontSize: 18,
+    fontWeight: "800",
   },
 
-  
+  subtitle: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  actionsRow: {
+    flexDirection: "row",
+    marginLeft: 8,
+  },
+
+  actionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
 });

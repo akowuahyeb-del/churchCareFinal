@@ -5,7 +5,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View,Text, StyleSheet, Platform } from "react-native";
+import { StatusBar} from "react-native";
 
 /* ── SCREENS ── */
 import SplashScreen            from "./screens/SplashScreen";
@@ -134,11 +135,22 @@ function RootStack() {
   );
 }
 
+
+
 export default function App() {
   return (
-    <NavigationContainer>
-      <RootStack />
-    </NavigationContainer>
+    <View style={{ flex: 1 }}>
+      {/* ✅ THIS STOPS OVERLAY */}
+      <StatusBar
+        translucent={false}
+        backgroundColor="#4B3F72"
+        barStyle="light-content"
+      />
+
+      <NavigationContainer>
+        <RootStack />
+      </NavigationContainer>
+    </View>
   );
 }
 
@@ -171,6 +183,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#EEF0FA",
   },
 });
-
-
-
