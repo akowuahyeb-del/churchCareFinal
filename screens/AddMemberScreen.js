@@ -3,7 +3,7 @@ import {
   ScrollView, Text, View, TextInput, Alert,
   TouchableOpacity, StyleSheet, Modal, Platform, StatusBar
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"; // ✅ FIX: context-aware SafeAreaView
+import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
@@ -13,6 +13,8 @@ import AppHeader from "../components/AppHeader";
 export default function AddMemberScreen({ navigation, route }) {
 
   const { memberData, editingId, entityId, organizationId } = route.params || {};
+  const [step, setStep] = useState(0);
+
 
   const [member, setMember] = useState(
     memberData || {
@@ -33,8 +35,6 @@ export default function AddMemberScreen({ navigation, route }) {
   const [commInvalidDate, setCommInvalidDate]   = useState(new Date());
   const [showDatePicker, setShowDatePicker]     = useState(false);
 
-  // ── FIX: back navigation always works, even if this screen is the
-  // only one on the stack (e.g. opened via deep link) ──────────────
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -43,7 +43,6 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
-  // ── SAVE MEMBER ──────────────────────────────────────────────
   const handleSaveMember = async () => {
     if (!member.name) {
       Alert.alert("Required", "Name is required");
@@ -70,7 +69,6 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
-  // ── COMMUNICANT SELECT ───────────────────────────────────────
   const handleCommunicantSelect = (val) => {
     setMember({ ...member, communicant: val });
     if (val === "yes") setCommStatusModal(true);
@@ -93,164 +91,164 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
-  return (
-  <View style={styles.safe}>
-    
-    {/* ✅ FORCE ANDROID NOTCH SPACE (REAL FIX) */}
-    <View style={{ height: StatusBar.currentHeight, backgroundColor: "#4B3F72" }} />
+const steps = [
+
+  // ─── STEP 0: Basic Info ───────────────
+  <ScrollView
+    key={0}
+    showsVerticalScrollIndicator={false}
+    contentContainerStyle={styles.container}
+  >
+    <Text style={styles.title}>
+      {editingId ? "Edit Member" : "Register Member"}
+    </Text>
+
+    <Text style={{ marginBottom: 10, color: "#888" }}>
+      Step 1 of 2
+    </Text>
+
+    <Text style={styles.label}>Full Name *</Text>
+    <TextInput
+      style={styles.input}
+      value={member.name}
+      onChangeText={(t) => setMember({ ...member, name: t })}
+    />
+
+    <Text style={styles.label}>Phone *</Text>
+    <TextInput
+      style={styles.input}
+      value={member.phone}
+      onChangeText={(t) => setMember({ ...member, phone: t })}
+    />
+
+    <Text style={styles.label}>Address</Text>
+    <TextInput
+      style={styles.input}
+      value={member.address}
+      onChangeText={(t) => setMember({ ...member, address: t })}
+    />
+
+    <TouchableOpacity
+      style={styles.saveBtn}
+      onPress={() => {
+        if (!member.name || !member.phone) {
+          Alert.alert("Required", "Name and phone are required");
+          return;
+        }
+        setStep(1);
+      }}
+    >
+      <Text style={styles.saveText}>Next</Text>
+    </TouchableOpacity>
+  </ScrollView>,
+
+  // ─── STEP 1: Extra Info ───────────────
+  <ScrollView
+    key={1}
+    showsVerticalScrollIndicator={false}
+    contentContainerStyle={styles.container}
+  >
+    <Text style={styles.title}>Additional Info</Text>
+
+    <Text style={{ marginBottom: 10, color: "#888" }}>
+      Step 2 of 2
+    </Text>
+
+    <Text style={styles.label}>Occupation</Text>
+    <TextInput
+      style={styles.input}
+      value={member.occupation}
+      onChangeText={(t) => setMember({ ...member, occupation: t })}
+    />
+
+    <Text style={styles.label}>Emergency Contact</Text>
+    <TextInput
+      style={styles.input}
+      value={member.emergencyContact}
+      onChangeText={(t) =>
+        setMember({ ...member, emergencyContact: t })
+      }
+    />
+
+    <Text style={styles.label}>Membership Duration</Text>
+    <TextInput
+      style={styles.input}
+      value={member.membershipDuration}
+      onChangeText={(t) =>
+        setMember({ ...member, membershipDuration: t })
+      }
+    />
+
+    <Text style={styles.label}>Communicant *</Text>
+    <View style={styles.row}>
+      {["yes", "no"].map((val) => (
+        <TouchableOpacity
+          key={val}
+          onPress={() => handleCommunicantSelect(val)}
+          style={[
+            styles.communicantBtn,
+            member.communicant === val && styles.activeBtn,
+          ]}
+        >
+          <Text
+            style={[
+              styles.btnText,
+              member.communicant === val && { color: "#fff" },
+            ]}
+          >
+            {val.toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+
+    <TouchableOpacity
+      style={styles.saveBtn}
+      onPress={handleSaveMember}
+    >
+      <Text style={styles.saveText}>Save Member</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.cancelBtn}
+      onPress={() => setStep(0)}
+    >
+      <Text style={styles.cancelText}>Back</Text>
+    </TouchableOpacity>
+  </ScrollView>
+];
+
+return (
+  <SafeAreaView style={styles.safe} edges={["top"]}>
 
     <StatusBar
-      translucent
-      backgroundColor="transparent"
+      translucent={false}
+      backgroundColor="#4B3F72"
       barStyle="light-content"
     />
 
     <AppHeader
       title={editingId ? "Edit Member" : "Add Member"}
       subtitle="Register a church member"
-      onBack={handleBack}
+      onBack={() => navigation.goBack()}
     />
 
-    <ScrollView
-      style={styles.body}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    ></ScrollView>
+    {/* ✅ STEP ENGINE */}
+    {steps[step]}
 
-<View style={{ height: 10 }} />  {/* ✅ spacing fix */}
+  </SafeAreaView>
+);
 
-      {/* ✅ SCROLLABLE FORM */}
-      <ScrollView style={styles.body} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-
-        <Text style={styles.title}>{editingId ? "Edit Member" : "Register Member"}</Text>
-
-        <Text style={styles.label}>Full Name *</Text>
-        <TextInput style={styles.input} value={member.name}
-          onChangeText={(t) => setMember({ ...member, name: t })} />
-
-        <Text style={styles.label}>Phone *</Text>
-        <TextInput style={styles.input} value={member.phone} keyboardType="phone-pad"
-          onChangeText={(t) => setMember({ ...member, phone: t })} />
-
-        <Text style={styles.label}>Address</Text>
-        <TextInput style={styles.input} value={member.address}
-          onChangeText={(t) => setMember({ ...member, address: t })} />
-
-        <Text style={styles.label}>Occupation</Text>
-        <TextInput style={styles.input} value={member.occupation}
-          onChangeText={(t) => setMember({ ...member, occupation: t })} />
-
-        <Text style={styles.label}>Emergency Contact</Text>
-        <TextInput style={styles.input} value={member.emergencyContact} keyboardType="phone-pad"
-          onChangeText={(t) => setMember({ ...member, emergencyContact: t })} />
-
-        <Text style={styles.label}>Membership Duration</Text>
-        <TextInput style={styles.input} value={member.membershipDuration}
-          onChangeText={(t) => setMember({ ...member, membershipDuration: t })} />
-
-        {/* COMMUNICANT */}
-        <Text style={styles.label}>Communicant *</Text>
-        <View style={styles.row}>
-          {["yes", "no"].map((val) => (
-            <TouchableOpacity key={val}
-              onPress={() => handleCommunicantSelect(val)}
-              style={[styles.communicantBtn, member.communicant === val && styles.activeBtn]}>
-              <Text style={[styles.btnText, member.communicant === val && { color: "#fff" }]}>
-                {val.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {member.communicant === "yes" && (
-          <Text style={{ marginTop: 8, color: "#555" }}>
-            Status: {member.communicantStatus === "invalid"
-              ? `Invalid since ${member.communicantInvalidSince || "—"}`
-              : "Active"}
-          </Text>
-        )}
-
-        {/* BUTTONS */}
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMember}>
-          <Text style={styles.saveText}>Save Member</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.cancelBtn} onPress={handleBack}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-
-      </ScrollView>
-
-      {/* ── MODALS ── */}
-      <Modal visible={commStatusModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Communicant Status</Text>
-
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#27ae60" }]}
-              onPress={() => handleCommStatus("active")}>
-              <Text style={styles.white}>Active — Eligible</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#e74c3c", marginTop: 10 }]}
-              onPress={() => handleCommStatus("invalid")}>
-              <Text style={styles.white}>Invalid — Not Eligible</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setCommStatusModal(false)}>
-              <Text style={{ textAlign: "center", marginTop: 10, color: "#888" }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={commInvalidModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Invalid Since</Text>
-
-            <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-              <Text>{commInvalidDate.toDateString()}</Text>
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={commInvalidDate}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={handleDateChange}
-              />
-            )}
-
-            <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]}
-              onPress={() => setCommInvalidModal(false)}>
-              <Text style={styles.white}>Confirm</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-    </View>
-  );
+  
 }
 
 const styles = StyleSheet.create({
-  
-safe: {
-  flex: 1,
-  backgroundColor: "#4B3F72",
-  paddingTop: Platform.OS === "android"
-    ? (StatusBar.currentHeight || 24)
-    : 0,
-},
+  // ✅ No manual paddingTop here — SafeAreaView + edges=["top"] handles it.
+  safe: { flex: 1, backgroundColor: "#4B3F72" },
 
   body: { flex: 1, backgroundColor: "#f4f6fb" },
 
-  container: {
-  padding: 16,
-  paddingTop: 30,   
-  paddingBottom: 40,
-},
+  container: { padding: 16, paddingBottom: 40 },
 
   title: { fontSize: 20, fontWeight: "700", marginBottom: 16, color: "#222" },
 
@@ -278,13 +276,12 @@ safe: {
   btnText: { color: "#333", fontWeight: "600" },
 
   saveBtn: {
-  backgroundColor: "#4B3F72",
-  padding: 16,
-  borderRadius: 12,
-  marginTop: 30,   
-  alignItems: "center",
-},
-
+    backgroundColor: "#4B3F72",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 30,
+    alignItems: "center",
+  },
   saveText: { color: "#fff", fontWeight: "700" },
 
   cancelBtn: {
@@ -303,3 +300,4 @@ safe: {
   actionBtn: { padding: 12, backgroundColor: "#4B3F72", borderRadius: 8, alignItems: "center" },
   white: { color: "#fff", fontWeight: "600" },
 });
+

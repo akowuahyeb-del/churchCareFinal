@@ -4,10 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AppHeader({
   title,
@@ -15,20 +14,19 @@ export default function AppHeader({
   onBack,
   actions = [],
 }) {
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
+      
+      {/* ✅ SAFE AREA TOP (ONLY SOURCE OF TRUTH) */}
+      <View style={{ height: insets.top, backgroundColor: "#4B3F72" }} />
 
-      {/* ✅ TRUE STATUS BAR SPACING (ONLY SOURCE OF TRUTH) */}
-      <View style={{ height: Platform.OS === "android" ? StatusBar.currentHeight || 24 : 0 }} />
 
-      {/* ✅ HEADER */}
+      {/* ✅ HEADER CONTENT */}
       <View style={styles.header}>
         {onBack ? (
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={onBack}
-          >
+          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -37,17 +35,13 @@ export default function AppHeader({
 
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
         </View>
 
         {actions.length > 0 && (
           <View style={styles.actionsRow}>
             {actions.map((a, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.actionBtn}
-                onPress={a.onPress}
-              >
+              <TouchableOpacity key={i} style={styles.actionBtn} onPress={a.onPress}>
                 <Ionicons name={a.icon} size={18} color="#fff" />
               </TouchableOpacity>
             ))}
@@ -68,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 16, // ✅ nice breathing space
+    paddingVertical: 16,
   },
 
   backBtn: {
@@ -76,8 +70,8 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
 
@@ -101,16 +95,9 @@ const styles = StyleSheet.create({
 
   actionsRow: {
     flexDirection: "row",
-    marginLeft: 8,
   },
 
   actionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
     marginLeft: 8,
   },
 });

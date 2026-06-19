@@ -140,9 +140,8 @@ function RootStack() {
 export default function App() {
   return (
     <View style={{ flex: 1 }}>
-      {/* ✅ THIS STOPS OVERLAY */}
       <StatusBar
-        translucent={false}
+        translucent={false}   // ✅ THIS IS THE REAL FIX
         backgroundColor="#4B3F72"
         barStyle="light-content"
       />
@@ -153,6 +152,7 @@ export default function App() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   tabBar: {

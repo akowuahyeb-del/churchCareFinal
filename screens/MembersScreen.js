@@ -203,12 +203,12 @@ export default function MembersScreen({ navigation }) {
     setCommStatusModal(false);
     setCommInvalidModal(false);
   };
-
-  const editMember = (item) => {
-    setMember({ ...DEFAULT_MEMBER, ...item });
-    setEditingId(item.id);
-    setShowForm(true);
-  };
+const editMember = (item) => {
+  navigation.navigate("AddMember", {
+    memberData: item,
+    editingId: item.id,
+  });
+};
 
   /* ── Save member ── */
   const saveMember = async () => {
@@ -393,6 +393,9 @@ export default function MembersScreen({ navigation }) {
           { icon: "filter-outline", onPress: () => setShowFilters(p => !p) },
         ]}
       />
+      <Text style={{ color: "green", fontSize: 20 }}>
+  ✅ MEMBERS SCREEN ACTIVE
+</Text>
 
       {/* ── SEARCH ── */}
       <View style={styles.searchRow}>
@@ -581,81 +584,6 @@ export default function MembersScreen({ navigation }) {
         }}
       />
 
-      {/* ══ MEMBER FORM MODAL ══ */}
-      <Modal visible={showForm} animationType="slide">
-        <View style={styles.formSafe}>
-          <View style={styles.formHeader}>
-            <TouchableOpacity onPress={resetForm} style={styles.formCloseBtn}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.formHeaderTitle}>{editingId ? "Edit Member" : "Add Member"}</Text>
-            <TouchableOpacity style={styles.formSaveBtn} onPress={saveMember}>
-              <Text style={styles.formSaveBtnText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={{ flex: 1, backgroundColor: "#f4f6fb" }}
-            contentContainerStyle={{ padding: 16, paddingBottom: 80 }}>
-
-            <View style={styles.formSection}>
-              <Text style={styles.formSectionTitle}>Personal Details</Text>
-              <FieldInput label="Full Name *"           value={member.name}              onChange={v => setField("name", v)} />
-              <FieldInput label="Phone *"               value={member.phone}             onChange={v => setField("phone", v)} keyboardType="phone-pad" />
-              <FieldInput label="Address"               value={member.address}           onChange={v => setField("address", v)} />
-              <FieldInput label="Occupation"            value={member.occupation}        onChange={v => setField("occupation", v)} />
-              <FieldInput label="Emergency Contact"     value={member.emergencyContact}  onChange={v => setField("emergencyContact", v)} keyboardType="phone-pad" />
-              <FieldInput label="Membership Duration"   value={member.membershipDuration} onChange={v => setField("membershipDuration", v)} />
-            </View>
-
-            <View style={styles.formSection}>
-              <Text style={styles.formSectionTitle}>Church Details</Text>
-              <ChipRow label="Ministry" list={ministries} value={member.ministry}
-                onSelect={v => setField("ministry", v)}
-                onAdd={() => openListModal("ministry")}
-                onEdit={(i) => openListModal("ministry", i, ministries)} />
-              <ChipRow label="Status" list={statusList} value={member.status}
-                onSelect={v => setField("status", v)}
-                onAdd={() => openListModal("status")}
-                onEdit={(i) => openListModal("status", i, statusList)} />
-              <ChipRow label="Baptism Status" list={baptismList} value={member.baptismStatus}
-                onSelect={v => setField("baptismStatus", v)}
-                onAdd={() => openListModal("baptism")}
-                onEdit={(i) => openListModal("baptism", i, baptismList)} />
-            </View>
-
-            <View style={styles.formSection}>
-              <Text style={styles.formSectionTitle}>Communicant Status</Text>
-              <Text style={styles.fieldLabel}>Is this member a communicant? *</Text>
-              <View style={styles.actionRow}>
-                {["yes", "no"].map(v => (
-                  <TouchableOpacity key={v}
-                    style={[styles.actionBtn, { flex: 1, backgroundColor: member.communicant === v ? "#4B3F72" : "#eee" }]}
-                    onPress={() => handleCommunicantSelect(v)}>
-                    <Text style={[styles.actionBtnText, { color: member.communicant === v ? "#fff" : "#333" }]}>
-                      {v === "yes" ? "Yes" : "No"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {member.communicant === "yes" && (
-                <View style={[styles.infoBanner, { marginTop: 8 }]}>
-                  <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />
-                  <Text style={styles.infoBannerText}>
-                    Status: {member.communicantStatus === "invalid"
-                      ? `Invalid since ${member.communicantInvalidSince || "—"}`
-                      : "Active"}
-                  </Text>
-                  <TouchableOpacity onPress={() => setCommStatusModal(true)}>
-                    <Text style={{ color: "#4B3F72", fontSize: 11, fontWeight: "700" }}>Change</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* ══ QR ENLARGED MODAL ══ */}
       <Modal visible={!!selectedMember} transparent animationType="fade">
@@ -837,7 +765,7 @@ export default function MembersScreen({ navigation }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
-          onPress={() => { resetForm(); setShowForm(true); }}>
+          onPress={() => { resetForm(); navigation.navigate("AddMember");; }}>
           <Ionicons name="person-add-outline" size={18} color="#fff" />
           <Text style={styles.fabBtnText}>Add Member</Text>
         </TouchableOpacity>
