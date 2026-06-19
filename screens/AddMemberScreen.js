@@ -142,79 +142,63 @@ const steps = [
 </ScrollView>,
 
   // ─── STEP 1: Extra Info ───────────────
-  <ScrollView
-    key={1}
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={styles.container}
+  // ─── STEP 0: Personal Details ───────────────
+<ScrollView
+  key={0}
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={styles.container}
+>
+
+  {/* ✅ CARD */}
+  <View style={styles.card}>
+
+    <Text style={styles.cardTitle}>PERSONAL DETAILS</Text>
+
+    {/* FULL NAME */}
+    <Text style={styles.label}>FULL NAME *</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Enter full name"
+      value={member.name}
+      onChangeText={(t) => setMember({ ...member, name: t })}
+    />
+
+    {/* PHONE */}
+    <Text style={styles.label}>PHONE *</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="+233..."
+      value={member.phone}
+      onChangeText={(t) => setMember({ ...member, phone: t })}
+      keyboardType="phone-pad"
+    />
+
+    {/* ADDRESS */}
+    <Text style={styles.label}>ADDRESS</Text>
+    <TextInput
+      style={styles.input}
+      placeholder="Enter address"
+      value={member.address}
+      onChangeText={(t) => setMember({ ...member, address: t })}
+    />
+
+  </View>
+
+  {/* ✅ BUTTON */}
+  <TouchableOpacity
+    style={styles.saveBtn}
+    onPress={() => {
+      if (!member.name || !member.phone) {
+        Alert.alert("Required", "Name and phone required");
+        return;
+      }
+      setStep(1);
+    }}
   >
-    <Text style={styles.title}>Additional Info</Text>
+    <Text style={styles.saveText}>Next</Text>
+  </TouchableOpacity>
 
-    <Text style={{ marginBottom: 10, color: "#888" }}>
-      Step 2 of 2
-    </Text>
-
-    <Text style={styles.label}>Occupation</Text>
-    <TextInput
-      style={styles.input}
-      value={member.occupation}
-      onChangeText={(t) => setMember({ ...member, occupation: t })}
-    />
-
-    <Text style={styles.label}>Emergency Contact</Text>
-    <TextInput
-      style={styles.input}
-      value={member.emergencyContact}
-      onChangeText={(t) =>
-        setMember({ ...member, emergencyContact: t })
-      }
-    />
-
-    <Text style={styles.label}>Membership Duration</Text>
-    <TextInput
-      style={styles.input}
-      value={member.membershipDuration}
-      onChangeText={(t) =>
-        setMember({ ...member, membershipDuration: t })
-      }
-    />
-
-    <Text style={styles.label}>Communicant *</Text>
-    <View style={styles.row}>
-      {["yes", "no"].map((val) => (
-        <TouchableOpacity
-          key={val}
-          onPress={() => handleCommunicantSelect(val)}
-          style={[
-            styles.communicantBtn,
-            member.communicant === val && styles.activeBtn,
-          ]}
-        >
-          <Text
-            style={[
-              styles.btnText,
-              member.communicant === val && { color: "#fff" },
-            ]}
-          >
-            {val.toUpperCase()}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-
-    <TouchableOpacity
-      style={styles.saveBtn}
-      onPress={handleSaveMember}
-    >
-      <Text style={styles.saveText}>Save Member</Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity
-      style={styles.cancelBtn}
-      onPress={() => setStep(0)}
-    >
-      <Text style={styles.cancelText}>Back</Text>
-    </TouchableOpacity>
-  </ScrollView>
+</ScrollView>
 ];
 
 return (
@@ -247,21 +231,28 @@ const styles = StyleSheet.create({
 
   body: { flex: 1, backgroundColor: "#f4f6fb" },
 
-  container: { padding: 16, paddingBottom: 40 },
+  
+container: {
+  padding: 16,
+  paddingBottom: 40,
+},
+
 
   title: { fontSize: 20, fontWeight: "700", marginBottom: 16, color: "#222" },
 
   label: { fontSize: 13, fontWeight: "600", marginTop: 12, marginBottom: 4, color: "#444" },
 
-  input: {
+  
+input: {
   backgroundColor: "#ffffff",
   padding: 14,
   borderRadius: 12,
   borderWidth: 1.5,
-  borderColor: "#d1d5db",   
+  borderColor: "#d1d5db",  
   fontSize: 14,
-  color: "#222",            
+  color: "#222",           
 },
+
 
 
   row: { flexDirection: "row", marginTop: 8 },
@@ -302,15 +293,18 @@ const styles = StyleSheet.create({
   actionBtn: { padding: 12, backgroundColor: "#4B3F72", borderRadius: 8, alignItems: "center" },
   white: { color: "#fff", fontWeight: "600" },
 
+
 card: {
-  backgroundColor: "#FFFFFF",
+  backgroundColor: "#ffffff",
   borderRadius: 16,
   padding: 16,
-  marginBottom: 16,
+  marginBottom: 20,
   elevation: 4,
   borderWidth: 1,
   borderColor: "#eee",
 },
+
+
 
 cardTitle: {
   fontSize: 14,
@@ -319,13 +313,16 @@ cardTitle: {
   marginBottom: 10,
 },
 
+
+
 label: {
   fontSize: 12,
   fontWeight: "700",
-  color: "#555",   
+  color: "#555",          // ✅ visible now
   marginTop: 12,
   marginBottom: 6,
 },
+
 
 
 });
