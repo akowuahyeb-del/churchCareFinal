@@ -12,6 +12,10 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { SafeAreaView, StatusBar, Platform } from "react-native";
+
+import AppHeader from "../components/AppHeader";
+
 
 
 export default function AddMemberScreen({ navigation, route }) {
@@ -109,15 +113,24 @@ const handleDateChange = (event, date) => {
     });
   }
 };
-  return (
-    <ScrollView style={styles.container}>
+return (
+  <SafeAreaView style={styles.safe}>
+
+    {/* ✅ HEADER */}
+    <AppHeader
+      title={editingId ? "Edit Member" : "Add Member"}
+      subtitle="Register a church member"
+      onBack={() => navigation.goBack()}
+    />
+
+    {/* ✅ SCROLLABLE FORM */}
+    <ScrollView contentContainerStyle={styles.container}>
 
       <Text style={styles.title}>
         {editingId ? "Edit Member" : "Register Member"}
       </Text>
 
       {/* INPUTS */}
-
       <Text style={styles.label}>Full Name *</Text>
       <TextInput
         style={styles.input}
@@ -165,7 +178,6 @@ const handleDateChange = (event, date) => {
       />
 
       {/* COMMUNICANT */}
-
       <Text style={styles.label}>Communicant *</Text>
 
       <View style={styles.row}>
@@ -190,7 +202,7 @@ const handleDateChange = (event, date) => {
         ))}
       </View>
 
-      {/* SHOW STATUS PREVIEW */}
+      {/* STATUS */}
       {member.communicant === "yes" && (
         <Text style={{ marginTop: 8, color: "#555" }}>
           Status: {member.communicantStatus === "invalid"
@@ -200,88 +212,93 @@ const handleDateChange = (event, date) => {
       )}
 
       {/* BUTTONS */}
+      <View>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMember}>
+          <Text style={styles.saveText}>Save Member</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMember}>
-        <Text style={styles.saveText}>Save Member</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.cancelText}>Cancel</Text>
-      </TouchableOpacity>
-
-      {/* ✅ COMMUNICANT STATUS MODAL */}
-      <Modal visible={commStatusModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-
-            <Text style={styles.modalTitle}>Communicant Status</Text>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "green" }]}
-              onPress={() => handleCommStatus("active")}
-            >
-              <Text style={styles.white}>Active — Eligible</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "red", marginTop: 10 }]}
-              onPress={() => handleCommStatus("invalid")}
-            >
-              <Text style={styles.white}>Invalid — Not Eligible</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setCommStatusModal(false)}>
-              <Text style={{ textAlign: "center", marginTop: 10 }}>Cancel</Text>
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      </Modal>
-
-      {/* ✅ INVALID DATE MODAL */}
-      <Modal visible={commInvalidModal} transparent animationType="fade">
-        <View style={styles.modalWrap}>
-          <View style={styles.modalBox}>
-
-            <Text style={styles.modalTitle}>Invalid Since</Text>
-
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text>{commInvalidDate.toDateString()}</Text>
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={commInvalidDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            )}
-
-            <TouchableOpacity
-              style={[styles.actionBtn, { marginTop: 10 }]}
-              onPress={() => setCommInvalidModal(false)}
-            >
-              <Text style={styles.white}>Confirm</Text>
-            </TouchableOpacity>
-
-          </View>
-        </View>
-      </Modal>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
 
     </ScrollView>
-  );
 
+    {/* ✅ MODALS */}
+    <Modal visible={commStatusModal} transparent animationType="fade">
+      <View style={styles.modalWrap}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalTitle}>Communicant Status</Text>
 
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: "green" }]}
+            onPress={() => handleCommStatus("active")}
+          >
+            <Text style={styles.white}>Active — Eligible</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: "red", marginTop: 10 }]}
+            onPress={() => handleCommStatus("invalid")}
+          >
+            <Text style={styles.white}>Invalid — Not Eligible</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setCommStatusModal(false)}>
+            <Text style={{ textAlign: "center", marginTop: 10 }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal visible={commInvalidModal} transparent animationType="fade">
+      <View style={styles.modalWrap}>
+        <View style={styles.modalBox}>
+          <Text style={styles.modalTitle}>Invalid Since</Text>
+
+          <TouchableOpacity
+            style={styles.input}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text>{commInvalidDate.toDateString()}</Text>
+          </TouchableOpacity>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={commInvalidDate}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { marginTop: 10 }]}
+            onPress={() => setCommInvalidModal(false)}
+          >
+            <Text style={styles.white}>Confirm</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
+  </SafeAreaView>
+);
 }
+
 const styles = StyleSheet.create({
   container: {
     padding: 16,
     backgroundColor: "#f4f6fb",
   },
+safe: {
+  flex: 1,
+  backgroundColor: "#f4f6fb",
+  paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0
+},
 
   title: {
     fontSize: 20,
