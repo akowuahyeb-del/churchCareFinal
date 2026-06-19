@@ -254,16 +254,15 @@ const steps = [
   ))}
 </View>
 
-{/* ✅ ✅ MINISTRY / GROUP */}
-<Text style={styles.label}>MINISTRY / GROUP</Text>
 
-<ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  style={{ marginTop: 8 }}
->
+   {/* ✅ ✅ CHURCH DETAILS */}
+<Text style={styles.cardTitle}>CHURCH DETAILS</Text>
+
+{/* ✅ MINISTRY */}
+<Text style={styles.label}>MINISTRY</Text>
+
+<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
   <View style={{ flexDirection: "row", alignItems: "center" }}>
-
 
     {ministries.map((item, index) => (
       <TouchableOpacity
@@ -296,20 +295,62 @@ const steps = [
       </TouchableOpacity>
     ))}
 
-    {/* ✅ ADD BUTTON */}
-   <TouchableOpacity
-  onPress={() => setMinistryModal(true)}
-  style={{ marginLeft: 8, justifyContent: "center" }}
->
-  <Text style={{ color: "#4B3F72", fontWeight: "600" }}>
-    + Add option
-  </Text>
-</TouchableOpacity>
+    <TouchableOpacity
+      onPress={() => setMinistryModal(true)}
+      style={{ marginLeft: 8, justifyContent: "center" }}
+    >
+      <Text style={{ color: "#4B3F72", fontWeight: "600" }}>
+        + Add option
+      </Text>
+    </TouchableOpacity>
 
   </View>
 </ScrollView>
-</View>   // ✅ closes styles.card (THIS WAS MISSING)
 
+{/* ✅ STATUS */}
+<Text style={styles.label}>STATUS</Text>
+
+<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+  <View style={{ flexDirection: "row", alignItems: "center" }}>
+
+    {["Regular", "Visiting", "Inactive"].map((item) => (
+      <TouchableOpacity
+        key={item}
+        onPress={() =>
+          setMember((prev) => ({
+            ...prev,
+            status: item,
+          }))
+        }
+        style={[
+          styles.chip,
+          member.status === item && styles.chipActive,
+        ]}
+      >
+        <Text
+          style={
+            member.status === item
+              ? styles.chipTextActive
+              : styles.chipText
+          }
+        >
+          {item}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+    <TouchableOpacity
+      onPress={() => setStatusModal(true)}
+      style={{ marginLeft: 8, justifyContent: "center" }}
+    >
+      <Text style={{ color: "#4B3F72", fontWeight: "600" }}>
+        + Add option
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+</ScrollView>
+</View>   // ✅ CLOSE styles.card (THIS IS MISSING)
 
 {member.communicant === "yes" && (
   <View style={styles.infoBanner}>
