@@ -252,7 +252,8 @@ const steps = [
   showsHorizontalScrollIndicator={false}
   style={{ marginTop: 8 }}
 >
-  <View style={{ flexDirection: "row" }}>
+  <View style={{ flexDirection: "row", alignItems: "center" }}>
+
 
     {ministries.map((item, index) => (
       <TouchableOpacity
@@ -286,14 +287,14 @@ const steps = [
     ))}
 
     {/* ✅ ADD BUTTON */}
-    <TouchableOpacity
-      style={styles.chipAdd}
-      onPress={() => setMinistryModal(true)}
-    >
-      <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-        + Add
-      </Text>
-    </TouchableOpacity>
+   <TouchableOpacity
+  onPress={() => setMinistryModal(true)}
+  style={{ marginLeft: 8, justifyContent: "center" }}
+>
+  <Text style={{ color: "#4B3F72", fontWeight: "600" }}>
+    + Add option
+  </Text>
+</TouchableOpacity>
 
   </View>
 </ScrollView>
@@ -618,6 +619,25 @@ progressLabel: {
   color: "#eee",
   fontSize: 12,
 },
+chip: {
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  backgroundColor: "#EDEDED",
+  borderRadius: 25,
+  marginRight: 10,
+},
 
+chipActive: {
+  backgroundColor: "#4B3F72",
+},
+chipText: {
+  color: "#555",
+  fontWeight: "600",
+},
+
+chipTextActive: {
+  color: "#fff",
+  fontWeight: "700",
+},
 });
 
