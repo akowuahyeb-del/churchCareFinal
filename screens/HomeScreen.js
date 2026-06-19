@@ -289,19 +289,31 @@ return (
 
     {/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
     <View style={styles.entityBar}>
-      <TouchableOpacity
-        onPress={() => setChurchModalVisible(true)}
-        style={styles.entityBtn}
-      >
-        <Ionicons name="business-outline" size={16} color="#4B3F72" />
+  <TouchableOpacity
+    onPress={() => setChurchModalVisible(true)}
+    style={styles.entityBtn}
+  >
+    <Ionicons name="business-outline" size={16} color="#4B3F72" />
 
-        <Text style={styles.entityText}>
-          {activeEntity?.name || "Select Church"}
-        </Text>
+    {/* ✅ NAME + STATUS */}
+    <View style={styles.entityTextRow}>
+      <Text style={styles.entityText}>
+        {activeEntity?.name || "Select Church"}
+      </Text>
 
-        <Ionicons name="chevron-down" size={14} color="#4B3F72" />
-      </TouchableOpacity>
+      {/* ✅ STATUS INDICATOR */}
+      {activeEntity && (
+        <View style={styles.statusBadge}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>Active</Text>
+        </View>
+      )}
     </View>
+
+    <Ionicons name="chevron-down" size={14} color="#4B3F72" />
+  </TouchableOpacity>
+</View>
+
 
 
     <ScrollView
@@ -536,7 +548,30 @@ entityText: {
   fontSize: 14,
   marginHorizontal: 6,
 },
+entityTextRow: {
+  flexDirection: "column",
+  marginHorizontal: 6,
+},
 
+statusBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 2,
+},
+
+statusDot: {
+  width: 6,
+  height: 6,
+  borderRadius: 3,
+  backgroundColor: "#27ae60", 
+  marginRight: 4,
+},
+
+statusText: {
+  fontSize: 10,
+  color: "#27ae60",
+  fontWeight: "600",
+},
 
 
   /* Quick actions */
