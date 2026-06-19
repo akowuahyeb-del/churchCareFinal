@@ -141,10 +141,9 @@ const steps = [
 
 </ScrollView>,
 
-  // ─── STEP 1: Extra Info ───────────────
-  // ─── STEP 0: Personal Details ───────────────
+  // ─── STEP 1: More Details ───────────────
 <ScrollView
-  key={0}
+  key={1}
   showsVerticalScrollIndicator={false}
   contentContainerStyle={styles.container}
 >
@@ -152,50 +151,79 @@ const steps = [
   {/* ✅ CARD */}
   <View style={styles.card}>
 
-    <Text style={styles.cardTitle}>PERSONAL DETAILS</Text>
+    <Text style={styles.cardTitle}>MORE DETAILS</Text>
 
-    {/* FULL NAME */}
-    <Text style={styles.label}>FULL NAME *</Text>
+    {/* OCCUPATION */}
+    <Text style={styles.label}>OCCUPATION</Text>
     <TextInput
       style={styles.input}
-      placeholder="Enter full name"
-      value={member.name}
-      onChangeText={(t) => setMember({ ...member, name: t })}
+      placeholder="Enter occupation"
+      value={member.occupation}
+      onChangeText={(t) => setMember({ ...member, occupation: t })}
     />
 
-    {/* PHONE */}
-    <Text style={styles.label}>PHONE *</Text>
+    {/* EMERGENCY CONTACT */}
+    <Text style={styles.label}>EMERGENCY CONTACT</Text>
     <TextInput
       style={styles.input}
       placeholder="+233..."
-      value={member.phone}
-      onChangeText={(t) => setMember({ ...member, phone: t })}
+      value={member.emergencyContact}
+      onChangeText={(t) =>
+        setMember({ ...member, emergencyContact: t })
+      }
       keyboardType="phone-pad"
     />
 
-    {/* ADDRESS */}
-    <Text style={styles.label}>ADDRESS</Text>
+    {/* MEMBERSHIP DURATION */}
+    <Text style={styles.label}>MEMBERSHIP DURATION</Text>
     <TextInput
       style={styles.input}
-      placeholder="Enter address"
-      value={member.address}
-      onChangeText={(t) => setMember({ ...member, address: t })}
+      placeholder="e.g. 2 years"
+      value={member.membershipDuration}
+      onChangeText={(t) =>
+        setMember({ ...member, membershipDuration: t })
+      }
     />
+
+    {/* COMMUNICANT */}
+    <Text style={styles.label}>COMMUNICANT *</Text>
+    <View style={styles.row}>
+      {["yes", "no"].map((val) => (
+        <TouchableOpacity
+          key={val}
+          onPress={() => handleCommunicantSelect(val)}
+          style={[
+            styles.communicantBtn,
+            member.communicant === val && styles.activeBtn,
+          ]}
+        >
+          <Text
+            style={[
+              styles.btnText,
+              member.communicant === val && { color: "#fff" },
+            ]}
+          >
+            {val.toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
 
   </View>
 
-  {/* ✅ BUTTON */}
+  {/* ✅ BUTTONS */}
   <TouchableOpacity
     style={styles.saveBtn}
-    onPress={() => {
-      if (!member.name || !member.phone) {
-        Alert.alert("Required", "Name and phone required");
-        return;
-      }
-      setStep(1);
-    }}
+    onPress={handleSaveMember}
   >
-    <Text style={styles.saveText}>Next</Text>
+    <Text style={styles.saveText}>Save Member</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.cancelBtn}
+    onPress={() => setStep(0)}
+  >
+    <Text style={styles.cancelText}>Back</Text>
   </TouchableOpacity>
 
 </ScrollView>
