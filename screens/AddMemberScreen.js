@@ -247,49 +247,58 @@ const steps = [
 {/* ✅ ✅ MINISTRY / GROUP */}
 <Text style={styles.label}>MINISTRY / GROUP</Text>
 
-<View style={styles.chipRow}>
-  {ministries.map((item,index) => (
-    <TouchableOpacity
-  key={item}
-  onPress={() =>
-    setMember((prev) => ({
-      ...prev,
-      ministry: item,
-    }))
-  }
-  onLongPress={() => {
-    setSelectedMinistryIndex(index);
-    setEditMinistryValue(item);
-    setEditMinistryModal(true);
-  }}
-      style={[
-        styles.chip,
-        member.ministry === item && styles.chipActive,
-      ]}
-    >
-      <Text
-        style={
-          member.ministry === item
-            ? styles.chipTextActive
-            : styles.chipText
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={{ marginTop: 8 }}
+>
+  <View style={{ flexDirection: "row" }}>
+
+    {ministries.map((item, index) => (
+      <TouchableOpacity
+        key={item}
+        onPress={() =>
+          setMember((prev) => ({
+            ...prev,
+            ministry: item,
+          }))
         }
+        onLongPress={() => {
+          setSelectedMinistryIndex(index);
+          setEditMinistryValue(item);
+          setEditMinistryModal(true);
+        }}
+        style={[
+          styles.chip,
+          member.ministry === item && styles.chipActive,
+        ]}
       >
-        {item}
+        <Text
+          style={
+            member.ministry === item
+              ? styles.chipTextActive
+              : styles.chipText
+          }
+        >
+          {item}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+    {/* ✅ ADD BUTTON */}
+    <TouchableOpacity
+      style={styles.chipAdd}
+      onPress={() => setMinistryModal(true)}
+    >
+      <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+        + Add
       </Text>
     </TouchableOpacity>
-  ))}
 
-  {/* ✅ ADD BUTTON */}
-  <TouchableOpacity
-    style={styles.chipAdd}
-    onPress={() => setMinistryModal(true)}
-  >
-    <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-      + Add
-    </Text>
-  </TouchableOpacity>
-</View>
-  </View>   // ✅ THIS CLOSES styles.card
+  </View>
+</ScrollView>
+</View>   // ✅ closes styles.card (THIS WAS MISSING)
+
 
 {member.communicant === "yes" && (
   <View style={styles.infoBanner}>
