@@ -206,10 +206,26 @@ const steps = [
             {val.toUpperCase()}
           </Text>
         </TouchableOpacity>
+        
       ))}
     </View>
 
   </View>
+
+{member.communicant === "yes" && (
+  <View style={styles.infoBanner}>
+    <Text style={styles.infoText}>
+      Status: {member.communicantStatus === "invalid"
+        ? `Invalid since ${member.communicantInvalidSince || "—"}`
+        : "Active"}
+    </Text>
+
+    <TouchableOpacity onPress={() => setCommStatusModal(true)}>
+      <Text style={styles.changeBtn}>Change</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
 
   {/* ✅ BUTTONS */}
   <TouchableOpacity
