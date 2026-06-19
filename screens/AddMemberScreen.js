@@ -244,6 +244,31 @@ return (
       onBack={() => navigation.goBack()}
     />
 
+{/* ✅ STEP PROGRESS */}
+<View style={styles.progressWrap}>
+
+  <View style={styles.progressRow}>
+
+    <View style={[styles.stepCircle, step >= 0 && styles.stepActive]}>
+      <Text style={styles.stepText}>1</Text>
+    </View>
+
+    <View style={[styles.stepLine, step >= 1 && styles.stepLineActive]} />
+
+    <View style={[styles.stepCircle, step >= 1 && styles.stepActive]}>
+      <Text style={styles.stepText}>2</Text>
+    </View>
+
+  </View>
+
+  <Text style={styles.progressLabel}>
+    Step {step + 1} of 2
+  </Text>
+
+</View>
+
+
+
     {/* ✅ STEP ENGINE */}
     {steps[step]}
 
@@ -351,7 +376,51 @@ label: {
   marginBottom: 6,
 },
 
+progressWrap: {
+  backgroundColor: "#4B3F72",
+  paddingVertical: 14,
+  alignItems: "center",
+},
 
+progressRow: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+stepCircle: {
+  width: 28,
+  height: 28,
+  borderRadius: 14,
+  backgroundColor: "#bbb",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+stepActive: {
+  backgroundColor: "#22c55e", // ✅ active green
+},
+
+stepText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 12,
+},
+
+stepLine: {
+  width: 40,
+  height: 3,
+  backgroundColor: "#bbb",
+},
+
+stepLineActive: {
+  backgroundColor: "#22c55e",
+},
+
+progressLabel: {
+  marginTop: 6,
+  color: "#eee",
+  fontSize: 12,
+},
 
 });
 
