@@ -20,8 +20,10 @@ const [editMinistryModal, setEditMinistryModal] = useState(false);
 const [selectedMinistryIndex, setSelectedMinistryIndex] = useState(null);
 const [editMinistryValue, setEditMinistryValue] = useState("");
 
-const [statusModal, setStatusModal] = useState(false);
+/* const [statusModal, setStatusModal] = useState(false);
 const [newStatus, setNewStatus] = useState("");
+const [ministryModal, setMinistryModal] = useState(false);
+const [newMinistry, setNewMinistry] = useState(""); */
 
 const [statusList, setStatusList] = useState([
   "Regular",
@@ -53,11 +55,13 @@ const [ministryModal, setMinistryModal] = useState(false);
 const [newMinistry, setNewMinistry] = useState("");
 
 
-
+const [showDatePicker, setShowDatePicker] = useState(false);
   const [commStatusModal, setCommStatusModal]   = useState(false);
   const [commInvalidModal, setCommInvalidModal] = useState(false);
   const [commInvalidDate, setCommInvalidDate]   = useState(new Date());
-  const [showDatePicker, setShowDatePicker]     = useState(false);
+  /* const [showDatePicker, setShowDatePicker]     = useState(false) */
+  const [statusModal, setStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -310,35 +314,42 @@ const steps = [
 {/* ✅ STATUS */}
 <Text style={styles.label}>STATUS</Text>
 
-<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={{ marginTop: 8 }}
+>
   <View style={{ flexDirection: "row", alignItems: "center" }}>
 
-    {["Regular", "Visiting", "Inactive"].map((item) => (
-      <TouchableOpacity
-        key={item}
-        onPress={() =>
-          setMember((prev) => ({
-            ...prev,
-            status: item,
-          }))
-        }
-        style={[
-          styles.chip,
-          member.status === item && styles.chipActive,
-        ]}
-      >
-        <Text
-          style={
-            member.status === item
-              ? styles.chipTextActive
-              : styles.chipText
+    {statusList.map((item) => {
+      return (
+        <TouchableOpacity
+          key={item}
+          onPress={() =>
+            setMember((prev) => ({
+              ...prev,
+              status: item,
+            }))
           }
+          style={[
+            styles.chip,
+            member.status === item && styles.chipActive,
+          ]}
         >
-          {item}
-        </Text>
-      </TouchableOpacity>
-    ))}
+          <Text
+            style={
+              member.status === item
+                ? styles.chipTextActive
+                : styles.chipText
+            }
+          >
+            {item}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
 
+    {/* ✅ ADD BUTTON */}
     <TouchableOpacity
       onPress={() => setStatusModal(true)}
       style={{ marginLeft: 8, justifyContent: "center" }}
@@ -348,9 +359,10 @@ const steps = [
       </Text>
     </TouchableOpacity>
 
+
   </View>
 </ScrollView>
-</View>   // ✅ CLOSE styles.card (THIS IS MISSING)
+</View>   // ✅ closes inner row container
 
 {member.communicant === "yes" && (
   <View style={styles.infoBanner}>
@@ -535,21 +547,78 @@ return (
         value={newStatus}
         onChangeText={setNewStatus}
       />
+<TouchableOpacity
+  style={[styles.actionBtn, { marginTop: 10 }]}
+  onPress={() => {
+    const trimmed = newStatus.trim();
+
+    if (!trimmed) return;
+
+    // ✅ add new status safely
+    setStatusList((prev) => {
+      const updated = [...prev, trimmed];
+      return updated;
+    });
+
+    // ✅ auto-select it on member
+    setMember((prev) => ({
+      ...prev,
+      status: trimmed,
+    }));
+
+    // ✅ reset + close
+    setNewStatus("");
+    setStatusModal(false);
+  }}
+>
+  <Text style={styles.white}>Save</Text>
+</TouchableOpacity>
+
+<TouchableOpacity onPress={() => setStatusModal(false)}>
+  <Text style={{ textAlign: "center", marginTop: 10 }}>
+    Cancel
+  </Text>
+</TouchableOpacity>
+
+    </View>
+  </View>
+
+</Modal>
+<Modal visible={ministryModal} transparent animationType="fade">
+  <View style={styles.modalWrap}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>Add Ministry</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter ministry name"
+        value={newMinistry}
+        onChangeText={setNewMinistry}
+      />
 
       <TouchableOpacity
-        style={[styles.actionBtn, { marginTop: 10 }]}
+        style={[styles.actionBtn, { marginTop: 12 }]}
         onPress={() => {
-          if (!newStatus) return;
+          if (!newMinistry.trim()) return;
 
-          setStatusList((prev) => [...prev, newStatus]);
-          setNewStatus("");
-          setStatusModal(false);
+          const updated = [...ministries, newMinistry];
+
+          setMinistries(updated);   // ✅ update list
+
+          setMember((prev) => ({
+            ...prev,
+            ministry: newMinistry,  // ✅ auto select
+          }));
+
+          setNewMinistry("");       // ✅ reset
+          setMinistryModal(false);  // ✅ close
         }}
       >
         <Text style={styles.white}>Save</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setStatusModal(false)}>
+      <TouchableOpacity onPress={() => setMinistryModal(false)}>
         <Text style={{ textAlign: "center", marginTop: 10 }}>
           Cancel
         </Text>
@@ -557,7 +626,6 @@ return (
 
     </View>
   </View>
-
 </Modal>
 
   </SafeAreaView>
