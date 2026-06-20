@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Switch, Modal, TextInput, Alert, SafeAreaView, StatusBar,
@@ -19,9 +19,6 @@ import { auth } from "../firebase";
 const USER_ROLE  = "admin";
 const USER_NAME  = "Kwame Mensah";
 const USER_EMAIL = "kwame@churchcare.app";
-const CHURCH_ID  = "church_001";
-const CHURCH_NAME = "Grace Community Church";
-
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
 
@@ -95,6 +92,28 @@ function ModalSheet({ visible, onClose, children }) {
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
+  const CHURCH_ID = activeEntity?.entityId || "unknown";
+const CHURCH_NAME = activeEntity?.name || "Church";
+
+// ✅ ADD THIS HERE
+const [activeEntity, setActiveEntity] = useState(null);
+
+useEffect(() => {
+  AsyncStorage.getItem("activeEntity").then((data) => {
+    if (data) {
+      try {
+        setActiveEntity(JSON.parse(data));
+      } catch (e) {
+        console.log("❌ ENTITY LOAD ERROR:", e);
+      }
+    }
+  });
+}, []);
+useEffect(() => {
+  if (activeEntity) {
+    console.log("✅ ACTIVE ENTITY IN SETTINGS:", activeEntity);
+  }
+}, [activeEntity]);
 
   // ── Notifications ──
   const [notifService,    setNotifService]    = useState(true);
@@ -518,7 +537,7 @@ export default function SettingsScreen() {
                   {/* Church tag */}
                   <View style={styles.qrChurchTag}>
                     <Ionicons name="business-outline" size={13} color="#4B3F72" />
-                    <Text style={styles.qrChurchTagText}>{CHURCH_NAME} · {CHURCH_ID}</Text>
+                    
                   </View>
 
                   <Text style={styles.qrNote}>
