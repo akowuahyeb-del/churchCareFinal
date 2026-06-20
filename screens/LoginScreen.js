@@ -155,30 +155,37 @@ export default function LoginScreen({ navigation }) {
         Sign in to continue
       </Text>
 
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-      />
+      {/* ✅ EMAIL */}
+<Text style={styles.label}>Email</Text>
+<TextInput
+  placeholder="Enter your email"
+  value={email}
+  onChangeText={setEmail}
+  style={styles.input}
+/>
 
-      <View style={styles.passwordBox}>
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          style={styles.passwordInput}
-        />
+{/* ✅ PASSWORD */}
+<Text style={styles.label}>Password</Text>
+<View style={styles.passwordBox}>
+  <TextInput
+    placeholder="Enter your password"
+    value={password}
+    onChangeText={setPassword}
+    secureTextEntry={!showPassword}
+    style={styles.passwordInput}
+  />
 
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Feather
-            name={showPassword ? "eye" : "eye-off"}
-            size={18}
-            color="#555"
-          />
-        </TouchableOpacity>
-      </View>
+  <TouchableOpacity
+    onPress={() => setShowPassword(!showPassword)}
+    style={{ padding: 6 }}
+  >
+    <Feather
+      name={showPassword ? "eye" : "eye-off"}
+      size={18}
+      color="#555"
+    />
+  </TouchableOpacity>
+</View>
 
       <AppButton title="Login" onPress={handleLogin} />
 
@@ -285,6 +292,14 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0"
   },
 
+label: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#555",
+  marginBottom: 4,
+  marginTop: 10
+},
+
   socialText: {
     marginLeft: 12,
     fontSize: 13,
@@ -301,4 +316,5 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14
   }
+  
 });
