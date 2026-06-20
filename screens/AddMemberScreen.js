@@ -72,6 +72,7 @@ const goNext = () => {
 
  /* ── save ── */
 const handleSaveMember = async () => {
+
   if (!member.name || !member.phone) {
     Alert.alert("Required", "Name and phone are required");
     return;
@@ -81,17 +82,14 @@ const handleSaveMember = async () => {
     Alert.alert("Error", "No active church selected");
     return;
   }
-console.log("🔍 Testing Firestore connection...");
-  console.log("✅ Attempting save:", {
-    entityId,
+
+  console.log("🔥 DEBUG SAVE:", {
     organizationId,
-    member,
+    entityId,
+    member
   });
 
   try {
-await setDoc(doc(db, "test", "connection"), {
-  ok: true,
-});
 
     await addDoc(
       collection(
@@ -104,8 +102,8 @@ await setDoc(doc(db, "test", "connection"), {
       ),
       {
         ...member,
-        entityId,
         organizationId,
+        entityId,
         createdAt: new Date().toISOString(),
       }
     );
@@ -130,6 +128,7 @@ await setDoc(doc(db, "test", "connection"), {
     );
 
   } catch (e) {
+
     console.log("❌ SAVE ERROR FULL:", e);
     console.log("❌ CODE:", e.code);
     console.log("❌ MESSAGE:", e.message);

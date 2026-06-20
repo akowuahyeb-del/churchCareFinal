@@ -22,43 +22,44 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  /* ✅ FIXED SESSION CHECK */
-  useEffect(() => {
-    const checkLogin = async () => {
-      const firebaseUser = auth.currentUser;
+useEffect(() => {
+  const checkLogin = async () => {
+    const firebaseUser = auth.currentUser;
 
-      if (!firebaseUser) return; // ✅ MUST confirm auth first
+    // ✅ DO NOTHING if not logged in
+    // (we are already on Login screen 👍)
+    if (!firebaseUser) {
+      return;
+    }
 
-      const storedUser = await AsyncStorage.getItem("currentUser");
+    const storedUser = await AsyncStorage.getItem("currentUser");
 
-      if (!storedUser) {
-        navigation.replace("Welcome");
-        return;
-      }
+    if (!storedUser) {
+      navigation.replace("CompleteProfile");
+      return;
+    }
 
-      const userData = JSON.parse(storedUser);
+    const userData = JSON.parse(storedUser);
 
-      // ✅ PROFILE NOT COMPLETE
-      if (
-        !userData?.name?.trim() ||
-        !userData?.phone?.trim() ||
-        userData.phone.length < 10
-      ) {
-        navigation.replace("Welcome");
-        return;
-      }
+    if (
+      !userData?.name?.trim() ||
+      !userData?.phone?.trim()
+    ) {
+      navigation.replace("CompleteProfile");
+      return;
+    }
 
-      // ✅ NO CHURCH
-      if (!userData?.organizationId || !userData?.entityId) {
-        navigation.replace("CreateChurch");
-        return;
-      }
+    if (!userData?.organizationId || !userData?.entityId) {
+      navigation.replace("CreateChurch");
+      return;
+    }
 
-      navigation.replace("MainTabs");
-    };
+    navigation.replace("MainTabs");
+  };
 
-    checkLogin();
-  }, []);
+  checkLogin();
+}, []);
+
 
   /* ✅ LOGIN HANDLER (FINAL FIX) */
   const handleLogin = async () => {
