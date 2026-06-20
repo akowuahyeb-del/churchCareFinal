@@ -145,6 +145,15 @@ export default function MembersScreen({ navigation }) {
   // ── List item edit modal ──
   const [listModal, setListModal] = useState({ visible: false, type: null, input: "", index: null });
 
+
+const toggleActions = () => {
+  setShowActions(prev => {
+    const next = !prev;
+    AsyncStorage.setItem("showActions", JSON.stringify(next));
+    return next;
+  });
+};
+
   /* ── Load entity ── */
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -157,41 +166,64 @@ export default function MembersScreen({ navigation }) {
     });
   }, []);
 
-  /* ── Load members when entity ready ── */
-  useEffect(() => {
-    if (entityId) loadMembers();
-  }, [entityId]);
-
   const loadMembers = useCallback(async () => {
-    if (!entityId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const q    = query(collection(db, "members"), where("entityId", "==", entityId));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setMembers(data);
-      await AsyncStorage.setItem(MEMBERS_CACHE_KEY, JSON.stringify(data));
-    } catch (_) {
-      const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
-      if (cached) {
-        setMembers(JSON.parse(cached));
-        setError("Showing offline data.");
-      } else {
-        setError("Unable to load members. Check your connection.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId]);
+  setLoading(true);
+  setError(null);
 
-  const toggleActions = () => {
-    setShowActions(prev => {
-      const next = !prev;
-      AsyncStorage.setItem("showActions", JSON.stringify(next));
-      return next;
+  try {
+    const data = await AsyncStorage.getItem("activeEntity");
+
+    if (!data) {
+      setError("No active church selected");
+      return;
+    }
+
+    const { organizationId, entityId } = JSON.parse(data);
+
+    console.log("📥 LOADING MEMBERS FROM:", {
+      organizationId,
+      entityId,
     });
-  };
+
+    const ref = collection(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "members"
+    );
+
+    const snap = await getDocs(ref);
+
+    const dataList = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    console.log("✅ MEMBERS FOUND:", dataList.length);
+
+    setMembers(dataList);
+
+    await AsyncStorage.setItem(
+      MEMBERS_CACHE_KEY,
+      JSON.stringify(dataList)
+    );
+
+  } catch (_) {
+    const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
+
+    if (cached) {
+      setMembers(JSON.parse(cached));
+      setError("Showing offline data.");
+    } else {
+      setError("Unable to load members.");
+    }
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
 
   /* ── Form helpers ── */
   const setField = (key, val) => setMember(prev => ({ ...prev, [key]: val }));
@@ -388,14 +420,24 @@ const editMember = (item) => {
         subtitle={activeEntity?.name || "Manage church members"}
         onBack={() => navigation.goBack()}
         actions={[
-          { icon: "heart", onPress: () => goToDonate() },
-          { icon: showActions ? "eye-off-outline" : "eye-outline", onPress: toggleActions },
-          { icon: "filter-outline", onPress: () => setShowFilters(p => !p) },
-        ]}
+  {
+    icon: "heart",
+    onPress: goToDonate,
+  },
+
+  {
+    icon: showActions ? "eye-off-outline" : "eye-outline",
+    onPress: toggleActions,
+  },
+
+  {
+    icon: "filter-outline",
+    onPress: () => console.log("Filter pressed"),
+  }
+]}
+
       />
-      <Text style={{ color: "green", fontSize: 20 }}>
-  ✅ MEMBERS SCREEN ACTIVE
-</Text>
+     
 
       {/* ── SEARCH ── */}
       <View style={styles.searchRow}>
