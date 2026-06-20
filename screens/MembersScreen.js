@@ -755,21 +755,61 @@ const editMember = (item) => {
         </View>
       </Modal>
 
-      {/* ══ FLOATING ACTION BUTTONS ══ */}
-      <View style={styles.fab}>
-        <TouchableOpacity
-          style={[styles.fabBtn, { backgroundColor: "#0984E3" }]}
-          onPress={() => navigation.navigate("ImportMembers", { entityId, organizationId })}>
-          <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-          <Text style={styles.fabBtnText}>Import</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
-          onPress={() => { resetForm(); navigation.navigate("AddMember");; }}>
-          <Ionicons name="person-add-outline" size={18} color="#fff" />
-          <Text style={styles.fabBtnText}>Add Member</Text>
-        </TouchableOpacity>
-      </View>
+  {/* ══ FLOATING ACTION BUTTONS ══ */}
+<View style={styles.fab}>
+
+  {/* ✅ IMPORT */}
+  <TouchableOpacity
+    style={[styles.fabBtn, { backgroundColor: "#0984E3" }]}
+    onPress={async () => {
+      const data = await AsyncStorage.getItem("activeEntity");
+
+      if (!data) {
+        Alert.alert("Error", "No active church selected");
+        return;
+      }
+
+      const { entityId, organizationId } = JSON.parse(data);
+
+      navigation.navigate("ImportMembers", {
+        entityId,
+        organizationId,
+      });
+    }}
+  >
+    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+    <Text style={styles.fabBtnText}>Import</Text>
+  </TouchableOpacity>
+
+  {/* ✅ ADD MEMBER */}
+  <TouchableOpacity
+    style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
+    onPress={async () => {
+      const data = await AsyncStorage.getItem("activeEntity");
+
+      if (!data) {
+        Alert.alert("Error", "No active church selected");
+        return;
+      }
+
+      const { entityId, organizationId } = JSON.parse(data);
+
+      resetForm?.();
+
+      // ✅ ✅ FIXED NAME HERE
+      navigation.navigate("AddMember", {
+        entityId,
+        organizationId,
+      });
+    }}
+  >
+    <Ionicons name="person-add-outline" size={18} color="#fff" />
+    <Text style={styles.fabBtnText}>Add Member</Text>
+  </TouchableOpacity>
+
+</View>
+
+
 
     </View>
   );
