@@ -8,11 +8,13 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { CameraView, Camera } from "expo-camera";
+import { CameraView } from "expo-camera";
 import * as Location from "expo-location";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useCameraPermissions } from "expo-camera";
+
 
 
 
@@ -55,7 +57,7 @@ export default function AttendanceScreen({ navigation, route }) {
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
   const entityName = activeEntity?.name || "Attendance";
-
+const [permission, requestPermission] = useCameraPermissions();
 
   /* ── NETWORK ── */
   const [isOnline,   setIsOnline]   = useState(true);
@@ -63,7 +65,6 @@ export default function AttendanceScreen({ navigation, route }) {
   const [syncing,    setSyncing]    = useState(false);
 
   /* ── CAMERA / GEO ── */
-  const [permission,    setPermission]    = useState(false);
   const [scanned,       setScanned]       = useState(false);
   const [scanFeedback,  setScanFeedback]  = useState("");
   const [locationPerm,  setLocationPerm]  = useState(false);
@@ -175,14 +176,10 @@ useEffect(() => {
 
 
 useEffect(() => {
-  Camera.requestCameraPermissionsAsync()
-    .then(({ status }) => setPermission(status === "granted"));
-
-  Location.requestForegroundPermissionsAsync()
-    .then(({ status }) => setLocationPerm(status === "granted"));
-
-  loadOfflineQueue();
-}, []);
+  if (!permission?.granted) {
+    requestPermission();
+  }
+}, [permission]);
 
 /* ❌ REMOVE OLD TEST FIX (churchId based) */
 /*
@@ -1424,7 +1421,7 @@ onPress={() => Alert.alert("Use the header switch to change church")}
 {/* ══ QR SCAN ══ */}
 {mode === "qr" && (
   <View style={styles.qrWrapper}>
-    {!permission ? (
+    {!permission?.granted ? (
       <View style={styles.qrPlaceholder}>
         <Ionicons name="camera-off-outline" size={40} color="#bbb" />
         <Text style={styles.qrPlaceholderText}>Camera permission denied</Text>
@@ -1432,6 +1429,7 @@ onPress={() => Alert.alert("Use the header switch to change church")}
     ) : (
       <>
         <CameraView
+          key="camera" // ✅ important fix
           style={styles.camera}
           facing="back"
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
@@ -1441,37 +1439,6 @@ onPress={() => Alert.alert("Use the header switch to change church")}
         <View style={styles.qrOverlay}>
           <View style={styles.qrFrame} />
         </View>
-
-        {scanFeedback && (
-          <View
-            style={[
-              styles.scanFeedback,
-              {
-                backgroundColor: scanFeedback.startsWith("✅")
-                  ? "#27ae60"
-                  : scanFeedback.startsWith("⚠️")
-                  ? "#e67e22"
-                  : "#e74c3c",
-              },
-            ]}
-          >
-            <Text style={{ color: "#fff", fontWeight: "700" }}>
-              {scanFeedback}
-            </Text>
-          </View>
-        )}
-
-        <Text style={styles.qrHint}>Scan member's QR code</Text>
-
-        {scanned && (
-          <TouchableOpacity
-            style={styles.rescanBtn}
-            onPress={() => setScanned(false)}
-          >
-            <Ionicons name="scan-outline" size={15} color="#fff" />
-            <Text style={{ color: "#fff", marginLeft: 6 }}>Scan Next</Text>
-          </TouchableOpacity>
-        )}
       </>
     )}
   </View>
