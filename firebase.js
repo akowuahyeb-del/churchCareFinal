@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";  // ✅ changed
 import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth";   // ✅ ADD THIS
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyATDviX7L_tAURjhVbkPUrrgHNsQVhjnW4",
@@ -14,10 +14,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// ✅ SERVICES
-const db = getFirestore(app);
-const storage = getStorage(app);
-const auth = getAuth(app);   // ✅ ADD THIS
+// ✅ ✅ IMPORTANT FIX HERE
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 
-// ✅ EXPORT ALL
+const storage = getStorage(app);
+const auth = getAuth(app);
+
 export { db, storage, auth };

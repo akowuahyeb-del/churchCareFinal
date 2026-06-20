@@ -81,19 +81,40 @@ const handleSaveMember = async () => {
     Alert.alert("Error", "No active church selected");
     return;
   }
+console.log("🔍 Testing Firestore connection...");
+  console.log("✅ Attempting save:", {
+    entityId,
+    organizationId,
+    member,
+  });
 
   try {
-    await addDoc(collection(db, "members"), {
-      ...member,
-      entityId,
-      organizationId,
-      createdAt: new Date().toISOString(),
-    });
+await setDoc(doc(db, "test", "connection"), {
+  ok: true,
+});
 
-    // ✅ FIX: show alert FIRST, then navigate AFTER user taps
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members"
+      ),
+      {
+        ...member,
+        entityId,
+        organizationId,
+        createdAt: new Date().toISOString(),
+      }
+    );
+
+    console.log("✅ SAVE SUCCESS");
+
     Alert.alert(
       "Success ✅",
-      "Member has been saved successfully",
+      "Member saved successfully",
       [
         {
           text: "OK",
@@ -109,11 +130,13 @@ const handleSaveMember = async () => {
     );
 
   } catch (e) {
-    console.log("❌ SAVE ERROR:", e);
-    Alert.alert("Error", e.message);
+    console.log("❌ SAVE ERROR FULL:", e);
+    console.log("❌ CODE:", e.code);
+    console.log("❌ MESSAGE:", e.message);
+
+    Alert.alert("Save Failed ❌", e.message);
   }
 };
-
 
 /*useEffect*/
 

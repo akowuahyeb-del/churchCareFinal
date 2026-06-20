@@ -13,18 +13,29 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export default function CompleteProfileScreen({ navigation }) {
+
   const [user, setUser] = useState(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
   useEffect(() => {
     const loadUser = async () => {
-      const data = await AsyncStorage.getItem("currentUser");
-      if (data) {
+      try {
+        const data = await AsyncStorage.getItem("currentUser");
+
+        if (!data) {
+          Alert.alert("Error", "User not found. Please log in again.");
+          return;
+        }
+
         const parsed = JSON.parse(data);
+
         setUser(parsed);
         setName(parsed.name || "");
         setPhone(parsed.phone || "");
+
+      } catch (err) {
+        console.log("❌ LOAD USER ERROR:", err);
       }
     };
 
@@ -38,11 +49,22 @@ export default function CompleteProfileScreen({ navigation }) {
     }
 
     try {
-      const currentUser = JSON.parse(
-        await AsyncStorage.getItem("currentUser")
-      );
+      const data = await AsyncStorage.getItem("currentUser");
 
-      const uid = currentUser.uid; // ✅ IMPORTANT
+      // ✅ SAFE GUARD
+      if (!data) {
+        Alert.alert("Error", "User not found. Please log in again.");
+        return;
+      }
+
+      const currentUser = JSON.parse(data);
+
+      if (!currentUser?.uid) {
+        Alert.alert("Error", "Invalid user session. Please log in again.");
+        return;
+      }
+
+      const uid = currentUser.uid;
 
       // ✅ UPDATE FIRESTORE
       await updateDoc(doc(db, "users", uid), {
@@ -62,18 +84,40 @@ export default function CompleteProfileScreen({ navigation }) {
         JSON.stringify(updatedUser)
       );
 
-      Alert.alert("Success", "Profile updated");
-
-      // ✅ MOVE USER TO NEXT STEP
-      navigation.replace("CreateChurch");
+      Alert.alert(
+        "Success ✅",
+        "Profile updated successfully",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.replace("CreateChurch")
+          }
+        ]
+      );
 
     } catch (e) {
+      console.log("❌ PROFILE SAVE ERROR:", e);
       Alert.alert("Error", e.message);
     }
   };
 
-  return (
-    <View style={styles.container}>
+  
+return (
+  <View style={styles.container}>
+
+    {/* ✅ BACK BUTTON (ADD HERE) */}
+    <TouchableOpacity onPress={() => navigation.goBack()}>
+      <Text style={{ color: "#4B3F72", marginBottom: 20 }}>
+        ← Back
+      </Text>
+    </TouchableOpacity>
+
+    <Text style={styles.title}>Complete Profile</Text>
+
+    <Text style={styles.subtitle}>
+      Tell us a bit about you before continuing
+    </Text>
+
 
       <Text style={styles.title}>Complete Profile</Text>
 
@@ -81,15 +125,19 @@ export default function CompleteProfileScreen({ navigation }) {
         Tell us a bit about you before continuing
       </Text>
 
+      {/* ✅ LABEL + INPUT */}
+      <Text style={styles.label}>Full Name</Text>
       <TextInput
-        placeholder="Full name"
+        placeholder="Enter your full name"
         value={name}
         onChangeText={setName}
         style={styles.input}
       />
 
+      {/* ✅ LABEL + INPUT */}
+      <Text style={styles.label}>Phone Number</Text>
       <TextInput
-        placeholder="Phone number"
+        placeholder="Enter phone number"
         value={phone}
         onChangeText={setPhone}
         style={styles.input}
@@ -123,6 +171,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#777",
     marginBottom: 20
+  },
+
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#555",
+    marginBottom: 4,
+    marginTop: 10
   },
 
   input: {
