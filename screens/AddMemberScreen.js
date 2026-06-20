@@ -70,31 +70,50 @@ const goNext = () => {
     else navigation.navigate("MembersMain");
   };
 
-  /* ── save ── */
-  const handleSaveMember = async () => {
-    if (!member.name || !member.phone) {
-      Alert.alert("Required", "Name and phone are required");
-      return;
-    }
-    if (!entityId || !organizationId) {
-      Alert.alert("Error", "No active church selected");
-      return;
-    }
-    try {
-      await addDoc(collection(db, "members"), {
-        ...member,
-        entityId,
-        organizationId,
-        createdAt: new Date().toISOString(),
-      });
-      Alert.alert("✅ Member saved");
-      if (navigation.canGoBack()) navigation.goBack();
-      else navigation.navigate("MembersMain");
-    } catch (e) {
-      console.log("❌ SAVE ERROR:", e);
-      Alert.alert("Error", e.message);
-    }
-  };
+ /* ── save ── */
+const handleSaveMember = async () => {
+  if (!member.name || !member.phone) {
+    Alert.alert("Required", "Name and phone are required");
+    return;
+  }
+
+  if (!entityId || !organizationId) {
+    Alert.alert("Error", "No active church selected");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, "members"), {
+      ...member,
+      entityId,
+      organizationId,
+      createdAt: new Date().toISOString(),
+    });
+
+    // ✅ FIX: show alert FIRST, then navigate AFTER user taps
+    Alert.alert(
+      "Success ✅",
+      "Member has been saved successfully",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("MembersMain");
+            }
+          },
+        },
+      ]
+    );
+
+  } catch (e) {
+    console.log("❌ SAVE ERROR:", e);
+    Alert.alert("Error", e.message);
+  }
+};
+
 
 /*useEffect*/
 
