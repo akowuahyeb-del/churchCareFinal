@@ -90,7 +90,11 @@ const handleSaveMember = async () => {
   });
 
   try {
-
+console.log("🔥 FULL PATH DEBUG:", {
+  orgPath: `organizations/${organizationId}`,
+  entityPath: `organizations/${organizationId}/entities/${entityId}`,
+  collection: "members"
+});
     await addDoc(
       collection(
         db,
