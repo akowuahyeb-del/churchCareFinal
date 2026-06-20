@@ -7,8 +7,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
-
 import AppHeader from "../components/AppHeader";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { useEffect } from "react";
 
 export default function AddMemberScreen({ navigation, route }) {
 
@@ -54,6 +55,14 @@ export default function AddMemberScreen({ navigation, route }) {
   const [commInvalidDate, setCommInvalidDate]   = useState(new Date());
   const [showDatePicker, setShowDatePicker]     = useState(false);
 
+const goNext = () => {
+  if (!member.name || !member.phone) {
+    Alert.alert("Required", "Name and phone required");
+    return;
+  }
+  setStep(1);
+};
+
   /* ── navigation ── */
   const handleBack = () => {
     if (step > 0) { setStep(0); return; }
@@ -87,6 +96,35 @@ export default function AddMemberScreen({ navigation, route }) {
     }
   };
 
+/*useEffect*/
+
+
+useEffect(() => {
+  const loadLists = async () => {
+    if (!organizationId) return;
+
+    try {
+      const ref = doc(db, "organizations", organizationId, "settings", "lists");
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+        if (data.ministries) setMinistries(data.ministries);
+        if (data.statuses) setStatusList(data.statuses);
+      }
+
+    } catch (e) {
+      console.log("❌ LOAD LIST ERROR:", e);
+    }
+  };
+
+  loadLists();
+}, [organizationId]);
+
+
+
+
   /* ── communicant handlers ── */
   const handleCommunicantSelect = (val) => {
     setMember(prev => ({ ...prev, communicant: val }));
@@ -111,20 +149,21 @@ export default function AddMemberScreen({ navigation, route }) {
   };
 
   /* ── ministry helpers ── */
-  const saveNewMinistry = () => {
+  const saveNewMinistry = async () => {
   const trimmed = newMinistry.trim();
   if (!trimmed) return;
 
   const formatted =
     trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 
-  // ✅ prevent duplicates
   if (ministries.includes(formatted)) {
     Alert.alert("Duplicate", "Ministry already exists");
     return;
   }
 
-  setMinistries(prev => [...prev, formatted]);
+  const updated = [...ministries, formatted];
+
+  setMinistries(updated);
 
   setMember(prev => ({
     ...prev,
@@ -133,7 +172,20 @@ export default function AddMemberScreen({ navigation, route }) {
 
   setNewMinistry("");
   setMinistryModal(false);
+
+  // ✅ SAVE TO FIRESTORE
+  try {
+    const ref = doc(db, "organizations", organizationId, "settings", "lists");
+
+    await setDoc(ref, {
+      ministries: updated,
+    }, { merge: true });
+
+  } catch (e) {
+    console.log("❌ SAVE MINISTRY ERROR:", e);
+  }
 };
+
 
  const saveEditedMinistry = () => {
   const trimmed = editMinistryValue.trim();
@@ -153,20 +205,21 @@ export default function AddMemberScreen({ navigation, route }) {
 };
 
   /* ── status helpers ── */
-  const saveNewStatus = () => {
+  const saveNewStatus = async () => {
   const trimmed = newStatus.trim();
   if (!trimmed) return;
 
   const formatted =
     trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 
-  // ✅ prevent duplicates
   if (statusList.includes(formatted)) {
     Alert.alert("Duplicate", "Status already exists");
     return;
   }
 
-  setStatusList(prev => [...prev, formatted]);
+  const updated = [...statusList, formatted];
+
+  setStatusList(updated);
 
   setMember(prev => ({
     ...prev,
@@ -175,15 +228,20 @@ export default function AddMemberScreen({ navigation, route }) {
 
   setNewStatus("");
   setStatusModal(false);
+
+  // ✅ SAVE TO FIRESTORE
+  try {
+    const ref = doc(db, "organizations", organizationId, "settings", "lists");
+
+    await setDoc(ref, {
+      statuses: updated,
+    }, { merge: true });
+
+  } catch (e) {
+    console.log("❌ SAVE STATUS ERROR:", e);
+  }
 };
 
-  const goNext = () => {
-    if (!member.name || !member.phone) {
-      Alert.alert("Required", "Name and phone required");
-      return;
-    }
-    setStep(1);
-  };
 
   /* ══════════════════════════ STEP CONTENT ══════════════════════════ */
 
@@ -206,8 +264,8 @@ export default function AddMemberScreen({ navigation, route }) {
       </View>
 
       <TouchableOpacity style={styles.saveBtn} onPress={goNext}>
-        <Text style={styles.saveText}>Next</Text>
-      </TouchableOpacity>
+  <Text style={styles.saveText}>Next</Text>
+</TouchableOpacity>
     </ScrollView>
   );
 
