@@ -147,6 +147,22 @@ const [targetChurch, setTargetChurch] = useState(null);
 const entity = activeEntity || {};
 const { organizationId, entityId } = entity;
 
+useEffect(() => {
+  const loadEntity = async () => {
+    const data = await AsyncStorage.getItem("activeEntity");
+
+    if (data) {
+      const parsed = JSON.parse(data);
+      setActiveEntity(parsed);
+    } else {
+      console.log("❌ No activeEntity found");
+    }
+  };
+
+  loadEntity();
+}, []);
+
+
 /* ══════════ INIT ══════════ */
 useEffect(() => {
   const unsub = NetInfo.addEventListener(s =>
@@ -165,6 +181,52 @@ useEffect(() => {
 
   loadSession();
 }, []);
+
+useEffect(() => {
+  const loadSessionDetails = async () => {
+    const sessionId = await AsyncStorage.getItem("activeSession");
+
+    if (!sessionId || !organizationId || !entityId) return;
+
+    try {
+      const ref = doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions",
+        sessionId
+      );
+
+      const snap = await getDocs(query(collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions"
+      )));
+
+      // ✅ safer: find this session
+      const sessionDoc = snap.docs.find(d => d.id === sessionId);
+
+      if (!sessionDoc) return;
+
+      const data = sessionDoc.data();
+
+      // ✅ restore UI state
+      setStartTime(data.startTime || "");
+      setEndTime(data.endTime || "");
+      setSessionStatus(data.status || "open");
+
+    } catch (e) {
+      console.log("❌ load session error:", e);
+    }
+  };
+
+  loadSessionDetails();
+}, [activeSession, organizationId, entityId]);
 
 useEffect(() => {
   setTargetEntities([
@@ -286,12 +348,18 @@ const syncOfflineQueue = async () => {
 
 // ✅ LOAD MEMBERS (ACTIVE ENTITY)
 const loadMembers = async () => {
-  if (!entityId) return;
+  if (!organizationId || !entityId) return;
 
   try {
     const q = query(
-      collection(db, "members"),
-      where("entityId", "==", entityId)
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members"
+      )
     );
 
     const snap = await getDocs(q);
