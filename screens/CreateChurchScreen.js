@@ -149,6 +149,20 @@ export default function CreateChurchScreen({ navigation }) {
     );
 
     const entityId = churchRef.id;
+    // ✅ SAVE CHURCH IDENTITY (DENOMINATION + CODE)
+await setDoc(
+  doc(db, "organizations", organizationId, "settings", "identity"),
+  {
+    denominationCode: "PCG",  // 🔥 you can later make this user input
+    churchCode: churchName
+      .split(" ")
+      .map(w => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 3), // e.g. POP from Prince of Peace
+  },
+  { merge: true }
+);
 
 
 const firebaseUser = auth.currentUser;

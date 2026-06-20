@@ -95,7 +95,31 @@ console.log("🔥 FULL PATH DEBUG:", {
   entityPath: `organizations/${organizationId}/entities/${entityId}`,
   collection: "members"
 });
-const memberCode = `${codePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+// ✅ FETCH IDENTITY FROM FIREBASE
+let denominationCode = "CH";
+let churchCode = "LOC";
+
+try {
+  const ref = doc(db, "organizations", organizationId, "settings", "identity");
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data();
+
+    denominationCode = data.denominationCode || "CH";
+    churchCode = data.churchCode || "LOC";
+  }
+
+} catch (e) {
+  console.log("❌ IDENTITY FETCH ERROR:", e);
+}
+
+// ✅ GENERATE MEMBER CODE
+const memberNumber = Math.floor(100 + Math.random() * 900);
+
+const memberCode = `${denominationCode}-${churchCode}-${memberNumber}`;
+
+console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 
 console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 
