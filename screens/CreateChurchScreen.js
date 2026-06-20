@@ -149,8 +149,7 @@ export default function CreateChurchScreen({ navigation }) {
     );
 
     const entityId = churchRef.id;
-    // ✅ USE REAL AUTH USER
-import { auth } from "../firebase"; // make sure this is at top
+
 
 const firebaseUser = auth.currentUser;
 
