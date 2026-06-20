@@ -1,3 +1,33 @@
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
+import { Alert } from "react-native";
+
+// ✅ NEW FUNCTION
+async function markAttendance(entityId, sessionId) {
+  try {
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        "tempOrgId", // ✅ temporary
+        "entities",
+        entityId,
+        "attendance"
+      ),
+      {
+        sessionId,
+        timestamp: new Date().toISOString(),
+      }
+    );
+
+    console.log("✅ Attendance recorded");
+
+  } catch (e) {
+    console.log("❌ Attendance error:", e);
+  }
+}
+
+// ✅ YOUR EXISTING FUNCTION (UNCHANGED EXCEPT CALL)
 export function handleQRCode(navigation, data) {
   try {
     console.log("📸 RAW QR:", data);
@@ -11,7 +41,9 @@ export function handleQRCode(navigation, data) {
     console.log("✅ PARAMS:", params);
 
     switch (type) {
+
       case "attendance":
+        markAttendance(params.church, params.session);
         navigation.navigate("AttendanceScreen", {
           entityId: params.church,
           sessionId: params.session,
