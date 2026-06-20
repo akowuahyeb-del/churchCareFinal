@@ -10,6 +10,11 @@ import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import AppHeader from "../components/AppHeader";
 
+import { signOut } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../firebase";
+
+
 // ── Role config ───────────────────────────────────────────────────
 const USER_ROLE  = "admin";
 const USER_NAME  = "Kwame Mensah";
@@ -256,7 +261,30 @@ export default function SettingsScreen() {
   };
   const handleSaveChurchInfo = () => { Alert.alert("✅ Church info updated"); setChurchInfoModal(false); };
   const handleClearData  = () => { Alert.alert("✅ Local data cleared"); setClearDataModal(false); };
-  const handleSignOut    = () => { Alert.alert("Signed out"); setSignOutModal(false); };
+  
+  const handleSignOut = async () => {
+  try {
+    // ✅ 1. Sign out Firebase
+    await signOut(auth);
+
+    // ✅ 2. Clear all stored session data
+    await AsyncStorage.multiRemove([
+      "isLoggedIn",
+      "currentUser",
+      "activeEntity"
+    ]);
+
+    // ✅ 3. Close modal
+    setSignOutModal(false);
+
+    // ✅ 4. Navigate to Login screen
+    navigation.replace("Login");
+
+  } catch (e) {
+    console.log("❌ LOGOUT ERROR:", e);
+    Alert.alert("Error", "Failed to log out");
+  }
+};
 
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (

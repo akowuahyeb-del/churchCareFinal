@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
+import { auth } from "../firebase";
 
 const { width: W } = Dimensions.get("window");
 const TOTAL_STEPS = 4;
@@ -148,32 +149,40 @@ export default function CreateChurchScreen({ navigation }) {
     );
 
     const entityId = churchRef.id;
-    const userId = `admin_${Date.now()}`;
+    // ✅ USE REAL AUTH USER
+import { auth } from "../firebase"; // make sure this is at top
+
+const firebaseUser = auth.currentUser;
+
+if (!firebaseUser) {
+  throw new Error("User not authenticated");
+}
+
+const userId = firebaseUser.uid;
 
     // ✅ 3. CREATE ADMIN USER
-    await setDoc(doc(db, "users", userId), {
-      id: userId,
-      name: adminName.trim(),
-      phone: adminPhone.trim(),
-      email: adminEmail.trim(),
-      role: "admin",
-      organizationId,
-      entityId,
-      createdAt: new Date().toISOString(),
-    });
+   await setDoc(doc(db, "users", userId), {
+  uid: userId,  // ✅ FIXED (was "id")
+  name: adminName.trim(),
+  phone: adminPhone.trim(),
+  email: adminEmail.trim(),
+  role: "admin",
+  organizationId,
+  entityId,
+  createdAt: new Date().toISOString(),
+});
 
     // ✅ 4. SAVE SESSION DATA
     await AsyncStorage.multiSet([
       ["isLoggedIn", "true"],
-
-      ["currentUser", JSON.stringify({
-        userId,
-        name: adminName.trim(),
-        email: adminEmail.trim(),
-        role: "admin",
-        organizationId,
-        entityId
-      })],
+["currentUser", JSON.stringify({
+  uid: userId,  
+  name: adminName.trim(),
+  email: adminEmail.trim(),
+  role: "admin",
+  organizationId,
+  entityId
+})],
 
       ["activeEntity", JSON.stringify({
         organizationId,

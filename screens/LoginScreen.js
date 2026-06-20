@@ -18,46 +18,49 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function LoginScreen({ navigation }) {
 
-  // ✅ CHECK EXISTING SESSION
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  /* ✅ FIXED SESSION CHECK */
   useEffect(() => {
     const checkLogin = async () => {
-      const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
+      const firebaseUser = auth.currentUser;
 
-      if (isLoggedIn === "true") {
+      if (!firebaseUser) return; // ✅ MUST confirm auth first
 
-        const userData = JSON.parse(
-          await AsyncStorage.getItem("currentUser")
-        );
+      const storedUser = await AsyncStorage.getItem("currentUser");
 
-        // ✅ PROFILE NOT COMPLETE → WELCOME
-        if (
-          !userData?.name?.trim() ||
-          !userData?.phone?.trim() ||
-          userData.phone.length < 10
-        ) {
-          navigation.replace("Welcome");
-          return;
-        }
-
-        // ✅ NO CHURCH
-        if (!userData?.organizationId || !userData?.entityId) {
-          navigation.replace("CreateChurch");
-          return;
-        }
-
-        // ✅ READY
-        navigation.replace("MainTabs");
+      if (!storedUser) {
+        navigation.replace("Welcome");
+        return;
       }
+
+      const userData = JSON.parse(storedUser);
+
+      // ✅ PROFILE NOT COMPLETE
+      if (
+        !userData?.name?.trim() ||
+        !userData?.phone?.trim() ||
+        userData.phone.length < 10
+      ) {
+        navigation.replace("Welcome");
+        return;
+      }
+
+      // ✅ NO CHURCH
+      if (!userData?.organizationId || !userData?.entityId) {
+        navigation.replace("CreateChurch");
+        return;
+      }
+
+      navigation.replace("MainTabs");
     };
 
     checkLogin();
   }, []);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  // ✅ LOGIN HANDLER
+  /* ✅ LOGIN HANDLER (FINAL FIX) */
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Enter email and password");
@@ -71,24 +74,26 @@ export default function LoginScreen({ navigation }) {
         password
       );
 
-      const uid = userCredential.user.uid;
+      const firebaseUser = userCredential.user;
+      const uid = firebaseUser.uid;
 
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
 
       let userData;
 
-      // ✅ AUTO-CREATE USER
       if (!userSnap.exists()) {
+        // ✅ CREATE USER PROFILE AUTOMATICALLY
         userData = {
-          email,
+          uid,
+          email: firebaseUser.email,
           role: "member",
           organizationId: "",
           entityId: "",
           entityName: "",
           name: "",
           phone: "",
-          uid
+          createdAt: new Date().toISOString()
         };
 
         await setDoc(userRef, userData);
@@ -100,15 +105,20 @@ export default function LoginScreen({ navigation }) {
 
       // ✅ SAVE SESSION
       await AsyncStorage.setItem("isLoggedIn", "true");
-      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+      await AsyncStorage.setItem(
+        "currentUser",
+        JSON.stringify(userData)
+      );
 
-      // ✅ PROFILE NOT COMPLETE
+      console.log("✅ User session ready:", userData);
+
+      // ✅ PROFILE INCOMPLETE
       if (
         !userData?.name?.trim() ||
         !userData?.phone?.trim() ||
         userData.phone.length < 10
       ) {
-        navigation.replace("Welcome");
+        navigation.replace("CompleteProfile");
         return;
       }
 
@@ -128,11 +138,10 @@ export default function LoginScreen({ navigation }) {
         })
       );
 
-      // ✅ ENTER APP
       navigation.replace("MainTabs");
 
     } catch (error) {
-      console.log("LOGIN ERROR:", error.code);
+      console.log("❌ LOGIN ERROR:", error);
       Alert.alert("Login Failed", error.message);
     }
   };
@@ -151,7 +160,6 @@ export default function LoginScreen({ navigation }) {
         value={email}
         onChangeText={setEmail}
         style={styles.input}
-        placeholderTextColor="#999"
       />
 
       <View style={styles.passwordBox}>
@@ -161,7 +169,6 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
           style={styles.passwordInput}
-          placeholderTextColor="#999"
         />
 
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -173,42 +180,34 @@ export default function LoginScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <AppButton
-        title="Login"
-        onPress={handleLogin}
-      />
+      <AppButton title="Login" onPress={handleLogin} />
 
-      {/* ✅ DIVIDER */}
       <View style={styles.dividerRow}>
         <View style={styles.line} />
         <Text style={styles.dividerText}>or continue with</Text>
         <View style={styles.line} />
       </View>
 
-      {/* ✅ GOOGLE */}
       <TouchableOpacity style={styles.socialBtn}>
         <AntDesign name="google" size={18} color="#DB4437" />
         <Text style={styles.socialText}>Continue with Google</Text>
       </TouchableOpacity>
 
-      {/* ✅ PHONE */}
       <TouchableOpacity style={styles.socialBtn}>
         <Feather name="phone" size={18} color="#4B3F72" />
         <Text style={styles.socialText}>Continue with Phone</Text>
       </TouchableOpacity>
 
-      {/* ✅ FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
-          <Text style={styles.register}>
-            New Church? Register
-          </Text>
+          <Text style={styles.register}>New Church? Register</Text>
         </TouchableOpacity>
       </View>
 
     </View>
   );
 }
+
 
 // ✅ STYLES
 const styles = StyleSheet.create({
