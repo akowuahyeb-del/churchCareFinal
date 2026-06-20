@@ -65,37 +65,73 @@ async function markMemberAttendance(memberCode, entityId) {
 }
 
 
-// ✅ ✅ ✅ GENERAL ATTENDANCE (SESSION BASED)
-async function markAttendance(entityId, sessionId) {
+async function markMemberAttendance(memberCode, entityId) {
   try {
     const data = await AsyncStorage.getItem("activeEntity");
-
-    if (!data) {
-      console.log("❌ No active entity found");
-      return;
-    }
+    if (!data) return;
 
     const { organizationId } = JSON.parse(data);
 
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "attendance"
-      ),
-      {
-        sessionId,
-        timestamp: new Date().toISOString(),
-      }
+    const attendanceRef = collection(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "attendance"
     );
 
-    console.log("✅ Attendance recorded for org:", organizationId);
+    // ✅ 1. CHECK IF ALREADY EXISTS (TODAY)
+    const today = new Date().toISOString().split("T")[0];
+
+    const q = query(
+      attendanceRef,
+      where("memberCode", "==", memberCode),
+      where("date", "==", today)
+    );
+
+    const existingSnap = await getDocs(q);
+
+    if (!existingSnap.empty) {
+      Alert.alert("Already Checked In", "This member has already been marked present today.");
+      return;
+    }
+
+    // ✅ 2. FIND MEMBER INFO
+    const membersRef = collection(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "members"
+    );
+
+    const mq = query(membersRef, where("memberCode", "==", memberCode));
+    const memberSnap = await getDocs(mq);
+
+    if (memberSnap.empty) {
+      Alert.alert("Not found", "Member not found");
+      return;
+    }
+
+    const member = memberSnap.docs[0].data();
+
+    // ✅ 3. SAVE ATTENDANCE
+    await addDoc(attendanceRef, {
+      memberCode,
+      name: member.name,
+      date: today, // ✅ important for duplicate check
+      timestamp: new Date().toISOString(),
+      entityId
+    });
+
+    console.log("✅ Member attendance recorded:", member.name);
+
+    Alert.alert("✅ Checked In", member.name);
 
   } catch (e) {
-    console.log("❌ Attendance error:", e);
+    console.log("❌ Member attendance error:", e);
   }
 }
 
