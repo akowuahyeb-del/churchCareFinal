@@ -116,10 +116,8 @@ try {
 
 // ✅ GENERATE MEMBER CODE
 // ✅ MAIN 3-DIGIT CODE (human readable)
-const mainCode = String(Math.floor(100 + Math.random() * 900));
-
-// ✅ EXTRA 2-DIGIT UNIQUENESS (very low collision)
-const uniqueSuffix = String(Math.floor(10 + Math.random() * 90));
+const mainCode = String(Math.floor(100 + Math.random() * 900)).padStart(3, "0");
+const uniqueSuffix = String(Math.floor(10 + Math.random() * 90)).padStart(2, "0");
 
 // ✅ FINAL MEMBER CODE
 const memberCode = `${denominationCode}-${churchCode}-${mainCode}-${uniqueSuffix}`;
