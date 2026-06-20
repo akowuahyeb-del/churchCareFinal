@@ -24,6 +24,10 @@ import QuickActions     from "../components/QuickActions";
 import SectionHeader    from "../components/SectionHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ChurchSwitcher from "../components/ChurchSwitcher";
+import { handleQRCode } from "../utils/qrRouter";
+import { CameraView, useCameraPermissions } from "expo-camera";
+
+
 
 
 /* ── firebase ── */
@@ -56,6 +60,8 @@ export default function HomeScreen() {
   const [activeEntity, setActiveEntity] = useState(null);
   const [churchName, setChurchName] = useState("");
   const [entities, setEntities] = useState([]);
+  const [scanned, setScanned] = useState(false);
+
 
 
   /* ── notifications (mock) ── */
@@ -105,6 +111,12 @@ useEffect(() => {
   };
 
   loadEntities();
+}, []);
+
+useEffect(() => {
+  (async () => {
+    await Camera.requestCameraPermissionsAsync();
+  })();
 }, []);
 
 
@@ -492,6 +504,45 @@ return (
     </View>
   </View>
 </Modal>
+<Modal visible={qrModal} transparent animationType="fade">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalSheet}>
+
+      <Text style={styles.modalTitle}>Scan QR Code</Text>
+
+      <View style={{ height: 250, overflow: "hidden", borderRadius: 12 }}>
+  <CameraView
+
+    onBarCodeScanned={scanned ? undefined : ({ data }) => {
+      setScanned(true);
+
+      console.log("📸 SCANNED:", data);
+
+      handleQRCode(navigation, data);
+      setQrModal(false);
+    }}
+    style={{ flex: 1 }}
+  />
+</View>
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={() => setScanned(false)}
+      >
+        <Text style={styles.saveBtnText}>Scan Again</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.cancelBtn}
+        onPress={() => setQrModal(false)}
+      >
+        <Text style={styles.cancelBtnText}>Close</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
  </SafeAreaView>
 );
 }  
