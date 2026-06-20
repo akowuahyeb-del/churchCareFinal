@@ -10,7 +10,7 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase"; // ✅ use Firebase Auth
 
 export default function CompleteProfileScreen({ navigation }) {
 
@@ -21,18 +21,38 @@ export default function CompleteProfileScreen({ navigation }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const data = await AsyncStorage.getItem("currentUser");
+        const firebaseUser = auth.currentUser;
 
-        if (!data) {
-          Alert.alert("Error", "User not found. Please log in again.");
+        if (!firebaseUser) {
+          Alert.alert("Error", "User not logged in");
           return;
         }
 
-        const parsed = JSON.parse(data);
+        const uid = firebaseUser.uid;
 
-        setUser(parsed);
-        setName(parsed.name || "");
-        setPhone(parsed.phone || "");
+        // ✅ Try AsyncStorage (cache)
+        const stored = await AsyncStorage.getItem("currentUser");
+
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+          setName(parsed.name || "");
+          setPhone(parsed.phone || "");
+        } else {
+          // ✅ Create minimal user if not exists
+          const newUser = {
+            uid,
+            name: "",
+            phone: ""
+          };
+
+          await AsyncStorage.setItem(
+            "currentUser",
+            JSON.stringify(newUser)
+          );
+
+          setUser(newUser);
+        }
 
       } catch (err) {
         console.log("❌ LOAD USER ERROR:", err);
@@ -49,32 +69,24 @@ export default function CompleteProfileScreen({ navigation }) {
     }
 
     try {
-      const data = await AsyncStorage.getItem("currentUser");
+      const firebaseUser = auth.currentUser;
 
-      // ✅ SAFE GUARD
-      if (!data) {
-        Alert.alert("Error", "User not found. Please log in again.");
+      if (!firebaseUser) {
+        Alert.alert("Error", "User not logged in");
         return;
       }
 
-      const currentUser = JSON.parse(data);
+      const uid = firebaseUser.uid;
 
-      if (!currentUser?.uid) {
-        Alert.alert("Error", "Invalid user session. Please log in again.");
-        return;
-      }
-
-      const uid = currentUser.uid;
-
-      // ✅ UPDATE FIRESTORE
+      // ✅ Update Firestore
       await updateDoc(doc(db, "users", uid), {
         name,
         phone
       });
 
-      // ✅ UPDATE LOCAL STORAGE
+      // ✅ Update local cache
       const updatedUser = {
-        ...currentUser,
+        uid,
         name,
         phone
       };
@@ -90,7 +102,7 @@ export default function CompleteProfileScreen({ navigation }) {
         [
           {
             text: "OK",
-            onPress: () => navigation.replace("CreateChurch")
+            onPress: () => navigation.navigate("CreateChurch") // ✅ allow back
           }
         ]
       );
@@ -101,23 +113,13 @@ export default function CompleteProfileScreen({ navigation }) {
     }
   };
 
-  
-return (
-  <View style={styles.container}>
+  return (
+    <View style={styles.container}>
 
-    {/* ✅ BACK BUTTON (ADD HERE) */}
-    <TouchableOpacity onPress={() => navigation.goBack()}>
-      <Text style={{ color: "#4B3F72", marginBottom: 20 }}>
-        ← Back
-      </Text>
-    </TouchableOpacity>
-
-    <Text style={styles.title}>Complete Profile</Text>
-
-    <Text style={styles.subtitle}>
-      Tell us a bit about you before continuing
-    </Text>
-
+      {/* ✅ BACK BUTTON */}
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.backText}>← Back</Text>
+      </TouchableOpacity>
 
       <Text style={styles.title}>Complete Profile</Text>
 
@@ -125,7 +127,7 @@ return (
         Tell us a bit about you before continuing
       </Text>
 
-      {/* ✅ LABEL + INPUT */}
+      {/* ✅ NAME */}
       <Text style={styles.label}>Full Name</Text>
       <TextInput
         placeholder="Enter your full name"
@@ -134,7 +136,7 @@ return (
         style={styles.input}
       />
 
-      {/* ✅ LABEL + INPUT */}
+      {/* ✅ PHONE */}
       <Text style={styles.label}>Phone Number</Text>
       <TextInput
         placeholder="Enter phone number"
@@ -144,6 +146,7 @@ return (
         keyboardType="phone-pad"
       />
 
+      {/* ✅ BUTTON */}
       <TouchableOpacity style={styles.btn} onPress={handleSave}>
         <Text style={styles.btnText}>Continue</Text>
       </TouchableOpacity>
@@ -158,6 +161,12 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: "center",
     backgroundColor: "#f7f8fb"
+  },
+
+  backText: {
+    color: "#4B3F72",
+    fontWeight: "700",
+    marginBottom: 20
   },
 
   title: {
