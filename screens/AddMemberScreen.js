@@ -115,11 +115,14 @@ try {
 }
 
 // ✅ GENERATE MEMBER CODE
-const memberNumber = Math.floor(100 + Math.random() * 900);
+// ✅ MAIN 3-DIGIT CODE (human readable)
+const mainCode = String(Math.floor(100 + Math.random() * 900));
 
-const memberCode = `${denominationCode}-${churchCode}-${memberNumber}`;
+// ✅ EXTRA 2-DIGIT UNIQUENESS (very low collision)
+const uniqueSuffix = String(Math.floor(10 + Math.random() * 90));
 
-console.log("🆔 GENERATED MEMBER CODE:", memberCode);
+// ✅ FINAL MEMBER CODE
+const memberCode = `${denominationCode}-${churchCode}-${mainCode}-${uniqueSuffix}`;
 
 console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 
