@@ -155,6 +155,13 @@ const toggleActions = () => {
 };
 
   /* ── Load entity ── */
+useEffect(() => {
+  if (activeEntity) {
+    console.log("🚀 activeEntity ready → loading members");
+    loadMembers();
+  }
+}, [activeEntity]);
+
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
       if (data) {
@@ -166,20 +173,22 @@ const toggleActions = () => {
     });
   }, []);
 
-  const loadMembers = useCallback(async () => {
+const loadMembers = useCallback(async () => {
   setLoading(true);
   setError(null);
 
   try {
-    const data = await AsyncStorage.getItem("activeEntity");
+    // ✅ FIXED LINE
+    const stored = await AsyncStorage.getItem("activeEntity");
 
-    if (!data) {
+    if (!stored) {
       setError("No active church selected");
       return;
     }
 
-    const { organizationId, entityId } = JSON.parse(data);
+    const { organizationId, entityId } = JSON.parse(stored);
 
+    console.log("🧠 ACTIVE ENTITY FROM STORAGE:", stored);
     console.log("📥 LOADING MEMBERS FROM:", {
       organizationId,
       entityId,
@@ -196,21 +205,23 @@ const toggleActions = () => {
 
     const snap = await getDocs(ref);
 
-    const dataList = snap.docs.map(d => ({
+    const data = snap.docs.map(d => ({
       id: d.id,
-      ...d.data()
+      ...d.data(),
     }));
 
-    console.log("✅ MEMBERS FOUND:", dataList.length);
+    console.log("✅ MEMBERS FOUND:", data.length);
 
-    setMembers(dataList);
+    setMembers(data);
 
     await AsyncStorage.setItem(
       MEMBERS_CACHE_KEY,
-      JSON.stringify(dataList)
+      JSON.stringify(data)
     );
 
-  } catch (_) {
+  } catch (e) {
+    console.log("❌ LOAD MEMBERS ERROR:", e);
+
     const cached = await AsyncStorage.getItem(MEMBERS_CACHE_KEY);
 
     if (cached) {
@@ -223,7 +234,6 @@ const toggleActions = () => {
     setLoading(false);
   }
 }, []);
-
 
   /* ── Form helpers ── */
   const setField = (key, val) => setMember(prev => ({ ...prev, [key]: val }));
