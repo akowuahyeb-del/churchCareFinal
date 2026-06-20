@@ -64,8 +64,8 @@ async function markMemberAttendance(memberCode, entityId) {
   }
 }
 
-
-async function markMemberAttendance(memberCode, entityId) {
+/* 
+async function markMemberAttendance(memberCode, entityId, sessionId) {
   try {
     const data = await AsyncStorage.getItem("activeEntity");
     if (!data) return;
@@ -81,23 +81,21 @@ async function markMemberAttendance(memberCode, entityId) {
       "attendance"
     );
 
-    // ✅ 1. CHECK IF ALREADY EXISTS (TODAY)
-    const today = new Date().toISOString().split("T")[0];
-
+    // ✅ CHECK DUPLICATE (SESSION-BASED)
     const q = query(
       attendanceRef,
       where("memberCode", "==", memberCode),
-      where("date", "==", today)
+      where("sessionId", "==", sessionId)
     );
 
     const existingSnap = await getDocs(q);
 
     if (!existingSnap.empty) {
-      Alert.alert("Already Checked In", "This member has already been marked present today.");
+      Alert.alert("Already Checked In", "Member already checked in for this service.");
       return;
     }
 
-    // ✅ 2. FIND MEMBER INFO
+    // ✅ FIND MEMBER
     const membersRef = collection(
       db,
       "organizations",
@@ -117,23 +115,23 @@ async function markMemberAttendance(memberCode, entityId) {
 
     const member = memberSnap.docs[0].data();
 
-    // ✅ 3. SAVE ATTENDANCE
+    // ✅ SAVE ATTENDANCE
     await addDoc(attendanceRef, {
       memberCode,
       name: member.name,
-      date: today, // ✅ important for duplicate check
+      sessionId,
+      entityId,
       timestamp: new Date().toISOString(),
-      entityId
     });
 
     console.log("✅ Member attendance recorded:", member.name);
 
-    Alert.alert("✅ Checked In", member.name);
+    Alert.alert("✅ Checked In", `${member.name} (Session)`);
 
   } catch (e) {
     console.log("❌ Member attendance error:", e);
   }
-}
+} */
 
 
 // ✅ ✅ ✅ MAIN QR ROUTER
@@ -142,20 +140,21 @@ export async function handleQRCode(navigation, data) {
     console.log("📸 RAW QR:", data);
 
     // ✅ 1. TRY MEMBER QR FIRST
-    try {
-      const parsed = JSON.parse(data);
+   try {
+  const parsed = JSON.parse(data);
 
-      if (parsed.memberCode) {
-        await markMemberAttendance(
-          parsed.memberCode,
-          parsed.entityId
-        );
-        return; // ✅ STOP here
-      }
+  if (parsed.memberCode) {
+    await markMemberAttendance(
+      parsed.memberCode,
+      parsed.entityId,
+      parsed.sessionId || "default-session" // ✅ NEW
+    );
+    return; // ✅ STOP here
+  }
 
-    } catch {
-      // not a member QR → continue
-    }
+} catch {
+  // not a member QR → continue
+}
 
     // ✅ 2. HANDLE NORMAL QR LINKS
     const url = new URL(data);

@@ -587,7 +587,14 @@ const editMember = (item) => {
                   <>
                     {/* QR code */}
                     <TouchableOpacity onPress={() => setSelectedMember(item)} style={styles.qrRow}>
-                      <QRCode value={item.id || "placeholder"} size={64} />
+                      <QRCode
+  value={JSON.stringify({
+    memberCode: item.memberCode,
+    entityId: activeEntity?.entityId,
+    sessionId: "Sunday-Service-1" // ✅ change per service later
+  })}
+  size={64}
+/>
                       <View style={styles.qrInfo}>
                         <Text style={styles.qrLabel}>Member QR Code</Text>
                         <Text style={styles.qrCode}>{item.memberCode || item.id}</Text>
