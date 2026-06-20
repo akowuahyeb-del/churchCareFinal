@@ -95,22 +95,28 @@ console.log("🔥 FULL PATH DEBUG:", {
   entityPath: `organizations/${organizationId}/entities/${entityId}`,
   collection: "members"
 });
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "members"
-      ),
-      {
-        ...member,
-        organizationId,
-        entityId,
-        createdAt: new Date().toISOString(),
-      }
-    );
+const memberCode = `${codePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+console.log("🆔 GENERATED MEMBER CODE:", memberCode);
+
+   await addDoc(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members"
+  ),
+  {
+    ...member,
+    memberCode,   // ✅ keep this
+    organizationId,
+    entityId,
+    createdAt: new Date().toISOString(),
+  }
+);
+
 
     console.log("✅ SAVE SUCCESS");
 
