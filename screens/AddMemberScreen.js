@@ -112,30 +112,70 @@ export default function AddMemberScreen({ navigation, route }) {
 
   /* ── ministry helpers ── */
   const saveNewMinistry = () => {
-    const trimmed = newMinistry.trim();
-    if (!trimmed) return;
-    setMinistries(prev => [...prev, trimmed]);
-    setMember(prev => ({ ...prev, ministry: trimmed }));
-    setNewMinistry("");
-    setMinistryModal(false);
-  };
+  const trimmed = newMinistry.trim();
+  if (!trimmed) return;
 
-  const saveEditedMinistry = () => {
-    const trimmed = editMinistryValue.trim();
-    if (!trimmed || selectedMinistryIndex == null) return;
-    setMinistries(prev => prev.map((m, i) => i === selectedMinistryIndex ? trimmed : m));
-    setEditMinistryModal(false);
-  };
+  const formatted =
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+
+  // ✅ prevent duplicates
+  if (ministries.includes(formatted)) {
+    Alert.alert("Duplicate", "Ministry already exists");
+    return;
+  }
+
+  setMinistries(prev => [...prev, formatted]);
+
+  setMember(prev => ({
+    ...prev,
+    ministry: formatted,
+  }));
+
+  setNewMinistry("");
+  setMinistryModal(false);
+};
+
+ const saveEditedMinistry = () => {
+  const trimmed = editMinistryValue.trim();
+  if (!trimmed || selectedMinistryIndex == null) return;
+
+  setMinistries(prev =>
+    prev.map((m, i) => (i === selectedMinistryIndex ? trimmed : m))
+  );
+
+  // ✅ IMPORTANT: update selected member ministry too
+  setMember(prev => ({
+    ...prev,
+    ministry: trimmed,
+  }));
+
+  setEditMinistryModal(false);
+};
 
   /* ── status helpers ── */
   const saveNewStatus = () => {
-    const trimmed = newStatus.trim();
-    if (!trimmed) return;
-    setStatusList(prev => [...prev, trimmed]);
-    setMember(prev => ({ ...prev, status: trimmed }));
-    setNewStatus("");
-    setStatusModal(false);
-  };
+  const trimmed = newStatus.trim();
+  if (!trimmed) return;
+
+  const formatted =
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+
+  // ✅ prevent duplicates
+  if (statusList.includes(formatted)) {
+    Alert.alert("Duplicate", "Status already exists");
+    return;
+  }
+
+  setStatusList(prev => [...prev, formatted]);
+
+  setMember(prev => ({
+    ...prev,
+    status: formatted,
+  }));
+
+  setNewStatus("");
+  setStatusModal(false);
+};
 
   const goNext = () => {
     if (!member.name || !member.phone) {
