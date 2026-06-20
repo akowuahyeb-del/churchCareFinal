@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 
 
+
+
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, deleteDoc,
@@ -48,6 +50,7 @@ export default function AttendanceScreen({ navigation, route }) {
   const userRole = "admin"; // replace with auth context
 
   const [targetEntities, setTargetEntities] = useState([]);
+  const [activeSession, setActiveSessionState] = useState(null);
 
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
@@ -149,6 +152,17 @@ useEffect(() => {
     setIsOnline(s.isConnected && s.isInternetReachable)
   );
   return () => unsub();
+}, []);
+
+useEffect(() => {
+  const loadSession = async () => {
+    const session = await AsyncStorage.getItem("activeSession");
+    if (session) {
+      setActiveSessionState(session);
+    }
+  };
+
+  loadSession();
 }, []);
 
 useEffect(() => {
@@ -443,7 +457,9 @@ const startSession = async () => {
       }
     );
 
-    setSessionId(ref.id);
+    // ✅ SAVE ACTIVE SESSION FOR QR SYSTEM
+await AsyncStorage.setItem("activeSession", ref.id);
+setActiveSessionState(ref.id);
 
   } catch (e) {
     console.log(e);
@@ -1038,6 +1054,11 @@ const attendanceRate =
 
     {/* ✅ FIXED HEADER SUBTEXT */}
     <Text style={styles.headerSub} numberOfLines={1}>
+      {activeSession && (
+  <Text style={{ color: "#fff", fontSize: 10 }}>
+    Session ID: {activeSession}
+  </Text>
+)}
       {selectedService || "Service"} · 
       {startTime ? ` Started ${startTime}` : " Not started"}
       {endTime ? ` · Ends ${endTime}` : ""}
