@@ -23,7 +23,7 @@ import { useCameraPermissions } from "expo-camera";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, deleteDoc,
-  doc, query, where, writeBatch, serverTimestamp, updateDoc, onSnapsho
+  doc, query, where, writeBatch, serverTimestamp, updateDoc, onSnapshot
 } from "firebase/firestore";
 
 const { width: SCREEN_W } = Dimensions.get("window");
