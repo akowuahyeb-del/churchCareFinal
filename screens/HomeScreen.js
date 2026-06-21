@@ -395,39 +395,42 @@ return (
   </TouchableOpacity>
 
   {/* ✅ CAROUSEL */}
-  <View style={styles.featuredSection}></View>
-    <View style={styles.featuredSection}>
-      <View style={styles.featuredHeader}>
-        <Text style={styles.featuredHeading}>Highlights</Text>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
-      >
-        {carouselItems.map(item => (
-          <View
-            key={item.id}
-            style={{
-              width: 260,
-              height: 140,
-              borderRadius: 16,
-              overflow: "hidden",
-              marginRight: 10,
-              backgroundColor: "#eee"
-            }}
-          >
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="cover"
-            />
-          </View>
-        ))}
-      </ScrollView>
+{carouselItems.length > 0 && (
+  <View style={styles.featuredSection}>
+    
+    <View style={styles.featuredHeader}>
+      <Text style={styles.featuredHeading}>Featured Events</Text>
     </View>
-  )}
+
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
+    >
+      {carouselItems.map(item => (
+        <View
+          key={item.id}
+          style={{
+            width: 260,
+            height: 140,
+            borderRadius: 16,
+            overflow: "hidden",
+            marginRight: 10,
+            backgroundColor: "#eee"
+          }}
+        >
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </View>
+      ))}
+    </ScrollView>
+
+  </View>
+)}
+
 
   {/* ✅ STATS */}
   <Section title="Overview">
