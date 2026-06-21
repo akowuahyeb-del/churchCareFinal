@@ -1266,6 +1266,44 @@ const attendanceRate =
           onAdd={()=>{setManageType("event");setManageModal(true);}} />
 
         {/* ── STATS CARDS ── */}
+        <View style={{
+  backgroundColor: "#fff",
+  marginHorizontal: 10,
+  marginTop: 10,
+  borderRadius: 14,
+  padding: 14,
+  elevation: 2
+}}>
+  <Text style={{ fontSize: 14, fontWeight: "800", color: "#4B3F72" }}>
+    {selectedService} Service
+  </Text>
+
+  <Text style={{
+    color: sessionStatus === "open" ? "#27ae60" : "#e74c3c",
+    fontWeight: "700",
+    marginTop: 4
+  }}>
+    ● {sessionStatus === "open" ? "Live" : "Closed"}
+  </Text>
+
+  <View style={{ marginTop: 10 }}>
+    <Text style={{ fontSize: 18, fontWeight: "900", color: "#27ae60" }}>
+      {presentCount} Present
+    </Text>
+
+    <Text style={{ fontSize: 13, color: "#e74c3c", marginTop: 2 }}>
+      {members.length - presentCount} Absent
+    </Text>
+
+    <Text style={{ fontSize: 12, color: "#888", marginTop: 6 }}>
+      Attendance Rate: {attendanceRate}%
+    </Text>
+  </View>
+
+  <Text style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>
+    Started: {startTime || "--"} | Ends: {endTime || "--"}
+  </Text>
+</View>
         <View style={styles.statsRow}>
           <StatCard icon="checkmark-circle" label="Present" value={presentCount}      color="#27ae60" bg="#e8f8f0" />
           <StatCard icon="close-circle"     label="Absent"  value={absentCount}        color="#e74c3c" bg="#fce8e8" />
