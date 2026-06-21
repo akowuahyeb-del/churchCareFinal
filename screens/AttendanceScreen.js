@@ -2072,8 +2072,16 @@ backBtn: {
 
   /* Stats */
   statsRow: { flexDirection:"row", marginHorizontal:10, marginVertical:8, gap:6 },
-  statCard: { flex:1, borderRadius:12, padding:10, alignItems:"center",
-    borderTopWidth:3, elevation:2 },
+  statCard: {
+  flex: 1,
+  borderRadius: 12,
+  paddingVertical: 12,   
+  paddingHorizontal: 10,
+  alignItems: "center",
+  borderTopWidth: 3,
+  elevation: 1,
+  backgroundColor: "#f8f8f8" 
+},
   statValue: { fontSize:18, fontWeight:"900", marginTop:3 },
   statLabel: { fontSize:10, color:"#666", marginTop:1, fontWeight:"600" },
 
