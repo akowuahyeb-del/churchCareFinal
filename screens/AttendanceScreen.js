@@ -1126,6 +1126,14 @@ const attendanceRate =
   members.length > 0
     ? Math.round((presentCount / members.length) * 100)
     : 0;
+   const lastAbsent = lastSession
+  ? members.length - (lastSession?.present || 0)
+  : 0;
+
+
+const lastRate = lastSession && members.length > 0
+  ? Math.round(((lastSession?.present || 0) / members.length) * 100)
+  : 0;
 
 
   /* ══════════════════════════ RENDER ══════════════════════════ */
@@ -1293,132 +1301,151 @@ const attendanceRate =
           onLongPress={(i,v)=>{setManageEditIdx(i);setManageInput(v);setManageType("event");setManageModal(true);}}
           onAdd={()=>{setManageType("event");setManageModal(true);}} />
 
-        {/* ── STATS CARDS ── */}
-        <View style={{
+        {/* ✅ SESSION DASHBOARD */}
+<View style={{
   backgroundColor: "#fff",
   marginHorizontal: 10,
   marginTop: 10,
-  borderRadius: 14,
-  padding: 14,
+  borderRadius: 16,
+  padding: 16,
   elevation: 2
 }}>
-  <Text style={{ fontSize: 14, fontWeight: "800", color: "#4B3F72" }}>
-    {selectedService} Service
-  </Text>
 
-  <Text style={{
-    color: sessionStatus === "open" ? "#27ae60" : "#e74c3c",
-    fontWeight: "700",
-    marginTop: 4
+  {/* HEADER */}
+  <View style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   }}>
-    ● {sessionStatus === "open" ? "Live" : "Closed"}
-  </Text>
-
-  <View style={{ marginTop: 10 }}>
-    <Text style={{ fontSize: 18, fontWeight: "900", color: "#27ae60" }}>
-      {presentCount} Present
+    <Text style={{
+      fontSize: 14,
+      fontWeight: "900",
+      color: "#4B3F72"
+    }}>
+      ⛪ {selectedService} Service
     </Text>
 
-    <Text style={{ fontSize: 13, color: "#e74c3c", marginTop: 2 }}>
-      {members.length - presentCount} Absent
-    </Text>
-
-    <Text style={{ fontSize: 12, color: "#888", marginTop: 6 }}>
-      Attendance Rate: {attendanceRate}%
+    <Text style={{
+      color: sessionStatus === "open" ? "#27ae60" : "#e74c3c",
+      fontWeight: "800"
+    }}>
+      ● {sessionStatus === "open" ? "Live" : "Closed"}
     </Text>
   </View>
 
-  <Text style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>
-    Started: {startTime || "--"} | Ends: {endTime || "--"}
-  </Text>
-</View>
-        <View style={styles.statsRow}>
-          <StatCard icon="checkmark-circle" label="Present" value={presentCount}      color="#27ae60" bg="#e8f8f0" />
-          <StatCard icon="close-circle"     label="Absent"  value={absentCount}        color="#e74c3c" bg="#fce8e8" />
-          <StatCard icon="people"           label="Total"   value={members.length}     color="#2980b9" bg="#e8f4fd" />
-          <StatCard icon="trending-up"      label="Rate"    value={`${attendanceRate}%`} color="#8e44ad" bg="#f3e8fd" />
-        </View>
-
-{/* ✅ LAST SESSION DISPLAY */}
-{lastSession && (
-  <View style={{
-    backgroundColor: "#fff",
-    marginHorizontal: 10,
-    marginTop: 10,
-    borderRadius: 14,
-    padding: 14,
-    elevation: 2
-  }}>
-    {/* Header */}
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-      <Text style={{
-        fontSize: 13,
-        fontWeight: "800",
-        color: "#4B3F72"
-      }}>
-        Last Session
-      </Text>
-
-      <View style={{
-        backgroundColor: "#f1f1f1",
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6
-      }}>
-        <Text style={{ fontSize: 10, color: "#777", fontWeight: "700" }}>
-          Completed
-        </Text>
-      </View>
-    </View>
-
-    {/* Main Info */}
+  {/* CURRENT SESSION */}
+  <View style={{ marginTop: 12 }}>
     <Text style={{
-      marginTop: 6,
-      fontSize: 15,
-      fontWeight: "900",
-      color: "#222"
+      fontSize: 11,
+      color: "#999",
+      fontWeight: "700"
     }}>
-      {lastSession.service}
+      CURRENT SESSION
     </Text>
 
-    <Text style={{
-      fontSize: 12,
-      color: "#888",
-      marginTop: 2
-    }}>
-      Ended {lastSession.endedAt}
-    </Text>
-
-    {/* Stats Row */}
     <View style={{
       flexDirection: "row",
       justifyContent: "space-between",
-      marginTop: 10
+      marginTop: 6
     }}>
       <View>
-        <Text style={{ fontSize: 14, fontWeight: "900", color: "#27ae60" }}>
-          {lastSession.present}
+        <Text style={{ fontSize: 18, fontWeight: "900", color: "#27ae60" }}>
+          {presentCount}
         </Text>
         <Text style={{ fontSize: 11, color: "#777" }}>Present</Text>
       </View>
 
       <View>
-        <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
-          {lastSession.absent}
+        <Text style={{ fontSize: 18, fontWeight: "900", color: "#e74c3c" }}>
+          {members.length - presentCount}
         </Text>
         <Text style={{ fontSize: 11, color: "#777" }}>Absent</Text>
       </View>
 
       <View>
-        <Text style={{ fontSize: 14, fontWeight: "900", color: "#8e44ad" }}>
-          {lastSession.rate}%
+        <Text style={{ fontSize: 18, fontWeight: "900", color: "#8e44ad" }}>
+          {attendanceRate}%
         </Text>
         <Text style={{ fontSize: 11, color: "#777" }}>Rate</Text>
       </View>
     </View>
-  </View>
-)}
 
+    <Text style={{
+      fontSize: 11,
+      color: "#aaa",
+      marginTop: 6
+    }}>
+      Started: {startTime || "--"} | Ends: {endTime || "--"}
+    </Text>
+  </View>
+
+  {/* DIVIDER */}
+  {lastSession && (
+    <View style={{
+      height: 1,
+      backgroundColor: "#eee",
+      marginVertical: 12
+    }} />
+  )}
+
+  {/* LAST SESSION */}
+  {lastSession && (
+    <View>
+      <Text style={{
+        fontSize: 11,
+        color: "#999",
+        fontWeight: "700"
+      }}>
+        LAST SESSION
+      </Text>
+
+      <Text style={{
+        fontSize: 14,
+        fontWeight: "900",
+        color: "#222",
+        marginTop: 4
+      }}>
+        {lastSession.service}
+      </Text>
+
+      <Text style={{
+        fontSize: 11,
+        color: "#888",
+        marginTop: 2
+      }}>
+        Ended {lastSession.endedAt}
+      </Text>
+
+      <View style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 8
+      }}>
+        <View>
+          <Text style={{ fontSize: 14, fontWeight: "900", color: "#27ae60" }}>
+            {lastSession.present}
+          </Text>
+          <Text style={{ fontSize: 11, color: "#777" }}>Present</Text>
+        </View>
+
+        <View>
+          <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
+            {lastAbsent}
+          </Text>
+          <Text style={{ fontSize: 11, color: "#777" }}>Absent</Text>
+        </View>
+
+        <View>
+          <Text style={{ fontSize: 14, fontWeight: "900", color: "#8e44ad" }}>
+            {lastRate}%
+          </Text>
+          <Text style={{ fontSize: 11, color: "#777" }}>Rate</Text>
+        </View>
+      </View>
+    </View>
+  )}
+
+</View>
 
 
         {/* ── MODE TABS ── */}
