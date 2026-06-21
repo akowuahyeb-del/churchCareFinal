@@ -607,25 +607,37 @@ const unlockSession = () => {
 /* ══════════ ATTENDANCE WRITE ══════════ */
 
 // ✅ BUILD RECORD (ACTIVE ENTITY)
-const buildRecord = (member, status) => ({
-  memberId: member.id,
-  name: member.name,
-  phone: member.phone || "",
-  ministry: member.ministry || "",
-  memberCode: member.memberCode || "",
+const buildRecord = (member, status) => {
 
-  entityId,
-  organizationId,
+  // ✅ ADD THIS (late detection logic)
+  const isLate =
+    startTime &&
+    new Date() > new Date(`1970-01-01T${startTime}`);
 
-  service: selectedService,
-  type: selectedType,
-  event: selectedEvent,
-  date: today,
-  status,
-  method: mode,
-  timestamp: new Date().toISOString(),
-  sessionId: sessionId || null,
-});
+  return {
+    memberId: member.id,
+    name: member.name,
+    phone: member.phone || "",
+    ministry: member.ministry || "",
+    memberCode: member.memberCode || "",
+
+    entityId,
+    organizationId,
+
+    service: selectedService,
+    type: selectedType,
+    event: selectedEvent,
+    date: today,
+    status,
+    method: mode,
+
+    isLate, // ✅ NEW FIELD (VERY IMPORTANT)
+
+    timestamp: new Date().toISOString(),
+    sessionId: sessionId || null,
+  };
+};
+
 
 
 // ✅ ADD RECORD
@@ -1099,6 +1111,41 @@ const attendanceRate =
     ? Math.round((presentCount / members.length) * 100)
     : 0;
 
+// ✅ GROUP BY MINISTRY
+const ministryStats = {};
+
+members.forEach(member => {
+  const ministry = member.ministry || "Unknown";
+
+  if (!ministryStats[ministry]) {
+    ministryStats[ministry] = {
+      total: 0,
+      present: 0
+    };
+  }
+
+  ministryStats[ministry].total++;
+
+  if (attendance[member.id]?.status === "present") {
+    ministryStats[ministry].present++;
+  }
+});
+
+const ministryList = Object.entries(ministryStats).map(
+  ([name, data]) => ({
+    name,
+    ...data,
+    rate: data.total > 0
+      ? Math.round((data.present / data.total) * 100)
+      : 0
+  })
+);
+
+ministryList.sort((a, b) => b.present - a.present);
+// ✅ COUNT LATE ATTENDANCE
+const lateCount = Object.values(attendance).filter(
+  a => a.isLate
+).length;
 
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (
@@ -1300,16 +1347,65 @@ const attendanceRate =
     </Text>
   </View>
 
-  <Text style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>
-    Started: {startTime || "--"} | Ends: {endTime || "--"}
+ {/* ✅ SESSION PANEL (already fine) */}
+<Text style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>
+  Started: {startTime || "--"} | Ends: {endTime || "--"}
+</Text>
+</View>
+
+
+{/* ✅ STATS ROW (MUST WRAP StatCards) */}
+<View style={styles.statsRow}>
+  <StatCard icon="checkmark-circle" label="Present" value={presentCount} color="#27ae60" bg="#e8f8f0" />
+  <StatCard icon="close-circle" label="Absent" value={absentCount} color="#e74c3c" bg="#fce8e8" />
+  <StatCard icon="people" label="Total" value={members.length} color="#2980b9" bg="#e8f4fd" />
+  <StatCard icon="trending-up" label="Rate" value={`${attendanceRate}%`} color="#8e44ad" bg="#f3e8fd" />
+</View>
+
+
+{/* ✅ ANALYTICS PANEL (GOES AFTER STATS ROW) */}
+<View style={{
+  backgroundColor: "#fff",
+  marginHorizontal: 10,
+  marginTop: 10,
+  borderRadius: 14,
+  padding: 14,
+  elevation: 2
+}}>
+  <Text style={{
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#4B3F72",
+    marginBottom: 10
+  }}>
+    📊 Attendance Insights
+  </Text>
+
+  {ministryList.slice(0, 5).map((m, index) => (
+    <View key={index} style={{
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8
+    }}>
+      <Text style={{ fontSize: 12, fontWeight: "600" }}>
+        {m.name}
+      </Text>
+
+      <Text style={{
+        fontSize: 12,
+        color: "#27ae60",
+        fontWeight: "700"
+      }}>
+        {m.present}/{m.total} ({m.rate}%)
+      </Text>
+    </View>
+  ))}
+
+  {/* ✅ Late count stays HERE */}
+  <Text style={{ fontSize: 12, color: "#e67e22", marginTop: 6 }}>
+    ⏱ Late: {lateCount}
   </Text>
 </View>
-        <View style={styles.statsRow}>
-          <StatCard icon="checkmark-circle" label="Present" value={presentCount}      color="#27ae60" bg="#e8f8f0" />
-          <StatCard icon="close-circle"     label="Absent"  value={absentCount}        color="#e74c3c" bg="#fce8e8" />
-          <StatCard icon="people"           label="Total"   value={members.length}     color="#2980b9" bg="#e8f4fd" />
-          <StatCard icon="trending-up"      label="Rate"    value={`${attendanceRate}%`} color="#8e44ad" bg="#f3e8fd" />
-        </View>
 
         {/* ── MODE TABS ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}
