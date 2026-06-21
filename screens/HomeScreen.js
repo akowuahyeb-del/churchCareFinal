@@ -61,6 +61,7 @@ export default function HomeScreen() {
   const [churchName, setChurchName] = useState("");
   const [entities, setEntities] = useState([]);
   const [scanned, setScanned] = useState(false);
+  const [carouselItems, setCarouselItems] = useState([]);
 
 
 
@@ -82,6 +83,7 @@ export default function HomeScreen() {
   const [showDatePicker,setShowDatePicker]= useState(false);
   const [showTimePicker,setShowTimePicker]= useState(false);
   const [pickerDate,    setPickerDate]    = useState(new Date());
+  
 
   /* ── featured event modal ── */
   const [selectedEvent,    setSelectedEvent]    = useState(null);
@@ -90,6 +92,7 @@ export default function HomeScreen() {
 
 
   /*useEffect*/
+
 
 useEffect(() => {
   const loadEntities = async () => {
@@ -119,42 +122,37 @@ useEffect(() => {
   })();
 }, []);
 
-
 useEffect(() => {
   if (!activeEntity) return;
 
   const { organizationId, entityId } = activeEntity;
-
   if (!organizationId || !entityId) return;
 
-const u1 = onSnapshot(
-  collection(db, "organizations", organizationId, "entities", entityId, "events"),
-  snap => {
-    setEvents(
-      snap.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      }))
-    );
-  }
-);
-
- const u2 = onSnapshot(
-  doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
-  snap => {
-    if (snap.exists()) {
-      setPastorData(snap.data());
-    } else {
-      // ✅ fallback if no data exists yet
-      setPastorData({
-        title: "Message from Pastor",
-        message: "Tap to add a message 🙏",
-        expiry: null
-      });
+  // ✅ EVENTS
+  const u1 = onSnapshot(
+    collection(db, "organizations", organizationId, "entities", entityId, "events"),
+    snap => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }
-  }
-);
+  );
 
+  // ✅ PASTOR MESSAGE
+  const u2 = onSnapshot(
+    doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
+    snap => {
+      if (snap.exists()) {
+        setPastorData(snap.data());
+      } else {
+        setPastorData({
+          title: "Message from Pastor",
+          message: "Tap to add a message 🙏",
+          expiry: null
+        });
+      }
+    }
+  );
+
+  // ✅ PROGRAM
   const u3 = onSnapshot(
     doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
     snap => {
@@ -162,13 +160,29 @@ const u1 = onSnapshot(
     }
   );
 
+  // ✅ ✅ ✅ CAROUSEL (FIXED)
+  const u4 = onSnapshot(
+    collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
+    snap => {
+      const items = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+
+      console.log("✅ CAROUSEL ITEMS:", items); // IMPORTANT DEBUG
+      setCarouselItems(items);
+    }
+  );
+
   return () => {
     u1();
     u2();
     u3();
+    u4();
   };
 
 }, [activeEntity]);
+
 
 
 
@@ -249,7 +263,50 @@ const savePastorMessage = async (title, message, expiry) => {
 };
 
 
- /* ══════════════════════════════════ RENDER ══════════════════════ */
+const handleUpload = async () => {
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1
+    });
+
+    if (result.canceled) return;
+
+    const imageUri = result.assets[0].uri;
+
+    const blob = await (await fetch(imageUri)).blob();
+
+    const data = await AsyncStorage.getItem("activeEntity");
+    if (!data) {
+      Alert.alert("Error", "No active church selected");
+      return;
+    }
+
+    const { organizationId, entityId } = JSON.parse(data);
+
+    const storageRef = ref(storage, `carousel/${Date.now()}`);
+    const uploadRes = await uploadBytes(storageRef, blob);
+
+    const downloadURL = await getDownloadURL(uploadRes.ref);
+
+    // ✅ THIS drives your carousel
+    await addDoc(
+      collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
+      {
+        imageUrl: downloadURL,
+        createdAt: new Date()
+      }
+    );
+
+    Alert.alert("✅ Uploaded to carousel");
+
+  } catch (err) {
+    console.log(err);
+    Alert.alert("Upload failed");
+  }
+};
+
+/* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
   <SafeAreaView style={styles.safe}>
     <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
@@ -300,151 +357,147 @@ return (
   </TouchableOpacity>
 </View>
 
+{/* ✅ MAIN SCROLL AREA */}
+<ScrollView
+  contentContainerStyle={styles.body}
+  refreshControl={
+    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+  }
+  showsVerticalScrollIndicator={false}
+>
 
+  {/* ✅ PASTOR CARD */}
+  <TouchableOpacity
+    onPress={openPastorModal}
+    activeOpacity={0.7}
+    style={[styles.pastorCard, styles.pastorCardActive]}
+  >
+    <View style={styles.pastorCardLeft}>
+      <Ionicons name="book-outline" size={20} color="#4B3F72" />
+    </View>
 
-    <ScrollView
-      contentContainerStyle={styles.body}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {featuredEvents.length > 0 && (
-        <View style={styles.featuredSection}>
-          <View style={styles.featuredHeader}>
-            <Text style={styles.featuredHeading}>Featured Events</Text>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
-          >
-            {featuredEvents.map(ev => (
-              <FeaturedEventCard
-                key={ev.id}
-                event={ev}
-                onPress={() => {
-                  setSelectedEvent(ev);
-                  setEventModalVisible(true);
-                }}
-              />
-            ))}
-          </ScrollView>
-        </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.pastorCardTitle} numberOfLines={1}>
+        {pastorData?.title || "Message from Pastor"}
+      </Text>
+
+      <Text style={styles.pastorCardMsg} numberOfLines={2}>
+        {pastorData?.message || "Tap to add a message 🙏"}
+      </Text>
+
+      {!pastorData?.message && (
+        <Text style={{ fontSize: 10, color: "#aaa", marginTop: 4 }}>
+          Tap to add message
+        </Text>
       )}
 
-    {/* PASTOR CARD */}
-<TouchableOpacity
-  onPress={openPastorModal}
-  activeOpacity={0.7}
-  style={[styles.pastorCard, styles.pastorCardActive]}
->
-  {/* LEFT ICON */}
-  <View style={styles.pastorCardLeft}>
-    <Ionicons name="book-outline" size={20} color="#4B3F72" />
-  </View>
+      {pastorData?.expiry && (
+        <Text style={styles.pastorExpiry}>
+          ⏱ Expires {fmtDT(pastorData.expiry)}
+        </Text>
+      )}
+    </View>
 
-  {/* CONTENT */}
-  <View style={{ flex: 1 }}>
+    <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
+  </TouchableOpacity>
 
-    {/* ✅ TITLE */}
-    <Text
-      style={styles.pastorCardTitle}
-      numberOfLines={1}
-    >
-      {pastorData?.title || "Message from Pastor"}
-    </Text>
-
-    {/* ✅ MESSAGE */}
-    <Text
-      style={styles.pastorCardMsg}
-      numberOfLines={2}
-    >
-      {pastorData?.message || "Tap to add a message 🙏"}
-    </Text>
-
-    {/* ✅ EMPTY STATE HINT */}
-    {!pastorData?.message && (
-      <Text
-        style={{
-          fontSize: 10,
-          color: "#aaa",
-          marginTop: 4
-        }}
-      >
-        Tap to add message
-      </Text>
-    )}
-
-    {/* ✅ EXPIRY */}
-    {pastorData?.expiry && (
-      <Text style={styles.pastorExpiry}>
-        ⏱ Expires {fmtDT(pastorData.expiry)}
-      </Text>
-    )}
-
-  </View>
-
-  {/* ✅ EDIT ICON */}
-  <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
-
-</TouchableOpacity>
-
-
-      {/* STATS */}
-      <Section title="Overview">
-        <View style={styles.statsRow}>
-          <StatCard label="Members" value="245" />
-          <StatCard label="Attendance" value="180" />
-        </View>
-      </Section>
-
-      {/* QUICK ACTIONS */}
-      <View style={styles.qaSection}>
-        <View style={styles.qaHeaderRow}>
-          <Text style={styles.qaHeading}>Quick Actions</Text>
-        </View>
-        <View style={styles.qaRow}>
-          {[
-            { icon: "checkmark-circle-outline", label: "Attendance", onPress: () => navigation.navigate("Attendance") },
-            { icon: "people-outline", label: "Members", onPress: () => navigation.navigate("Members") },
-            { icon: "bar-chart-outline", label: "Reports", onPress: () => navigation.navigate("AdminDashboard") },
-            { icon: "heart-outline", label: "Donate", onPress: () => navigation.navigate("Donate") },
-            { icon: "help-circle-outline", label: "Help", onPress: () => navigation.navigate("Help") },
-            { icon: "qr-code-outline", label: "QR Code", onPress: () => setQrModal(true) }
-          ].map(a => (
-            <TouchableOpacity key={a.label} style={styles.qaItem} onPress={a.onPress}>
-              <View style={styles.qaCircle}>
-                <Ionicons name={a.icon} size={22} color="#fff" />
-              </View>
-              <Text style={styles.qaLabel}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+  {/* ✅ CAROUSEL */}
+  {carouselItems.length > 0 && (
+    <View style={styles.featuredSection}>
+      <View style={styles.featuredHeader}>
+        <Text style={styles.featuredHeading}>Highlights</Text>
       </View>
 
-      <Section title="Service Flow">
-        <EventsTabs
-          events={upcomingEvents}
-          program={program}
-          preachers={preachers}
-          setProgram={setProgram}
-          onAddPreacher={() => {
-            setEditingPreacher(null);
-            setPreacherModal(true);
-          }}
-          onEditPreacher={(p) => {
-            setEditingPreacher(p);
-            setPreacherModal(true);
-          }}
-        />
-      </Section>
-    </ScrollView>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
+      >
+        {carouselItems.map(item => (
+          <View
+            key={item.id}
+            style={{
+              width: 260,
+              height: 140,
+              borderRadius: 16,
+              overflow: "hidden",
+              marginRight: 10,
+              backgroundColor: "#eee"
+            }}
+          >
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  )}
+
+  {/* ✅ STATS */}
+  <Section title="Overview">
+    <View style={styles.statsRow}>
+      <StatCard label="Members" value="245" />
+      <StatCard label="Attendance" value="180" />
+    </View>
+  </Section>
+
+  {/* ✅ QUICK ACTIONS */}
+  <View style={styles.qaSection}>
+    <View style={styles.qaHeaderRow}>
+      <Text style={styles.qaHeading}>Quick Actions</Text>
+    </View>
+
+    <View style={styles.qaRow}>
+      {[
+        { icon: "checkmark-circle-outline", label: "Attendance", onPress: () => navigation.navigate("Attendance") },
+        { icon: "people-outline", label: "Members", onPress: () => navigation.navigate("Members") },
+        { icon: "bar-chart-outline", label: "Reports", onPress: () => navigation.navigate("AdminDashboard") },
+        { icon: "heart-outline", label: "Donate", onPress: () => navigation.navigate("Donate") },
+        { icon: "help-circle-outline", label: "Help", onPress: () => navigation.navigate("Help") },
+        { icon: "qr-code-outline", label: "QR Code", onPress: () => setQrModal(true) }
+      ].map(a => (
+        <TouchableOpacity key={a.label} style={styles.qaItem} onPress={a.onPress}>
+          <View style={styles.qaCircle}>
+            <Ionicons name={a.icon} size={22} color="#fff" />
+          </View>
+          <Text style={styles.qaLabel}>{a.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+
+  {/* ✅ SERVICE FLOW */}
+  <Section title="Service Flow">
+    <EventsTabs
+      events={upcomingEvents}
+      program={program}
+      preachers={preachers}
+      setProgram={setProgram}
+      onAddPreacher={() => {
+        setEditingPreacher(null);
+        setPreacherModal(true);
+      }}
+      onEditPreacher={(p) => {
+        setEditingPreacher(p);
+        setPreacherModal(true);
+      }}
+    />
+  </Section>
+
+</ScrollView>
+
+    
 
     {/* ✅ KEEP ALL YOUR MODALS HERE (unchanged) */}
-
-    <FlyerUploadModal
-      visible={showUpload}
-      onClose={() => setShowUpload(false)}
-    />
+<FlyerUploadModal
+  visible={showUpload}
+  onClose={() => setShowUpload(false)}
+  onUpload={handleUpload}   // ✅ CRITICAL FIX
+/>
+    
    <Modal
   visible={churchModalVisible}
   transparent
@@ -579,6 +632,7 @@ return (
 );
 }  
 
+ 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f4f6fb" },
   body: { paddingBottom: 110 },
