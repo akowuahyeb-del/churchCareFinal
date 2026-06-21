@@ -26,6 +26,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import ChurchSwitcher from "../components/ChurchSwitcher";
 import { handleQRCode } from "../utils/qrRouter";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { addDoc } from "firebase/firestore";
 
 
 
@@ -95,40 +96,12 @@ export default function HomeScreen() {
 
 
 useEffect(() => {
-  const loadEntities = async () => {
-    try {
-      const storedEntities = await AsyncStorage.getItem("userEntities");
-      const storedActive = await AsyncStorage.getItem("activeEntity");
-
-      if (storedEntities) {
-        setEntities(JSON.parse(storedEntities));
-      }
-
-      if (storedActive) {
-        setActiveEntity(JSON.parse(storedActive));
-      }
-
-    } catch (e) {
-      console.log("❌ Load entity error:", e);
-    }
-  };
-
-  loadEntities();
-}, []);
-
-useEffect(() => {
-  (async () => {
-    await Camera.requestCameraPermissionsAsync();
-  })();
-}, []);
-
-useEffect(() => {
   if (!activeEntity) return;
 
   const { organizationId, entityId } = activeEntity;
   if (!organizationId || !entityId) return;
 
-  // ✅ EVENTS
+  // EVENTS
   const u1 = onSnapshot(
     collection(db, "organizations", organizationId, "entities", entityId, "events"),
     snap => {
@@ -136,23 +109,17 @@ useEffect(() => {
     }
   );
 
-  // ✅ PASTOR MESSAGE
+  // PASTOR MESSAGE
   const u2 = onSnapshot(
     doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
     snap => {
       if (snap.exists()) {
         setPastorData(snap.data());
-      } else {
-        setPastorData({
-          title: "Message from Pastor",
-          message: "Tap to add a message 🙏",
-          expiry: null
-        });
       }
     }
   );
 
-  // ✅ PROGRAM
+  // PROGRAM
   const u3 = onSnapshot(
     doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
     snap => {
@@ -160,7 +127,7 @@ useEffect(() => {
     }
   );
 
-  // ✅ ✅ ✅ CAROUSEL (FIXED)
+  // ✅ CAROUSEL LISTENER (THIS FIXES YOUR ISSUE)
   const u4 = onSnapshot(
     collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
     snap => {
@@ -169,7 +136,7 @@ useEffect(() => {
         ...d.data()
       }));
 
-      console.log("✅ CAROUSEL ITEMS:", items); // IMPORTANT DEBUG
+      console.log("✅ CAROUSEL ITEMS:", items);
       setCarouselItems(items);
     }
   );
@@ -402,7 +369,7 @@ return (
   </TouchableOpacity>
 
   {/* ✅ CAROUSEL */}
-  {carouselItems.length > 0 && (
+  <View style={styles.featuredSection}></View>
     <View style={styles.featuredSection}>
       <View style={styles.featuredHeader}>
         <Text style={styles.featuredHeading}>Highlights</Text>
