@@ -1355,11 +1355,13 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
 <View style={{
   backgroundColor: "#fff",
   marginHorizontal: 10,
-  marginTop: 10,
+  marginTop: 12,
+  marginBottom: 20,   // ✅ ADD 
   borderRadius: 16,
   padding: 16,
   elevation: 2
 }}>
+
 
   {/* HEADER */}
   <View style={{
@@ -1800,13 +1802,17 @@ onPress={() => Alert.alert("Use the header switch to change church")}
             <Text style={styles.modalSub}>
               Attendance will be locked. Only an admin can unlock it to make further changes.
             </Text>
-            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#e74c3c", marginTop: 12 }]} onPress={endSession}>
+
+
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#e8dbda", marginTop: 12 }]} onPress={endSession}>
               <Ionicons name="lock-closed-outline" size={15} color="#fff" />
               <Text style={styles.primaryBtnText}>End & Lock Service</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelTxt} onPress={() => setEndServiceModal(false)}>
               <Text style={styles.cancelTxtText}>Cancel</Text>
             </TouchableOpacity>
+
+
           </View>
         </View>
       </Modal>
@@ -2259,9 +2265,12 @@ backBtn: {
   filterPanel: { backgroundColor:"#fff", marginHorizontal:10, borderRadius:12,
     padding:12, marginBottom:6, elevation:1 },
   filterLabel: { fontSize:10, fontWeight:"700", color:"#aaa", textTransform:"uppercase", marginBottom:6 },
-  filterChip: { flexDirection:"row", alignItems:"center", paddingHorizontal:10, paddingVertical:5,
-    backgroundColor:"#f0f0f0", borderRadius:20, marginRight:6 },
-  filterChipActive: { backgroundColor:"#4B3F72" },
+
+  filterChip: { flexDirection:"row", alignItems:"center",  borderRadius: 14,paddingHorizontal:10, paddingVertical:6,
+ backgroundColor: "#d91293",borderRadius:20, marginRight:6 },
+
+
+  filterChipActive: { backgroundColor: "#800020" },
   filterChipText: { fontSize:11, color:"#555", fontWeight:"600" },
   filterResult: { fontSize:11, color:"#888", marginTop:8, fontStyle:"italic" },
 
@@ -2291,11 +2300,31 @@ backBtn: {
 
   btnGroup: { flexDirection:"row", gap:5, alignItems:"center", marginLeft:8 },
   markBtn: { width:36, height:36, borderRadius:10, alignItems:"center", justifyContent:"center" },
-  btnPresent: { backgroundColor:"#27ae60" },
-  btnPresentOff: { backgroundColor:"#a8d5b8" },
+  
+  
+  
+btnPresent: {
+  backgroundColor: "#af0530", 
+},
+ 
+btnPresentOff: {
+  backgroundColor: "#aea0d4", 
+},
+
+
+
+
   btnAbsent: { backgroundColor:"#e74c3c" },
   btnAbsentOff: { backgroundColor:"#f0a0a0" },
-  btnGreyed: { backgroundColor:"#ddd", opacity:0.5 },
+
+
+  
+btnGreyed: {
+  opacity: 0.8, 
+},
+
+
+
   btnUndo: { width:30, height:30, borderRadius:8, backgroundColor:"#6c47b8",
     alignItems:"center", justifyContent:"center" },
 
@@ -2370,6 +2399,36 @@ transferOptionText: {
   fontSize: 14,
   marginLeft: 10,
   color: "#333",
+  fontWeight: "600",
+},
+
+primaryBtn: {
+  backgroundColor: "#800020",   // ✅ Burgundy
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 20,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+secondaryBtn: {
+  backgroundColor: "#EDEAF5",   // ✅ light background
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 20,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+primaryText: {
+  color: "#fff",
+  fontWeight: "700",
+},
+
+secondaryText: {
+  color: "#4B3F72",
   fontWeight: "600",
 },
 

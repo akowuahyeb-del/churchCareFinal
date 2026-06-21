@@ -1,11 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  Modal,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet
+  View, Text, Modal, TextInput,
+  TouchableOpacity, StyleSheet
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -18,11 +14,20 @@ export default function EditableContentModal({
   onDelete
 }) {
 
-  const [title, setTitle] = useState(titleValue || "");
-  const [message, setMessage] = useState(messageValue || "");
+  /* ✅ STATE */
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
   const [expiry, setExpiry] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
   const [mode, setMode] = useState("date");
+
+  /* ✅ FIX: sync props when modal opens */
+  useEffect(() => {
+    if (visible) {
+      setTitle(titleValue || "");
+      setMessage(messageValue || "");
+    }
+  }, [visible, titleValue, messageValue]);
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -47,55 +52,51 @@ export default function EditableContentModal({
             onChangeText={setMessage}
             placeholder="Message..."
           />
-{/* ✅ EXPIRY BUTTON */}
-<TouchableOpacity
-  style={styles.dateBtn}
-  onPress={() => {
-    setMode("date");
-    setShowPicker(true);
-  }}
->
-  <Text>
-    {expiry
-      ? new Date(expiry).toLocaleString()
-      : "Set expiry"}
-  </Text>
-</TouchableOpacity>
-{showPicker && (
-  <DateTimePicker
-    value={expiry ? new Date(expiry) : new Date()}
-    mode={mode}
-    onChange={(event, selectedDate) => {
-      setShowPicker(false);
-      if (!selectedDate) return;
 
-      if (mode === "date") {
-        setMode("time");
-        setShowPicker(true);
-        setExpiry(selectedDate.toISOString());
-      } else {
-        const newDate = new Date(expiry || selectedDate);
-        newDate.setHours(
-          selectedDate.getHours(),
-          selectedDate.getMinutes()
-        );
-        setExpiry(newDate.toISOString());
-      }
-    }}
-  />
-)}
+          {/* ✅ EXPIRY BUTTON */}
+          <TouchableOpacity
+            style={styles.dateBtn}
+            onPress={() => {
+              setMode("date");
+              setShowPicker(true);
+            }}
+          >
+            <Text>
+              {expiry
+                ? new Date(expiry).toLocaleString()
+                : "Set expiry"}
+            </Text>
+          </TouchableOpacity>
 
-          <DateTimePicker
-  value={expiry ? new Date(expiry) : new Date()}
-  mode="date"
-  display="default"
-  onChange={(e, d) => {
-    setShowPicker(false);
-    if (d) setExpiry(d.toISOString());
-  }}
-/>
+          {/* ✅ FIXED PICKER (only render conditionally) */}
+          {showPicker && (
+            <DateTimePicker
+              value={expiry ? new Date(expiry) : new Date()}
+              mode={mode}
+              onChange={(event, selectedDate) => {
+                if (!selectedDate) {
+                  setShowPicker(false);
+                  return;
+                }
 
-          {/* ✅ ACTIONS */}
+                if (mode === "date") {
+                  setMode("time");
+                  setShowPicker(true);
+                  setExpiry(selectedDate.toISOString());
+                } else {
+                  const newDate = new Date(expiry || selectedDate);
+                  newDate.setHours(
+                    selectedDate.getHours(),
+                    selectedDate.getMinutes()
+                  );
+                  setExpiry(newDate.toISOString());
+                  setShowPicker(false);
+                }
+              }}
+            />
+          )}
+
+          {/* ✅ SAVE */}
           <TouchableOpacity
             style={styles.save}
             onPress={() => {
@@ -106,18 +107,24 @@ export default function EditableContentModal({
             <Text style={styles.white}>Save</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.delete}
-            onPress={() => {
-              onDelete();
-              onClose();
-            }}
-          >
-            <Text style={styles.white}>Delete</Text>
-          </TouchableOpacity>
+          {/* ✅ DELETE */}
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.delete}
+              onPress={() => {
+                onDelete();
+                onClose();
+              }}
+            >
+              <Text style={styles.white}>Delete</Text>
+            </TouchableOpacity>
+          )}
 
+          {/* ✅ CANCEL */}
           <TouchableOpacity onPress={onClose}>
-            <Text style={{ textAlign: "center", marginTop: 8 }}>Cancel</Text>
+            <Text style={{ textAlign: "center", marginTop: 8 }}>
+              Cancel
+            </Text>
           </TouchableOpacity>
 
         </View>
@@ -126,6 +133,7 @@ export default function EditableContentModal({
   );
 }
 
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,

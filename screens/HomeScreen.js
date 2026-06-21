@@ -139,12 +139,21 @@ const u1 = onSnapshot(
   }
 );
 
-  const u2 = onSnapshot(
-    doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
-    snap => {
-      if (snap.exists()) setPastorData(snap.data());
+ const u2 = onSnapshot(
+  doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
+  snap => {
+    if (snap.exists()) {
+      setPastorData(snap.data());
+    } else {
+      // ✅ fallback if no data exists yet
+      setPastorData({
+        title: "Message from Pastor",
+        message: "Tap to add a message 🙏",
+        expiry: null
+      });
     }
-  );
+  }
+);
 
   const u3 = onSnapshot(
     doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
@@ -191,9 +200,8 @@ const u1 = onSnapshot(
   setPastorModal(true);
 };
 
-/* ── save pastor message ── */
 const savePastorMessage = async () => {
-  if (!editTitle.trim()) {
+  if (!editTitle?.trim()) {
     Alert.alert("Required", "Heading is required");
     return;
   }
@@ -209,8 +217,8 @@ const savePastorMessage = async () => {
 
   const updated = {
     title: editTitle.trim(),
-    message: editMessage.trim(),
-    expiry: editExpiry
+    message: editMessage?.trim() || "Tap to add a message 🙏",
+    expiry: editExpiry || null
   };
 
   try {
@@ -224,10 +232,14 @@ const savePastorMessage = async () => {
         "settings",
         "pastorMessage"
       ),
-      updated
+      updated,
+      { merge: true } // ✅ IMPORTANT
     );
 
     setPastorData(updated);
+
+    console.log("✅ Pastor message saved:", updated);
+
     setPastorModal(false);
 
   } catch (e) {
@@ -357,22 +369,63 @@ return (
         </View>
       )}
 
-      {/* PASTOR CARD */}
-      <TouchableOpacity onPress={openPastorModal} activeOpacity={0.85} style={styles.pastorCard}>
-        <View style={styles.pastorCardLeft}>
-          <Ionicons name="book-outline" size={20} color="#4B3F72" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.pastorCardTitle} numberOfLines={1}>{pastorData.title}</Text>
-          <Text style={styles.pastorCardMsg} numberOfLines={2}>{pastorData.message}</Text>
-          {pastorData.expiry && (
-            <Text style={styles.pastorExpiry}>
-              ⏱ Expires {fmtDT(pastorData.expiry)}
-            </Text>
-          )}
-        </View>
-        <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
-      </TouchableOpacity>
+    {/* PASTOR CARD */}
+<TouchableOpacity
+  onPress={openPastorModal}
+  activeOpacity={0.7}
+  style={[styles.pastorCard, styles.pastorCardActive]}
+>
+  {/* LEFT ICON */}
+  <View style={styles.pastorCardLeft}>
+    <Ionicons name="book-outline" size={20} color="#4B3F72" />
+  </View>
+
+  {/* CONTENT */}
+  <View style={{ flex: 1 }}>
+
+    {/* ✅ TITLE */}
+    <Text
+      style={styles.pastorCardTitle}
+      numberOfLines={1}
+    >
+      {pastorData?.title || "Message from Pastor"}
+    </Text>
+
+    {/* ✅ MESSAGE */}
+    <Text
+      style={styles.pastorCardMsg}
+      numberOfLines={2}
+    >
+      {pastorData?.message || "Tap to add a message 🙏"}
+    </Text>
+
+    {/* ✅ EMPTY STATE HINT */}
+    {!pastorData?.message && (
+      <Text
+        style={{
+          fontSize: 10,
+          color: "#aaa",
+          marginTop: 4
+        }}
+      >
+        Tap to add message
+      </Text>
+    )}
+
+    {/* ✅ EXPIRY */}
+    {pastorData?.expiry && (
+      <Text style={styles.pastorExpiry}>
+        ⏱ Expires {fmtDT(pastorData.expiry)}
+      </Text>
+    )}
+
+  </View>
+
+  {/* ✅ EDIT ICON */}
+  <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
+
+</TouchableOpacity>
+
 
       {/* STATS */}
       <Section title="Overview">
@@ -674,4 +727,9 @@ statusText: {
   qrActions: { flexDirection: "row", gap: 10, marginBottom: 8, width: "100%" },
   qrBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 12, padding: 12, gap: 6 },
   qrBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+pastorCardActive: {
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+},
+
 });
