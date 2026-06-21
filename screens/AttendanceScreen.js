@@ -49,6 +49,115 @@ const CHURCHES = [
 
 export default function AttendanceScreen({ navigation, route }) {
 
+const extendSession = async () => {
+  try {
+    setSessionStatus("extended");
+    setExtendModal(false);
+
+    if (sessionId && organizationId && entityId) {
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "sessions",
+          sessionId
+        ),
+        {
+          status: "extended",
+          extendedAt: serverTimestamp(),
+        }
+      );
+    }
+  } catch (err) {
+    console.log("Extend session error:", err);
+  }
+};
+
+
+/* ════════════════════════════════════════════════════════════════
+   FIX: endSession() was deriving present/total from `members.present`
+   (a field that never exists on member records — attendance status
+   lives in the separate `attendance` state map, keyed by member.id).
+   That made currentPresent always 0 and currentTotal always
+   members.length, so "Last Session" always showed the same wrong
+   numbers as "Current Session".
+
+   Drop-in replacement for the existing endSession function.
+   ════════════════════════════════════════════════════════════════ */
+
+const endSession = async () => {
+  try {
+    // ✅ FIX: derive present count from the `attendance` state map,
+    // which is the actual source of truth (built by toggleAttendance /
+    // loadAttendance), not from a non-existent `member.present` field.
+    const currentPresent = Object.values(attendance).filter(
+      (a) => a.status === "present"
+    ).length;
+    const currentTotal = members.length;
+    const currentRate = currentTotal > 0
+      ? Math.round((currentPresent / currentTotal) * 100)
+      : 0;
+
+    // ✅ Snapshot the session that is ENDING — this becomes "Last Session"
+    const endedSession = {
+      service: selectedService,
+      type: selectedType,
+      event: selectedEvent,
+      present: currentPresent,
+      total: currentTotal,
+      rate: currentRate,
+      endedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setLastSession(endedSession);
+
+    if (sessionId && organizationId && entityId) {
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "sessions",
+          sessionId
+        ),
+        {
+          status: "ended",
+          lockedAt: serverTimestamp(),
+          lockedBy: userRole,
+          finalPresent: currentPresent,
+          finalTotal: currentTotal,
+        }
+      );
+    }
+
+    // ✅ FIX: clear the live attendance map too — not just presentCount —
+    // so "Current Session" genuinely starts from zero for the NEXT
+    // session instead of carrying over stale marks.
+    setAttendance({});
+    setPresentCount(0);
+    setSessionId(null);
+    setStartTime("");
+    setEndTime("");
+    setSessionStatus("ended");
+
+    await AsyncStorage.setItem("sessionStatus", "ended");
+    await AsyncStorage.removeItem("activeSession");
+
+    setEndServiceModal(false);
+
+    Alert.alert("Service Ended", "Attendance is now locked.");
+  } catch (err) {
+    console.log(err);
+    Alert.alert("Error", "Could not end the session. Please try again.");
+  }
+};
+
+
   const userRole = "admin"; // replace with auth context
 
   const [targetEntities, setTargetEntities] = useState([]);
@@ -539,80 +648,6 @@ const startSession = async () => {
 
   } catch (e) {
     console.log(e);
-  }
-};
-
-/*END SESSION*/
-const endSession = async () => {
-  setSessionStatus("ended");
-  setEndServiceModal(false);
-
-  await AsyncStorage.setItem("sessionStatus", "ended");
-
-  if (sessionId && organizationId && entityId) {
-    await updateDoc(
-      doc(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "sessions",
-        sessionId
-      ),
-      {
-        status: "ended",
-        lockedAt: serverTimestamp(),
-        lockedBy: userRole
-      }
-    ).catch(console.log);
-  }
-
-  Alert.alert(
-    "Service Ended",
-    "Attendance is now locked."
-  );
-// ✅ SAVE LAST SESSION INFO
-setLastSession({
-  service: selectedService,
-  present: presentCount,
-  endedAt: new Date().toLocaleTimeString()
-});
-
-  // ✅ RESET FOR NEXT SESSION
-  setSessionId(null);
-  setStartTime("");
-  setEndTime("");
-  setSessionStatus("open");
-
-  // ✅ REMOVE OLD SESSION
-  await AsyncStorage.removeItem("activeSession");
-
-  // ✅ OPEN NEW SESSION SETUP
-  setSessionModal(true);
-};
-
-// ✅ EXTEND SESSION
-const extendSession = async () => {
-  setSessionStatus("extended");
-  setExtendModal(false);
-
-  if (sessionId && organizationId && entityId) {
-    await updateDoc(
-      doc(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "sessions",
-        sessionId
-      ),
-      {
-        status: "extended",
-        extendedAt: serverTimestamp()
-      }
-    ).catch(console.log);
   }
 };
 
@@ -1126,15 +1161,17 @@ const attendanceRate =
   members.length > 0
     ? Math.round((presentCount / members.length) * 100)
     : 0;
-   const lastAbsent = lastSession
-  ? members.length - (lastSession?.present || 0)
+  const lastAbsent = lastSession
+  ? (lastSession.total || 0) - (lastSession?.present || 0)
+  : 0;
+
+const lastRate = lastSession && (lastSession.total || 0) > 0
+  ? Math.round(((lastSession?.present || 0) / (lastSession.total || 1)) * 100)
   : 0;
 
 
-const lastRate = lastSession && members.length > 0
-  ? Math.round(((lastSession?.present || 0) / members.length) * 100)
-  : 0;
 
+   
 
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (
@@ -1301,7 +1338,20 @@ const lastRate = lastSession && members.length > 0
           onLongPress={(i,v)=>{setManageEditIdx(i);setManageInput(v);setManageType("event");setManageModal(true);}}
           onAdd={()=>{setManageType("event");setManageModal(true);}} />
 
-        {/* ✅ SESSION DASHBOARD */}
+/* ════════════════════════════════════════════════════════════════
+   FIX: Session Dashboard block — "Last Session" now reads ONLY
+   from the lastSession snapshot object (present/total/rate fields
+   that are now correctly computed in the fixed endSession above),
+   instead of re-deriving absent/rate from a mix of current-session
+   variables (`lastAbsent`, `lastRate`) that referenced the WRONG
+   present count before the fix.
+
+   Drop-in replacement for the existing "✅ SESSION DASHBOARD" View.
+   Also remove the old `lastAbsent` / `lastRate` consts above this
+   block — they're now computed inline from `lastSession` directly.
+   ════════════════════════════════════════════════════════════════ */
+
+{/* ✅ SESSION DASHBOARD */}
 <View style={{
   backgroundColor: "#fff",
   marginHorizontal: 10,
@@ -1317,37 +1367,25 @@ const lastRate = lastSession && members.length > 0
     justifyContent: "space-between",
     alignItems: "center"
   }}>
-    <Text style={{
-      fontSize: 14,
-      fontWeight: "900",
-      color: "#4B3F72"
-    }}>
+    <Text style={{ fontSize: 14, fontWeight: "900", color: "#4B3F72" }}>
       ⛪ {selectedService} Service
     </Text>
 
     <Text style={{
-      color: sessionStatus === "open" ? "#27ae60" : "#e74c3c",
+      color: sessionStatus === "open" || sessionStatus === "extended" ? "#27ae60" : "#e74c3c",
       fontWeight: "800"
     }}>
-      ● {sessionStatus === "open" ? "Live" : "Closed"}
+      ● {sessionStatus === "open" || sessionStatus === "extended" ? "Live" : "Closed"}
     </Text>
   </View>
 
-  {/* CURRENT SESSION */}
+  {/* CURRENT SESSION — always reflects the LIVE attendance map */}
   <View style={{ marginTop: 12 }}>
-    <Text style={{
-      fontSize: 11,
-      color: "#999",
-      fontWeight: "700"
-    }}>
+    <Text style={{ fontSize: 11, color: "#999", fontWeight: "700" }}>
       CURRENT SESSION
     </Text>
 
-    <View style={{
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: 6
-    }}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
       <View>
         <Text style={{ fontSize: 18, fontWeight: "900", color: "#27ae60" }}>
           {presentCount}
@@ -1370,82 +1408,58 @@ const lastRate = lastSession && members.length > 0
       </View>
     </View>
 
-    <Text style={{
-      fontSize: 11,
-      color: "#aaa",
-      marginTop: 6
-    }}>
+    <Text style={{ fontSize: 11, color: "#aaa", marginTop: 6 }}>
       Started: {startTime || "--"} | Ends: {endTime || "--"}
     </Text>
   </View>
 
   {/* DIVIDER */}
   {lastSession && (
-    <View style={{
-      height: 1,
-      backgroundColor: "#eee",
-      marginVertical: 12
-    }} />
+    <View style={{ height: 1, backgroundColor: "#eee", marginVertical: 12 }} />
   )}
 
-  {/* LAST SESSION */}
   {lastSession && (
-    <View>
-      <Text style={{
-        fontSize: 11,
-        color: "#999",
-        fontWeight: "700"
-      }}>
-        LAST SESSION
-      </Text>
+  <View>
+    <Text style={{ fontSize: 11, color: "#999", fontWeight: "700" }}>
+      LAST SESSION
+    </Text>
 
-      <Text style={{
-        fontSize: 14,
-        fontWeight: "900",
-        color: "#222",
-        marginTop: 4
-      }}>
-        {lastSession.service}
-      </Text>
+    <Text style={{ fontSize: 14, fontWeight: "900", color: "#222", marginTop: 4 }}>
+      {lastSession?.service ?? "--"}
+      {lastSession?.type ? ` · ${lastSession.type}` : ""}
+    </Text>
 
-      <Text style={{
-        fontSize: 11,
-        color: "#888",
-        marginTop: 2
-      }}>
-        Ended {lastSession.endedAt}
-      </Text>
+    <Text style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+      Ended {lastSession?.endedAt ?? "--"}
+    </Text>
 
-      <View style={{
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 8
-      }}>
-        <View>
-          <Text style={{ fontSize: 14, fontWeight: "900", color: "#27ae60" }}>
-            {lastSession.present}
-          </Text>
-          <Text style={{ fontSize: 11, color: "#777" }}>Present</Text>
-        </View>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#27ae60" }}>
+          {lastSession?.present ?? 0}
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Present</Text>
+      </View>
 
-        <View>
-          <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
-            {lastAbsent}
-          </Text>
-          <Text style={{ fontSize: 11, color: "#777" }}>Absent</Text>
-        </View>
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
+          {Math.max((lastSession?.total ?? 0) - (lastSession?.present ?? 0), 0)}
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Absent</Text>
+      </View>
 
-        <View>
-          <Text style={{ fontSize: 14, fontWeight: "900", color: "#8e44ad" }}>
-            {lastRate}%
-          </Text>
-          <Text style={{ fontSize: 11, color: "#777" }}>Rate</Text>
-        </View>
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#8e44ad" }}>
+          {lastSession?.rate ?? 0}%
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Rate</Text>
       </View>
     </View>
-  )}
+  </View>
+)}
 
 </View>
+
 
 
         {/* ── MODE TABS ── */}
