@@ -200,28 +200,28 @@ const u1 = onSnapshot(
   setPastorModal(true);
 };
 
-const savePastorMessage = async () => {
-  if (!editTitle?.trim()) {
+const savePastorMessage = async (title, message, expiry) => {
+  if (!title?.trim()) {
     Alert.alert("Required", "Heading is required");
     return;
   }
 
-  const data = await AsyncStorage.getItem("activeEntity");
-
-  if (!data) {
-    Alert.alert("Error", "No active church selected");
-    return;
-  }
-
-  const { organizationId, entityId } = JSON.parse(data);
-
-  const updated = {
-    title: editTitle.trim(),
-    message: editMessage?.trim() || "Tap to add a message 🙏",
-    expiry: editExpiry || null
-  };
-
   try {
+    const data = await AsyncStorage.getItem("activeEntity");
+
+    if (!data) {
+      Alert.alert("Error", "No active church selected");
+      return;
+    }
+
+    const { organizationId, entityId } = JSON.parse(data);
+
+    const updated = {
+      title: title.trim(),
+      message: message?.trim() || "Tap to add a message 🙏",
+      expiry: expiry || null
+    };
+
     await setDoc(
       doc(
         db,
@@ -233,9 +233,10 @@ const savePastorMessage = async () => {
         "pastorMessage"
       ),
       updated,
-      { merge: true } // ✅ IMPORTANT
+      { merge: true }
     );
 
+    // ✅ Update UI instantly
     setPastorData(updated);
 
     console.log("✅ Pastor message saved:", updated);
@@ -246,45 +247,6 @@ const savePastorMessage = async () => {
     Alert.alert("Save failed", e.message);
   }
 };
-
-/* ── date / time picker handlers ── */
-const onDateChange = (e, selected) => {
-  setShowDatePicker(false);
-  if (!selected) return;
-
-  const base = editExpiry ? new Date(editExpiry) : new Date();
-  base.setFullYear(
-    selected.getFullYear(),
-    selected.getMonth(),
-    selected.getDate()
-  );
-
-  setPickerDate(base);
-  setEditExpiry(base.toISOString());
-};
-
-const onTimeChange = (e, selected) => {
-  setShowTimePicker(false);
-  if (!selected) return;
-
-  const base = editExpiry ? new Date(editExpiry) : new Date();
-  base.setHours(selected.getHours(), selected.getMinutes());
-
-  setPickerDate(base);
-  setEditExpiry(base.toISOString());
-};
-
-const handleSelectChurch = async (entity) => {
-  setActiveEntity(entity);
-
-  await AsyncStorage.setItem(
-    "activeEntity",
-    JSON.stringify(entity)
-  );
-
-  console.log("✅ Switched to:", entity.name);
-};
-
 
 
  /* ══════════════════════════════════ RENDER ══════════════════════ */
@@ -595,6 +557,23 @@ return (
     </View>
   </View>
 </Modal>
+
+<EditableContentModal
+  visible={pastorModal}
+  onClose={() => setPastorModal(false)}
+
+  titleValue={pastorData?.title}
+  messageValue={pastorData?.message}
+
+  onSave={({ title, message, expiry }) => {
+    savePastorMessage(title, message, expiry);
+  }}
+
+  onDelete={() => {
+    savePastorMessage("", "", null);
+  }}
+/>
+
 
  </SafeAreaView>
 );
