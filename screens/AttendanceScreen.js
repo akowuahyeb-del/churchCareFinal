@@ -23,7 +23,7 @@ import { useCameraPermissions } from "expo-camera";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, deleteDoc,
-  doc, query, where, writeBatch, serverTimestamp, updateDoc
+  doc, query, where, writeBatch, serverTimestamp, updateDoc, onSnapsho
 } from "firebase/firestore";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -262,8 +262,13 @@ useEffect(() => {
 }, [entityId]);
 
 useEffect(() => {
-  if (entityId) loadAttendance();
-}, [dateObj, selectedService, selectedType, entityId]);
+  if (!entityId) return;
+
+  const unsubscribe = loadAttendance();
+
+  return () => unsubscribe && unsubscribe();
+
+}, [organizationId, entityId, dateObj, selectedService, selectedType]);
 
 /* ══════════ OFFLINE ══════════ */
 const loadOfflineQueue = async () => {
@@ -378,26 +383,24 @@ const loadMembers = async () => {
 
 
 // ✅ LOAD ATTENDANCE (NEW STRUCTURE)
-const loadAttendance = async () => {
-  if (!isOnline || !organizationId || !entityId) return;
+const loadAttendance = () => {
+  if (!organizationId || !entityId) return;
 
-  try {
-    const q = query(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "attendance"
-      ),
-      where("date", "==", today),
-      where("service", "==", selectedService),
-      where("type", "==", selectedType)
-    );
+  const q = query(
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "attendance"
+    ),
+    where("date", "==", today),
+    where("service", "==", selectedService),
+    where("type", "==", selectedType)
+  );
 
-    const snap = await getDocs(q);
-
+  return onSnapshot(q, (snap) => {
     let map = {};
     let present = 0;
 
@@ -416,11 +419,9 @@ const loadAttendance = async () => {
 
     setAttendance(map);
     setPresentCount(present);
-
-  } catch (e) {
-    console.log(e);
-  }
+  });
 };
+
 
 /* TRANSFER */
 const transferMember = async (member, newEntityId) => {
