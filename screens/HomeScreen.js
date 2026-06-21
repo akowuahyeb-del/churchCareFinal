@@ -94,6 +94,32 @@ export default function HomeScreen() {
 
   /*useEffect*/
 
+useEffect(() => {
+  const loadEntities = async () => {
+    try {
+      const storedEntities = await AsyncStorage.getItem("userEntities");
+      const storedActive = await AsyncStorage.getItem("activeEntity");
+
+      if (storedEntities) {
+        setEntities(JSON.parse(storedEntities));
+      }
+
+      if (storedActive) {
+        const parsed = JSON.parse(storedActive);
+        console.log("✅ Loaded activeEntity:", parsed);
+        setActiveEntity(parsed);
+      } else {
+        console.log("❌ No activeEntity found");
+      }
+
+    } catch (e) {
+      console.log("❌ Load entity error:", e);
+    }
+  };
+
+  loadEntities();
+}, []);
+
 
 useEffect(() => {
   if (!activeEntity) return;
