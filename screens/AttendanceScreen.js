@@ -53,6 +53,7 @@ export default function AttendanceScreen({ navigation, route }) {
 
   const [targetEntities, setTargetEntities] = useState([]);
   const [activeSession, setActiveSessionState] = useState(null);
+  const [lastSession, setLastSession] = useState(null);
 
   /* ── MODE ── */
   const [mode, setMode] = useState("manual");
@@ -571,6 +572,12 @@ const endSession = async () => {
     "Service Ended",
     "Attendance is now locked."
   );
+// ✅ SAVE LAST SESSION INFO
+setLastSession({
+  service: selectedService,
+  present: presentCount,
+  endedAt: new Date().toLocaleTimeString()
+});
 
   // ✅ RESET FOR NEXT SESSION
   setSessionId(null);
@@ -1331,6 +1338,88 @@ const attendanceRate =
           <StatCard icon="people"           label="Total"   value={members.length}     color="#2980b9" bg="#e8f4fd" />
           <StatCard icon="trending-up"      label="Rate"    value={`${attendanceRate}%`} color="#8e44ad" bg="#f3e8fd" />
         </View>
+
+{/* ✅ LAST SESSION DISPLAY */}
+{lastSession && (
+  <View style={{
+    backgroundColor: "#fff",
+    marginHorizontal: 10,
+    marginTop: 10,
+    borderRadius: 14,
+    padding: 14,
+    elevation: 2
+  }}>
+    {/* Header */}
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <Text style={{
+        fontSize: 13,
+        fontWeight: "800",
+        color: "#4B3F72"
+      }}>
+        Last Session
+      </Text>
+
+      <View style={{
+        backgroundColor: "#f1f1f1",
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6
+      }}>
+        <Text style={{ fontSize: 10, color: "#777", fontWeight: "700" }}>
+          Completed
+        </Text>
+      </View>
+    </View>
+
+    {/* Main Info */}
+    <Text style={{
+      marginTop: 6,
+      fontSize: 15,
+      fontWeight: "900",
+      color: "#222"
+    }}>
+      {lastSession.service}
+    </Text>
+
+    <Text style={{
+      fontSize: 12,
+      color: "#888",
+      marginTop: 2
+    }}>
+      Ended {lastSession.endedAt}
+    </Text>
+
+    {/* Stats Row */}
+    <View style={{
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 10
+    }}>
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#27ae60" }}>
+          {lastSession.present}
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Present</Text>
+      </View>
+
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
+          {lastSession.absent}
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Absent</Text>
+      </View>
+
+      <View>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: "#8e44ad" }}>
+          {lastSession.rate}%
+        </Text>
+        <Text style={{ fontSize: 11, color: "#777" }}>Rate</Text>
+      </View>
+    </View>
+  </View>
+)}
+
+
 
         {/* ── MODE TABS ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}
