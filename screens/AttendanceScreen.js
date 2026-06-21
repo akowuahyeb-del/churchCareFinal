@@ -174,9 +174,16 @@ useEffect(() => {
 useEffect(() => {
   const loadSession = async () => {
     const session = await AsyncStorage.getItem("activeSession");
+    const status = await AsyncStorage.getItem("sessionStatus");
+    const start = await AsyncStorage.getItem("sessionStartTime");
+
     if (session) {
       setActiveSessionState(session);
+      setSessionId(session);
     }
+
+    if (status) setSessionStatus(status);
+    if (start) setStartTime(start);
   };
 
   loadSession();
@@ -482,6 +489,7 @@ const isSessionLocked = sessionStatus === "ended";
 
 
 // ✅ START SESSION (ACTIVE ENTITY)
+
 const startSession = async () => {
   if (!startTime) {
     Alert.alert("Required", "Service start time is required.");
@@ -511,32 +519,34 @@ const startSession = async () => {
         service: selectedService,
         type: selectedType,
         event: selectedEvent,
-
         entityId,
         organizationId,
-
         startTime,
         endTime,
         status: "open",
-
         createdAt: serverTimestamp()
       }
     );
 
-    // ✅ SAVE ACTIVE SESSION FOR QR SYSTEM
-await AsyncStorage.setItem("activeSession", ref.id);
-setActiveSessionState(ref.id);
+    // ✅ SAVE ACTIVE SESSION
+    setSessionId(ref.id);
+    setActiveSessionState(ref.id);
+
+    await AsyncStorage.setItem("activeSession", ref.id);
+    await AsyncStorage.setItem("sessionStatus", "open");
+    await AsyncStorage.setItem("sessionStartTime", startTime);
 
   } catch (e) {
     console.log(e);
   }
 };
 
-
-// ✅ END SESSION
+/*END SESSION*/
 const endSession = async () => {
   setSessionStatus("ended");
   setEndServiceModal(false);
+
+  await AsyncStorage.setItem("sessionStatus", "ended");
 
   if (sessionId && organizationId && entityId) {
     await updateDoc(
@@ -559,10 +569,21 @@ const endSession = async () => {
 
   Alert.alert(
     "Service Ended",
-    "Attendance is now locked. Admin can unlock if needed."
+    "Attendance is now locked."
   );
-};
 
+  // ✅ RESET FOR NEXT SESSION
+  setSessionId(null);
+  setStartTime("");
+  setEndTime("");
+  setSessionStatus("open");
+
+  // ✅ REMOVE OLD SESSION
+  await AsyncStorage.removeItem("activeSession");
+
+  // ✅ OPEN NEW SESSION SETUP
+  setSessionModal(true);
+};
 
 // ✅ EXTEND SESSION
 const extendSession = async () => {
