@@ -12,6 +12,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function PreacherModal({
   visible,
@@ -28,7 +29,9 @@ export default function PreacherModal({
   const [date, setDate] = useState(null);
   const [expiry, setExpiry] = useState(null);
 
-  // ✅ LOAD DATA (EDIT MODE)
+  const [session, setSession] = useState("");
+
+  // ✅ LOAD EDIT DATA
   useEffect(() => {
     setName(initialData?.name || "");
     setTopic(initialData?.topic || "");
@@ -36,46 +39,40 @@ export default function PreacherModal({
     setPhoto(initialData?.photo || null);
     setDate(initialData?.date || null);
     setExpiry(initialData?.expiry || null);
+    setSession(initialData?.session || "");
   }, [initialData]);
 
-  // ✅ SIMPLE STABLE DATE PICKER (NO MORE BUGS)
+  // ✅ QUICK DATE PICKER
   const pickDate = (type) => {
     const now = new Date();
-
     const tomorrow = new Date();
     tomorrow.setDate(now.getDate() + 1);
 
-    Alert.alert(
-      "Select Date",
-      "Quick options",
-      [
-        {
-          text: "Today",
-          onPress: () => {
-            if (type === "date") setDate(now.toISOString());
-            else setExpiry(now.toISOString());
-          }
-        },
-        {
-          text: "Tomorrow",
-          onPress: () => {
-            if (type === "date") setDate(tomorrow.toISOString());
-            else setExpiry(tomorrow.toISOString());
-          }
-        },
-        {
-          text: "Clear",
-          onPress: () => {
-            if (type === "date") setDate(null);
-            else setExpiry(null);
-          }
-        },
-        {
-          text: "Cancel",
-          style: "cancel"
+    Alert.alert("Select Date", "Quick options", [
+      {
+        text: "Today",
+        onPress: () => {
+          type === "date"
+            ? setDate(now.toISOString())
+            : setExpiry(now.toISOString());
         }
-      ]
-    );
+      },
+      {
+        text: "Tomorrow",
+        onPress: () => {
+          type === "date"
+            ? setDate(tomorrow.toISOString())
+            : setExpiry(tomorrow.toISOString());
+        }
+      },
+      {
+        text: "Clear",
+        onPress: () => {
+          type === "date" ? setDate(null) : setExpiry(null);
+        }
+      },
+      { text: "Cancel", style: "cancel" }
+    ]);
   };
 
   // ✅ IMAGE UPLOAD
@@ -106,7 +103,6 @@ export default function PreacherModal({
 
       const url = await getDownloadURL(storageRef);
       setPhoto(url);
-
     } catch (err) {
       console.log("Upload error:", err);
     }
@@ -114,20 +110,47 @@ export default function PreacherModal({
     setUploading(false);
   };
 
+  // ✅ SAVE HANDLER
+  const handleSave = () => {
+    if (!name.trim() || !topic.trim()) {
+      Alert.alert("Required", "Name and topic are required");
+      return;
+    }
+
+    onSave({
+      id: initialData?.id || Date.now().toString(),
+      name,
+      topic,
+      bio,
+      photo,
+      date,
+      expiry,
+      session
+    });
+
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade">
-
       <View style={styles.overlay}>
         <View style={styles.box}>
 
-          <Text style={styles.title}>Preacher</Text>
+          <Text style={styles.title}>
+            {initialData?.id ? "Edit Preacher" : "New Preacher"}
+          </Text>
 
           {/* ✅ IMAGE */}
           <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
             {photo ? (
               <Image source={{ uri: photo }} style={styles.image} />
             ) : (
-              <Text>{uploading ? "Uploading..." : "Upload Photo"}</Text>
+              <View style={styles.placeholder}>
+                <Ionicons name="camera-outline" size={20} color="#666" />
+                <Text style={{ fontSize: 11, marginTop: 4 }}>
+                  {uploading ? "Uploading..." : "Upload Photo"}
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
 
@@ -139,13 +162,35 @@ export default function PreacherModal({
             onChangeText={setName}
           />
 
-          {/* ✅ SERMON */}
+          {/* ✅ TOPIC */}
           <TextInput
             placeholder="Sermon Topic"
             style={styles.input}
             value={topic}
             onChangeText={setTopic}
           />
+
+          {/* ✅ SESSION */}
+          <Text style={styles.label}>Session</Text>
+          <View style={styles.sessionRow}>
+            {["First Service", "Second Service", "Youth", "Special"].map(s => (
+              <TouchableOpacity
+                key={s}
+                style={[
+                  styles.sessionChip,
+                  session === s && styles.sessionChipActive
+                ]}
+                onPress={() => setSession(s)}
+              >
+                <Text style={[
+                  styles.sessionText,
+                  session === s && styles.sessionTextActive
+                ]}>
+                  {s}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {/* ✅ BIO */}
           <TextInput
@@ -156,15 +201,13 @@ export default function PreacherModal({
             onChangeText={setBio}
           />
 
-          {/* ✅ SERVICE DATE */}
+          {/* ✅ DATE */}
           <TouchableOpacity
             style={styles.input}
             onPress={() => pickDate("date")}
           >
             <Text>
-              {date
-                ? new Date(date).toLocaleDateString()
-                : "Set Service Date"}
+              {date ? new Date(date).toLocaleDateString() : "Set Service Date"}
             </Text>
           </TouchableOpacity>
 
@@ -174,46 +217,39 @@ export default function PreacherModal({
             onPress={() => pickDate("expiry")}
           >
             <Text>
-              {expiry
-                ? new Date(expiry).toLocaleDateString()
-                : "Set Expiry"}
+              {expiry ? new Date(expiry).toLocaleDateString() : "Set Expiry"}
             </Text>
           </TouchableOpacity>
 
           {/* ✅ SAVE */}
-          <TouchableOpacity
-            style={styles.save}
-            onPress={() => {
-              onSave({ name, topic, bio, photo, date, expiry });
-              onClose();
-            }}
-          >
+          <TouchableOpacity style={styles.save} onPress={handleSave}>
             <Text style={styles.white}>Save</Text>
           </TouchableOpacity>
 
           {/* ✅ DELETE */}
-          <TouchableOpacity
-            style={styles.delete}
-            onPress={() => {
-              onSave({ delete: true });
-              onClose();
-            }}
-          >
-            <Text style={styles.white}>Delete</Text>
-          </TouchableOpacity>
+          {initialData?.id && (
+            <TouchableOpacity
+              style={styles.delete}
+              onPress={() => {
+                onSave({ id: initialData.id, delete: true });
+                onClose();
+              }}
+            >
+              <Text style={styles.white}>Delete</Text>
+            </TouchableOpacity>
+          )}
 
           {/* ✅ CANCEL */}
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.cancel}>Cancel</Text>
           </TouchableOpacity>
-
         </View>
       </View>
-
     </Modal>
   );
 }
 
+/* ✅ STYLES */
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "#0006", justifyContent: "center" },
 
@@ -239,18 +275,57 @@ const styles = StyleSheet.create({
   },
 
   imageBox: {
-    height: 90,
-    backgroundColor: "#eee",
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12
+    height: 100,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+    backgroundColor: "#eee"
   },
 
   image: {
     width: "100%",
-    height: "100%",
-    borderRadius: 10
+    height: "100%"
+  },
+
+  placeholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#777",
+    marginBottom: 5
+  },
+
+  sessionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10
+  },
+
+  sessionChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: "#eee"
+  },
+
+  sessionChipActive: {
+    backgroundColor: "#4B3F72"
+  },
+
+  sessionText: {
+    fontSize: 11,
+    color: "#555",
+    fontWeight: "600"
+  },
+
+  sessionTextActive: {
+    color: "#fff"
   },
 
   save: {
