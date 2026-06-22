@@ -704,22 +704,26 @@ const toggleFeatured = async (event) => {
   animationType="slide"
   statusBarTranslucent
 >
-  <SafeAreaView style={{ flex: 1, backgroundColor: "#4B3F72" }}>
-    <AppHeader
-  title={editingId ? "Edit Event" : "New Event"}
-  onBack={closeForm}
-  actions={[
-    {
-      label: saving ? "Saving…" : "Save",
-      onPress: handleSave,
-    },
-  ]}
-/>
-  
+ <SafeAreaView style={{ flex: 1, backgroundColor: "#4B3F72" }}>
 
+  <AppHeader
+    title={editingId ? "Edit Event" : "New Event"}
+    onBack={closeForm}
+    actions={[
+      {
+        label: saving ? "Saving…" : "Save",
+        onPress: handleSave,
+      },
+    ]}
+  />
 
-          <ScrollView style={styles.formBody} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-
+  <ScrollView
+    style={styles.formBody}
+    contentContainerStyle={{ paddingBottom: 80 }}
+    showsVerticalScrollIndicator={false}
+  >
+           
+           
             {/* Cover image */}
             <TouchableOpacity style={styles.coverUpload} onPress={pickCover} disabled={uploading}>
               {form.coverImage
