@@ -13,12 +13,13 @@ export default function EventsTabs({
   const [activeTab, setActiveTab] = useState("events");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [localPreachers, setLocalPreachers] = useState(preachers || []);
 
   // ✅ ACTIVE SESSION (for testing)
   const [activeSession, setActiveSession] = useState("First Service");
 
   // ✅ PREACHERS AVAILABLE FOR THE CURRENT SESSION ONLY
-  const sessionPreachers = preachers.filter(p => p.session === activeSession);
+  const sessionPreachers = (p => p.session === activeSession);
 
   return (
     <View style={styles.container}>
@@ -100,7 +101,7 @@ export default function EventsTabs({
             {program
               .filter(item => item.session === activeSession)
               .map(item => {
-                const linkedPreacher = preachers.find(
+                const linkedPreacher = localPreachers.find(
                   p => p.id === item.preacherId
                 );
 
