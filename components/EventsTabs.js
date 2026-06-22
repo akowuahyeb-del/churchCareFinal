@@ -133,17 +133,18 @@ export default function EventsTabs({
     let updated;
 
     // ✅ EDIT existing item
-    if (selectedItem?.id && program.some(p => p.id === selectedItem.id)) {
-      updated = program.map(p =>
-        p.id === selectedItem.id
-          ? {
-              id: selectedItem.id,
-              title: selectedItem.title || "",
-              date: selectedItem.date || null,
-            }
-          : p
-      );
-    } 
+if (selectedItem?.id && program.some(p => p.id === selectedItem.id)) {
+  updated = program.map(p =>
+    p.id === selectedItem.id
+      ? {
+          id: selectedItem.id,                        // ✅ FIXED
+          title: selectedItem.title || "",
+          date: selectedItem.date || null,
+          session: selectedItem.session || ""        // ✅ session-aware
+        }
+      : p
+  );
+}
     // ✅ ADD new item
     else {
       updated = [
