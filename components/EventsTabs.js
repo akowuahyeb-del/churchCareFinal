@@ -181,25 +181,26 @@ export default function EventsTabs({
           if (!selectedItem) return;
 
           // ✅ ALWAYS BUILD CLEAN ITEM (IMPORTANT)
-          const cleanItem = {
-            id: selectedItem.id || Date.now().toString(),
-            title: selectedItem.title || "",
-            date: selectedItem.date || null,
-            session: selectedItem.session || activeSession,
-            notes: selectedItem.notes || "",
-            preacherId: selectedItem.preacherId || null, // ✅ REAL LINK TO PREACHER
-            time: selectedItem.time || ""
-          };
+         const cleanItem = {
+  id: item.id || Date.now().toString(),
+  title: item.title || "",
+  date: item.date || null,
+  session: item.session || activeSession,
+  notes: item.notes || "",
+  preacherId: item.preacherId || null,
+  time: item.time || ""
+}; 
 
           let updated;
 
           // ✅ EDIT EXISTING
           if (
             selectedItem?.id &&
-            program.some(p => p.id === selectedItem.id)
+            program.some(p => p.id === item.id)
           ) {
             updated = program.map(p =>
-              p.id === selectedItem.id ? cleanItem : p
+              p.id === item.id ? cleanItem : p
+
             );
           }
           // ✅ ADD NEW

@@ -79,55 +79,59 @@ export default function StableEventModal({
               }}
             />
           )}
+{/* ✅ LINKED PREACHER (PROGRAM ITEMS ONLY) */}
+{requirePreacher && (
+  <View style={styles.preacherSection}>
+    <Text style={styles.label}>Preacher</Text>
 
-          {/* ✅ LINKED PREACHER (PROGRAM ITEMS ONLY) */}
-          {requirePreacher && (
-            <View style={styles.preacherSection}>
-              <Text style={styles.label}>Preacher</Text>
+    {!Array.isArray(preachers) || preachers.length === 0 ? (
+      <Text style={styles.emptyText}>
+        No preachers added for this session yet
+      </Text>
+    ) : (
+      preachers.map((p) => {
+        const active = data.preacherId === p.id;
 
-              {preachers.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  No preachers added for this session yet
-                </Text>
-              ) : (
-                preachers.map((p) => {
-                  const active = data.preacherId === p.id;
-                  return (
-                    <TouchableOpacity
-                      key={p.id}
-                      style={[
-                        styles.preacherRow,
-                        active && styles.preacherRowActive
-                      ]}
-                      onPress={() => {
-                        setData({ ...data, preacherId: p.id });
-                        setError("");
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.preacherName,
-                          active && styles.preacherTextActive
-                        ]}
-                      >
-                        {p.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.preacherTopic,
-                          active && styles.preacherTextActive
-                        ]}
-                      >
-                        {p.topic}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
+        return (
+          <TouchableOpacity
+            key={p.id}
+            style={[
+              styles.preacherRow,
+              active && styles.preacherRowActive
+            ]}
+            onPress={() => {
+              setData({ ...data, preacherId: p.id });
+              setError("");
+            }}
+          >
+            <Text
+              style={[
+                styles.preacherName,
+                active && styles.preacherTextActive
+              ]}
+            >
+              {p.name}
+            </Text>
 
-              {!!error && <Text style={styles.errorText}>{error}</Text>}
-            </View>
-          )}
+            <Text
+              style={[
+                styles.preacherTopic,
+                active && styles.preacherTextActive
+              ]}
+            >
+              {p.topic}
+            </Text>
+          </TouchableOpacity>
+        );
+      })
+    )}
+
+    {!!error && (
+      <Text style={styles.errorText}>{error}</Text>
+    )}
+  </View>
+)}
+
 
           {/* BUTTONS */}
           <View style={styles.row}>
