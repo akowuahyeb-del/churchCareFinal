@@ -3,12 +3,16 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import AppHeader from "../components/AppHeader";
+
 import { db } from "../firebase";
 import {
   collection, getDocs, query, where, updateDoc, doc
 } from "firebase/firestore";
 
 export default function TransferRequestsScreen({ route }) {
+  const navigation = useNavigation();
   const { churchId } = route.params || {};
 
   const [requests, setRequests] = useState([]);
@@ -68,25 +72,56 @@ export default function TransferRequestsScreen({ route }) {
   };
 
   return (
+  <SafeAreaView style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
+
+    {/* ✅ HEADER */}
+    <AppHeader
+      title="Transfer Requests"
+      subtitle="Manage member transfers"
+      actions={[
+        {
+          icon: "arrow-back-outline",
+          onPress: () => route?.navigation?.goBack?.() || console.log("no nav"),
+        },
+      ]}
+    />
+
+    {/* ✅ CONTENT */}
     <FlatList
       data={requests}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={{ padding: 12 }}
+      contentContainerStyle={{
+        paddingHorizontal: 14,
+        paddingTop: 10,
+        paddingBottom: 40,
+      }}
+      showsVerticalScrollIndicator={false}
+
       ListEmptyComponent={
-        <Text style={{ textAlign: "center", marginTop: 40 }}>
+        <Text
+          style={{
+            textAlign: "center",
+            marginTop: 40,
+            color: "#777",
+          }}
+        >
           No pending requests
         </Text>
       }
+
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Text style={styles.name}>{item.memberName}</Text>
+
+          <Text style={styles.name}>
+            {item.memberName || "Unnamed Member"}
+          </Text>
 
           <Text style={styles.meta}>
             {item.fromChurchId} → {item.toChurchId}
           </Text>
 
           <Text style={styles.reason}>
-            {item.reason}
+            {item.reason || "No reason provided"}
           </Text>
 
           <View style={styles.actions}>
@@ -108,13 +143,21 @@ export default function TransferRequestsScreen({ route }) {
             </TouchableOpacity>
 
           </View>
+
         </View>
       )}
     />
-  );
-}
+
+  </SafeAreaView>
+);}
 
 const styles = StyleSheet.create({
+  empty: {
+    textAlign: "center",
+    marginTop: 40,
+    color: "#777",
+  },
+
   card: {
     backgroundColor: "#fff",
     padding: 15,
@@ -122,25 +165,30 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 2,
   },
+
   name: {
     fontSize: 16,
     fontWeight: "700",
   },
+
   meta: {
     fontSize: 12,
     color: "#888",
     marginTop: 4,
   },
+
   reason: {
     fontSize: 13,
     marginTop: 6,
     color: "#555",
   },
+
   actions: {
     flexDirection: "row",
     marginTop: 10,
     gap: 10,
   },
+
   approveBtn: {
     flex: 1,
     flexDirection: "row",
@@ -150,6 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 6,
   },
+
   rejectBtn: {
     flex: 1,
     flexDirection: "row",
@@ -159,6 +208,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 6,
   },
+
   btnText: {
     color: "#fff",
     fontWeight: "700",

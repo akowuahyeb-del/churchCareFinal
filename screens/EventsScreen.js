@@ -89,11 +89,11 @@ const emptyForm = () => ({
 
 export default function EventsScreen() {
   const navigation = useNavigation();
-  const entity = activeEntity || {};
-const { organizationId, entityId } = entity;
-
 
   const [activeEntity, setActiveEntity] = useState(null);
+
+  const organizationId = activeEntity?.organizationId;
+  const entityId = activeEntity?.entityId;
 
 
 useEffect(() => {
@@ -206,9 +206,15 @@ useEffect(() => {
   // ── Save / update ────────────────────────────────────────────
 const handleSave = async () => {
   if (!form.title.trim()) {
-    Alert.alert("Event title is required");
-    return;
-  }
+  Alert.alert("Event title is required");
+  return;
+}
+
+if (!form.startDate) {
+  Alert.alert("Start date required", "Please select a start date and time.");
+  return;
+}
+
 
   if (!organizationId || !entityId) {
     Alert.alert("No active church", "Please select a church first");
@@ -343,12 +349,26 @@ const toggleFeatured = async (event) => {
 };
 
   // ── Open form ────────────────────────────────────────────────
-  const openCreate = () => {
-    if (!canDo("deacon")) { Alert.alert("Access denied", "You do not have permission to create events."); return; }
-    setEditingId(null);
-    setForm(emptyForm());
-    setFormModal(true);
-  };
+ const openCreate = () => {
+  if (!activeEntity) {
+    Alert.alert("Please wait", "Church data still loading.");
+    return;
+  }
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  if (!canDo("deacon")) {
+    Alert.alert("Access denied", "You do not have permission to create events.");
+    return;
+  }
+
+  setEditingId(null);
+  setForm(emptyForm());
+  setFormModal(true);
+};
 
   const openEdit = (event) => {
     if (!canDo("deacon")) { Alert.alert("Access denied"); return; }
@@ -396,30 +416,33 @@ const toggleFeatured = async (event) => {
                       RENDER
   ══════════════════════════════════════════════ */
   return (
-    <SafeAreaView style={styles.safe}>
+   <SafeAreaView style={styles.safe}>
   <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-  <AppHeader
-    title="Events"
-    subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
-    onBack={() => navigation.goBack()}
-    actions={[
-      {
-        icon: "search-outline",
-        onPress: () => setShowSearch(p => !p),
-      },
-      ...VIEWS.map(v => ({
-        icon: v.icon,
-        onPress: () => setViewMode(v.key),
-      })),
-      ...(canDo("deacon")
-        ? [{
-            icon: "add",
-            onPress: openCreate,
-          }]
-        : [])
-    ]}
-  />
+  <View style={{ paddingTop: Platform.OS === "android" ? 30 : 10 }}>
+    <AppHeader
+      title="Events"
+      subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
+      onBack={() => navigation.goBack()}
+      actions={[
+        {
+          icon: "search-outline",
+          onPress: () => setShowSearch(p => !p),
+        },
+        ...VIEWS.map(v => ({
+          icon: v.icon,
+          onPress: () => setViewMode(v.key),
+        })),
+        ...(canDo("deacon")
+          ? [{
+              icon: "add",
+              onPress: openCreate,
+            }]
+          : [])
+      ]}
+    />
+  </View>
+
 
 
       {/* ── SEARCH BAR ── */}
@@ -673,15 +696,18 @@ const toggleFeatured = async (event) => {
       {/* ══ CREATE / EDIT FORM MODAL ══ */}
       <Modal visible={formModal} animationType="slide">
         <SafeAreaView style={styles.formSafe}>
-          <View style={styles.formHeader}>
-            <TouchableOpacity style={styles.backBtn} onPress={closeForm}>
-              <Ionicons name="close" size={20} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{editingId ? "Edit Event" : "New Event"}</Text>
-            <TouchableOpacity style={styles.saveFormBtn} onPress={handleSave} disabled={saving}>
-              <Text style={styles.saveFormBtnText}>{saving ? "Saving…" : "Save"}</Text>
-            </TouchableOpacity>
-          </View>
+          <View style={{ paddingTop: Platform.OS === "android" ? 30 : 10 }}>
+  <AppHeader
+    title={editingId ? "Edit Event" : "New Event"}
+    onBack={closeForm}
+    actions={[
+      {
+        label: saving ? "Saving…" : "Save",
+        onPress: handleSave,
+      },
+    ]}
+  />
+</View>
 
           <ScrollView style={styles.formBody} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
 
@@ -989,12 +1015,15 @@ const styles = StyleSheet.create({
   closeDetailText: { color: "#888", fontSize: 13 },
 
   /* Form */
-  formHeader: {
+ formHeader: {
   flexDirection: "row",
   alignItems: "center",
   backgroundColor: "#4B3F72",
   paddingHorizontal: 14,
-  paddingTop: Platform.OS === "android" ? 28 : 16,   
+
+  // ✅ FIX HERE (increase spacing)
+  paddingTop: Platform.OS === "android" ? 40 : 24,
+
   paddingBottom: 12,
   gap: 10,
 },
