@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  SafeAreaView, StatusBar, Modal, TextInput, Alert,
+  StatusBar, Modal, TextInput, Alert,
   Dimensions, Platform, Image, FlatList
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 
 const { width: W } = Dimensions.get("window");
@@ -415,11 +416,17 @@ const toggleFeatured = async (event) => {
   /* ══════════════════════════════════════════════
                       RENDER
   ══════════════════════════════════════════════ */
-  return (
-   <SafeAreaView style={styles.safe}>
-  <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
+ return (
+  <SafeAreaView
+    edges={['top']}
+    style={[styles.safe, { backgroundColor: "#4B3F72" }]}
+  >
+    <StatusBar
+      barStyle="light-content"
+      translucent={true}
+      backgroundColor="transparent"
+    />
 
-  <View style={{ paddingTop: Platform.OS === "android" ? 30 : 10 }}>
     <AppHeader
       title="Events"
       subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
@@ -441,8 +448,6 @@ const toggleFeatured = async (event) => {
           : [])
       ]}
     />
-  </View>
-
 
 
       {/* ── SEARCH BAR ── */}
@@ -694,9 +699,13 @@ const toggleFeatured = async (event) => {
       </Modal>
 
       {/* ══ CREATE / EDIT FORM MODAL ══ */}
-      <Modal visible={formModal} animationType="slide">
-        <SafeAreaView style={styles.formSafe}>
-          <View style={{ paddingTop: Platform.OS === "android" ? 30 : 10 }}>
+<Modal
+  visible={formModal}
+  animationType="slide"
+  statusBarTranslucent
+>
+  <SafeAreaView style={{ flex: 1, backgroundColor: "#4B3F72" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
   <AppHeader
     title={editingId ? "Edit Event" : "New Event"}
     onBack={closeForm}
