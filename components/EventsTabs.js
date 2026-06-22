@@ -122,77 +122,54 @@ export default function EventsTabs({
 
       {/* ✅ ✅ STABLE MODAL HERE (IMPORTANT POSITION) */}
       <StableEventModal
-        visible={modalVisible}
-        data={selectedItem || {}}
-        setData={setSelectedItem}
-        onClose={() => setModalVisible(false)}
+  visible={modalVisible}
+  data={selectedItem || {}}
+  setData={setSelectedItem}
+  onClose={() => setModalVisible(false)}
 
-        onSave={async () => {
-  if (!selectedItem || !setProgram) return;
+  onSave={async () => {
+    if (!selectedItem || !setProgram) return;
 
-  let updated;
+    let updated;
 
-  setProgram(prev => {
-    updated = prev.some(p => p.id === selectedItem.id)
-      ? prev.map(p =>
-          p.id === selectedItem.id
-            ? {
-                id: selectedItem.id,
-                title: selectedItem.title || "",   // ✅ FIX
-                date: selectedItem.date || null    // ✅ FIX
-              }
-            : p
-        )
-      : [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            title: selectedItem.title || "",   // ✅ FIX
-            date: selectedItem.date || null    // ✅ FIX
-          }
-        ];
+    // ✅ EDIT existing item
+    if (selectedItem?.id && program.some(p => p.id === selectedItem.id)) {
+      updated = program.map(p =>
+        p.id === selectedItem.id
+          ? {
+              id: selectedItem.id,
+              title: selectedItem.title || "",
+              date: selectedItem.date || null,
+            }
+          : p
+      );
+    } 
+    // ✅ ADD new item
+    else {
+      updated = [
+        ...program,
+        {
+          id: Date.now().toString(),
+          title: selectedItem.title || "",
+          date: selectedItem.date || null,
+        },
+      ];
+    }
 
-    return updated;
-  });
+    setProgram(updated);        // ✅ goes to HomeScreen → Firestore
+    setModalVisible(false);     // ✅ CLOSE modal
+  }}
 
-  // ✅ FINAL CLEANED DATA
-  const cleaned = updated.map(item => ({
-    id: item.id,
-    title: item.title || "",
-    date: item.date || null
-  }));
+  onDelete={async () => {
+    if (!selectedItem || !setProgram) return;
 
-  await setDoc(doc(db, "settings", "programList"), {
-    items: cleaned
-  });
+    const updated = program.filter(p => p.id !== selectedItem.id);
 
-  setModalVisible(false);
-}}
+    setProgram(updated);        // ✅ persist delete
+    setModalVisible(false);     // ✅ CLOSE modal
+  }}
+/>
 
-
-onDelete={async () => {
-  let updated;
-
-  setProgram(prev => {
-    updated = prev.filter(p => p.id !== selectedItem.id);
-    return updated;
-  });
-
-  const cleaned = updated.map(item => ({
-    id: item.id,
-    title: item.title || "",
-    date: item.date || null
-  }));
-
-  await setDoc(doc(db, "settings", "programList"), {
-    items: cleaned
-  });
-
-  setModalVisible(false);
-}}
-
-        
-      />
 
     </View>
   );

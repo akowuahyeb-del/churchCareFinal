@@ -299,6 +299,50 @@ const handleUpload = async () => {
   }
 };
 
+const saveProgramToFirestore = async (updatedProgram) => {
+  try {
+    if (!activeEntity) return;
+
+    const { organizationId, entityId } = activeEntity;
+
+    // ✅ If a function is passed, resolve it first
+    const resolvedProgram =
+      typeof updatedProgram === "function"
+        ? updatedProgram(program)
+        : updatedProgram;
+
+    // ✅ Clean every item (remove functions completely)
+    const cleanProgram = resolvedProgram.map(item => ({
+      title: item.title || "",
+      time: item.time || "",
+      preacher: typeof item.preacher === "string" ? item.preacher : "",
+      notes: item.notes || "",
+    }));
+
+    await setDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "settings",
+        "programList"
+      ),
+      { items: cleanProgram },
+      { merge: true }
+    );
+
+    setProgram(cleanProgram);
+
+    console.log("✅ Program saved clean:", cleanProgram);
+
+  } catch (e) {
+    Alert.alert("Save failed", e.message);
+  }
+};
+
+
 /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
   <SafeAreaView style={styles.safe}>
@@ -471,7 +515,7 @@ return (
       events={upcomingEvents}
       program={program}
       preachers={preachers}
-      setProgram={setProgram}
+      setProgram={saveProgramToFirestore}
       onAddPreacher={() => {
         setEditingPreacher(null);
         setPreacherModal(true);
