@@ -1,23 +1,24 @@
+// EventsTabs.js
 import React, { useState } from "react";
-import {
-  View, Text, TouchableOpacity, StyleSheet
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import StableEventModal from "../components/StableEventModal";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";   
 
 export default function EventsTabs({
   events,
   program,
   preachers,
-  setProgram     // ✅ important (comes from HomeScreen)
+  setProgram
 }) {
-
   const [activeTab, setActiveTab] = useState("events");
-
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // ✅ ACTIVE SESSION (for testing)
+  const [activeSession, setActiveSession] = useState("First Service");
+
+  // ✅ PREACHERS AVAILABLE FOR THE CURRENT SESSION ONLY
+  const sessionPreachers = preachers.filter(p => p.session === activeSession);
 
   return (
     <View style={styles.container}>
@@ -57,32 +58,31 @@ export default function EventsTabs({
       {/* ✅ CONTENT */}
       <View style={{ marginTop: 10 }}>
 
-        {/* ── UPCOMING EVENTS ── */}
+        {/* ── EVENTS ── */}
         {activeTab === "events" && (
           <>
             {events.map(ev => (
-              <TouchableOpacity
-                key={ev.id}
-                style={styles.card}
-                onPress={() => {
-                  setSelectedItem({ id: ev.id, title: ev.title, date: ev.date });
-                  setModalVisible(true);
-                }}
-              >
+              <View key={ev.id} style={styles.card}>
                 <Text style={styles.title}>{ev.title}</Text>
                 <Text style={styles.sub}>{ev.date}</Text>
-              </TouchableOpacity>
+              </View>
             ))}
           </>
         )}
 
-        {/* ── PROGRAM ── */}
+        {/* ── PROGRAM (SESSION FILTERED + PREACHER LINKED) ── */}
         {activeTab === "program" && (
           <>
+            {/* ✅ ADD BUTTON */}
             <TouchableOpacity
               style={styles.card}
               onPress={() => {
-                setSelectedItem({ title: "", date: null });
+                setSelectedItem({
+                  title: "",
+                  date: null,
+                  session: activeSession,
+                  preacherId: null
+                });
                 setModalVisible(true);
               }}
             >
@@ -91,86 +91,130 @@ export default function EventsTabs({
               </Text>
             </TouchableOpacity>
 
-            {program.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                onPress={() => {
-                  setSelectedItem(item);
-                  setModalVisible(true);
-                }}
-              >
-                <Text style={styles.title}>{item.title || item.item}</Text>
-              </TouchableOpacity>
-            ))}
+            {/* ✅ ACTIVE SESSION */}
+            <Text style={styles.sessionHeader}>
+              {activeSession}
+            </Text>
+
+            {/* ✅ FILTERED PROGRAM */}
+            {program
+              .filter(item => item.session === activeSession)
+              .map(item => {
+                const linkedPreacher = preachers.find(
+                  p => p.id === item.preacherId
+                );
+
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.card}
+                    onPress={() => {
+                      setSelectedItem(item);
+                      setModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.title}>{item.title}</Text>
+                    {linkedPreacher ? (
+                      <Text style={styles.sub}>
+                        {linkedPreacher.name} • {linkedPreacher.topic}
+                      </Text>
+                    ) : (
+                      <Text style={styles.unassigned}>
+                        No preacher assigned
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+            {/* ✅ EMPTY STATE */}
+            {program.filter(item => item.session === activeSession).length === 0 && (
+              <Text style={{ color: "#aaa", marginLeft: 4 }}>
+                No program for this session
+              </Text>
+            )}
           </>
         )}
 
-        {/* ── PREACHERS (UNCHANGED) ── */}
+        {/* ── PREACHERS (SESSION FILTERED) ── */}
         {activeTab === "preachers" && (
           <>
-            {preachers.map(p => (
-              <View key={p.id} style={styles.card}>
+            <Text style={styles.sessionHeader}>
+              {activeSession}
+            </Text>
+
+            {sessionPreachers.map(p => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.card}
+                onPress={() => {
+                  setSelectedItem(p);
+                  setModalVisible(true);
+                }}
+              >
                 <Text style={styles.title}>{p.name}</Text>
                 <Text style={styles.sub}>{p.topic}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
+
+            {sessionPreachers.length === 0 && (
+              <Text style={{ color: "#aaa", marginLeft: 4 }}>
+                No preacher for this session
+              </Text>
+            )}
           </>
         )}
 
       </View>
 
-      {/* ✅ ✅ STABLE MODAL HERE (IMPORTANT POSITION) */}
+      {/* ✅ MODAL (PROGRAM ITEMS) */}
       <StableEventModal
-  visible={modalVisible}
-  data={selectedItem || {}}
-  setData={setSelectedItem}
-  onClose={() => setModalVisible(false)}
+        visible={modalVisible}
+        data={selectedItem || {}}
+        setData={setSelectedItem}
+        onClose={() => setModalVisible(false)}
+        preachers={sessionPreachers}
+        requirePreacher
+        title="Program Item"
+        onSave={() => {
+          if (!selectedItem) return;
 
-  onSave={async () => {
-    if (!selectedItem || !setProgram) return;
+          // ✅ ALWAYS BUILD CLEAN ITEM (IMPORTANT)
+          const cleanItem = {
+            id: selectedItem.id || Date.now().toString(),
+            title: selectedItem.title || "",
+            date: selectedItem.date || null,
+            session: selectedItem.session || activeSession,
+            notes: selectedItem.notes || "",
+            preacherId: selectedItem.preacherId || null, // ✅ REAL LINK TO PREACHER
+            time: selectedItem.time || ""
+          };
 
-    let updated;
+          let updated;
 
-    // ✅ EDIT existing item
-if (selectedItem?.id && program.some(p => p.id === selectedItem.id)) {
-  updated = program.map(p =>
-    p.id === selectedItem.id
-      ? {
-          id: selectedItem.id,                        // ✅ FIXED
-          title: selectedItem.title || "",
-          date: selectedItem.date || null,
-          session: selectedItem.session || ""        // ✅ session-aware
-        }
-      : p
-  );
-}
-    // ✅ ADD new item
-    else {
-      updated = [
-        ...program,
-        {
-          id: Date.now().toString(),
-          title: selectedItem.title || "",
-          date: selectedItem.date || null,
-        },
-      ];
-    }
+          // ✅ EDIT EXISTING
+          if (
+            selectedItem?.id &&
+            program.some(p => p.id === selectedItem.id)
+          ) {
+            updated = program.map(p =>
+              p.id === selectedItem.id ? cleanItem : p
+            );
+          }
+          // ✅ ADD NEW
+          else {
+            updated = [...program, cleanItem];
+          }
 
-    setProgram(updated);        // ✅ goes to HomeScreen → Firestore
-    setModalVisible(false);     // ✅ CLOSE modal
-  }}
-
-  onDelete={async () => {
-    if (!selectedItem || !setProgram) return;
-
-    const updated = program.filter(p => p.id !== selectedItem.id);
-
-    setProgram(updated);        // ✅ persist delete
-    setModalVisible(false);     // ✅ CLOSE modal
-  }}
-/>
-
+          setProgram(updated);
+          setModalVisible(false);
+        }}
+        onDelete={() => {
+          if (!selectedItem?.id) return;
+          setProgram(program.filter(p => p.id !== selectedItem.id));
+          setModalVisible(false);
+        }}
+      />
 
     </View>
   );
@@ -180,14 +224,14 @@ if (selectedItem?.id && program.some(p => p.id === selectedItem.id)) {
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 14,
-    marginTop: 12,
+    marginTop: 12
   },
 
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#eee",
     borderRadius: 12,
-    padding: 4,
+    padding: 4
   },
 
   tab: {
@@ -195,29 +239,29 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     paddingVertical: 10,
-    gap: 5,
+    gap: 5
   },
 
   activeTab: {
     backgroundColor: "#4B3F72",
-    borderRadius: 10,
+    borderRadius: 10
   },
 
   tabText: {
     fontSize: 12,
     color: "#777",
-    fontWeight: "700",
+    fontWeight: "700"
   },
 
   activeTabText: {
-    color: "#fff",
+    color: "#fff"
   },
 
   card: {
     backgroundColor: "#fff",
     padding: 14,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 8
   },
 
   title: {
@@ -229,5 +273,20 @@ const styles = StyleSheet.create({
   sub: {
     fontSize: 12,
     color: "#777"
+  },
+
+  unassigned: {
+    fontSize: 12,
+    color: "#aaa",
+    fontStyle: "italic"
+  },
+
+  sessionHeader: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#4B3F72",
+    marginBottom: 6,
+    marginLeft: 4,
+    marginTop: 10
   }
 });
