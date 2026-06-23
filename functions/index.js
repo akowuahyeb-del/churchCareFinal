@@ -1,32 +1,72 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const admin = require("firebase-admin");
+admin.initializeApp();
 
-const {setGlobalOptions} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/https");
-const logger = require("firebase-functions/logger");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { getFirestore } = require("firebase-admin/firestore");
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+exports.generateFinanceInsight = onCall(
+  { timeoutSeconds: 30 },
+  async (request) => {
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in.");
+    }
 
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+    const { summary, churchId } = request.data;
+
+    const db = getFirestore();
+    const uid = request.auth.uid;
+
+    // ✅ Admin check
+    const memberDoc = await db
+      .collection("churches")
+      .doc(churchId)
+      .collection("members")
+      .doc(uid)
+      .get();
+
+    if (!memberDoc.exists || memberDoc.data().role !== "admin") {
+      throw new HttpsError("permission-denied", "Not authorized.");
+    }
+
+    // ✅ Cache key
+    const todayKey = new Date().toISOString().split("T")[0];
+
+    const insightRef = db
+      .collection("churches")
+      .doc(churchId)
+      .collection("aiInsights")
+      .doc(todayKey);
+
+    // ✅ Check cache
+    const existing = await insightRef.get();
+
+    if (existing.exists) {
+      console.log("✅ Returning cached insight");
+      return { insight: existing.data().insight, cached: true };
+    }
+
+    // ✅ MOCK AI (temporary)
+    const text = `
+✅ Financial Insight Summary:
+
+1. Your income exceeds expenses — positive cash flow.
+2. Monitor top expenses to avoid overspending.
+3. Consider increasing savings or investments.
+4. Track trends weekly for better forecasting.
+`;
+
+    // ✅ Save to Firestore
+    await insightRef.set({
+      insight: text,
+      createdAt: Date.now(),
+    });
+
+    console.log("✅ Insight saved (mock)");
+
+    return {
+      insight: text,
+      cached: false,
+    };
+  }
+);
