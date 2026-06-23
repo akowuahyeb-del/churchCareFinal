@@ -19,7 +19,10 @@ export default function EventsTabs({
   const [activeSession, setActiveSession] = useState("First Service");
 
   // ✅ PREACHERS AVAILABLE FOR THE CURRENT SESSION ONLY
-  const sessionPreachers = (p => p.session === activeSession);
+const sessionPreachers = Array.isArray(preachers)
+  ? preachers.filter(p => p.session === activeSession)
+  : [];
+
 
   return (
     <View style={styles.container}>
@@ -174,7 +177,8 @@ export default function EventsTabs({
         data={selectedItem || {}}
         setData={setSelectedItem}
         onClose={() => setModalVisible(false)}
-        preachers={sessionPreachers}
+        preachers={Array.isArray(sessionPreachers) ? sessionPreachers : []}
+
         requirePreacher
         title="Program Item"
         onSave={() => {

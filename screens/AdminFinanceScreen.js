@@ -300,48 +300,48 @@ export default function AdminFinanceScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Tabs ── */}
-     <View style={styles.tabGrid}>
+  {/* ── Tabs ── */}
+<View style={styles.tabGrid}>
   {TABS.map(tabItem => {
     const isActive = tab === tabItem.key;
 
     return (
       <TouchableOpacity
         key={tabItem.key}
-        activeOpacity={0.8}
-        style={[
-          styles.tabCard,
-          { backgroundColor: tabItem.bg },
-          isActive && styles.tabCardActive,
-        ]}
+        activeOpacity={0.75}
+        style={styles.tabItem}
         onPress={() => setTab(tabItem.key)}
       >
         <View
           style={[
-            styles.tabIconWrap,
-            { backgroundColor: "#fff" }
+            styles.tabCircle,
+            { backgroundColor: tabItem.color },
+            isActive && styles.tabCircleActive,
+            isActive && { shadowColor: tabItem.color }
           ]}
         >
-          <Ionicons
-            name={tabItem.icon}
-            size={20}
-            color={tabItem.color}
-          />
+          <Ionicons name={tabItem.icon} size={22} color="#fff" />
+          {/* small accent on the AI tab — it's the literal "intelligence" feature */}
+          {tabItem.key === "ai" && <View style={styles.aiDot} />}
         </View>
 
         <Text
           style={[
             styles.tabLabel,
-            isActive && { color: tabItem.color }
+            isActive && { color: tabItem.color, fontWeight: "800" }
           ]}
+          numberOfLines={1}
         >
           {tabItem.label}
         </Text>
+
+        {isActive && (
+          <View style={[styles.activeBar, { backgroundColor: tabItem.color }]} />
+        )}
       </TouchableOpacity>
     );
   })}
 </View>
-
 
       {loading ? (
         <View style={styles.loader}><ActivityIndicator color="#4B3F72" size="large" /></View>
@@ -1101,46 +1101,69 @@ const styles = StyleSheet.create({
   emptyState: { alignItems:"center", padding:40 },
   emptyText: { color:"#bbb", marginTop:10, fontSize:13 },
   
-  tabGrid: {
+  
+tabGrid: {
   flexDirection: "row",
   flexWrap: "wrap",
   justifyContent: "space-between",
-  paddingHorizontal: 16,
-  paddingVertical: 14,
+  paddingHorizontal: 22,
+  paddingTop: 14,
+  paddingBottom: 18,
   backgroundColor: "#f4f6fb",
-  },
+},
 
-tabCard: {
+tabItem: {
   width: "31%",
-  backgroundColor: "#fff",
-  borderRadius: 16,
-  paddingVertical: 16,
+  alignItems: "center",
+  marginBottom: 16,
+},
+
+tabCircle: {
+  width: 58,
+  height: 58,
+  borderRadius: 29,
   alignItems: "center",
   justifyContent: "center",
-  marginBottom: 14,
-  minHeight: 85,
+  marginBottom: 8,
   shadowColor: "#000",
-  shadowOpacity: 0.05,
+  shadowOpacity: 0.15,
+  shadowOffset: { width: 0, height: 4 },
   shadowRadius: 6,
   elevation: 3,
 },
 
-tabCardActive: {
-  borderWidth: 2,
-  borderColor: "#4B3F72",
-  shadowColor: "#4B3F72",
-  shadowOpacity: 0.2,
+tabCircleActive: {
+  transform: [{ scale: 1.08 }],
+  shadowOpacity: 0.4,
+  shadowOffset: { width: 0, height: 6 },
   shadowRadius: 10,
-  elevation: 6,
+  elevation: 7,
 },
 
-tabIconWrap: {
-  width: 44,
-  height: 44,
-  borderRadius: 14,
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: 8,
+tabLabel: {
+  fontSize: 11,
+  fontWeight: "600",
+  color: "#777",
+  textAlign: "center",
+},
+
+activeBar: {
+  width: 16,
+  height: 3,
+  borderRadius: 2,
+  marginTop: 6,
+},
+
+aiDot: {
+  position: "absolute",
+  top: -2,
+  right: -2,
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: "#FFD93D",
+  borderWidth: 1.5,
+  borderColor: "#fff",
 },
 
 
@@ -1174,20 +1197,8 @@ shadowRadius: 10,
 elevation: 6,
 },
 
-tabIconBadge: {
-  width: 44,
-  height: 44,
-  borderRadius: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: 8,
-},
 
-tabTitle: {
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#333",
-},
+
 
 
 
