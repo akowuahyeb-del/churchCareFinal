@@ -93,6 +93,10 @@ export default function HomeScreen() {
 
 
   /*useEffect*/
+useEffect(() => {
+  console.log("🎯 preacherModal:", preacherModal);
+}, [preacherModal]);
+
 
 useEffect(() => {
   const loadEntities = async () => {
@@ -341,7 +345,34 @@ const saveProgramToFirestore = async (updatedProgram) => {
     Alert.alert("Save failed", e.message);
   }
 };
+<PreacherModal
+  visible={preacherModal}
+  onClose={() => {
+    console.log("❌ Modal closed");
+    setPreacherModal(false);
+    setEditingPreacher(null);
+  }}
+  initialData={editingPreacher}
+  onSave={(data) => {
+    console.log("✅ Saved preacher:", data);
 
+    setPreachers((prev) => {
+      if (data.delete) {
+        return prev.filter(p => p.id !== data.id);
+      }
+
+      const exists = prev.find(p => p.id === data.id);
+
+      if (exists) {
+        return prev.map(p => (p.id === data.id ? data : p));
+      }
+
+      return [...prev, data];
+    });
+
+    setPreacherModal(false);
+  }}
+/>
 
 /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
@@ -517,9 +548,11 @@ return (
       preachers={preachers}
       setProgram={saveProgramToFirestore}
       onAddPreacher={() => {
-        setEditingPreacher(null);
-        setPreacherModal(true);
-      }}
+  console.log("🔥 ADD PREACHER CLICKED");
+  setEditingPreacher(null);
+  setPreacherModal(true);
+}}
+
       onEditPreacher={(p) => {
         setEditingPreacher(p);
         setPreacherModal(true);
@@ -666,7 +699,33 @@ return (
     savePastorMessage("", "", null);
   }}
 />
+<PreacherModal
+  visible={preacherModal}
+  onClose={() => {
+    setPreacherModal(false);
+    setEditingPreacher(null);
+  }}
+  initialData={editingPreacher}
+  onSave={(data) => {
+    console.log("✅ Saved preacher:", data);
 
+    setPreachers((prev) => {
+      if (data.delete) {
+        return prev.filter(p => p.id !== data.id);
+      }
+
+      const exists = prev.find(p => p.id === data.id);
+
+      if (exists) {
+        return prev.map(p => (p.id === data.id ? data : p));
+      }
+
+      return [...prev, data];
+    });
+
+    setPreacherModal(false);
+  }}
+/>
 
  </SafeAreaView>
 );

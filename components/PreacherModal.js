@@ -29,7 +29,7 @@ export default function PreacherModal({
   const [date, setDate] = useState(null);
   const [expiry, setExpiry] = useState(null);
 
-  const [session, setSession] = useState("");
+  const [session, setSession] = useState("null");
 
   // ✅ LOAD EDIT DATA
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function PreacherModal({
     setPhoto(initialData?.photo || null);
     setDate(initialData?.date || null);
     setExpiry(initialData?.expiry || null);
-    setSession(initialData?.session || "");
+    setSession(initialData?.session || "null");
   }, [initialData]);
 
   // ✅ QUICK DATE PICKER
@@ -170,27 +170,42 @@ export default function PreacherModal({
             onChangeText={setTopic}
           />
 
-          {/* ✅ SESSION */}
-          <Text style={styles.label}>Session</Text>
-          <View style={styles.sessionRow}>
-            {["First Service", "Second Service", "Youth", "Special"].map(s => (
-              <TouchableOpacity
-                key={s}
-                style={[
-                  styles.sessionChip,
-                  session === s && styles.sessionChipActive
-                ]}
-                onPress={() => setSession(s)}
-              >
-                <Text style={[
-                  styles.sessionText,
-                  session === s && styles.sessionTextActive
-                ]}>
-                  {s}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* ✅ SESSION (UPGRADED) */}
+<Text style={styles.label}>Session</Text>
+
+<View style={styles.sessionRow}>
+  {["First Service", "Second Service", "Youth", "Special"].map((s) => (
+    <TouchableOpacity
+      key={s}
+      style={[
+        styles.sessionChip,
+        session?.name === s && styles.sessionChipActive
+      ]}
+      onPress={() =>
+        setSession({
+          id: s.toLowerCase().replace(/\s/g, "-"),
+          name: s
+        })
+      }
+    >
+      <Text
+        style={[
+          styles.sessionText,
+          session?.name === s && styles.sessionTextActive
+        ]}
+      >
+        {s}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
+{/* ✅ SHOW SELECTED SESSION */}
+{session && (
+  <Text style={{ fontSize: 12, color: "#4B3F72", marginBottom: 8 }}>
+    Selected: {session.name}
+  </Text>
+)}
 
           {/* ✅ BIO */}
           <TextInput

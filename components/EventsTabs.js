@@ -5,24 +5,24 @@ import { Ionicons } from "@expo/vector-icons";
 import StableEventModal from "../components/StableEventModal";
 
 export default function EventsTabs({
-  events,
-  program,
-  preachers,
-  setProgram
+  events = [],
+  program = [],
+  preachers = [],
+  setProgram,
+  onAddPreacher,
+  onEditPreacher
 }) {
   const [activeTab, setActiveTab] = useState("events");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [localPreachers, setLocalPreachers] = useState(preachers || []);
 
-  // ✅ ACTIVE SESSION (for testing)
+  // ✅ ACTIVE SESSION (temporary)
   const [activeSession, setActiveSession] = useState("First Service");
 
-  // ✅ PREACHERS AVAILABLE FOR THE CURRENT SESSION ONLY
-const sessionPreachers = Array.isArray(preachers)
-  ? preachers.filter(p => p.session === activeSession)
-  : [];
-
+  // ✅ FILTER PREACHERS BY SESSION
+  const sessionPreachers = Array.isArray(preachers)
+    ? preachers.filter(p => p.session?.name === activeSession)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -59,7 +59,6 @@ const sessionPreachers = Array.isArray(preachers)
         ))}
       </View>
 
-      {/* ✅ CONTENT */}
       <View style={{ marginTop: 10 }}>
 
         {/* ── EVENTS ── */}
@@ -74,14 +73,14 @@ const sessionPreachers = Array.isArray(preachers)
           </>
         )}
 
-        {/* ── PROGRAM (SESSION FILTERED + PREACHER LINKED) ── */}
+        {/* ── PROGRAM ── */}
         {activeTab === "program" && (
           <>
-            {/* ✅ ADD BUTTON */}
             <TouchableOpacity
               style={styles.card}
               onPress={() => {
                 setSelectedItem({
+                  id: null,
                   title: "",
                   date: null,
                   session: activeSession,
@@ -95,16 +94,12 @@ const sessionPreachers = Array.isArray(preachers)
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ ACTIVE SESSION */}
-            <Text style={styles.sessionHeader}>
-              {activeSession}
-            </Text>
+            <Text style={styles.sessionHeader}>{activeSession}</Text>
 
-            {/* ✅ FILTERED PROGRAM */}
             {program
               .filter(item => item.session === activeSession)
               .map(item => {
-                const linkedPreacher = localPreachers.find(
+                const linkedPreacher = preachers.find(
                   p => p.id === item.preacherId
                 );
 
@@ -130,30 +125,35 @@ const sessionPreachers = Array.isArray(preachers)
                   </TouchableOpacity>
                 );
               })}
-
-            {/* ✅ EMPTY STATE */}
-            {program.filter(item => item.session === activeSession).length === 0 && (
-              <Text style={{ color: "#aaa", marginLeft: 4 }}>
-                No program for this session
-              </Text>
-            )}
           </>
         )}
 
-        {/* ── PREACHERS (SESSION FILTERED) ── */}
+        {/* ── PREACHERS ── */}
         {activeTab === "preachers" && (
           <>
-            <Text style={styles.sessionHeader}>
-              {activeSession}
-            </Text>
+            <Text style={styles.sessionHeader}>{activeSession}</Text>
 
+            {/* ✅ ADD PREACHER BUTTON */}
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => {
+                console.log("🔥 Add Preacher Clicked");
+                onAddPreacher && onAddPreacher();
+              }}
+            >
+              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
+                + Add Preacher
+              </Text>
+            </TouchableOpacity>
+
+            {/* ✅ LIST */}
             {sessionPreachers.map(p => (
               <TouchableOpacity
                 key={p.id}
                 style={styles.card}
                 onPress={() => {
-                  setSelectedItem(p);
-                  setModalVisible(true);
+                  console.log("🔥 Edit Preacher Clicked");
+                  onEditPreacher && onEditPreacher(p);
                 }}
               >
                 <Text style={styles.title}>{p.name}</Text>
@@ -171,44 +171,35 @@ const sessionPreachers = Array.isArray(preachers)
 
       </View>
 
-      {/* ✅ MODAL (PROGRAM ITEMS) */}
+      {/* ✅ PROGRAM MODAL */}
       <StableEventModal
         visible={modalVisible}
         data={selectedItem || {}}
         setData={setSelectedItem}
         onClose={() => setModalVisible(false)}
-        preachers={Array.isArray(sessionPreachers) ? sessionPreachers : []}
-
+        preachers={sessionPreachers}
         requirePreacher
         title="Program Item"
         onSave={() => {
           if (!selectedItem) return;
 
-          // ✅ ALWAYS BUILD CLEAN ITEM (IMPORTANT)
-         const cleanItem = {
-  id: item.id || Date.now().toString(),
-  title: item.title || "",
-  date: item.date || null,
-  session: item.session || activeSession,
-  notes: item.notes || "",
-  preacherId: item.preacherId || null,
-  time: item.time || ""
-}; 
+          const cleanItem = {
+            id: selectedItem?.id || Date.now().toString(),
+            title: selectedItem.title || "",
+            date: selectedItem.date || null,
+            session: selectedItem.session || activeSession,
+            notes: selectedItem.notes || "",
+            preacherId: selectedItem.preacherId || null,
+            time: selectedItem.time || ""
+          };
 
           let updated;
 
-          // ✅ EDIT EXISTING
-          if (
-            selectedItem?.id &&
-            program.some(p => p.id === item.id)
-          ) {
+          if (program.some(p => p.id === selectedItem?.id)) {
             updated = program.map(p =>
-              p.id === item.id ? cleanItem : p
-
+              p.id === selectedItem.id ? cleanItem : p
             );
-          }
-          // ✅ ADD NEW
-          else {
+          } else {
             updated = [...program, cleanItem];
           }
 
@@ -221,7 +212,6 @@ const sessionPreachers = Array.isArray(preachers)
           setModalVisible(false);
         }}
       />
-
     </View>
   );
 }
