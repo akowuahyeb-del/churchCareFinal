@@ -13,6 +13,9 @@ import {
   collection, addDoc, getDocs, query,
   orderBy, where, serverTimestamp, Timestamp
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from "../firebase"; // if you export app
+
 
 const { width: W } = Dimensions.get("window");
 
@@ -93,6 +96,9 @@ export default function AdminFinanceScreen() {
 
   // Ledger filter
   const [ledgerAccount, setLedgerAccount] = useState("Cash");
+const functions = getFunctions(app); // or just getFunctions()
+const generateInsightFn = httpsCallable(functions, "generateFinanceInsight");
+
 
   /* ── Load transactions ── */
   useEffect(() => {
@@ -124,6 +130,9 @@ export default function AdminFinanceScreen() {
       setTransactions(DEMO_TRANSACTIONS);
     } finally { setLoading(false); }
   };
+
+
+
 
   /* ── Save journal entry ── */
   const saveJournal = async () => {
@@ -276,6 +285,8 @@ export default function AdminFinanceScreen() {
       }).reduce((ss, e) => ss + Number(e.amount), 0);
     }, 0)
   );
+
+
 
   /* ════════════════════ RENDER ════════════════════ */
   return (
@@ -809,6 +820,29 @@ export default function AdminFinanceScreen() {
           </View>
         </View>
       </Modal>
+
+<View style={styles.aiContainer}>
+  
+  {/* Generate Button */}
+  <TouchableOpacity
+    style={styles.aiButton}
+    onPress={generateAiInsight}
+    disabled={aiLoading}
+  >
+    <Text style={styles.aiButtonText}>
+      {aiLoading ? "Generating..." : "Generate AI Insight"}
+    </Text>
+  </TouchableOpacity>
+
+  {/* Result Box */}
+  {aiInsight ? (
+    <View style={styles.aiResult}>
+      <Text style={styles.aiText}>{aiInsight}</Text>
+    </View>
+  ) : null}
+
+</View>
+
 
     </SafeAreaView>
   );
