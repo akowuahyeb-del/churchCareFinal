@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import StableEventModal from "../components/StableEventModal";
+import ProgramModal from "./ProgramModal";
+import { SESSIONS, DEFAULT_SESSION, sessionsMatch } from "../constants/sessions";
 
 export default function EventsTabs({
   events = [],
@@ -16,13 +17,20 @@ export default function EventsTabs({
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // ✅ ACTIVE SESSION (temporary)
-  const [activeSession, setActiveSession] = useState("First Service");
+  // ✅ Real switcher now, backed by the shared SESSIONS list
+  const [activeSession, setActiveSession] = useState(DEFAULT_SESSION);
 
-  // ✅ FILTER PREACHERS BY SESSION
+  // ✅ Only preachers belonging to the session you're currently viewing
   const sessionPreachers = Array.isArray(preachers)
-    ? preachers.filter(p => p.session?.name === activeSession)
+    ? preachers.filter(p => sessionsMatch(p.session, activeSession))
     : [];
+
+  // ✅ Only program items belonging to the session you're currently viewing
+  const sessionProgram = Array.isArray(program)
+    ? program.filter(item => sessionsMatch(item.session, activeSession))
+    : [];
+
+  const showSessionSwitcher = activeTab === "program" || activeTab === "preachers";
 
   return (
     <View style={styles.container}>
@@ -33,31 +41,43 @@ export default function EventsTabs({
           { key: "events", label: "Upcoming", icon: "calendar-outline" },
           { key: "program", label: "Program", icon: "list-outline" },
           { key: "preachers", label: "Preachers", icon: "person-outline" }
-        ].map(tab => (
+        ].map(t => (
           <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tab,
-              activeTab === tab.key && styles.activeTab
-            ]}
-            onPress={() => setActiveTab(tab.key)}
+            key={t.key}
+            style={[styles.tab, activeTab === t.key && styles.activeTab]}
+            onPress={() => setActiveTab(t.key)}
           >
             <Ionicons
-              name={tab.icon}
+              name={t.icon}
               size={14}
-              color={activeTab === tab.key ? "#fff" : "#777"}
+              color={activeTab === t.key ? "#fff" : "#777"}
             />
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.key && styles.activeTabText
-              ]}
-            >
-              {tab.label}
+            <Text style={[styles.tabText, activeTab === t.key && styles.activeTabText]}>
+              {t.label}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* ✅ SESSION SWITCHER — only where session actually matters */}
+      {showSessionSwitcher && (
+        <View style={styles.sessionSwitchRow}>
+          {SESSIONS.map(s => {
+            const active = sessionsMatch(activeSession, s);
+            return (
+              <TouchableOpacity
+                key={s.id}
+                style={[styles.sessionChip, active && styles.sessionChipActive]}
+                onPress={() => setActiveSession(s)}
+              >
+                <Text style={[styles.sessionChipText, active && styles.sessionChipTextActive]}>
+                  {s.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       <View style={{ marginTop: 10 }}>
 
@@ -70,22 +90,19 @@ export default function EventsTabs({
                 <Text style={styles.sub}>{ev.date}</Text>
               </View>
             ))}
+            {events.length === 0 && (
+              <Text style={styles.emptyText}>No upcoming events</Text>
+            )}
           </>
         )}
 
-        {/* ── PROGRAM ── */}
+        {/* ── PROGRAM (session-scoped + preacher-linked) ── */}
         {activeTab === "program" && (
           <>
             <TouchableOpacity
               style={styles.card}
               onPress={() => {
-                setSelectedItem({
-                  id: null,
-                  title: "",
-                  date: null,
-                  session: activeSession,
-                  preacherId: null
-                });
+                setSelectedItem({}); // empty = "new" to ProgramModal
                 setModalVisible(true);
               }}
             >
@@ -94,67 +111,59 @@ export default function EventsTabs({
               </Text>
             </TouchableOpacity>
 
-            <Text style={styles.sessionHeader}>{activeSession}</Text>
+            <Text style={styles.sessionHeader}>{activeSession.name}</Text>
 
-            {program
-              .filter(item => item.session === activeSession)
-              .map(item => {
-                const linkedPreacher = preachers.find(
-                  p => p.id === item.preacherId
-                );
+            {sessionProgram.map(item => {
+              const linkedPreacher = preachers.find(p => p.id === item.preacherId);
 
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.card}
-                    onPress={() => {
-                      setSelectedItem(item);
-                      setModalVisible(true);
-                    }}
-                  >
-                    <Text style={styles.title}>{item.title}</Text>
-                    {linkedPreacher ? (
-                      <Text style={styles.sub}>
-                        {linkedPreacher.name} • {linkedPreacher.topic}
-                      </Text>
-                    ) : (
-                      <Text style={styles.unassigned}>
-                        No preacher assigned
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  onPress={() => {
+                    setSelectedItem(item);
+                    setModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.title}>{item.title}</Text>
+                  {linkedPreacher ? (
+                    <Text style={styles.sub}>
+                      {linkedPreacher.name} • {linkedPreacher.topic}
+                    </Text>
+                  ) : (
+                    <Text style={styles.unassigned}>No preacher assigned</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+
+            {sessionProgram.length === 0 && (
+              <Text style={styles.emptyText}>
+                No program for {activeSession.name}
+              </Text>
+            )}
           </>
         )}
 
-        {/* ── PREACHERS ── */}
+        {/* ── PREACHERS (session-scoped) ── */}
         {activeTab === "preachers" && (
           <>
-            <Text style={styles.sessionHeader}>{activeSession}</Text>
+            <Text style={styles.sessionHeader}>{activeSession.name}</Text>
 
-            {/* ✅ ADD PREACHER BUTTON */}
             <TouchableOpacity
               style={styles.card}
-              onPress={() => {
-                console.log("🔥 Add Preacher Clicked");
-                onAddPreacher && onAddPreacher();
-              }}
+              onPress={() => onAddPreacher && onAddPreacher(activeSession)}
             >
               <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
                 + Add Preacher
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ LIST */}
             {sessionPreachers.map(p => (
               <TouchableOpacity
                 key={p.id}
                 style={styles.card}
-                onPress={() => {
-                  console.log("🔥 Edit Preacher Clicked");
-                  onEditPreacher && onEditPreacher(p);
-                }}
+                onPress={() => onEditPreacher && onEditPreacher(p)}
               >
                 <Text style={styles.title}>{p.name}</Text>
                 <Text style={styles.sub}>{p.topic}</Text>
@@ -162,8 +171,8 @@ export default function EventsTabs({
             ))}
 
             {sessionPreachers.length === 0 && (
-              <Text style={{ color: "#aaa", marginLeft: 4 }}>
-                No preacher for this session
+              <Text style={styles.emptyText}>
+                No preacher for {activeSession.name}
               </Text>
             )}
           </>
@@ -172,43 +181,23 @@ export default function EventsTabs({
       </View>
 
       {/* ✅ PROGRAM MODAL */}
-      <StableEventModal
+      <ProgramModal
         visible={modalVisible}
-        data={selectedItem || {}}
-        setData={setSelectedItem}
+        initialData={selectedItem || {}}
         onClose={() => setModalVisible(false)}
         preachers={sessionPreachers}
-        requirePreacher
-        title="Program Item"
-        onSave={() => {
-          if (!selectedItem) return;
-
-          const cleanItem = {
-            id: selectedItem?.id || Date.now().toString(),
-            title: selectedItem.title || "",
-            date: selectedItem.date || null,
-            session: selectedItem.session || activeSession,
-            notes: selectedItem.notes || "",
-            preacherId: selectedItem.preacherId || null,
-            time: selectedItem.time || ""
-          };
-
-          let updated;
-
-          if (program.some(p => p.id === selectedItem?.id)) {
-            updated = program.map(p =>
-              p.id === selectedItem.id ? cleanItem : p
-            );
-          } else {
-            updated = [...program, cleanItem];
-          }
+        activeSession={activeSession}
+        onSave={(itemObject) => {
+          const exists = program.some(p => p.id === itemObject.id);
+          const updated = exists
+            ? program.map(p => (p.id === itemObject.id ? itemObject : p))
+            : [...program, itemObject];
 
           setProgram(updated);
           setModalVisible(false);
         }}
-        onDelete={() => {
-          if (!selectedItem?.id) return;
-          setProgram(program.filter(p => p.id !== selectedItem.id));
+        onDelete={(id) => {
+          setProgram(program.filter(p => p.id !== id));
           setModalVisible(false);
         }}
       />
@@ -218,64 +207,35 @@ export default function EventsTabs({
 
 /* ✅ STYLES */
 const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: 14,
-    marginTop: 12
-  },
+  container: { marginHorizontal: 14, marginTop: 12 },
 
-  tabRow: {
+  tabRow: { flexDirection: "row", backgroundColor: "#eee", borderRadius: 12, padding: 4 },
+  tab: { flex: 1, flexDirection: "row", justifyContent: "center", paddingVertical: 10, gap: 5 },
+  activeTab: { backgroundColor: "#4B3F72", borderRadius: 10 },
+  tabText: { fontSize: 12, color: "#777", fontWeight: "700" },
+  activeTabText: { color: "#fff" },
+
+  sessionSwitchRow: {
     flexDirection: "row",
-    backgroundColor: "#eee",
-    borderRadius: 12,
-    padding: 4
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10
   },
+  sessionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: "#eee"
+  },
+  sessionChipActive: { backgroundColor: "#4B3F72" },
+  sessionChipText: { fontSize: 11, color: "#555", fontWeight: "700" },
+  sessionChipTextActive: { color: "#fff" },
 
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    paddingVertical: 10,
-    gap: 5
-  },
-
-  activeTab: {
-    backgroundColor: "#4B3F72",
-    borderRadius: 10
-  },
-
-  tabText: {
-    fontSize: 12,
-    color: "#777",
-    fontWeight: "700"
-  },
-
-  activeTabText: {
-    color: "#fff"
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8
-  },
-
-  title: {
-    fontWeight: "700",
-    fontSize: 14,
-    color: "#222"
-  },
-
-  sub: {
-    fontSize: 12,
-    color: "#777"
-  },
-
-  unassigned: {
-    fontSize: 12,
-    color: "#aaa",
-    fontStyle: "italic"
-  },
+  card: { backgroundColor: "#fff", padding: 14, borderRadius: 12, marginBottom: 8 },
+  title: { fontWeight: "700", fontSize: 14, color: "#222" },
+  sub: { fontSize: 12, color: "#777" },
+  unassigned: { fontSize: 12, color: "#aaa", fontStyle: "italic" },
+  emptyText: { color: "#aaa", marginLeft: 4 },
 
   sessionHeader: {
     fontSize: 13,

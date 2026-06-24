@@ -1,3 +1,4 @@
+// components/PreacherModal.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
+import { SESSIONS } from "../constants/sessions";
 
 export default function PreacherModal({
   visible,
@@ -29,18 +31,22 @@ export default function PreacherModal({
   const [date, setDate] = useState(null);
   const [expiry, setExpiry] = useState(null);
 
-  const [session, setSession] = useState("null");
+  // ✅ FIXED: was useState("null") — a literal string, not null.
+  // That meant session?.id checks below never failed gracefully,
+  // and a brand-new preacher silently "had" a session named "null".
+  const [session, setSession] = useState(null);
 
-  // ✅ LOAD EDIT DATA
+  // ✅ LOAD EDIT DATA (and reset cleanly every time the modal opens)
   useEffect(() => {
+    if (!visible) return;
     setName(initialData?.name || "");
     setTopic(initialData?.topic || "");
     setBio(initialData?.bio || "");
     setPhoto(initialData?.photo || null);
     setDate(initialData?.date || null);
     setExpiry(initialData?.expiry || null);
-    setSession(initialData?.session || "null");
-  }, [initialData]);
+    setSession(initialData?.session || null);
+  }, [initialData, visible]);
 
   // ✅ QUICK DATE PICKER
   const pickDate = (type) => {
@@ -117,6 +123,13 @@ export default function PreacherModal({
       return;
     }
 
+    // ✅ A preacher with no session can never be matched to a program item —
+    // so a session is now mandatory, same as name/topic.
+    if (!session?.id) {
+      Alert.alert("Required", "Please select which session this preacher belongs to");
+      return;
+    }
+
     onSave({
       id: initialData?.id || Date.now().toString(),
       name,
@@ -125,7 +138,7 @@ export default function PreacherModal({
       photo,
       date,
       expiry,
-      session
+      session // ✅ {id, name} — same shape Program items use to link back
     });
 
     onClose();
@@ -170,42 +183,36 @@ export default function PreacherModal({
             onChangeText={setTopic}
           />
 
-          {/* ✅ SESSION (UPGRADED) */}
-<Text style={styles.label}>Session</Text>
+          {/* ✅ SESSION — now reads from the shared SESSIONS list */}
+          <Text style={styles.label}>Session</Text>
 
-<View style={styles.sessionRow}>
-  {["First Service", "Second Service", "Youth", "Special"].map((s) => (
-    <TouchableOpacity
-      key={s}
-      style={[
-        styles.sessionChip,
-        session?.name === s && styles.sessionChipActive
-      ]}
-      onPress={() =>
-        setSession({
-          id: s.toLowerCase().replace(/\s/g, "-"),
-          name: s
-        })
-      }
-    >
-      <Text
-        style={[
-          styles.sessionText,
-          session?.name === s && styles.sessionTextActive
-        ]}
-      >
-        {s}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+          <View style={styles.sessionRow}>
+            {SESSIONS.map((s) => (
+              <TouchableOpacity
+                key={s.id}
+                style={[
+                  styles.sessionChip,
+                  session?.id === s.id && styles.sessionChipActive
+                ]}
+                onPress={() => setSession(s)}
+              >
+                <Text
+                  style={[
+                    styles.sessionText,
+                    session?.id === s.id && styles.sessionTextActive
+                  ]}
+                >
+                  {s.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-{/* ✅ SHOW SELECTED SESSION */}
-{session && (
-  <Text style={{ fontSize: 12, color: "#4B3F72", marginBottom: 8 }}>
-    Selected: {session.name}
-  </Text>
-)}
+          {session && (
+            <Text style={{ fontSize: 12, color: "#4B3F72", marginBottom: 8 }}>
+              This preacher will appear under: {session.name}
+            </Text>
+          )}
 
           {/* ✅ BIO */}
           <TextInput
