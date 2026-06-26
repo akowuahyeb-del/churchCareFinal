@@ -15,6 +15,7 @@ import {
   deleteDoc, doc, query, where
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
+import { hasPermission } from "../constants/permissions";
 
 // ── Constants ─────────────────────────────────────────────────────
 const MEMBERS_CACHE_KEY = "members_cache_v1";
@@ -602,19 +603,39 @@ const editMember = (item) => {
                       </View>
                     </TouchableOpacity>
 
-                    {/* Edit / Delete */}
-                    <View style={styles.actionRow}>
-                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#4B3F72", flex: 1 }]}
-                        onPress={() => editMember(item)}>
-                        <Ionicons name="create-outline" size={13} color="#fff" />
-                        <Text style={styles.actionBtnText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#e74c3c", flex: 1 }]}
-                        onPress={() => openApproval(item, "delete")}>
-                        <Ionicons name="trash-outline" size={13} color="#fff" />
-                        <Text style={styles.actionBtnText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
+                    {/* Edit / Roles / Delete */}
+<View style={styles.actionRow}>
+
+  {/* EDIT */}
+  <TouchableOpacity
+    style={[styles.actionBtn, { backgroundColor: "#4B3F72", flex: 1 }]}
+    onPress={() => editMember(item)}
+  >
+    <Ionicons name="create-outline" size={13} color="#fff" />
+    <Text style={styles.actionBtnText}>Edit</Text>
+  </TouchableOpacity>
+
+  {/* ✅ INSERT THIS */}
+  <TouchableOpacity
+    style={[styles.actionBtn, { backgroundColor: "#0984E3", flex: 1 }]}
+    onPress={() =>
+      navigation.navigate("AssignMemberRolesScreen", { user: item })
+    }
+  >
+    <Ionicons name="shield-checkmark-outline" size={13} color="#fff" />
+    <Text style={styles.actionBtnText}>Roles</Text>
+  </TouchableOpacity>
+
+  {/* DELETE */}
+  <TouchableOpacity
+    style={[styles.actionBtn, { backgroundColor: "#e74c3c", flex: 1 }]}
+    onPress={() => openApproval(item, "delete")}
+  >
+    <Ionicons name="trash-outline" size={13} color="#fff" />
+    <Text style={styles.actionBtnText}>Delete</Text>
+  </TouchableOpacity>
+
+</View>
 
                     {/* Disciplinary actions */}
                     <View style={styles.actionRow}>
