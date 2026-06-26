@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../firebase";
 
 
+
 // ── Role config ───────────────────────────────────────────────────
 const USER_ROLE  = "admin";
 const USER_NAME  = "Kwame Mensah";
@@ -402,6 +403,25 @@ useEffect(() => {
             </View>
           </>
         )}
+          <TouchableOpacity
+  style={{
+    padding: 14,
+    backgroundColor: "#fff",
+    marginBottom: 8,
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  }}
+  onPress={() => navigation.navigate("Roles")}
+>
+  <Text style={{ fontWeight: "600" }}>
+    Roles & Privileges
+  </Text>
+
+  <Ionicons name="chevron-forward" size={18} color="#999" />
+</TouchableOpacity>
+
 
         {/* ── NEW: QR CODE GENERATOR ── */}
         {canDo("deacon") && (

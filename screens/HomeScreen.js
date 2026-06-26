@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
@@ -27,7 +26,6 @@ import ChurchSwitcher from "../components/ChurchSwitcher";
 import { handleQRCode } from "../utils/qrRouter";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { addDoc } from "firebase/firestore";
-import { DEFAULT_SESSION } from "../constants/sessions";
 
 
 
@@ -90,128 +88,119 @@ export default function HomeScreen() {
   /* ── featured event modal ── */
   const [selectedEvent,    setSelectedEvent]    = useState(null);
   const [eventModalVisible,setEventModalVisible]= useState(false);
- const [churchModalVisible, setChurchModalVisible] = useState(false);
-
- /* ── preacher ── */
-const [preacherModal,   setPreacherModal]   = useState(false);
-// const [editingPreacher, setEditingPreacher] = useState(null);
-
-// /* ── programme ── */
-// const [programModalVisible, setProgramModalVisible] = useState(false);
-const [editingProgram,      setEditingProgram]      = useState(null);
-
-/* ✅ now safe — preacherModal exists above this point */
-useEffect(() => {
-  console.log("🎯 preacherModal:", preacherModal);
-}, [preacherModal]);
-
-
-useEffect(() => {
-  const loadEntities = async () => {
-    try {
-      const storedEntities = await AsyncStorage.getItem("userEntities");
-      const storedActive = await AsyncStorage.getItem("activeEntity");
-
-      if (storedEntities) {
-        setEntities(JSON.parse(storedEntities));
-      }
-
-      if (storedActive) {
-        const parsed = JSON.parse(storedActive);
-        console.log("✅ Loaded activeEntity:", parsed);
-        setActiveEntity(parsed);
-      } else {
-        console.log("❌ No activeEntity found");
-      }
-
-    } catch (e) {
-      console.log("❌ Load entity error:", e);
-    }
-  };
-
-  loadEntities();
-}, []);
-
-
-useEffect(() => {
-  if (!activeEntity) return;
-  const { organizationId, entityId } = activeEntity;
-  if (!organizationId || !entityId) return;
-
- // EVENTS
-const u1 = onSnapshot(
-  collection(db, "organizations", organizationId, "entities", entityId, "events"),
-  snap => {
-    setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }
-);
-
-// PASTOR MESSAGE
-const u2 = onSnapshot(
-  doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
-  snap => {
-    if (snap.exists()) {
-      setPastorData(snap.data());
-    }
-  }
-);
-
-// PROGRAM
-const u3 = onSnapshot(
-  doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
-  snap => {
-    if (snap.exists()) setProgram(snap.data().items || []);
-  }
-);
-
-// CAROUSEL
-const u4 = onSnapshot(
-  collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
-  snap => {
-    const items = snap.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
-    setCarouselItems(items);
-  }
-);
-
-
-  // ✅ PREACHERS — same pattern as PROGRAM, stored as one doc with an items array
-  const u5 = onSnapshot(
-    doc(db, "organizations", organizationId, "entities", entityId, "settings", "preacherList"),
-    snap => {
-      if (snap.exists()) setPreachers(snap.data().items || []);
-    }
-  );
-
-  return () => {
-    u1();
-    u2();
-    u3();
-    u4();
-    u5(); // ✅ don't forget to clean this one up too
-  };
-}, [activeEntity]);
-
-
-
-
-
-const [activeSession, setActiveSession] = useState(DEFAULT_SESSION);
-
-// ✅ PLACE IT DIRECTLY BELOW THIS
-const sessionPreachers = preachers.filter(
-  p => p.session?.id === activeSession.id
-);
+  const [churchModalVisible, setChurchModalVisible] = useState(false);
 
   /* ── preacher ── */
-  // const [preacherModal,   setPreacherModal]   = useState(false);
+  {/* ✅ PATCH 1: moved up from further down the file. The debug useEffect right
+     below this used to reference preacherModal BEFORE this declaration existed
+     in source order, which throws "Cannot access 'preacherModal' before
+     initialization" on first render. Declaring the state first fixes that. */}
+  const [preacherModal,   setPreacherModal]   = useState(false);
   const [editingPreacher, setEditingPreacher] = useState(null);
 
-  // /* ── programme ── */
-  // const [programModalVisible, setProgramModalVisible] = useState(false);
-  // const [editingProgram,      setEditingProgram]      = useState(null);
+  /* ── programme ── */
+  const [programModalVisible, setProgramModalVisible] = useState(false);
+  const [editingProgram,      setEditingProgram]      = useState(null);
+
+  /* useEffect */
+  useEffect(() => {
+    console.log("🎯 preacherModal:", preacherModal);
+  }, [preacherModal]);
+
+
+  useEffect(() => {
+    const loadEntities = async () => {
+      try {
+        const storedEntities = await AsyncStorage.getItem("userEntities");
+        const storedActive = await AsyncStorage.getItem("activeEntity");
+
+        if (storedEntities) {
+          setEntities(JSON.parse(storedEntities));
+        }
+
+        if (storedActive) {
+          const parsed = JSON.parse(storedActive);
+          console.log("✅ Loaded activeEntity:", parsed);
+          setActiveEntity(parsed);
+        } else {
+          console.log("❌ No activeEntity found");
+        }
+
+      } catch (e) {
+        console.log("❌ Load entity error:", e);
+      }
+    };
+
+    loadEntities();
+  }, []);
+
+
+  useEffect(() => {
+    if (!activeEntity) return;
+
+    const { organizationId, entityId } = activeEntity;
+    if (!organizationId || !entityId) return;
+
+    // EVENTS
+    const u1 = onSnapshot(
+      collection(db, "organizations", organizationId, "entities", entityId, "events"),
+      snap => {
+        setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+    );
+
+    // PASTOR MESSAGE
+    const u2 = onSnapshot(
+      doc(db, "organizations", organizationId, "entities", entityId, "settings", "pastorMessage"),
+      snap => {
+        if (snap.exists()) {
+          setPastorData(snap.data());
+        }
+      }
+    );
+
+    // PROGRAM
+    const u3 = onSnapshot(
+      doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
+      snap => {
+        if (snap.exists()) setProgram(snap.data().items || []);
+      }
+    );
+
+    // ✅ CAROUSEL LISTENER (THIS FIXES YOUR ISSUE)
+    const u4 = onSnapshot(
+      collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
+      snap => {
+        const items = snap.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }));
+
+        console.log("✅ CAROUSEL ITEMS:", items);
+        setCarouselItems(items);
+      }
+    );
+
+    // ✅ PATCH 3 — PREACHERS LISTENER (same pattern as PROGRAM: one doc, items array)
+    // Preachers used to live only in local state and reset on every reload.
+    // This is what actually makes the Program ↔ Preacher link durable.
+    const u5 = onSnapshot(
+      doc(db, "organizations", organizationId, "entities", entityId, "settings", "preacherList"),
+      snap => {
+        if (snap.exists()) setPreachers(snap.data().items || []);
+      }
+    );
+
+    return () => {
+      u1();
+      u2();
+      u3();
+      u4();
+      u5(); // ✅ don't forget to clean this one up too
+    };
+
+  }, [activeEntity]);
+
 
   /* ── QR modal ── */
   const [qrModal, setQrModal] = useState(false);
@@ -324,45 +313,62 @@ const handleUpload = async () => {
     Alert.alert("Upload failed");
   }
 };
+
+// ✅ PATCH 4 — FIXED: this used to drop id, preacherId, and session entirely,
+// which is exactly why saved program items lost their preacher link and
+// disappeared from session filtering after a reload.
 const saveProgramToFirestore = async (updatedProgram) => {
   try {
     if (!activeEntity) return;
+
     const { organizationId, entityId } = activeEntity;
 
+    // ✅ If a function is passed, resolve it first
     const resolvedProgram =
       typeof updatedProgram === "function"
         ? updatedProgram(program)
         : updatedProgram;
 
-    // ✅ FIXED: this used to drop id, preacherId, and session entirely —
-    // which is exactly why saved program items lost their preacher link
-    // and disappeared from session filtering after a reload.
+    // ✅ Clean every item, but keep the fields the link depends on
     const cleanProgram = resolvedProgram.map(item => ({
       id: item.id || Date.now().toString(),
       title: item.title || "",
       time: item.time || "",
       date: item.date || null,
       notes: item.notes || "",
-      preacherId: item.preacherId || null, // ✅ the actual link
-      session: item.session || null        // ✅ {id, name} — used to filter by session
+      preacherId: item.preacherId || null, // ✅ the actual link to a preacher
+      session: item.session || null,       // ✅ {id, name} — used to filter by session
     }));
 
     await setDoc(
-      doc(db, "organizations", organizationId, "entities", entityId, "settings", "programList"),
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "settings",
+        "programList"
+      ),
       { items: cleanProgram },
       { merge: true }
     );
 
     setProgram(cleanProgram);
+
+    console.log("✅ Program saved clean:", cleanProgram);
+
   } catch (e) {
     Alert.alert("Save failed", e.message);
   }
 };
 
-// ✅ NEW — preachers now actually persist, instead of living only in memory
+// ✅ PATCH 4 (NEW) — preachers now actually persist to Firestore instead of
+// living only in memory and disappearing on reload.
 const savePreachersToFirestore = async (updatedPreachers) => {
   try {
     if (!activeEntity) return;
+
     const { organizationId, entityId } = activeEntity;
 
     const resolved =
@@ -378,21 +384,36 @@ const savePreachersToFirestore = async (updatedPreachers) => {
       photo: p.photo || null,
       date: p.date || null,
       expiry: p.expiry || null,
-      session: p.session || null
+      session: p.session || null, // ✅ {id, name} — same shape Program items link against
     }));
 
     await setDoc(
-      doc(db, "organizations", organizationId, "entities", entityId, "settings", "preacherList"),
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "settings",
+        "preacherList"
+      ),
       { items: cleanPreachers },
       { merge: true }
     );
 
     setPreachers(cleanPreachers);
+
+    console.log("✅ Preachers saved clean:", cleanPreachers);
+
   } catch (e) {
     Alert.alert("Save failed", e.message);
   }
 };
 
+{/* ✅ PATCH 2: the duplicate, dead <PreacherModal> block that used to sit here —
+   as a bare JSX expression statement before `return (...)`, so it never
+   rendered anything — has been removed. The real one lives inside the JSX
+   tree below, and its onSave is wired to savePreachersToFirestore there. */}
 
 /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (
@@ -567,12 +588,14 @@ return (
       program={program}
       preachers={preachers}
       setProgram={saveProgramToFirestore}
-      onAddPreacher={() => {
-  console.log("🔥 ADD PREACHER CLICKED");
-  setEditingPreacher(null);
-  setPreacherModal(true);
-}}
-
+      onAddPreacher={(session) => {
+        // ✅ PATCH 5: EventsTabs now passes the currently-active session along,
+        // so a brand-new preacher defaults to whichever session you're viewing
+        // instead of opening blank.
+        console.log("🔥 ADD PREACHER CLICKED");
+        setEditingPreacher(session ? { session } : null);
+        setPreacherModal(true);
+      }}
       onEditPreacher={(p) => {
         setEditingPreacher(p);
         setPreacherModal(true);
@@ -727,21 +750,20 @@ return (
   }}
   initialData={editingPreacher}
   onSave={(data) => {
+    // ✅ PATCH 5: now writes through to Firestore via savePreachersToFirestore
+    // instead of only updating local state — this is what makes the
+    // Program ↔ Preacher link (and the preacher list itself) survive a reload.
     console.log("✅ Saved preacher:", data);
 
-    setPreachers((prev) => {
-      if (data.delete) {
-        return prev.filter(p => p.id !== data.id);
-      }
-
-      const exists = prev.find(p => p.id === data.id);
-
-      if (exists) {
-        return prev.map(p => (p.id === data.id ? data : p));
-      }
-
-      return [...prev, data];
-    });
+    if (data.delete) {
+      savePreachersToFirestore(preachers.filter(p => p.id !== data.id));
+    } else {
+      const exists = preachers.some(p => p.id === data.id);
+      const updated = exists
+        ? preachers.map(p => (p.id === data.id ? data : p))
+        : [...preachers, data];
+      savePreachersToFirestore(updated);
+    }
 
     setPreacherModal(false);
   }}

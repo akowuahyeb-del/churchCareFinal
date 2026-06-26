@@ -34,6 +34,8 @@ import ChurchSelectScreen from "./screens/ChurchSelectScreen";
 import ImportMembersScreen from "./screens/ImportMembersScreen";
 import CompleteProfileScreen from "./screens/CompleteProfileScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
+import RolesScreen from "./screens/RolesScreen";
+
 
 
 
@@ -127,6 +129,8 @@ function RootStack() {
       <Stack.Screen name="ImportMembers" component={ImportMembersScreen} />
       <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="Roles"component={RolesScreen}options={{ title: "Roles & Privileges" }}/>
+
 
 
 

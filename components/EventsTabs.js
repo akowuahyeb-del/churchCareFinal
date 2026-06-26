@@ -40,10 +40,28 @@ const [sessions, setSessions] = useState([
   { id: "first-service", name: "First Service" },
   { id: "second-service", name: "Second Service" }
 ]);
+// ✅ PROGRAMMATIC SESSION CREATOR
+const addSession = (name) => {
+  const trimmed = name.trim();
+  if (!trimmed) return;
 
+  const exists = sessions.some(
+    s => s.name.toLowerCase() === trimmed.toLowerCase()
+  );
+
+  if (exists) return;
+
+  const newSession = {
+    id: Date.now().toString(),
+    name: trimmed
+  };
+
+  setSessions(prev => [...prev, newSession]);
+};
 
   return (
     <View style={styles.container}>
+     
 {/* ✅ TAB HEADER */}
 <View style={styles.tabRow}>
   {[
@@ -65,7 +83,9 @@ const [sessions, setSessions] = useState([
         {t.label}
       </Text>
     </TouchableOpacity>
+    
   ))}
+  
 </View>
 
  {/* ✅ SESSION SWITCHER WITH EDIT + DELETE */}
@@ -293,21 +313,20 @@ const [sessions, setSessions] = useState([
           const name = sessionNameInput.trim();
           if (!name) return;
 
-          if (editingSession) {
-            setSessions(prev =>
-              prev.map(item =>
-                item.id === editingSession.id
-                  ? { ...item, name }
-                  : item
-              )
-            );
-          } else {
-            const newSession = {
-              id: Date.now().toString(),
-              name
-            };
-            setSessions(prev => [...prev, newSession]);
-          }
+         if (editingSession) {
+  // ✅ EDIT
+  setSessions(prev =>
+    prev.map(item =>
+      item.id === editingSession.id
+        ? { ...item, name }
+        : item
+    )
+  );
+} else {
+  // ✅ ADD USING FUNCTION
+  addSession(name);
+}
+
 
           setEditModalVisible(false);
           setEditingSession(null);
