@@ -62,6 +62,7 @@ export default function HomeScreen() {
   const [entities, setEntities] = useState([]);
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
 
 
 
@@ -102,6 +103,8 @@ export default function HomeScreen() {
   const [programModalVisible, setProgramModalVisible] = useState(false);
   const [editingProgram,      setEditingProgram]      = useState(null);
 
+  const hasRole = (role) => userRoles.includes(role);
+
   /* useEffect */
   useEffect(() => {
     console.log("🎯 preacherModal:", preacherModal);
@@ -133,6 +136,19 @@ export default function HomeScreen() {
 
     loadEntities();
   }, []);
+
+useEffect(() => {
+  const loadRoles = async () => {
+    const stored = await AsyncStorage.getItem("userRoles");
+    if (stored) {
+      setUserRoles(JSON.parse(stored));
+    }
+  };
+
+  loadRoles();
+}, []);
+
+
 
 
   useEffect(() => {
@@ -555,31 +571,79 @@ return (
       <StatCard label="Attendance" value="180" />
     </View>
   </Section>
-
-  {/* ✅ QUICK ACTIONS */}
-  <View style={styles.qaSection}>
-    <View style={styles.qaHeaderRow}>
-      <Text style={styles.qaHeading}>Quick Actions</Text>
-    </View>
-
-    <View style={styles.qaRow}>
-      {[
-        { icon: "checkmark-circle-outline", label: "Attendance", onPress: () => navigation.navigate("Attendance") },
-        { icon: "people-outline", label: "Members", onPress: () => navigation.navigate("Members") },
-        { icon: "bar-chart-outline", label: "Reports", onPress: () => navigation.navigate("AdminDashboard") },
-        { icon: "heart-outline", label: "Donate", onPress: () => navigation.navigate("Donate") },
-        { icon: "help-circle-outline", label: "Help", onPress: () => navigation.navigate("Help") },
-        { icon: "qr-code-outline", label: "QR Code", onPress: () => setQrModal(true) }
-      ].map(a => (
-        <TouchableOpacity key={a.label} style={styles.qaItem} onPress={a.onPress}>
-          <View style={styles.qaCircle}>
-            <Ionicons name={a.icon} size={22} color="#fff" />
-          </View>
-          <Text style={styles.qaLabel}>{a.label}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+{/* ✅ QUICK ACTIONS */}
+<View style={styles.qaSection}>
+  <View style={styles.qaHeaderRow}>
+    <Text style={styles.qaHeading}>Quick Actions</Text>
   </View>
+
+  {/* ✅ REQUIRED ROW WRAPPER */}
+  <View style={styles.qaRow}>
+
+    {[
+      (hasRole("admin") || hasRole("usher")) && {
+        icon: "checkmark-circle-outline",
+        label: "Attendance",
+        onPress: () => navigation.navigate("Attendance")
+      },
+
+      hasRole("admin") && {
+        icon: "people-outline",
+        label: "Members",
+        onPress: () => navigation.navigate("Members")
+      },
+
+      hasRole("admin") && {
+        icon: "bar-chart-outline",
+        label: "Reports",
+        onPress: () => navigation.navigate("AdminDashboard")
+      },
+
+      (hasRole("admin") || hasRole("media")) && {
+        icon: "cloud-upload-outline",
+        label: "Upload",
+        onPress: () => setShowUpload(true)
+      },
+
+      {
+        icon: "heart-outline",
+        label: "Donate",
+        onPress: () => navigation.navigate("Donate")
+      },
+
+      {
+        icon: "help-circle-outline",
+        label: "Help",
+        onPress: () => navigation.navigate("Help")
+      },
+
+      {
+        icon: "qr-code-outline",
+        label: "QR Code",
+        onPress: () => setQrModal(true)
+      }
+
+    ]
+    .filter(Boolean)
+    .map((a, index) => (
+      <TouchableOpacity
+        key={`${a.label}-${index}`}
+        style={styles.qaItem}
+        onPress={a.onPress}
+      >
+        <View style={styles.qaCircle}>
+          <Ionicons name={a.icon} size={22} color="#fff" />
+        </View>
+
+        <Text style={styles.qaLabel}>
+          {a.label}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+  </View>
+</View>
+
 
   {/* ✅ SERVICE FLOW */}
   <Section title="Service Flow">

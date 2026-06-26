@@ -91,53 +91,53 @@ export default function RolesScreen({ route }) {
 
           return (
             <TouchableOpacity
-  key={role.id}
-  style={styles.row}
-  onPress={() => toggleRole(role.id)}
-  onLongPress={() => {
+              key={role.id}
+              style={styles.row}
+              onPress={() => toggleRole(role.id)}
+              onLongPress={() => {
 
-    // ✅ PROTECT ADMIN ROLE
-    if (role.id === "admin") {
-      Alert.alert(
-        "Protected Role",
-        "Administrator role cannot be modified or deleted."
-      );
-      return;
-    }
+                // ✅ PROTECT ADMIN ROLE
+                if (role.id === "admin") {
+                  Alert.alert(
+                    "Protected Role",
+                    "Administrator role cannot be modified or deleted."
+                  );
+                  return;
+                }
 
-    Alert.alert(
-      role.label,
-      "Choose action",
-      [
-        {
-          text: "Rename",
-          onPress: () => {
-            setRoleToEdit(role);
-            setEditValue(role.label);
-            setRenameModal(true);
-          }
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setRoleToDelete(role);
-            setDeleteModal(true);
-          }
-        },
-        { text: "Cancel", style: "cancel" }
-      ]
-    );
-  }}
->
-  <Text style={styles.label}>{role.label}</Text>
+                Alert.alert(
+                  role.label,
+                  "Choose action",
+                  [
+                    {
+                      text: "Rename",
+                      onPress: () => {
+                        setRoleToEdit(role);
+                        setEditValue(role.label);
+                        setRenameModal(true);
+                      }
+                    },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => {
+                        setRoleToDelete(role);
+                        setDeleteModal(true);
+                      }
+                    },
+                    { text: "Cancel", style: "cancel" }
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.label}>{role.label}</Text>
 
-  <Ionicons
-    name={roles.includes(role.id) ? "checkbox" : "square-outline"}
-    size={22}
-    color={roles.includes(role.id) ? "#4B3F72" : "#999"}
-  />
-</TouchableOpacity>
+              <Ionicons
+                name={selected ? "checkbox" : "square-outline"}
+                size={22}
+                color={selected ? "#4B3F72" : "#999"}
+              />
+            </TouchableOpacity>
           );
         })}
 
@@ -159,6 +159,12 @@ export default function RolesScreen({ route }) {
             <TouchableOpacity
               style={styles.save}
               onPress={() => {
+
+                if (roleToEdit?.id === "admin") {
+                  Alert.alert("Protected Role", "Cannot rename Administrator.");
+                  return;
+                }
+
                 if (!editValue.trim()) return;
 
                 setAvailableRoles(prev =>
@@ -195,6 +201,13 @@ export default function RolesScreen({ route }) {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => {
+
+                if (roleToDelete?.id === "admin") {
+                  Alert.alert("Protected Role", "Cannot delete Administrator.");
+                  setDeleteModal(false);
+                  return;
+                }
+
                 setAvailableRoles(prev =>
                   prev.filter(r => r.id !== roleToDelete.id)
                 );
@@ -220,8 +233,6 @@ export default function RolesScreen({ route }) {
     </View>
   );
 }
-
-
 
 const styles = StyleSheet.create({
 
