@@ -42,3 +42,22 @@
     }
   }
 }
+
+{
+  "expo": {
+    "scheme": "churchcare",
+    "android": {
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "churchcare"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    }
+  }
+}

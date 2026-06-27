@@ -142,19 +142,33 @@ function RootStack() {
 }
 
 
+const linking = {
+  prefixes: ["churchcare://"],
+  config: {
+    screens: {
+      MainTabs: {
+        screens: {
+          Attendance: "attendance"
+        }
+      }
+    }
+  }
+};
 
 export default function App() {
   return (
     <View style={{ flex: 1 }}>
       <StatusBar
-        translucent={false}   // ✅ THIS IS THE REAL FIX
+        translucent={false}
         backgroundColor="#4B3F72"
         barStyle="light-content"
       />
 
-      <NavigationContainer>
+      {/* ✅ FIXED */}
+      <NavigationContainer linking={linking}>
         <RootStack />
       </NavigationContainer>
+
     </View>
   );
 }
