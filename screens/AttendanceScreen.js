@@ -14,7 +14,8 @@ import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCameraPermissions } from "expo-camera";
-
+import QRCodeDisplay from "../components/QRCodeDisplay";
+import { buildAttendanceSessionLink } from "../utils/qrLinks";
 
 
 
@@ -49,7 +50,11 @@ const CHURCHES = [
 
 export default function AttendanceScreen({ navigation, route }) {
 
-const extendSession = async () => {
+const [sessionQR, setSessionQR] = useState(null);     // the encoded payload string for the live session
+const [qrModalVisible, setQrModalVisible] = useState(false);
+
+
+  const extendSession = async () => {
   try {
     setSessionStatus("extended");
     setExtendModal(false);
@@ -142,6 +147,7 @@ const endSession = async () => {
     setPresentCount(0);
     setSessionId(null);
     setStartTime("");
+    setSessionQR(null);
     setEndTime("");
     setSessionStatus("ended");
 
@@ -156,6 +162,95 @@ const endSession = async () => {
     Alert.alert("Error", "Could not end the session. Please try again.");
   }
 };
+
+
+/* START SESSION*/
+
+const startSession = async () => {
+  if (!startTime) {
+    Alert.alert("Required", "Service start time is required.");
+    return;
+  }
+
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first");
+    return;
+  }
+
+  try {
+    const ref = await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions"
+      ),
+      {
+        date: today,
+        service: selectedService,
+        type: selectedType,
+        event: selectedEvent,
+        entityId,
+        organizationId,
+        startTime,
+        endTime,
+        status: "open",
+        createdAt: serverTimestamp()
+      }
+    );
+
+    // ✅ ✅ CORRECT PLACE FOR QR LOGIC
+    const qrLink = buildAttendanceSessionLink(
+      ref.id,
+      organizationId,
+      entityId
+    );
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions",
+        ref.id
+      ),
+      { qrPayload: qrLink }
+    );
+
+    setSessionQR(qrLink);
+    setSessionId(ref.id);
+    setActiveSessionState(ref.id);
+
+    await AsyncStorage.setItem("activeSession", ref.id);
+    await AsyncStorage.setItem("sessionStatus", "open");
+    await AsyncStorage.setItem("sessionStartTime", startTime);
+
+    setSessionModal(false);
+
+  } catch (e) {
+    console.log("Start session error:", e);
+  }
+};
+
+
+const unlockSession = () => {
+  if (adminPin !== ADMIN_PIN) {
+    Alert.alert("Wrong PIN", "Incorrect admin PIN.");
+    return;
+  }
+
+  setSessionStatus("open");
+  setAdminPin("");
+  setUnlockModal(false);
+
+  Alert.alert("Unlocked", "Attendance is now editable again.");
+};
+
+
 
 
   const userRole = "admin"; // replace with auth context
@@ -387,6 +482,43 @@ useEffect(() => {
 
 }, [organizationId, entityId, dateObj, selectedService, selectedType]);
 
+
+
+useEffect(() => {
+  const resumeSessionId = route?.params?.resumeSessionId;
+  const resumeEntityId = route?.params?.resumeEntityId;
+  if (!resumeSessionId || !organizationId || !entityId) return;
+
+  if (resumeEntityId && resumeEntityId !== entityId) {
+    Alert.alert(
+      "Different Church",
+      "This QR code belongs to a different church than the one currently active. Switch churches first."
+    );
+    return;
+  }
+
+  const resumeSession = async () => {
+    // ...unchanged from before...
+  };
+
+  resumeSession();
+}, [route?.params?.resumeSessionId, route?.params?.resumeEntityId, organizationId, entityId]);
+
+
+
+
+
+
+// ✅ NEW — also support opening straight into a specific tab, e.g.
+// navigation.navigate("Attendance", { initialMode: "qr" }) — this is
+// what replaces any old navigation calls to QRCodeAttendanceScreen.
+useEffect(() => {
+  if (route?.params?.initialMode) {
+    setMode(route.params.initialMode);
+  }
+}, [route?.params?.initialMode]);
+
+
 /* ══════════ OFFLINE ══════════ */
 const loadOfflineQueue = async () => {
   try {
@@ -598,73 +730,6 @@ const fmt12 = (d) => {
 const isSessionLocked = sessionStatus === "ended";
 
 
-// ✅ START SESSION (ACTIVE ENTITY)
-
-const startSession = async () => {
-  if (!startTime) {
-    Alert.alert("Required", "Service start time is required.");
-    return;
-  }
-
-  if (!organizationId || !entityId) {
-    Alert.alert("No active church", "Please select a church first");
-    return;
-  }
-
-  setSessionStatus("open");
-  setSessionModal(false);
-
-  try {
-    const ref = await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "sessions"
-      ),
-      {
-        date: today,
-        service: selectedService,
-        type: selectedType,
-        event: selectedEvent,
-        entityId,
-        organizationId,
-        startTime,
-        endTime,
-        status: "open",
-        createdAt: serverTimestamp()
-      }
-    );
-
-    // ✅ SAVE ACTIVE SESSION
-    setSessionId(ref.id);
-    setActiveSessionState(ref.id);
-
-    await AsyncStorage.setItem("activeSession", ref.id);
-    await AsyncStorage.setItem("sessionStatus", "open");
-    await AsyncStorage.setItem("sessionStartTime", startTime);
-
-  } catch (e) {
-    console.log(e);
-  }
-};
-
-
-// ✅ UNLOCK SESSION (LOCAL STATE ONLY)
-const unlockSession = () => {
-  if (adminPin !== ADMIN_PIN) {
-    Alert.alert("Wrong PIN", "Incorrect admin PIN.");
-    return;
-  }
-
-  setSessionStatus("open");
-  setAdminPin("");
-  setUnlockModal(false);
-
-  Alert.alert("Unlocked", "Attendance is now editable again.");
-};
 
 
 /* ══════════ ATTENDANCE WRITE ══════════ */
@@ -1000,16 +1065,63 @@ const handleGeoAttendance = async () => {
 
 
 /* ══════════ QR ══════════ */
+// const handleBarCodeScanned = async ({ data: scannedRaw }) => {
+//   if (!organizationId || !entityId) return;
+//   if (scanned) return;
 
-const handleBarCodeScanned = async ({ data: scannedId }) => {
+//   setScanned(true);
+
+//   // ✅ Decode with the shared schema — still works with old plain-ID
+//   // badges (decodeQRPayload falls back to treating them as a member id),
+//   // but also validates new-format badges actually belong to this church.
+//   const payload = decodeQRPayload(scannedRaw);
+//   const scannedId = payload?.memberId || scannedRaw;
+
+//   if (payload && payload.v !== 0 && !payloadMatchesEntity(payload, organizationId, entityId)) {
+//     setScanFeedback("❌ This badge belongs to a different church");
+//     setTimeout(() => { setScanned(false); setScanFeedback(""); }, 2500);
+//     return;
+//   }
+
+//   const found = members.find(
+//     m => m.id === scannedId || m.memberCode === scannedId
+//   );
+
+//   if (found) {
+//     if (attendance[found.id]) {
+//       setScanFeedback(`⚠️ ${found.name} already marked`);
+//     } else {
+//       await toggleAttendance(found, "present");
+//       setScanFeedback(`✅ ${found.name} marked Present`);
+//     }
+//   } else {
+//     setScanFeedback("❌ Member not found");
+//   }
+
+//   setTimeout(() => {
+//     setScanned(false);
+//     setScanFeedback("");
+//   }, 2500);
+// };
+
+const handleBarCodeScanned = async ({ data: scannedRaw }) => {
   if (!organizationId || !entityId) return;
-
   if (scanned) return;
 
   setScanned(true);
 
+  // ✅ Member badges are JSON { memberCode, entityId } — see qrRouter.js.
+  // Falls back to the raw string for any older plain-ID badges.
+  let scannedCode = scannedRaw;
+  try {
+    const parsed = JSON.parse(scannedRaw);
+    if (parsed?.memberCode) scannedCode = parsed.memberCode;
+  } catch {
+    // not JSON — use as-is
+  }
+
   const found = members.find(
-    m => m.id === scannedId || m.memberCode === scannedId
+    m => m.id === scannedCode || m.memberCode === scannedCode
   );
 
   if (found) {
@@ -1028,6 +1140,11 @@ const handleBarCodeScanned = async ({ data: scannedId }) => {
     setScanFeedback("");
   }, 2500);
 };
+
+
+
+
+
 
  /* ══════════ LOG ══════════ */
 const openLog = async () => {
@@ -1308,6 +1425,28 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
             </View>
           )}
         </View>
+         
+         <View style={{ flexDirection: "row", gap: 6 }}>
+  {/* ✅ NEW */}
+  <TouchableOpacity
+    style={[styles.extendBtn, { backgroundColor: "#4B3F72" }]}
+    onPress={() => setQrModalVisible(true)}
+  >
+    <Ionicons name="qr-code-outline" size={13} color="#fff" />
+    <Text style={styles.extendBtnText}>Show QR</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity style={styles.extendBtn} onPress={() => setExtendModal(true)}>
+    <Ionicons name="time-outline" size={13} color="#fff" />
+    <Text style={styles.extendBtnText}>Extend</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={styles.endBtn} onPress={() => setEndServiceModal(true)}>
+    <Ionicons name="stop-circle-outline" size={13} color="#fff" />
+    <Text style={styles.endBtnText}>End Service</Text>
+  </TouchableOpacity>
+</View>
+
+
 
         {/* ── DATE ── */}
         <TouchableOpacity style={styles.box} onPress={() => setShowDatePicker(true)}>
@@ -1704,28 +1843,49 @@ onPress={() => Alert.alert("Use the header switch to change church")}
   </View>
 )}
 
-        {/* ══ SELF QR ══ */}
-        {mode === "selfqr" && (
-          <View style={styles.infoBox}>
-            <Ionicons name="phone-portrait-outline" size={36} color="#4B3F72" />
-            <Text style={styles.infoBoxTitle}>Member Self Check-In</Text>
-            <Text style={styles.infoBoxDesc}>Members scan the church entrance QR code with their phone.</Text>
-            <TextInput style={[styles.input, { marginTop: 12, alignSelf: "stretch" }]}
-              placeholder="Or type Member ID / Code"
-              value={memberGeoCode} onChangeText={setMemberGeoCode} />
-            <TouchableOpacity style={styles.geoBtn} onPress={async () => {
-              const member = members.find(m => m.id===memberGeoCode.trim() || m.memberCode===memberGeoCode.trim());
-              if (!member) { Alert.alert("Not found"); return; }
-              if (attendance[member.id]) { Alert.alert("Already marked", `${member.name} is recorded.`); return; }
-              await toggleAttendance(member, "present");
-              Alert.alert("✅ Marked", `${member.name} marked Present.`);
-              setMemberGeoCode("");
-            }}>
-              <Ionicons name="checkmark-circle" size={15} color="#fff" />
-              <Text style={styles.geoBtnText}>Mark Present</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+{/* ══ SELF QR ══ */}
+{mode === "selfqr" && (
+  <View style={styles.infoBox}>
+    {sessionQR ? (
+      <QRCodeDisplay
+        value={sessionQR}
+        title="Self Check-In"
+        subtitle="Members scan this with their own phone to check in"
+        size={180}
+      />
+    ) : (
+      <>
+        <Ionicons name="phone-portrait-outline" size={36} color="#4B3F72" />
+        <Text style={styles.infoBoxTitle}>Member Self Check-In</Text>
+        <Text style={styles.infoBoxDesc}>
+          Start a session first — its QR code will appear here automatically.
+        </Text>
+      </>
+    )}
+
+    <TextInput
+      style={[styles.input, { marginTop: 12, alignSelf: "stretch" }]}
+      placeholder="Or type Member ID / Code"
+      value={memberGeoCode}
+      onChangeText={setMemberGeoCode}
+    />
+    <TouchableOpacity
+      style={styles.geoBtn}
+      onPress={async () => {
+        const member = members.find(m => m.id === memberGeoCode.trim() || m.memberCode === memberGeoCode.trim());
+        if (!member) { Alert.alert("Not found"); return; }
+        if (attendance[member.id]) { Alert.alert("Already marked", `${member.name} is recorded.`); return; }
+        await toggleAttendance(member, "present");
+        Alert.alert("✅ Marked", `${member.name} marked Present.`);
+        setMemberGeoCode("");
+      }}
+    >
+      <Ionicons name="checkmark-circle" size={15} color="#fff" />
+      <Text style={styles.geoBtnText}>Mark Present</Text>
+    </TouchableOpacity>
+  </View>
+)}
+        
 
         {/* ══ GEO ══ */}
         {mode === "geo" && (
@@ -1802,6 +1962,24 @@ onPress={() => Alert.alert("Use the header switch to change church")}
             <Text style={styles.modalSub}>
               Attendance will be locked. Only an admin can unlock it to make further changes.
             </Text>
+
+            {/* ══ SESSION QR MODAL ══ */}
+<Modal visible={qrModalVisible} transparent animationType="fade">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalSheet}>
+      {sessionQR ? (
+        <QRCodeDisplay
+          value={sessionQR}
+          title={`${selectedService} · ${selectedType}`}
+          subtitle="Members scan this to check themselves in for this session"
+          onClose={() => setQrModalVisible(false)}
+        />
+      ) : (
+        <Text style={styles.emptyText}>No active session yet.</Text>
+      )}
+    </View>
+  </View>
+</Modal>
 
 
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#e8dbda", marginTop: 12 }]} onPress={endSession}>
