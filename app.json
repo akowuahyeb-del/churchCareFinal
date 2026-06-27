@@ -7,16 +7,22 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+
+    "scheme": "churchcare",
+
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.ChurchCareFinal"
     },
+
     "android": {
+      "package": "com.anonymous.ChurchCareFinal",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -25,28 +31,6 @@
       "permissions": [
         "android.permission.CAMERA"
       ],
-      "package": "com.anonymous.ChurchCareFinal"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "@react-native-community/datetimepicker",
-      "expo-sharing",
-      "expo-status-bar",
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "5cf65fe9-73d0-473b-8da7-be87ccfc2ef3"
-      }
-    }
-  }
-}
-
-{
-  "expo": {
-    "scheme": "churchcare",
-    "android": {
       "intentFilters": [
         {
           "action": "VIEW",
@@ -58,6 +42,22 @@
           "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
+    },
+
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-status-bar"
+    ],
+
+    "extra": {
+      "eas": {
+        "projectId": "5cf65fe9-73d0-473b-8da7-be87ccfc2ef3"
+      }
     }
   }
 }
