@@ -62,7 +62,8 @@ export default function HomeScreen() {
   const [entities, setEntities] = useState([]);
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
-  const [userRoles, setUserRoles] = useState([]);
+  const [userRoles, setUserRoles] = useState(["admin"]);
+
 
 
 
@@ -136,18 +137,33 @@ export default function HomeScreen() {
 
     loadEntities();
   }, []);
-
 useEffect(() => {
   const loadRoles = async () => {
-    const stored = await AsyncStorage.getItem("userRoles");
-    if (stored) {
-      setUserRoles(JSON.parse(stored));
+    try {
+      const stored = await AsyncStorage.getItem("userRoles");
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        // ✅ Safety: ensure it's an array and not empty
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setUserRoles(parsed);
+        } else {
+          setUserRoles(["admin"]); // ✅ fallback
+        }
+
+      } else {
+        setUserRoles(["admin"]); // ✅ fallback if nothing stored
+      }
+
+    } catch (e) {
+      console.log("❌ Load roles error:", e);
+      setUserRoles(["admin"]); // ✅ fallback on error
     }
   };
 
   loadRoles();
 }, []);
-
 
 
 

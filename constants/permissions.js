@@ -181,8 +181,13 @@ export const DEFAULT_ROLES = [
 // ✅ Reusable everywhere else in the app — gate a screen, button, or nav
 // item behind a permission instead of hardcoding role names.
 // e.g. hasPermission(currentMember, "manage_finance")
-export const hasPermission = (member, key) =>
-  Array.isArray(member?.permissions) && member.permissions.includes(key);
+export const hasPermission = (member, key) => {
+  // ✅ Super Admin override (CRITICAL)
+  if (member?.roles?.includes("super_admin")) return true;
+
+  return Array.isArray(member?.permissions) &&
+    member.permissions.includes(key);
+};
 
 // ✅ Union of every permission across a set of role objects — this is what
 // gets written onto a member's record as their effective permission set.
