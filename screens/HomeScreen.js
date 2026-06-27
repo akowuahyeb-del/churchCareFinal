@@ -48,8 +48,9 @@ const fmtDT = (iso) => {
          d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-export default function HomeScreen() {
-  const navigation = useNavigation();
+export default function HomeScreen({ route }) {
+  const navigation = useNavigation(); 
+  
 
   /* ── data state ── */
   const [events,      setEvents]      = useState([]);
@@ -105,6 +106,16 @@ export default function HomeScreen() {
   const [editingProgram,      setEditingProgram]      = useState(null);
 
   const hasRole = (role) => userRoles.includes(role);
+
+useEffect(() => {
+  const entityFromQR = route?.params?.entity;
+
+  if (!entityFromQR) return;
+
+  console.log("CHURCH QR OPENED:", entityFromQR);
+
+}, [route?.params]);
+
 
   /* useEffect */
   useEffect(() => {
@@ -164,6 +175,8 @@ useEffect(() => {
 
   loadRoles();
 }, []);
+
+
 
 
 

@@ -174,6 +174,16 @@ console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 
 /*useEffect*/
 
+useEffect(() => {
+  const entityFromQR = route?.params?.entity;
+
+  if (!entityFromQR) return;
+
+  console.log("REGISTER QR:", entityFromQR);
+
+}, [route?.params]);
+
+
 
 useEffect(() => {
   const loadLists = async () => {

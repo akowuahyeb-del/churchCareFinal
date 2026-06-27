@@ -13,6 +13,12 @@ import AppHeader from "../components/AppHeader";
 import { signOut } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../firebase";
+import QRCodeDisplay from "../components/QRCodeDisplay";
+
+import {
+  buildChurchQR,
+  buildRegistrationQR
+} from "../utils/qrLinks";
 
 
 
@@ -92,12 +98,32 @@ function ModalSheet({ visible, onClose, children }) {
 }
 
 export default function SettingsScreen() {
+  
+  
+
+
+  
   const navigation = useNavigation();
   const CHURCH_ID = activeEntity?.entityId || "unknown";
 const CHURCH_NAME = activeEntity?.name || "Church";
 
 // ✅ ADD THIS HERE
 const [activeEntity, setActiveEntity] = useState(null);
+
+// ✅ FIXED — derive IDs first
+const organizationId = activeEntity?.organizationId;
+const entityId = activeEntity?.entityId;
+
+// ✅ SAFE QR generation (only when ready)
+const churchQR =
+  organizationId && entityId
+    ? buildChurchQR(organizationId, entityId)
+    : null;
+
+const registerQR =
+  organizationId && entityId
+    ? buildRegistrationQR(organizationId, entityId)
+    : null;
 
 useEffect(() => {
   AsyncStorage.getItem("activeEntity").then((data) => {
@@ -227,19 +253,55 @@ useEffect(() => {
   };
 
   // ── QR generation ─────────────────────────────────────────────
-  const generateQR = () => {
-    if (qrType.key === "custom" && !qrLabel.trim()) {
-      Alert.alert("Required", "Please enter the custom URL or text for this QR code.");
-      return;
-    }
-    if (qrType.key === "event" && !qrLabel.trim()) {
-      Alert.alert("Required", "Please enter the event name.");
-      return;
-    }
-    const value = qrType.buildValue(CHURCH_ID, qrLabel.trim());
-    setQrValue(value);
-    setQrGenerated(true);
-  };
+ const generateQR = () => {
+  if (qrType.key === "custom" && !qrLabel.trim()) {
+    Alert.alert("Required", "Please enter the custom URL or text");
+    return;
+  }
+
+  if (qrType.key === "event" && !qrLabel.trim()) {
+    Alert.alert("Required", "Please enter the event name");
+    return;
+  }
+
+  if (!activeEntity) {
+    Alert.alert("Error", "No active church selected");
+    return;
+  }
+
+  let value = "";
+  const { organizationId, entityId } = activeEntity;
+
+  switch (qrType.key) {
+
+    case "attendance":
+      value = `churchcare://attendance?org=${organizationId}&entity=${entityId}&session=${Date.now()}`;
+      break;
+
+    case "register":
+      value = `churchcare://register?org=${organizationId}&entity=${entityId}`;
+      break;
+
+    case "event":
+      value = `churchcare://event?event=${encodeURIComponent(qrLabel)}&entity=${entityId}&org=${organizationId}`;
+      break;
+
+    case "donate":
+      value = `churchcare://donate?entity=${entityId}&org=${organizationId}`;
+      break;
+
+    case "custom":
+      value = qrLabel;
+      break;
+
+    default:
+      value = `churchcare://church?entity=${entityId}&org=${organizationId}`;
+  }
+
+  setQrValue(value);
+  setQrGenerated(true);
+};
+
 
   const shareQR = async () => {
     try {
@@ -423,22 +485,29 @@ useEffect(() => {
 </TouchableOpacity>
 
 
-        {/* ── NEW: QR CODE GENERATOR ── */}
-        {canDo("deacon") && (
-          <>
-            <SectionHeader title="QR Code Generator" />
-            <View style={styles.card}>
-              <TapRow
-                icon="qr-code-outline"
-                label="Generate Church QR Code"
-                sub="Dynamic QR for attendance, events, donations & more"
-                onPress={() => { resetQR(); setQrModal(true); }}
-                color="#4B3F72"
-                badge="New"
-              />
-            </View>
-          </>
-        )}
+       {/* ── NEW: QR CODE GENERATOR ── */}
+{canDo("deacon") && (
+  <>
+    <SectionHeader title="QR Code Generator" />
+
+    <View style={styles.card}>
+      <TapRow
+        icon="qr-code-outline"
+        label="Generate Dynamic QR"
+        sub="Create QR for attendance, events, and more"
+        onPress={() => { resetQR(); setQrModal(true); }}
+        color="#4B3F72"
+        badge="New"
+      />
+    </View>
+
+    {/* ✅ ✅ THIS IS THE EXACT PLACE FOR STATIC QR DISPLAY */}
+    
+
+  </>
+)}
+         
+
 
         {/* ── DATA MANAGEMENT ── */}
         <SectionHeader title="Data Management" />

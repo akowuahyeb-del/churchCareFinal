@@ -1444,7 +1444,7 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         
-        {/* ── OFFLINE BANNER ── */}
+        
         {!isOnline && (
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={13} color="#fff" />

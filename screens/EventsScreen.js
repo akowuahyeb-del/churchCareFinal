@@ -96,6 +96,15 @@ export default function EventsScreen() {
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
 
+useEffect(() => {
+  const eventId = route?.params?.eventId;
+
+  if (!eventId) return;
+
+  console.log("EVENT QR:", eventId);
+
+}, [route?.params]);
+
 
 useEffect(() => {
   const loadEntity = async () => {

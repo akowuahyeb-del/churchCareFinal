@@ -83,6 +83,16 @@ export default function MemberProfileScreen({ route, navigation }) {
   const [requestModal, setRequestModal]     = useState(false);
   const [requestAction, setRequestAction]   = useState("");
 
+useEffect(() => {
+  const memberId = route?.params?.memberId;
+
+  if (!memberId) return;
+
+  console.log("MEMBER QR:", memberId);
+
+}, [route?.params]);
+
+
   /* ────────────── LOAD DATA ────────────── */
   useEffect(() => { loadAttendance(); loadContributions(); }, []);
 

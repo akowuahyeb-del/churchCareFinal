@@ -39,38 +39,76 @@ export default function DonateScreen({ route, navigation }) {
   const [history,     setHistory]     = useState([]);
   const [historyTab,  setHistoryTab]  = useState("donate"); // "donate" | "history"
 
-  useEffect(() => { loadHistory(); }, []);
+  // ✅ FIXED: was reading AsyncStorage("churchId"), a key nothing in the app
+  // ever sets. Every other screen uses "activeEntity" → { organizationId,
+  // entityId } — that's what's actually populated when a church is selected.
+  const [activeEntity, setActiveEntity] = useState(null);
+  const organizationId = activeEntity?.organizationId || null;
+  const entityId       = activeEntity?.entityId       || null;
 
-const [churchId, setChurchId] = useState(null);
+  useEffect(() => {
+    AsyncStorage.getItem("activeEntity").then(data => {
+      if (data) {
+        try { setActiveEntity(JSON.parse(data)); } catch (_) {}
+      }
+    });
+  }, []);
 
-/* useEffects*/
+  useEffect(() => {
+    if (!organizationId || !entityId) return;
+    loadHistory();
+  }, [organizationId, entityId]);
 
-useEffect(() => {
-  const loadChurchId = async () => {
-    const id = await AsyncStorage.getItem("churchId");
-    setChurchId(id);
-  };
-  loadChurchId();
-}, []);
+  // ✅ NEW — prefill from a scanned donate QR link (utils/qrLinks.js /
+  // utils/qrRouter.js). amount/category are optional; whichever are present
+  // get applied, the rest stay at their defaults.
+  useEffect(() => {
+    const presetAmount   = route?.params?.amount;
+    const presetCategory = route?.params?.category;
 
-useEffect(() => {
-  if (!churchId) return;
-  loadHistory();
-}, [churchId]);
+    if (presetAmount) {
+      if (AMOUNTS.includes(String(presetAmount))) {
+        setSelectedAmount(String(presetAmount));
+        setCustomAmount("");
+      } else {
+        setCustomAmount(String(presetAmount));
+        setSelectedAmount("");
+      }
+    }
 
+    if (presetCategory) {
+      const match = CATEGORIES.find(
+        c => c.label.toLowerCase() === String(presetCategory).toLowerCase()
+      );
+      if (match) setSelectedCategory(match.label);
+    }
+  }, [route?.params?.amount, route?.params?.category]);
 
+  // ✅ NEW — a donate QR carries the church it was generated for. If this
+  // device currently has a DIFFERENT church active, flag it instead of
+  // silently recording the gift under the wrong church.
+  useEffect(() => {
+    const qrEntityId = route?.params?.entityId;
+    if (qrEntityId && entityId && qrEntityId !== entityId) {
+      Alert.alert(
+        "Different Church",
+        "This donation link belongs to a different church than the one currently active on this device."
+      );
+    }
+  }, [route?.params?.entityId, entityId]);
 
   const loadHistory = async () => {
+    if (!organizationId || !entityId) return;
+
     try {
-      let q;
-      if (memberId) {
-        q = query(
-          collection(db, "churches", churchId, "contributions"),
-          where("memberId", "==", memberId)
-        );
-      } else {
-        q = query(collection(db, "churches", churchId, "contributions"));
-      }
+      const contributionsRef = collection(
+        db, "organizations", organizationId, "entities", entityId, "contributions"
+      );
+
+      const q = memberId
+        ? query(contributionsRef, where("memberId", "==", memberId))
+        : query(contributionsRef);
+
       const snap = await getDocs(q);
       const data = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -88,24 +126,28 @@ useEffect(() => {
       Alert.alert("Invalid amount", "Please enter or select a valid donation amount.");
       return;
     }
+
+    if (!organizationId || !entityId) {
+      Alert.alert("Error", "No active church found. Please select a church first.");
+      return;
+    }
+
     setLoading(true);
     try {
-      if (!churchId) {
-  Alert.alert("Error", "No active church found");
-  return;
-}
-
-await addDoc(
-  collection(db, "churches", churchId, "contributions"),
-   {
-        memberId:   memberId   || "anonymous",
-        memberName: memberName || "Anonymous",
-        amount:     Number(finalAmount),
-        type:       selectedCategory,
-        note:       note.trim(),
-        date:       new Date().toISOString().split("T")[0],
-        createdAt:  serverTimestamp(),
-      });
+      await addDoc(
+        collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
+        {
+          memberId:   memberId   || "anonymous",
+          memberName: memberName || "Anonymous",
+          amount:     Number(finalAmount),
+          type:       selectedCategory,
+          note:       note.trim(),
+          entityId,
+          organizationId,
+          date:       new Date().toISOString().split("T")[0],
+          createdAt:  serverTimestamp(),
+        }
+      );
       Alert.alert("Thank you! 🙏", `GH₵ ${finalAmount} ${selectedCategory} recorded successfully.`);
       setSelectedAmount(""); setCustomAmount(""); setNote("");
       loadHistory();
