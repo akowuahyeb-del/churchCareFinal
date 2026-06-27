@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,14 +20,20 @@ export default function AppHeader({
   return (
     <View style={styles.container}>
       
-      {/* ✅ ONE CONTINUOUS HEADER (NO SEPARATE SAFE BLOCK) */}
+      {/* ✅ SAFE HEADER WITH EXTRA SPACING */}
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top }   // ✅ CRITICAL LINE
+          {
+            paddingTop:
+              Platform.OS === "android"
+                ? (insets.top || 24) + 10   // ✅ Ensure minimum spacing
+                : insets.top + 6,          // ✅ Slight extra for iOS
+          },
         ]}
       >
-        
+
+        {/* BACK BUTTON */}
         {onBack ? (
           <TouchableOpacity style={styles.backBtn} onPress={onBack}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
@@ -35,11 +42,15 @@ export default function AppHeader({
           <View style={styles.backBtnSpacer} />
         )}
 
+        {/* TITLE */}
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{title}</Text>
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+          {subtitle ? (
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          ) : null}
         </View>
 
+        {/* ACTIONS */}
         {actions.length > 0 && (
           <View style={styles.actionsRow}>
             {actions.map((a, i) => (
@@ -51,11 +62,8 @@ export default function AppHeader({
                 {a.icon && (
                   <Ionicons name={a.icon} size={18} color="#fff" />
                 )}
-
                 {a.label && (
-                  <Text style={styles.actionText}>
-                    {a.label}
-                  </Text>
+                  <Text style={styles.actionText}>{a.label}</Text>
                 )}
               </TouchableOpacity>
             ))}
@@ -76,7 +84,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingBottom: 16,   // ✅ keep bottom spacing only
+    paddingBottom: 14,
   },
 
   backBtn: {

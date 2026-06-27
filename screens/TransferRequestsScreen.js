@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Platform
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
@@ -72,92 +73,80 @@ export default function TransferRequestsScreen({ route }) {
   };
 
   return (
-  <SafeAreaView style={{ flex: 1, backgroundColor: "#f4f6fb" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f4f6fb" }} edges={["top"]}>
 
-    {/* ✅ HEADER */}
-    <AppHeader
-      title="Transfer Requests"
-      subtitle="Manage member transfers"
-      actions={[
-        {
-          icon: "arrow-back-outline",
-          onPress: () => route?.navigation?.goBack?.() || console.log("no nav"),
-        },
-      ]}
-    />
+      {/* ✅ HEADER WITH SAFE SPACING */}
+      <View style={{ paddingTop: Platform.OS === "android" ? 6 : 0 }}>
+        <AppHeader
+          title="Transfer Requests"
+          subtitle="Manage member transfers"
+          actions={[
+            {
+              icon: "arrow-back-outline",
+              onPress: () => navigation.goBack(),
+            },
+          ]}
+        />
+      </View>
 
-    {/* ✅ CONTENT */}
-    <FlatList
-      data={requests}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={{
-        paddingHorizontal: 14,
-        paddingTop: 10,
-        paddingBottom: 40,
-      }}
-      showsVerticalScrollIndicator={false}
-
-      ListEmptyComponent={
-        <Text
-          style={{
-            textAlign: "center",
-            marginTop: 40,
-            color: "#777",
-          }}
-        >
-          No pending requests
-        </Text>
-      }
-
-      renderItem={({ item }) => (
-        <View style={styles.card}>
-
-          <Text style={styles.name}>
-            {item.memberName || "Unnamed Member"}
+      {/* ✅ CONTENT */}
+      <FlatList
+        data={requests}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingHorizontal: 14,
+          paddingTop: 10,
+          paddingBottom: 40,
+        }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 40, color: "#777" }}>
+            No pending requests
           </Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
 
-          <Text style={styles.meta}>
-            {item.fromChurchId} → {item.toChurchId}
-          </Text>
+            <Text style={styles.name}>
+              {item.memberName || "Unnamed Member"}
+            </Text>
 
-          <Text style={styles.reason}>
-            {item.reason || "No reason provided"}
-          </Text>
+            <Text style={styles.meta}>
+              {item.fromChurchId} → {item.toChurchId}
+            </Text>
 
-          <View style={styles.actions}>
+            <Text style={styles.reason}>
+              {item.reason || "No reason provided"}
+            </Text>
 
-            <TouchableOpacity
-              style={styles.approveBtn}
-              onPress={() => approveRequest(item)}
-            >
-              <Ionicons name="checkmark" size={16} color="#fff" />
-              <Text style={styles.btnText}>Approve</Text>
-            </TouchableOpacity>
+            <View style={styles.actions}>
 
-            <TouchableOpacity
-              style={styles.rejectBtn}
-              onPress={() => rejectRequest(item)}
-            >
-              <Ionicons name="close" size={16} color="#fff" />
-              <Text style={styles.btnText}>Reject</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.approveBtn}
+                onPress={() => approveRequest(item)}
+              >
+                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Text style={styles.btnText}>Approve</Text>
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.rejectBtn}
+                onPress={() => rejectRequest(item)}
+              >
+                <Ionicons name="close" size={16} color="#fff" />
+                <Text style={styles.btnText}>Reject</Text>
+              </TouchableOpacity>
+
+            </View>
           </View>
+        )}
+      />
 
-        </View>
-      )}
-    />
-
-  </SafeAreaView>
-);}
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#777",
-  },
-
   card: {
     backgroundColor: "#fff",
     padding: 15,
