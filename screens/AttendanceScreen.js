@@ -385,6 +385,34 @@ useEffect(() => {
     if (session) {
       setActiveSessionState(session);
       setSessionId(session);
+
+      // ✅ 🔥 LOAD QR FROM FIRESTORE
+      if (organizationId && entityId) {
+        try {
+          const snap = await getDocs(
+            query(
+              collection(
+                db,
+                "organizations",
+                organizationId,
+                "entities",
+                entityId,
+                "sessions"
+              )
+            )
+          );
+
+          const sessionDoc = snap.docs.find(d => d.id === session);
+
+          if (sessionDoc) {
+            const data = sessionDoc.data();
+            setSessionQR(data.qrPayload || null); // ✅ THIS FIXES YOUR ISSUE
+          }
+
+        } catch (e) {
+          console.log("QR restore error:", e);
+        }
+      }
     }
 
     if (status) setSessionStatus(status);
@@ -392,7 +420,7 @@ useEffect(() => {
   };
 
   loadSession();
-}, []);
+}, [organizationId, entityId]);
 
 useEffect(() => {
   const loadSessionDetails = async () => {
@@ -1110,35 +1138,77 @@ const handleBarCodeScanned = async ({ data: scannedRaw }) => {
 
   setScanned(true);
 
-  // ✅ Member badges are JSON { memberCode, entityId } — see qrRouter.js.
-  // Falls back to the raw string for any older plain-ID badges.
+  // ✅ CASE 1: Session QR (deep link)
+  if (scannedRaw.startsWith("churchcare://attendance")) {
+    try {
+      const url = new URL(scannedRaw.replace("churchcare://", "https://dummy/"));
+
+      const sessionId = url.searchParams.get("session");
+      const entityFromQR = url.searchParams.get("entity");
+
+      if (!sessionId) {
+        Alert.alert("Invalid QR", "Session not found.");
+        return;
+      }
+
+      if (entityFromQR && entityFromQR !== entityId) {
+        Alert.alert("Wrong church", "Switch church first.");
+        return;
+      }
+
+      // ✅ resume session directly
+      setSessionId(sessionId);
+      setActiveSessionState(sessionId);
+
+      Alert.alert("✅ Session Activated", "You are now checked into this service.");
+
+    } catch (e) {
+      Alert.alert("Invalid QR", "Could not parse QR.");
+    }
+
+    setTimeout(() => setScanned(false), 2000);
+    return;
+  }
+
+  // ✅ CASE 2: Member QR
   let scannedCode = scannedRaw;
+
   try {
     const parsed = JSON.parse(scannedRaw);
     if (parsed?.memberCode) scannedCode = parsed.memberCode;
-  } catch {
-    // not JSON — use as-is
-  }
+  } catch {}
 
-  const found = members.find(
+  const member = members.find(
     m => m.id === scannedCode || m.memberCode === scannedCode
   );
 
-  if (found) {
-    if (attendance[found.id]) {
-      setScanFeedback(`⚠️ ${found.name} already marked`);
-    } else {
-      await toggleAttendance(found, "present");
-      setScanFeedback(`✅ ${found.name} marked Present`);
-    }
-  } else {
+  if (!member) {
     setScanFeedback("❌ Member not found");
+    setTimeout(() => {
+      setScanned(false);
+      setScanFeedback("");
+    }, 2000);
+    return;
+  }
+
+  // ✅ MUST HAVE SESSION
+  if (!sessionId) {
+    Alert.alert("No Session", "Start or scan a session QR first.");
+    setScanned(false);
+    return;
+  }
+
+  if (attendance[member.id]) {
+    setScanFeedback(`⚠️ ${member.name} already marked`);
+  } else {
+    await toggleAttendance(member, "present");
+    setScanFeedback(`✅ ${member.name} marked Present`);
   }
 
   setTimeout(() => {
     setScanned(false);
     setScanFeedback("");
-  }, 2500);
+  }, 2000);
 };
 
 
@@ -1383,71 +1453,86 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
             </Text>
           </View>
         )}
+{/* ── SESSION SETUP BAR ── */}
+<View style={styles.sessionBar}>
+  {!startTime ? (
+    <TouchableOpacity
+      style={styles.setupBtn}
+      onPress={() => setSessionModal(true)}
+    >
+      <Ionicons name="play-circle-outline" size={16} color="#fff" />
+      <Text style={styles.setupBtnText}>Setup & Start Service</Text>
+    </TouchableOpacity>
 
-        {/* ── SESSION SETUP BAR ── */}
-        <View style={styles.sessionBar}>
-          {!startTime ? (
-            <TouchableOpacity style={styles.setupBtn} onPress={() => setSessionModal(true)}>
-              <Ionicons name="play-circle-outline" size={16} color="#fff" />
-              <Text style={styles.setupBtnText}>Setup & Start Service</Text>
-            </TouchableOpacity>
-          ) : isSessionLocked ? (
-            <View style={styles.sessionStatusRow}>
-              <View style={styles.sessionEndedBadge}>
-                <Ionicons name="lock-closed" size={13} color="#e74c3c" />
-                <Text style={styles.sessionEndedText}>Service Ended · Locked</Text>
-              </View>
-              {userRole === "admin" && (
-                <TouchableOpacity style={styles.unlockBtn} onPress={() => setUnlockModal(true)}>
-                  <Ionicons name="key-outline" size={13} color="#fff" />
-                  <Text style={styles.unlockBtnText}>Unlock</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={styles.sessionStatusRow}>
-              <View style={styles.sessionOpenBadge}>
-                <Ionicons name="radio-button-on" size={11} color="#27ae60" />
-                <Text style={styles.sessionOpenText}>
-                  {sessionStatus === "extended" ? "Extended" : "In Progress"} · {startTime}
-                </Text>
-              </View>
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                <TouchableOpacity style={styles.extendBtn} onPress={() => setExtendModal(true)}>
-                  <Ionicons name="time-outline" size={13} color="#fff" />
-                  <Text style={styles.extendBtnText}>Extend</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.endBtn} onPress={() => setEndServiceModal(true)}>
-                  <Ionicons name="stop-circle-outline" size={13} color="#fff" />
-                  <Text style={styles.endBtnText}>End Service</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-         
-         <View style={{ flexDirection: "row", gap: 6 }}>
-  {/* ✅ NEW */}
-  <TouchableOpacity
-    style={[styles.extendBtn, { backgroundColor: "#4B3F72" }]}
-    onPress={() => setQrModalVisible(true)}
-  >
-    <Ionicons name="qr-code-outline" size={13} color="#fff" />
-    <Text style={styles.extendBtnText}>Show QR</Text>
-  </TouchableOpacity>
+  ) : isSessionLocked ? (
 
-  <TouchableOpacity style={styles.extendBtn} onPress={() => setExtendModal(true)}>
-    <Ionicons name="time-outline" size={13} color="#fff" />
-    <Text style={styles.extendBtnText}>Extend</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.endBtn} onPress={() => setEndServiceModal(true)}>
-    <Ionicons name="stop-circle-outline" size={13} color="#fff" />
-    <Text style={styles.endBtnText}>End Service</Text>
-  </TouchableOpacity>
+    // ✅ LOCKED STATE
+    <View style={styles.sessionStatusRow}>
+      <View style={styles.sessionEndedBadge}>
+        <Ionicons name="lock-closed" size={13} color="#e74c3c" />
+        <Text style={styles.sessionEndedText}>
+          Service Ended · Locked
+        </Text>
+      </View>
+
+      {userRole === "admin" && (
+        <TouchableOpacity
+          style={styles.unlockBtn}
+          onPress={() => setUnlockModal(true)}
+        >
+          <Ionicons name="key-outline" size={13} color="#fff" />
+          <Text style={styles.unlockBtnText}>Unlock</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+
+  ) : (
+
+    // ✅ ACTIVE SESSION (FIXED — SINGLE CONTROL ROW)
+    <View style={styles.sessionStatusRow}>
+      
+      <View style={styles.sessionOpenBadge}>
+        <Ionicons name="radio-button-on" size={11} color="#27ae60" />
+        <Text style={styles.sessionOpenText}>
+          {sessionStatus === "extended" ? "Extended" : "In Progress"} · {startTime}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 6 }}>
+
+        {/* ✅ SHOW QR */}
+        <TouchableOpacity
+          style={[styles.extendBtn, { backgroundColor: "#4B3F72" }]}
+          onPress={() => setQrModalVisible(true)}
+        >
+          <Ionicons name="qr-code-outline" size={13} color="#fff" />
+          <Text style={styles.extendBtnText}>Show QR</Text>
+        </TouchableOpacity>
+
+        {/* Extend */}
+        <TouchableOpacity
+          style={styles.extendBtn}
+          onPress={() => setExtendModal(true)}
+        >
+          <Ionicons name="time-outline" size={13} color="#fff" />
+          <Text style={styles.extendBtnText}>Extend</Text>
+        </TouchableOpacity>
+
+        {/* End */}
+        <TouchableOpacity
+          style={styles.endBtn}
+          onPress={() => setEndServiceModal(true)}
+        >
+          <Ionicons name="stop-circle-outline" size={13} color="#fff" />
+          <Text style={styles.endBtnText}>End Service</Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
+
+  )}
 </View>
-
-
-
+        
         {/* ── DATE ── */}
         <TouchableOpacity style={styles.box} onPress={() => setShowDatePicker(true)}>
           <Ionicons name="calendar-outline" size={14} color="#4B3F72" />
@@ -1963,24 +2048,7 @@ onPress={() => Alert.alert("Use the header switch to change church")}
               Attendance will be locked. Only an admin can unlock it to make further changes.
             </Text>
 
-            {/* ══ SESSION QR MODAL ══ */}
-<Modal visible={qrModalVisible} transparent animationType="fade">
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalSheet}>
-      {sessionQR ? (
-        <QRCodeDisplay
-          value={sessionQR}
-          title={`${selectedService} · ${selectedType}`}
-          subtitle="Members scan this to check themselves in for this session"
-          onClose={() => setQrModalVisible(false)}
-        />
-      ) : (
-        <Text style={styles.emptyText}>No active session yet.</Text>
-      )}
-    </View>
-  </View>
-</Modal>
-
+ 
 
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: "#e8dbda", marginTop: 12 }]} onPress={endSession}>
               <Ionicons name="lock-closed-outline" size={15} color="#fff" />
@@ -2290,6 +2358,54 @@ onPress={() => Alert.alert("Use the header switch to change church")}
     </View>
   </View>
 </Modal>
+
+           {/* ══ SESSION QR MODAL ══ */}
+<Modal
+  visible={qrModalVisible}
+  transparent
+  animationType="fade"
+  onRequestClose={() => setQrModalVisible(false)} // ✅ Android back
+>
+  <View style={styles.modalOverlay}>
+
+    {/* ✅ TAP OUTSIDE TO CLOSE */}
+    <TouchableOpacity
+      style={{ position: "absolute", width: "100%", height: "100%" }}
+      onPress={() => setQrModalVisible(false)}
+    />
+
+    <View style={styles.modalSheet}>
+      {sessionQR ? (
+        <QRCodeDisplay
+          value={sessionQR}
+          title={`${selectedService} · ${selectedType}`}
+          subtitle="Members scan this to check in"
+        />
+      ) : (
+        <Text style={styles.emptyText}>No active session yet.</Text>
+      )}
+
+      {/* ✅ HARD CLOSE BUTTON */}
+      <TouchableOpacity
+        onPress={() => setQrModalVisible(false)}
+        style={{
+          marginTop: 14,
+          backgroundColor: "#4B3F72",
+          padding: 10,
+          borderRadius: 10,
+          alignItems: "center"
+        }}
+      >
+        <Text style={{ color: "#fff", fontWeight: "700" }}>Close</Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+
+
+
 </SafeAreaView>
 );
 }
