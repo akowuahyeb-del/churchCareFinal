@@ -1439,11 +1439,7 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
 
   </View>
 </View>
-    
-
-   <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-
-        
+   <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>   
         
         {!isOnline && (
           <View style={styles.offlineBanner}>
@@ -1453,7 +1449,7 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
             </Text>
           </View>
         )}
-{/* ── SESSION SETUP BAR ── */}
+
 <View style={styles.sessionBar}>
   {!startTime ? (
     <TouchableOpacity

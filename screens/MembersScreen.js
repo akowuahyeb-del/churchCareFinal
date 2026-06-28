@@ -349,42 +349,63 @@ const editMember = (item) => {
   };
 
   const executeAction = async (m, action, note) => {
-    try {
-      if (action === "delete") {
-        await deleteDoc(doc(db, "members", m.id));
-        Alert.alert("Deleted", `${m.name} has been removed`);
-      } else {
-        await updateDoc(doc(db, "members", m.id), {
-          disciplinaryStatus: action, disciplinaryNote: note,
-          disciplinaryDate: new Date().toISOString().split("T")[0],
-          entityId, organizationId,
-        });
-        Alert.alert("Done", `${m.name} has been ${action}ed`);
-      }
-      const key = approvalKey(m.id, action);
-      setApprovals(prev => { const n = { ...prev }; delete n[key]; return n; });
-      loadMembers();
-    } catch (e) { Alert.alert("Error", e.message); }
-  };
+  try {
+    if (!organizationId || !entityId) {
+      Alert.alert("Error", "No active church selected");
+      return;
+    }
+
+    // ✅ FIXED: was doc(db, "members", m.id) — a flat, unscoped path that
+    // doesn't match where loadMembers() actually reads from. Delete/suspend/
+    // reprimand/demote were all silently no-ops against the real record.
+    const memberRef = doc(
+      db, "organizations", organizationId, "entities", entityId, "members", m.id
+    );
+
+    if (action === "delete") {
+      await deleteDoc(memberRef);
+      Alert.alert("Deleted", `${m.name} has been removed`);
+    } else {
+      await updateDoc(memberRef, {
+        disciplinaryStatus: action,
+        disciplinaryNote: note,
+        disciplinaryDate: new Date().toISOString().split("T")[0],
+      });
+      Alert.alert("Done", `${m.name} has been ${action}ed`);
+    }
+
+    const key = approvalKey(m.id, action);
+    setApprovals(prev => { const n = { ...prev }; delete n[key]; return n; });
+    loadMembers();
+  } catch (e) { Alert.alert("Error", e.message); }
+};
 
   /* ── Reinstate ── */
   const openReinstate = (m) => { setReinstateTarget(m); setReinstateNote(""); setReinstateModal(true); };
 
-  const executeReinstate = async () => {
-    if (!reinstateTarget) return;
-    if (!entityId) { Alert.alert("No active church", "Please select a church first."); return; }
-    try {
-      await updateDoc(doc(db, "members", reinstateTarget.id), {
-        disciplinaryStatus: null, disciplinaryNote: null, disciplinaryDate: null,
-        reinstateNote, reinstateDate: new Date().toISOString().split("T")[0],
-        entityId, organizationId,
-      });
-      Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
-      setReinstateModal(false);
-      loadMembers();
-    } catch (e) { Alert.alert("Error", e.message); }
-  };
-
+const executeReinstate = async () => {
+  if (!reinstateTarget) return;
+  if (!organizationId || !entityId) {
+    Alert.alert("No active church", "Please select a church first.");
+    return;
+  }
+  try {
+    // ✅ FIXED: same flat-path bug as executeAction above
+    await updateDoc(
+      doc(db, "organizations", organizationId, "entities", entityId, "members", reinstateTarget.id),
+      {
+        disciplinaryStatus: null,
+        disciplinaryNote: null,
+        disciplinaryDate: null,
+        reinstateNote,
+        reinstateDate: new Date().toISOString().split("T")[0],
+      }
+    );
+    Alert.alert("Reinstated", `${reinstateTarget.name} has been reinstated.`);
+    setReinstateModal(false);
+    loadMembers();
+  } catch (e) { Alert.alert("Error", e.message); }
+};
   /* ── Donate nav ── */
   const goToDonate = (memberId, memberName) => {
     navigation.getParent()?.navigate("Donate", memberId ? { memberId, memberName } : undefined);
@@ -588,11 +609,13 @@ const editMember = (item) => {
                   <>
                     {/* QR code */}
                     <TouchableOpacity onPress={() => setSelectedMember(item)} style={styles.qrRow}>
-                      <QRCode
+                      {/* ✅ FIXED: dropped the hardcoded sessionId: "Sunday-Service-1" — the
+   router now resolves whichever session is actually live, so baking a
+   fixed session into a permanent badge was both wrong and unused. */}
+<QRCode
   value={JSON.stringify({
     memberCode: item.memberCode,
-    entityId: activeEntity?.entityId,
-    sessionId: "Sunday-Service-1" // ✅ change per service later
+    entityId: activeEntity?.entityId
   })}
   size={64}
 />
@@ -674,7 +697,13 @@ const editMember = (item) => {
               <Text style={styles.memberIdText}>{selectedMember?.memberCode || selectedMember?.id || ""}</Text>
             </View>
             <View style={{ marginVertical: 16 }}>
-              <QRCode value={selectedMember?.id || "placeholder"} size={220} />
+              <QRCode
+  value={JSON.stringify({
+    memberCode: selectedMember?.memberCode,
+    entityId: activeEntity?.entityId
+  })}
+  size={220}
+/>
             </View>
             <Text style={styles.qrHint}>Scan to mark attendance at the entrance</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => setSelectedMember(null)}>

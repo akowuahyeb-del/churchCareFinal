@@ -1,26 +1,22 @@
 const APP_SCHEME = "churchcare://";
 
-// ✅ 1. ATTENDANCE QR
-export const buildAttendanceSessionLink = (sessionId, organizationId, entityId) => {
-  return `${APP_SCHEME}attendance?org=${organizationId}&entity=${entityId}&session=${sessionId}`;
+// ✅ ATTENDANCE
+export const buildAttendanceSessionLink = (sessionId, orgId, entityId) => {
+  return `${APP_SCHEME}attendance?org=${orgId}&entity=${entityId}&session=${sessionId}`;
 };
 
-// ✅ 2. CHURCH QR (Settings / Entry Point)
-export const buildChurchQR = (organizationId, entityId) => {
-  return `${APP_SCHEME}church?org=${organizationId}&entity=${entityId}`;
+// ✅ EVENT
+export const buildEventQR = (eventId, orgId, entityId) => {
+  return `${APP_SCHEME}event?eventId=${eventId}&entity=${entityId}&org=${orgId}`;
 };
 
-// ✅ 3. EVENT QR
-export const buildEventQR = (eventId, organizationId, entityId) => {
-  return `${APP_SCHEME}event?eventId=${eventId}&entity=${entityId}&org=${organizationId}`;
+// ✅ REGISTER
+export const buildRegistrationQR = (orgId, entityId) => {
+  return `${APP_SCHEME}register?org=${orgId}&entity=${entityId}`;
 };
 
-// ✅ 4. MEMBER REGISTRATION QR
-export const buildRegistrationQR = (organizationId, entityId) => {
-  return `${APP_SCHEME}register?org=${organizationId}&entity=${entityId}`;
+// ✅ CHURCH
+export const buildChurchQR = (orgId, entityId) => {
+  return `${APP_SCHEME}church?org=${orgId}&entity=${entityId}`;
 };
-
-// ✅ 5. MEMBER PROFILE QR
-export const buildMemberQR = (memberId, organizationId, entityId) => {
-  return `${APP_SCHEME}member?memberId=${memberId}&entity=${entityId}&org=${organizationId}`;
-};
+``

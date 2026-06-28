@@ -18,7 +18,9 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import QRCodeDisplay from "../components/QRCodeDisplay";
+import { buildEventLink } from "../utils/qrLinks";
+import { buildEventQR } from "../utils/qrLinks";
 
 const { width: W } = Dimensions.get("window");
 
@@ -88,13 +90,18 @@ const emptyForm = () => ({
 });
 
 
-export default function EventsScreen() {
+ export default function EventsScreen({ route }) 
+{
   const navigation = useNavigation();
 
   const [activeEntity, setActiveEntity] = useState(null);
 
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
+  const [eventQR, setEventQR] = useState(null);
+  const [eventQRVisible, setEventQRVisible] = useState(false);
+
+
 
 useEffect(() => {
   const eventId = route?.params?.eventId;
@@ -120,6 +127,23 @@ useEffect(() => {
   loadEntity();
 }, []);
 
+useEffect(() => {
+  const targetId = route?.params?.eventId;
+
+  if (!targetId || events.length === 0) return;
+
+  const match = events.find(e => e.id === targetId);
+
+  if (match) {
+    setViewingEvent(match);   // must exist already
+    setDetailModal(true);     // must exist already
+  } else {
+    Alert.alert("Event Not Found", "This event may have been removed.");
+  }
+
+}, [route?.params?.eventId, events]);
+
+
   const [events,       setEvents]       = useState([]);
   const [filterCat,    setFilterCat]    = useState("all");
   const [viewMode,     setViewMode]     = useState("featured");
@@ -140,6 +164,23 @@ useEffect(() => {
   const [pickerDate,   setPickerDate]   = useState(new Date());
 
   // ── Load ──────────────────────────────────────────────────────
+
+useEffect(() => {
+  const eventId = route?.params?.eventId;
+
+  if (!eventId || events.length === 0) return;
+
+  const found = events.find(e => e.id === eventId);
+
+  if (found) {
+    console.log("✅ AUTO OPEN EVENT:", found);
+
+    setViewingEvent(found);
+    setDetailModal(true); // ✅ instantly opens modal
+  }
+
+}, [route?.params?.eventId, events]);
+
 
 useEffect(() => {
   if (!activeEntity) return;
@@ -679,6 +720,29 @@ const toggleFeatured = async (event) => {
                           <Text style={styles.detailBtnText}>Edit</Text>
                         </TouchableOpacity>
                       )}
+{canDo("deacon") && (
+    <TouchableOpacity
+      style={[styles.detailEditBtn, { backgroundColor: "#0984E3" }]}
+      onPress={async () => {
+        const link = buildEventQR(
+  viewingEvent.id,
+  activeEntity.organizationId,
+  activeEntity.entityId
+);
+
+    // ✅ ✅ ADD THIS LINE HERE
+    console.log("EVENT QR:", link);
+
+        setEventQR(link);
+        setEventQRVisible(true);
+      }}
+    >
+      <Ionicons name="qr-code-outline" size={15} color="#fff" />
+      <Text style={styles.detailBtnText}>Show QR</Text>
+    </TouchableOpacity>
+  )}
+
+
                       {canDo("deacon") && (
                         <TouchableOpacity
                           style={[styles.detailEditBtn, { backgroundColor: viewingEvent.featured ? "#FDCB6E" : "#EEF0FA" }]}
@@ -706,6 +770,25 @@ const toggleFeatured = async (event) => {
           </View>
         </View>
       </Modal>
+
+<Modal visible={eventQRVisible} transparent animationType="fade">
+  <View style={styles.modalOverlay}>
+    <View style={[styles.detailSheet, { paddingVertical: 10 }]}>
+
+      {eventQR && (
+        <QRCodeDisplay
+          value={eventQR}
+          title={viewingEvent?.title}
+          subtitle="Scan to view this event"
+          onClose={() => setEventQRVisible(false)}
+        />
+      )}
+
+    </View>
+  </View>
+</Modal>
+
+
 
       {/* ══ CREATE / EDIT FORM MODAL ══ */}
 <Modal
