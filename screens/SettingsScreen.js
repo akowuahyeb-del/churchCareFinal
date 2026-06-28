@@ -22,6 +22,12 @@ import {
 
 
 
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc, doc } from "firebase/firestore";
+import { storage, db } from "../firebase";
+
+
+
 // ── Role config ───────────────────────────────────────────────────
 const USER_ROLE  = "admin";
 const USER_NAME  = "Kwame Mensah";
@@ -107,8 +113,63 @@ export default function SettingsScreen() {
   const CHURCH_ID = activeEntity?.entityId || "unknown";
 const CHURCH_NAME = activeEntity?.name || "Church";
 
-// ✅ ADD THIS HERE
-const [activeEntity, setActiveEntity] = useState(null);
+  const [activeEntity, setActiveEntity] = useState(null);
+
+  // ✅ ✅ PASTE HERE (RIGHT AFTER STATE)
+ <SectionHeader title="Church Branding" />
+  const uploadChurchLogo = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      const imageUri = result.assets[0].uri;
+      const blob = await (await fetch(imageUri)).blob();
+
+      const { organizationId, entityId } = activeEntity;
+
+      const storageRef = ref(storage, `church-logos/${entityId}`);
+
+      await uploadBytes(storageRef, blob);
+
+      const downloadURL = await getDownloadURL(storageRef);
+
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId
+        ),
+        {
+          logo: downloadURL,
+        }
+      );
+
+      const updatedEntity = {
+        ...activeEntity,
+        logo: downloadURL,
+      };
+
+      setActiveEntity(updatedEntity);
+
+      await AsyncStorage.setItem(
+        "activeEntity",
+        JSON.stringify(updatedEntity)
+      );
+
+      Alert.alert("✅ Success", "Logo updated successfully");
+
+    } catch (e) {
+      console.log("❌ Upload error:", e);
+      Alert.alert("Upload failed");
+    }
+  };
+
 
 // ✅ FIXED — derive IDs first
 const organizationId = activeEntity?.organizationId;
@@ -437,6 +498,37 @@ useEffect(() => {
             </View>
           </>
         )}
+
+        
+
+<View style={styles.card}>
+
+  <TouchableOpacity onPress={uploadChurchLogo} style={styles.logoRow}>
+
+    {activeEntity?.logo ? (
+      <Image
+        source={{ uri: activeEntity.logo }}
+        style={styles.logoPreview}
+      />
+    ) : (
+      <View style={styles.logoPlaceholder}>
+        <Ionicons name="camera-outline" size={20} color="#fff" />
+      </View>
+    )}
+
+    <View style={{ marginLeft: 12 }}>
+      <Text style={{ fontWeight: "700", fontSize: 14 }}>
+        Upload Church Logo
+      </Text>
+      <Text style={{ fontSize: 12, color: "#888" }}>
+        Tap to select image
+      </Text>
+    </View>
+
+  </TouchableOpacity>
+
+</View>
+
 
         {/* ── ADMIN CONTROLS ── */}
         {canDo("admin") && (
@@ -782,6 +874,9 @@ useEffect(() => {
         <TouchableOpacity style={styles.cancelTxt} onPress={() => setChurchInfoModal(false)}><Text style={styles.cancelTxtText}>Cancel</Text></TouchableOpacity>
       </ModalSheet>
 
+
+
+
       {/* ══ FONT SIZE MODAL ══ */}
       <Modal visible={fontModal} transparent animationType="fade">
         <View style={styles.modalOverlay}><View style={[styles.modalSheet,{paddingBottom:20}]}>
@@ -969,4 +1064,24 @@ const styles = StyleSheet.create({
   aboutVersion: { fontSize: 12, color: "#888", marginTop: 2 },
   aboutText: { fontSize: 13, color: "#555", lineHeight: 20, textAlign: "center" },
   aboutDivider: { height: 1, backgroundColor: "#f0f0f0", marginVertical: 12 },
+  logoRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  padding: 12,
+},
+
+logoPreview: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+},
+
+logoPlaceholder: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "#4B3F72",
+  justifyContent: "center",
+  alignItems: "center",
+},
 });

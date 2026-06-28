@@ -26,6 +26,9 @@ import ChurchSwitcher from "../components/ChurchSwitcher";
 import { handleQRCode } from "../utils/qrRouter";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { addDoc } from "firebase/firestore";
+import ChurchLogo from "../components/ChurchLogo";
+
+
 
 
 
@@ -359,6 +362,57 @@ const handleUpload = async () => {
   }
 };
 
+const uploadChurchLogo = async () => {
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+
+    const imageUri = result.assets[0].uri;
+
+    const blob = await (await fetch(imageUri)).blob();
+
+    const { organizationId, entityId } = activeEntity;
+
+    const storageRef = ref(storage, `church-logos/${entityId}`);
+
+    await uploadBytes(storageRef, blob);
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    // ✅ SAVE TO FIRESTORE
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId
+      ),
+      {
+        logo: downloadURL,
+      }
+    );
+
+    // ✅ UPDATE UI
+    const updated = { ...activeEntity, logo: downloadURL };
+    setActiveEntity(updated);
+
+    // ✅ persist locally
+    await AsyncStorage.setItem("activeEntity", JSON.stringify(updated));
+
+    console.log("✅ Logo uploaded:", downloadURL);
+
+  } catch (e) {
+    console.log("❌ Upload error:", e);
+    Alert.alert("Upload failed");
+  }
+};
+
+
 // ✅ PATCH 4 — FIXED: this used to drop id, preacherId, and session entirely,
 // which is exactly why saved program items lost their preacher link and
 // disappeared from session filtering after a reload.
@@ -469,6 +523,7 @@ return (
     <AppHeader
       title="ChurchCare"
       subtitle="Welcome back 👋"
+      entity={activeEntity}
       actions={[
         {
           icon: "notifications-outline",
@@ -483,6 +538,10 @@ return (
         },
       ]}
     />
+    <ChurchLogo
+  entity={activeEntity}
+  onPress={uploadChurchLogo}
+/>
 
     {/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
     <View style={styles.entityBar}>

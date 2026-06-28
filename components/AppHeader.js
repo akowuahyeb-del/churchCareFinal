@@ -8,10 +8,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "react-native";
 
 export default function AppHeader({
   title,
   subtitle,
+  entity,
   onBack,
   actions = [],
 }) {
@@ -43,12 +45,26 @@ export default function AppHeader({
         )}
 
         {/* TITLE */}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? (
-            <Text style={styles.subtitle}>{subtitle}</Text>
-          ) : null}
-        </View>
+       <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+
+  {/* ✅ LOGO */}
+  {entity?.logo ? (
+    <Image source={{ uri: entity.logo }} style={styles.logo} />
+  ) : (
+    <View style={styles.logoPlaceholder}>
+      <Ionicons name="church-outline" size={18} color="#fff" />
+    </View>
+  )}
+
+  {/* ✅ TEXT */}
+  <View style={{ marginLeft: 10 }}>
+    <Text style={styles.title}>{title}</Text>
+    {subtitle ? (
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    ) : null}
+  </View>
+
+</View>
 
         {/* ACTIONS */}
         {actions.length > 0 && (
@@ -129,4 +145,18 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 13,
   },
+  logo: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+},
+
+logoPlaceholder: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: "rgba(255,255,255,0.25)",
+  alignItems: "center",
+  justifyContent: "center",
+},
 });
