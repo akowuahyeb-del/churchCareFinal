@@ -35,9 +35,9 @@ useEffect(() => {
     const storedUser = await AsyncStorage.getItem("currentUser");
 
     if (!storedUser) {
-      navigation.replace("CompleteProfile");
-      return;
-    }
+  // ✅ user is NOT logged in → stay on Login
+  return;
+}
 
     const userData = JSON.parse(storedUser);
 

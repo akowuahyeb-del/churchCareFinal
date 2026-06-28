@@ -32,6 +32,8 @@ export default function SplashScreen({ navigation }) {
     useRef(new Animated.Value(0)).current,
   ];
 
+  
+
   useEffect(() => {
 
     // ✅ ANIMATION SEQUENCE (UNCHANGED)
@@ -77,22 +79,30 @@ export default function SplashScreen({ navigation }) {
 
     // ✅ ✅ FIXED AUTO LOGIN LOGIC (ONLY THIS PART CHANGED)
     const navTimer = setTimeout(async () => {
+const userToken  = await AsyncStorage.getItem("userToken");
+const profileData = await AsyncStorage.getItem("userProfile");
 
-      const profileData = await AsyncStorage.getItem("userProfile");
+// ✅ NOT LOGGED IN → LOGIN
+if (!userToken) {
+  navigation.replace("Login");
+  return;
+}
 
-      if (profileData) {
-        const profile = JSON.parse(profileData);
+// ✅ LOGGED IN BUT NO PROFILE → COMPLETE PROFILE
+if (!profileData) {
+  navigation.replace("CompleteProfile");
+  return;
+}
 
-        console.log("Cached user:", profile);
+// ✅ USER + PROFILE OK
+const profile = JSON.parse(profileData);
 
-        navigation.replace("MainTabs", {
-          role: profile.role,
-          churchId: profile.churchId,
-        });
-
-      } else {
-        navigation.replace("Login");
-      }
+// ✅ USE entityId (NOT churchId)
+navigation.replace("MainTabs", {
+  role: profile.role,
+  entityId: profile.entityId, // ✅ correct for your system
+});
+    
 
     }, 3400);
 

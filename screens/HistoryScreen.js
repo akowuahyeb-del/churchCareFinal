@@ -14,6 +14,7 @@ import {
   updateDoc, deleteDoc, query, where, orderBy
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import AppHeader from "../components/AppHeader";
 
 const { width: W } = Dimensions.get("window");
 
@@ -495,22 +496,37 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Church History</Text>
-          <Text style={styles.headerSub}>Records & Heritage</Text>
-        </View>
-        {/* Role badge */}
-        <View style={[styles.roleBadge, { backgroundColor: CAN_EDIT ? "#27ae6022" : "#88888822" }]}>
-          <Text style={[styles.roleText, { color: CAN_EDIT ? "#27ae60" : "#888" }]}>
-            {ROLE}
-          </Text>
-        </View>
+
+      <AppHeader
+  title="Church History"
+  subtitle="Records & Heritage"
+  onBack={() => navigation.goBack()}
+
+  rightContent={
+    typeof ROLE !== "undefined" && (
+      <View
+        style={{
+          backgroundColor: CAN_EDIT
+            ? "rgba(39,174,96,0.15)"
+            : "rgba(136,136,136,0.15)",
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 8,
+        }}
+      >
+        <Text
+          style={{
+            color: CAN_EDIT ? "#27ae60" : "#888",
+            fontSize: 11,
+            fontWeight: "700",
+          }}
+        >
+          {ROLE}
+        </Text>
       </View>
+    )
+  }
+/>
 
       {/* ── TABS ── */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll}

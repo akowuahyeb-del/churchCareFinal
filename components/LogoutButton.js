@@ -6,34 +6,41 @@ import { useNavigation } from "@react-navigation/native";
 export default function LogoutButton() {
   const navigation = useNavigation();
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              // ✅ CLEAR STORAGE
-              await AsyncStorage.clear();
 
-              // ✅ RESET NAVIGATION (VERY CLEAN)
-              navigation.reset({
-                index: 0,
-                routes: [{ name: "Login" }],
-              });
+    const handleLogout = () => {
+  Alert.alert(
+    "Logout",
+    "Are you sure you want to logout?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // ✅ clear storage
+            await AsyncStorage.removeItem("userToken");
+await AsyncStorage.removeItem("userProfile");
 
-            } catch (error) {
-              console.log("Logout error:", error);
-            }
-          },
+            // ✅ OPTIONAL (if using Firebase)
+            // import { getAuth, signOut } from "firebase/auth";
+            // await signOut(getAuth());
+
+            // ✅ FIX: correct reset location + correct route name
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }], // ✅ must match your navigator
+            });
+
+          } catch (error) {
+            console.log("Logout error:", error);
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
+
 
   return (
     <TouchableOpacity style={styles.button} onPress={handleLogout}>
