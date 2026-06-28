@@ -57,7 +57,7 @@ export default function AppHeader({
   )}
 
   {/* ✅ TEXT */}
-  <View style={{ marginLeft: 10 }}>
+  <View style={{ marginLeft: 20 }}>
     <Text style={styles.title}>{title}</Text>
     {subtitle ? (
       <Text style={styles.subtitle}>{subtitle}</Text>
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingBottom: 14,
   },
 
