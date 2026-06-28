@@ -140,25 +140,91 @@ const applySessionData = async (targetSessionId) => {
    Drop-in replacement for the existing endSession function.
    ════════════════════════════════════════════════════════════════ */
 
-const endSession = async () => {
-  try {
-    // ✅ FIX: derive present count from the `attendance` state map,
-    // which is the actual source of truth (built by toggleAttendance /
-    // loadAttendance), not from a non-existent `member.present` field.
-    const currentPresent = Object.values(attendance).filter(
-      (a) => a.status === "present"
-    ).length;
-    const currentTotal = members.length;
-    const currentRate = currentTotal > 0
-      ? Math.round((currentPresent / currentTotal) * 100)
-      : 0;
+// const endSession = async () => {
+//   try {
+//     // ✅ FIX: derive present count from the `attendance` state map,
+//     // which is the actual source of truth (built by toggleAttendance /
+//     // loadAttendance), not from a non-existent `member.present` field.
+//     const currentPresent = Object.values(attendance).filter(
+//       (a) => a.status === "present"
+//     ).length;
+//     const currentTotal = members.length;
+//     const currentRate = currentTotal > 0
+//       ? Math.round((currentPresent / currentTotal) * 100)
+//       : 0;
 
     // ✅ Snapshot the session that is ENDING — this becomes "Last Session"
+//     const endedSession = {
+//       service: selectedService,
+//       type: selectedType,
+//       event: selectedEvent,
+//       present: currentPresent,
+//       total: currentTotal,
+//       rate: currentRate,
+//       endedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+//     };
+
+//     setLastSession(endedSession);
+
+//     if (sessionId && organizationId && entityId) {
+//       await updateDoc(
+//         doc(
+//           db,
+//           "organizations",
+//           organizationId,
+//           "entities",
+//           entityId,
+//           "sessions",
+//           sessionId
+//         ),
+//         {
+//           status: "ended",
+//           lockedAt: serverTimestamp(),
+//           lockedBy: userRole,
+//           finalPresent: currentPresent,
+//           finalTotal: currentTotal,
+//         }
+//       );
+//     }
+
+//     // ✅ FIX: clear the live attendance map too — not just presentCount —
+//     // so "Current Session" genuinely starts from zero for the NEXT
+//     // session instead of carrying over stale marks.
+//     setAttendance({});
+//     setPresentCount(0);
+//     setSessionId(null);
+//     setStartTime("");
+//     setSessionQR(null);
+//     setEndTime("");
+//     setSessionStatus("ended");
+
+//     await AsyncStorage.setItem("sessionStatus", "ended");
+//     await AsyncStorage.removeItem("activeSession");
+
+//     setEndServiceModal(false);
+
+//     Alert.alert("Service Ended", "Attendance is now locked.");
+//   } catch (err) {
+//     console.log(err);
+//     Alert.alert("Error", "Could not end the session. Please try again.");
+//   }
+// };
+
+const endSession = async () => {
+  try {
+    // ✅ Same derived formula as the live dashboard — guarantees this
+    // snapshot can't disagree with what was on screen a moment earlier
+    const currentPresent = members.filter(m => attendance[m.id]?.status === "present").length;
+    const currentTotal = members.length;
+    const currentAbsent = currentTotal - currentPresent;
+    const currentRate = currentTotal > 0 ? Math.round((currentPresent / currentTotal) * 100) : 0;
+
     const endedSession = {
       service: selectedService,
       type: selectedType,
       event: selectedEvent,
       present: currentPresent,
+      absent: currentAbsent,   // ✅ NEW — stored directly, not re-derived at render time
       total: currentTotal,
       rate: currentRate,
       endedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -168,30 +234,19 @@ const endSession = async () => {
 
     if (sessionId && organizationId && entityId) {
       await updateDoc(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "entities",
-          entityId,
-          "sessions",
-          sessionId
-        ),
+        doc(db, "organizations", organizationId, "entities", entityId, "sessions", sessionId),
         {
           status: "ended",
           lockedAt: serverTimestamp(),
           lockedBy: userRole,
           finalPresent: currentPresent,
+          finalAbsent: currentAbsent,
           finalTotal: currentTotal,
         }
       );
     }
 
-    // ✅ FIX: clear the live attendance map too — not just presentCount —
-    // so "Current Session" genuinely starts from zero for the NEXT
-    // session instead of carrying over stale marks.
     setAttendance({});
-    setPresentCount(0);
     setSessionId(null);
     setStartTime("");
     setSessionQR(null);
@@ -209,6 +264,9 @@ const endSession = async () => {
     Alert.alert("Error", "Could not end the session. Please try again.");
   }
 };
+
+
+
 
 
 /* START SESSION*/
@@ -368,7 +426,7 @@ const [permission, requestPermission] = useCameraPermissions();
   /* ── MEMBERS ── */
   const [members,      setMembers]      = useState([]);
   const [attendance,   setAttendance]   = useState({});
-  const [presentCount, setPresentCount] = useState(0);
+  // const [presentCount, setPresentCount] = useState(0);
   const [undoMap,      setUndoMap]      = useState({});
 
   /* ── SEARCH & FILTER ── */
@@ -606,40 +664,64 @@ const loadMembers = async () => {
 };
 
 
-// ✅ LOAD ATTENDANCE (NEW STRUCTURE)
+// // ✅ LOAD ATTENDANCE (NEW STRUCTURE)
+// const loadAttendance = () => {
+//   if (!organizationId || !entityId) return;
+
+//   const q = query(
+//     collection(
+//       db,
+//       "organizations",
+//       organizationId,
+//       "entities",
+//       entityId,
+//       "attendance"
+//     ),
+//     where("date", "==", today),
+//     where("service", "==", selectedService),
+//     where("type", "==", selectedType)
+//   );
+// return onSnapshot(q, (snap) => {
+//   const map = {};
+
+//   snap.docs.forEach(d => {
+//     const x = d.data();
+//     // ✅ last-write-wins per member — duplicate docs for the same person
+//     // can no longer inflate the headcount
+//     map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
+//   });
+
+//   const present = Object.values(map).filter(a => a.status === "present").length;
+
+//   setAttendance(map);
+//   setPresentCount(present);
+// });
+  
+// };
+
+
 const loadAttendance = () => {
   if (!organizationId || !entityId) return;
 
   const q = query(
-    collection(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "attendance"
-    ),
+    collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
     where("date", "==", today),
     where("service", "==", selectedService),
     where("type", "==", selectedType)
   );
-return onSnapshot(q, (snap) => {
-  const map = {};
 
-  snap.docs.forEach(d => {
-    const x = d.data();
-    // ✅ last-write-wins per member — duplicate docs for the same person
-    // can no longer inflate the headcount
-    map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
+  return onSnapshot(q, (snap) => {
+    const map = {};
+    snap.docs.forEach(d => {
+      const x = d.data();
+      map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
+    });
+    setAttendance(map);
+    // ✅ presentCount/absentCount are now derived below from members +
+    // attendance together — see the "Stats" section further down.
   });
-
-  const present = Object.values(map).filter(a => a.status === "present").length;
-
-  setAttendance(map);
-  setPresentCount(present);
-});
-  
 };
+
 
 
 /* TRANSFER */
@@ -794,14 +876,66 @@ const writeDelete = async (docId) => {
 // other top-level state
 const pendingToggleRef = useRef(new Set());
 
+// const toggleAttendance = async (member, status) => {
+//   if (isSessionLocked && userRole !== "admin") {
+//     Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
+//     return;
+//   }
+
+//   // ✅ NEW — ignore a second tap on the same member while their first
+//   // write is still in flight, instead of letting both through
+//   if (pendingToggleRef.current.has(member.id)) return;
+//   pendingToggleRef.current.add(member.id);
+
+//   try {
+//     const existing = attendance[member.id];
+
+//     setUndoMap(prev => ({
+//       ...prev,
+//       [member.id]: existing ? { ...existing } : null
+//     }));
+
+//     const record = buildRecord(member, status);
+
+//     if (existing && existing.status === status) {
+//       await writeDelete(existing.id);
+//       setAttendance(prev => {
+//         const n = { ...prev };
+//         delete n[member.id];
+//         return n;
+//       });
+//       if (status === "present") setPresentCount(p => p - 1);
+//     } else {
+//       if (existing) await writeDelete(existing.id);
+//       const newId = await writeAdd(record);
+
+//       setAttendance(prev => ({
+//         ...prev,
+//         [member.id]: { id: newId, status, name: member.name, time: new Date().toISOString() }
+//       }));
+
+//       setPresentCount(p => {
+//         if (!existing && status === "present") return p + 1;
+//         if (existing?.status === "present" && status === "absent") return p - 1;
+//         if (existing?.status === "absent" && status === "present") return p + 1;
+//         return p;
+//       });
+
+//       if (status === "absent") checkAbsenceStreak(member);
+//     }
+//   } finally {
+//     // ✅ NEW
+//     pendingToggleRef.current.delete(member.id);
+//   }
+// };
+
+
 const toggleAttendance = async (member, status) => {
   if (isSessionLocked && userRole !== "admin") {
     Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
     return;
   }
 
-  // ✅ NEW — ignore a second tap on the same member while their first
-  // write is still in flight, instead of letting both through
   if (pendingToggleRef.current.has(member.id)) return;
   pendingToggleRef.current.add(member.id);
 
@@ -822,7 +956,8 @@ const toggleAttendance = async (member, status) => {
         delete n[member.id];
         return n;
       });
-      if (status === "present") setPresentCount(p => p - 1);
+      // ✅ no setPresentCount needed — removing it from `attendance`
+      // automatically lowers the derived presentCount on next render
     } else {
       if (existing) await writeDelete(existing.id);
       const newId = await writeAdd(record);
@@ -832,22 +967,63 @@ const toggleAttendance = async (member, status) => {
         [member.id]: { id: newId, status, name: member.name, time: new Date().toISOString() }
       }));
 
-      setPresentCount(p => {
-        if (!existing && status === "present") return p + 1;
-        if (existing?.status === "present" && status === "absent") return p - 1;
-        if (existing?.status === "absent" && status === "present") return p + 1;
-        return p;
-      });
-
       if (status === "absent") checkAbsenceStreak(member);
     }
   } finally {
-    // ✅ NEW
     pendingToggleRef.current.delete(member.id);
   }
 };
 
-// ✅ UNDO MEMBER ACTION
+
+
+
+// // ✅ UNDO MEMBER ACTION
+// const undoMember = async (member) => {
+//   const snap = undoMap[member.id];
+//   if (!snap) return;
+
+//   const current = attendance[member.id];
+
+//   if (current) await writeDelete(current.id);
+
+//   if (snap) {
+//     const record = buildRecord(member, snap.status);
+//     const newId = await writeAdd(record);
+
+//     setAttendance(prev => ({
+//       ...prev,
+//       [member.id]: {
+//         id: newId,
+//         status: snap.status
+//       }
+//     }));
+
+//     setPresentCount(p => {
+//       if (current?.status === "present" && snap.status === "absent") return p - 1;
+//       if (current?.status === "absent" && snap.status === "present") return p + 1;
+//       return p;
+//     });
+
+//   } else {
+//     setAttendance(prev => {
+//       const n = { ...prev };
+//       delete n[member.id];
+//       return n;
+//     });
+
+//     if (current?.status === "present") {
+//       setPresentCount(p => p - 1);
+//     }
+//   }
+
+//   setUndoMap(prev => {
+//     const n = { ...prev };
+//     delete n[member.id];
+//     return n;
+//   });
+// };
+
+
 const undoMember = async (member) => {
   const snap = undoMap[member.id];
   if (!snap) return;
@@ -862,28 +1038,14 @@ const undoMember = async (member) => {
 
     setAttendance(prev => ({
       ...prev,
-      [member.id]: {
-        id: newId,
-        status: snap.status
-      }
+      [member.id]: { id: newId, status: snap.status }
     }));
-
-    setPresentCount(p => {
-      if (current?.status === "present" && snap.status === "absent") return p - 1;
-      if (current?.status === "absent" && snap.status === "present") return p + 1;
-      return p;
-    });
-
   } else {
     setAttendance(prev => {
       const n = { ...prev };
       delete n[member.id];
       return n;
     });
-
-    if (current?.status === "present") {
-      setPresentCount(p => p - 1);
-    }
   }
 
   setUndoMap(prev => {
@@ -1306,20 +1468,29 @@ const recentlyMarked = Object.values(attendance)
 
 
 // ✅ Stats
+// const absentCount = members.length - presentCount;
+
+// const attendanceRate =
+//   members.length > 0
+//     ? Math.round((presentCount / members.length) * 100)
+//     : 0;
+//   const lastAbsent = lastSession
+//   ? (lastSession.total || 0) - (lastSession?.present || 0)
+//   : 0;
+
+// const lastRate = lastSession && (lastSession.total || 0) > 0
+//   ? Math.round(((lastSession?.present || 0) / (lastSession.total || 1)) * 100)
+//   : 0;
+
+// ✅ Stats — presentCount is now derived here, bounded by the real
+// roster, instead of being separately-managed state
+const presentCount = members.filter(m => attendance[m.id]?.status === "present").length;
 const absentCount = members.length - presentCount;
 
 const attendanceRate =
   members.length > 0
     ? Math.round((presentCount / members.length) * 100)
     : 0;
-  const lastAbsent = lastSession
-  ? (lastSession.total || 0) - (lastSession?.present || 0)
-  : 0;
-
-const lastRate = lastSession && (lastSession.total || 0) > 0
-  ? Math.round(((lastSession?.present || 0) / (lastSession.total || 1)) * 100)
-  : 0;
-
 
 
    
@@ -1618,6 +1789,10 @@ const lastRate = lastSession && (lastSession.total || 0) > 0
     <Text style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
       Ended {lastSession?.endedAt ?? "--"}
     </Text>
+
+{/* <Text style={{ fontSize: 14, fontWeight: "900", color: "#e74c3c" }}>
+  {lastSession?.absent ?? 0}
+</Text> */}
 
     <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
       <View>
