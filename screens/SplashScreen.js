@@ -131,7 +131,7 @@ export default function SplashScreen({ navigation }) {
         transform: [{ scale: logoScale }],
       }]}>
         <View style={styles.logoInnerRing} />
-        <Ionicons name="church-outline" size={52} color="#fff" />
+        <Ionicons name="business-outline" size={13} color="#ffff" />
       </Animated.View>
 
       {/* Title */}

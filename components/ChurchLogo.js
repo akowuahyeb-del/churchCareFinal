@@ -8,7 +8,7 @@ export default function ChurchLogo({
   size = 42
 }) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.container}>
+    <TouchableOpacity onPress={null} style={styles.container}>
 
       {entity?.logo ? (
         <Image
@@ -16,19 +16,8 @@ export default function ChurchLogo({
           style={{ width: size, height: size, borderRadius: size / 2 }}
         />
       ) : (
-        <View style={[styles.iconBox, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Ionicons name="camera-outline" size={size * 0.5} color="#fff" />
-        </View>
+        <View style={styles.placeholder} />
       )}
-
-      <View style={{ marginLeft: 10 }}>
-        <Text style={styles.title}>
-          {entity?.name || "Select Church"}
-        </Text>
-        <Text style={styles.subtitle}>
-          Tap to upload logo
-        </Text>
-      </View>
 
     </TouchableOpacity>
   );

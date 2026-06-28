@@ -685,7 +685,7 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}><View style={styles.modalSheet}>
           <View style={styles.handleRow}><View style={styles.handle} /></View>
           <View style={{ alignItems:"center", marginBottom:16 }}>
-            <View style={styles.aboutIcon}><Ionicons name="church-outline" size={36} color="#4B3F72"/></View>
+            <View style={styles.aboutIcon}><Ionicons name="business-outline" size={13} color="#4B3F72" /></View>
             <Text style={styles.aboutTitle}>ChurchCare</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           </View>

@@ -1171,25 +1171,51 @@ const handleBarCodeScanned = async ({ data: scannedRaw }) => {
   }
 
   // ✅ CASE 2: Member QR
-  let scannedCode = scannedRaw;
+  // ✅ ✅ FIRST: try JSON (AUTO ATTENDANCE)
+try {
+  const parsed = JSON.parse(scannedRaw);
 
-  try {
-    const parsed = JSON.parse(scannedRaw);
-    if (parsed?.memberCode) scannedCode = parsed.memberCode;
-  } catch {}
+  if (parsed?.memberCode && parsed?.entityId) {
+    console.log("✅ AUTO ATTENDANCE TRIGGER");
 
-  const member = members.find(
-    m => m.id === scannedCode || m.memberCode === scannedCode
-  );
+    await markMemberAttendance(
+      parsed.memberCode,
+      parsed.entityId
+    );
 
-  if (!member) {
-    setScanFeedback("❌ Member not found");
+    setScanFeedback("✅ Checked In");
+
     setTimeout(() => {
       setScanned(false);
       setScanFeedback("");
     }, 2000);
-    return;
+
+    return; // ✅ STOP here (no manual search)
   }
+
+} catch {
+  // Not JSON → continue
+}
+
+
+// ✅ ✅ SECOND: fallback to manual scan (your existing logic)
+
+let scannedCode = scannedRaw;
+
+const member = members.find(
+  m => m.id === scannedCode || m.memberCode === scannedCode
+);
+
+if (!member) {
+  setScanFeedback("❌ Member not found");
+
+  setTimeout(() => {
+    setScanned(false);
+    setScanFeedback("");
+  }, 2000);
+
+  return;
+}
 
   // ✅ MUST HAVE SESSION
   if (!sessionId) {

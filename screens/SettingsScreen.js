@@ -16,14 +16,18 @@ import { auth } from "../firebase";
 import QRCodeDisplay from "../components/QRCodeDisplay";
 
 import {
-  buildChurchQR,
-  buildRegistrationQR
+  buildRegisterLink,
+  buildEventLink,
+  buildDonateLink,
+  buildPrayerLink
 } from "../utils/qrLinks";
+import QRCode from "react-native-qrcode-svg";
+import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
 
 
 
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc, doc } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+
 import { storage, db } from "../firebase";
 
 
@@ -35,20 +39,23 @@ const USER_EMAIL = "kwame@churchcare.app";
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
 
-// ── QR types — dynamic, tied to church activity ───────────────────
+// ✅ "Attendance Check-In" removed — there's no real, live session to
+// reference from Settings (the old version faked one with session:
+// Date.now(), which never matched any real Firestore session doc). A
+// working attendance QR needs a real open session, generated the moment
+// AttendanceScreen's "Show QR" runs. Showing whichever session is
+// currently live from here too is a reasonable next step — say the word
+// and I'll wire it up reusing the same lookup logic from qrRouter.js.
+//
+// ✅ Dropped the unused `buildValue` field per type — generateQR() below
+// never actually called it; it had its own separate, inconsistent
+// template strings instead. utils/qrLinks.js is now the one source of truth.
 const QR_TYPES = [
-  { key: "attendance",  label: "Attendance Check-In", icon: "checkmark-circle-outline", color: "#4B3F72",
-    buildValue: (cId, _label) => `churchcare://attendance?church=${cId}&session=${Date.now()}` },
-  { key: "donate",      label: "Donation Link",       icon: "heart-outline",            color: "#E11D48",
-    buildValue: (cId)         => `churchcare://donate?church=${cId}` },
-  { key: "register",    label: "Member Registration", icon: "person-add-outline",       color: "#0984E3",
-    buildValue: (cId)         => `churchcare://register?church=${cId}` },
-  { key: "event",       label: "Event Registration",  icon: "calendar-outline",         color: "#00B894",
-    buildValue: (cId, label)  => `churchcare://event?church=${cId}&event=${encodeURIComponent(label || "event")}` },
-  { key: "prayer",      label: "Prayer Request",      icon: "prism-outline",            color: "#6C5CE7",
-    buildValue: (cId)         => `churchcare://prayer?church=${cId}` },
-  { key: "custom",      label: "Custom URL / Text",   icon: "link-outline",             color: "#636e72",
-    buildValue: (_, label)    => label || "https://churchcare.app" },
+  { key: "donate",   label: "Donation Link",       icon: "heart-outline",      color: "#E11D48" },
+  { key: "register", label: "Member Registration", icon: "person-add-outline", color: "#0984E3" },
+  { key: "event",    label: "Event Registration",  icon: "calendar-outline",   color: "#00B894" },
+  { key: "prayer",   label: "Prayer Request",      icon: "prism-outline",      color: "#6C5CE7" },
+  { key: "custom",   label: "Custom URL / Text",   icon: "link-outline",       color: "#636e72" },
 ];
 
 // ── Reusable rows ─────────────────────────────────────────────────
@@ -102,89 +109,87 @@ function ModalSheet({ visible, onClose, children }) {
     </Modal>
   );
 }
-
 export default function SettingsScreen() {
-  
-  
 
-
-  
   const navigation = useNavigation();
-  const CHURCH_ID = activeEntity?.entityId || "unknown";
-const CHURCH_NAME = activeEntity?.name || "Church";
 
+  // ✅ FIXED: was declared AFTER CHURCH_ID/CHURCH_NAME referenced it,
+  // throwing "Cannot access 'activeEntity' before initialization" on
+  // every render — same bug class we fixed in HomeScreen earlier.
   const [activeEntity, setActiveEntity] = useState(null);
 
-  // ✅ ✅ PASTE HERE (RIGHT AFTER STATE)
- <SectionHeader title="Church Branding" />
-  const uploadChurchLogo = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-      });
+  const CHURCH_ID   = activeEntity?.entityId || "unknown";
+  const CHURCH_NAME = activeEntity?.name     || "Church";
 
-      if (result.canceled) return;
+  // ✅ FIXED: this <SectionHeader> was a bare JSX statement sitting in the
+  // middle of the function body, not inside any return() — it never
+  // rendered. Moved into the real JSX tree in Patch 3, right above the
+  // logo upload row it was clearly meant to label.
+ const uploadChurchLogo = async () => {
+  try {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
 
-      const imageUri = result.assets[0].uri;
-      const blob = await (await fetch(imageUri)).blob();
+    if (result.canceled) return;
 
-      const { organizationId, entityId } = activeEntity;
+    const imageUri = result.assets[0].uri;
+    const blob = await (await fetch(imageUri)).blob();
 
-      const storageRef = ref(storage, `church-logos/${entityId}`);
-
-      await uploadBytes(storageRef, blob);
-
-      const downloadURL = await getDownloadURL(storageRef);
-
-      await updateDoc(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "entities",
-          entityId
-        ),
-        {
-          logo: downloadURL,
-        }
-      );
-
-      const updatedEntity = {
-        ...activeEntity,
-        logo: downloadURL,
-      };
-
-      setActiveEntity(updatedEntity);
-
-      await AsyncStorage.setItem(
-        "activeEntity",
-        JSON.stringify(updatedEntity)
-      );
-
-      Alert.alert("✅ Success", "Logo updated successfully");
-
-    } catch (e) {
-      console.log("❌ Upload error:", e);
-      Alert.alert("Upload failed");
+    if (!activeEntity) {
+      Alert.alert("No active church selected");
+      return;
     }
-  };
+
+    const { organizationId, entityId } = activeEntity;
+
+    const storageRef = ref(storage, `church-logos/${entityId}`);
+
+    // ✅ ✅ RN SAFE UPLOAD
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+
+    await new Promise((resolve, reject) => {
+      uploadTask.on(
+        "state_changed",
+        null,
+        (error) => reject(error),
+        () => resolve()
+      );
+    });
+
+    const downloadURL = await getDownloadURL(storageRef);
+
+    await updateDoc(
+      doc(db, "organizations", organizationId, "entities", entityId),
+      { logo: downloadURL }
+    );
+
+    const updatedEntity = {
+      ...activeEntity,
+      logo: downloadURL,
+    };
+
+    setActiveEntity(updatedEntity);
+
+    await AsyncStorage.setItem(
+      "activeEntity",
+      JSON.stringify(updatedEntity)
+    );
+
+    Alert.alert("✅ Success", "Logo updated successfully");
+
+  } catch (e) {
+    console.log("❌ Upload error:", e);
+    Alert.alert("Upload failed");
+  }
+};
+
 
 
 // ✅ FIXED — derive IDs first
 const organizationId = activeEntity?.organizationId;
 const entityId = activeEntity?.entityId;
-
-// ✅ SAFE QR generation (only when ready)
-const churchQR =
-  organizationId && entityId
-    ? buildChurchQR(organizationId, entityId)
-    : null;
-
-const registerQR =
-  organizationId && entityId
-    ? buildRegistrationQR(organizationId, entityId)
-    : null;
 
 useEffect(() => {
   AsyncStorage.getItem("activeEntity").then((data) => {
@@ -259,12 +264,23 @@ useEffect(() => {
   const [dataExportModal, setDataExportModal] = useState(false);
   const [aboutModal,      setAboutModal]      = useState(false);
 
-  // ── NEW: QR Generator ──
+// ── NEW: QR Generator ──
   const [qrModal,       setQrModal]       = useState(false);
   const [qrType,        setQrType]        = useState(QR_TYPES[0]);
   const [qrLabel,       setQrLabel]       = useState("");
   const [qrGenerated,   setQrGenerated]   = useState(false);
   const [qrValue,       setQrValue]       = useState("");
+  const [generatingQR,  setGeneratingQR]  = useState(false);
+
+  // ✅ NEW — donate-specific optional fields
+  const [qrDonateAmount,   setQrDonateAmount]   = useState("");
+  const [qrDonateCategory, setQrDonateCategory] = useState("");
+
+  // ✅ NEW — event picker, so an admin selects a real event instead of
+  // typing a name/ID by hand (titles can be duplicated or renamed; IDs can't)
+  const [qrEvents,         setQrEvents]         = useState([]);
+  const [qrEventsLoading,  setQrEventsLoading]  = useState(false);
+  const [selectedEventId,  setSelectedEventId]  = useState(null);
 
   // ── NEW: Member Account Status (admin) ──
   const [accountStatusModal, setAccountStatusModal] = useState(false);
@@ -313,15 +329,59 @@ useEffect(() => {
     ].filter(Boolean));
   };
 
-  // ── QR generation ─────────────────────────────────────────────
- const generateQR = () => {
+// ✅ NEW — fetches this church's events so an admin picks from a real
+// list, the same source EventsScreen's own "Show QR" reads from.
+const loadQrEvents = async () => {
+  if (!db) {
+    console.log("❌ DB NOT READY");
+    return;
+  }
+
+  if (!activeEntity?.organizationId || !activeEntity?.entityId) {
+    console.log("❌ Missing entity for Firestore");
+    return;
+  }
+
+  setQrEventsLoading(true);
+
+  try {
+    const snap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        activeEntity.organizationId,
+        "entities",
+        activeEntity.entityId,
+        "events"
+      )
+    );
+
+    setQrEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+  } catch (e) {
+    console.log("❌ Load events error:", e);
+  } finally {
+    setQrEventsLoading(false);
+  }
+};
+
+
+
+
+// ✅ FIXED: now builds every link through utils/qrLinks.js — the same
+// functions AttendanceScreen/EventsScreen/MembersScreen already use.
+// Before, this built its own inline template strings with different
+// param names than utils/qrRouter.js actually reads ("entity=" instead
+// of "church="), so a QR generated here silently failed to carry the
+// right context whenever it was scanned.
+const generateQR = async () => {
   if (qrType.key === "custom" && !qrLabel.trim()) {
     Alert.alert("Required", "Please enter the custom URL or text");
     return;
   }
 
-  if (qrType.key === "event" && !qrLabel.trim()) {
-    Alert.alert("Required", "Please enter the event name");
+  if (qrType.key === "event" && !selectedEventId) {
+    Alert.alert("Required", "Please select an event");
     return;
   }
 
@@ -330,37 +390,52 @@ useEffect(() => {
     return;
   }
 
-  let value = "";
-  const { organizationId, entityId } = activeEntity;
+  setGeneratingQR(true);
+  try {
+    let value = null;
 
-  switch (qrType.key) {
+    switch (qrType.key) {
+      case "register":
+        value = await buildRegisterLink();
+        break;
 
-    case "attendance":
-      value = `churchcare://attendance?org=${organizationId}&entity=${entityId}&session=${Date.now()}`;
-      break;
+      case "event":
+        value = await buildEventLink(selectedEventId);
+        break;
 
-    case "register":
-      value = `churchcare://register?org=${organizationId}&entity=${entityId}`;
-      break;
+      case "donate":
+        value = await buildDonateLink({
+          amount: qrDonateAmount || undefined,
+          category: qrDonateCategory || undefined
+        });
+        break;
 
-    case "event":
-      value = `churchcare://event?event=${encodeURIComponent(qrLabel)}&entity=${entityId}&org=${organizationId}`;
-      break;
+      case "prayer":
+        value = await buildPrayerLink();
+        break;
 
-    case "donate":
-      value = `churchcare://donate?entity=${entityId}&org=${organizationId}`;
-      break;
+      case "custom":
+        value = qrLabel;
+        break;
+    }
 
-    case "custom":
-      value = qrLabel;
-      break;
+    if (!value) {
+      Alert.alert("Error", "Could not generate this QR code. Please try again.");
+      return;
+    }
 
-    default:
-      value = `churchcare://church?entity=${entityId}&org=${organizationId}`;
+    setQrValue(value);
+    setQrGenerated(true);
+  } catch (e) {
+    // ✅ NEW — this is exactly what was missing: any error inside the
+    // try block (like the URLSearchParams crash) had nowhere to go,
+    // so it surfaced as an unhandled promise rejection / red screen
+    // instead of a normal, dismissable alert.
+    console.log("❌ QR generation error:", e);
+    Alert.alert("Error", "Something went wrong generating this QR code.");
+  } finally {
+    setGeneratingQR(false);
   }
-
-  setQrValue(value);
-  setQrGenerated(true);
 };
 
 
@@ -373,7 +448,16 @@ useEffect(() => {
     } catch (e) { Alert.alert("Share failed", e.message); }
   };
 
-  const resetQR = () => { setQrGenerated(false); setQrLabel(""); setQrType(QR_TYPES[0]); setQrValue(""); };
+  const resetQR = () => {
+  setQrGenerated(false);
+  setQrLabel("");
+  setQrType(QR_TYPES[0]);
+  setQrValue("");
+  setQrDonateAmount("");
+  setQrDonateCategory("");
+  setSelectedEventId(null);
+  setQrEvents([]);
+};
 
   // ── Account status actions ─────────────────────────────────────
   const confirmAccountAction = () => {
@@ -493,7 +577,7 @@ useEffect(() => {
             <SectionHeader title="Church Information" />
             <View style={styles.card}>
               <TapRow icon="business-outline"   label="Church Details"   sub="Name, address, contact"    onPress={() => setChurchInfoModal(true)} color="#4B3F72" />
-              <TapRow icon="people-outline"     label="Manage Roles"     sub="Assign roles to members"   onPress={() => Alert.alert("Manage Roles", "Role management is in the Members section.")} color="#0984E3" />
+              <TapRow icon="people-outline"     label="Manage Roles"     sub="Assign roles to members"   onPress={() => navigation.navigate("Roles")} color="#0984E3" />   onPress={() => Alert.alert("Manage Roles", "Role management is in the Members section.")} color="#0984E3" />
               <TapRow icon="git-branch-outline" label="Manage Branches"  sub="Add or edit branches"      onPress={() => Alert.alert("Coming Soon", "Branch management coming soon.")} color="#00B894" />
             </View>
           </>
@@ -501,6 +585,7 @@ useEffect(() => {
 
         
 
+<SectionHeader title="Church Branding" />
 <View style={styles.card}>
 
   <TouchableOpacity onPress={uploadChurchLogo} style={styles.logoRow}>
@@ -686,9 +771,14 @@ useEffect(() => {
                   <Text style={styles.fieldLabel}>QR Code Type</Text>
                   <View style={styles.qrTypeGrid}>
                     {QR_TYPES.map(type => (
-                      <TouchableOpacity key={type.key}
-                        style={[styles.qrTypeCard, qrType.key === type.key && { borderColor: type.color, backgroundColor: type.color + "10" }]}
-                        onPress={() => { setQrType(type); setQrLabel(""); }}>
+                  <TouchableOpacity key={type.key}
+  style={[styles.qrTypeCard, qrType.key === type.key && { borderColor: type.color, backgroundColor: type.color + "10" }]}
+  onPress={() => {
+    setQrType(type);
+    setQrLabel("");
+    setSelectedEventId(null);
+    if (type.key === "event") loadQrEvents();
+  }}>
                         <View style={[styles.qrTypeIcon, { backgroundColor: type.color + "20" }]}>
                           <Ionicons name={type.icon} size={18} color={type.color} />
                         </View>
@@ -702,33 +792,78 @@ useEffect(() => {
                       </TouchableOpacity>
                     ))}
                   </View>
+        
+             {/* ✅ FIXED: picks a real event by ID instead of free-typing a name */}
+{qrType.key === "event" && (
+  <>
+    <Text style={styles.fieldLabel}>Select Event *</Text>
+    {qrEventsLoading ? (
+      <ActivityIndicator color="#4B3F72" style={{ marginVertical: 10 }} />
+    ) : qrEvents.length === 0 ? (
+      <Text style={{ fontSize: 12, color: "#aaa", marginBottom: 10 }}>
+        No events found for this church yet.
+      </Text>
+    ) : (
+      <View style={{ marginBottom: 10 }}>
+        {qrEvents.map(ev => (
+          <TouchableOpacity
+            key={ev.id}
+            style={[styles.choiceRow, selectedEventId === ev.id && styles.choiceRowActive]}
+            onPress={() => setSelectedEventId(ev.id)}
+          >
+            <Text style={[styles.choiceText, selectedEventId === ev.id && { color: "#00B894", fontWeight: "800" }]}>
+              {ev.title}
+            </Text>
+            {selectedEventId === ev.id && <Ionicons name="checkmark-circle" size={18} color="#00B894" />}
+          </TouchableOpacity>
+        ))}
+      </View>
+    )}
+  </>
+)}
 
-                  {/* Dynamic label input */}
-                  {(qrType.key === "event" || qrType.key === "custom") && (
-                    <>
-                      <Text style={styles.fieldLabel}>
-                        {qrType.key === "event" ? "Event Name *" : "Custom URL or Text *"}
-                      </Text>
-                      <TextInput style={styles.input}
-                        placeholder={qrType.key === "event" ? "e.g. Youth Conference 2025" : "https://yourlink.com or any text"}
-                        value={qrLabel} onChangeText={setQrLabel} autoCapitalize="none" />
-                    </>
-                  )}
+{/* ✅ NEW — donate links can optionally carry a fixed amount/category */}
+{qrType.key === "donate" && (
+  <>
+    <Text style={styles.fieldLabel}>Amount (optional)</Text>
+    <TextInput style={styles.input}
+      placeholder="e.g. 50 — leave blank for open amount"
+      keyboardType="numeric"
+      value={qrDonateAmount} onChangeText={setQrDonateAmount} />
+    <Text style={styles.fieldLabel}>Category (optional)</Text>
+    <TextInput style={styles.input}
+      placeholder="e.g. Building, Tithe, Missions"
+      value={qrDonateCategory} onChangeText={setQrDonateCategory} />
+  </>
+)}
 
-                  {/* Church tag */}
-                  <View style={styles.qrChurchTag}>
-                    <Ionicons name="business-outline" size={13} color="#4B3F72" />
-                    
-                  </View>
+{qrType.key === "custom" && (
+  <>
+    <Text style={styles.fieldLabel}>Custom URL or Text *</Text>
+    <TextInput style={styles.input}
+      placeholder="https://yourlink.com or any text"
+      value={qrLabel} onChangeText={setQrLabel} autoCapitalize="none" />
+  </>
+)}
+
+                {/* Church tag */}
+<View style={styles.qrChurchTag}>
+  <Ionicons name="business-outline" size={13} color="#4B3F72" />
+  <Text style={styles.qrChurchTagText}>{CHURCH_NAME}</Text>
+</View>
 
                   <Text style={styles.qrNote}>
                     Each QR code is uniquely tied to your church ID. Attendance QR codes include a timestamp for security.
                   </Text>
 
-                  <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: qrType.color }]} onPress={generateQR}>
-                    <Ionicons name="qr-code-outline" size={16} color="#fff" />
-                    <Text style={styles.primaryBtnText}>Generate QR Code</Text>
-                  </TouchableOpacity>
+                  <TouchableOpacity
+  style={[styles.primaryBtn, { backgroundColor: qrType.color }, generatingQR && { opacity: 0.6 }]}
+  onPress={generateQR}
+  disabled={generatingQR}
+>
+  <Ionicons name="qr-code-outline" size={16} color="#fff" />
+  <Text style={styles.primaryBtnText}>{generatingQR ? "Generating..." : "Generate QR Code"}</Text>
+</TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -739,11 +874,12 @@ useEffect(() => {
                       <Text style={[styles.qrResultBadgeText, { color: qrType.color }]}>{qrType.label}</Text>
                     </View>
 
-                    {/* QR placeholder — replace with <QRCode value={qrValue} size={180} /> from react-native-qrcode-svg */}
-                    <View style={styles.qrDisplay}>
-                      <Ionicons name="qr-code-outline" size={130} color="#4B3F72" />
-                      <Text style={styles.qrInstall}>Install react-native-qrcode-svg{"\n"}for live QR rendering</Text>
-                    </View>
+                   {/* ✅ FIXED: this was a placeholder icon — react-native-qrcode-svg is
+   already a dependency (MembersScreen already uses it), it just was
+   never actually rendered here. */}
+<View style={[styles.qrDisplay, { backgroundColor: "#fff", borderStyle: "solid" }]}>
+  <QRCode value={qrValue} size={180} backgroundColor="#fff" color="#222" />
+</View>
 
                     <Text style={styles.qrChurchLabel}>{CHURCH_NAME}</Text>
                     <Text style={styles.qrTypeDisplay}>{qrType.label}</Text>
@@ -916,7 +1052,7 @@ useEffect(() => {
         <View style={styles.modalOverlay}><View style={styles.modalSheet}>
           <View style={styles.handleRow}><View style={styles.handle} /></View>
           <View style={{ alignItems:"center", marginBottom:16 }}>
-            <View style={styles.aboutIcon}><Ionicons name="church-outline" size={36} color="#4B3F72"/></View>
+            <View style={styles.aboutIcon}> <Ionicons name="business-outline" />size={36} color="#4B3F72"</View>
             <Text style={styles.aboutTitle}>ChurchCare</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           </View>

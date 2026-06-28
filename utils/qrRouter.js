@@ -10,7 +10,25 @@ import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
-// ✅ ✅ ✅ MEMBER ATTENDANCE (IDENTITY-BASED)
+async function findOpenSession(organizationId, entityId) {
+  const today = new Date().toISOString().split("T")[0];
+
+  const sessionsRef = collection(
+    db, "organizations", organizationId, "entities", entityId, "sessions"
+  );
+  const q = query(sessionsRef, where("date", "==", today));
+  const snap = await getDocs(q);
+
+  const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const live = sessions
+    .filter(s => s.status === "open" || s.status === "extended")
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+  return live[0] || null;
+}
+
+
 async function markMemberAttendance(memberCode, entityId) {
   try {
     const data = await AsyncStorage.getItem("activeEntity");
@@ -18,120 +36,93 @@ async function markMemberAttendance(memberCode, entityId) {
 
     const { organizationId } = JSON.parse(data);
 
-    // ✅ find member
-    const ref = collection(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "members"
-    );
-
-    const q = query(ref, where("memberCode", "==", memberCode));
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      Alert.alert("Not found", "Member not found");
-      return;
-    }
-
-    const member = snap.docs[0].data();
-
-    // ✅ save attendance
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "attendance"
-      ),
-      {
-        memberCode,
-        name: member.name,
-        sessionId: "member-scan",
-        timestamp: new Date().toISOString(),
-      }
-    );
-
-    console.log("✅ Member attendance recorded:", member.name);
-    Alert.alert("✅ Checked In", member.name);
-
-  } catch (e) {
-    console.log("❌ Member attendance error:", e);
-  }
-}
-
-/* 
-async function markMemberAttendance(memberCode, entityId, sessionId) {
-  try {
-    const data = await AsyncStorage.getItem("activeEntity");
-    if (!data) return;
-
-    const { organizationId } = JSON.parse(data);
-
-    const attendanceRef = collection(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "attendance"
-    );
-
-    // ✅ CHECK DUPLICATE (SESSION-BASED)
-    const q = query(
-      attendanceRef,
-      where("memberCode", "==", memberCode),
-      where("sessionId", "==", sessionId)
-    );
-
-    const existingSnap = await getDocs(q);
-
-    if (!existingSnap.empty) {
-      Alert.alert("Already Checked In", "Member already checked in for this service.");
-      return;
-    }
-
-    // ✅ FIND MEMBER
     const membersRef = collection(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "members"
+      db, "organizations", organizationId, "entities", entityId, "members"
     );
 
     const mq = query(membersRef, where("memberCode", "==", memberCode));
     const memberSnap = await getDocs(mq);
 
     if (memberSnap.empty) {
-      Alert.alert("Not found", "Member not found");
+      Alert.alert("Not Found", "Member not found");
       return;
     }
 
-    const member = memberSnap.docs[0].data();
+    const memberDoc = memberSnap.docs[0];
+    const member = { id: memberDoc.id, ...memberDoc.data() };
 
-    // ✅ SAVE ATTENDANCE
+    const session = await findOpenSession(organizationId, entityId);
+
+    if (!session) {
+      Alert.alert(
+        "No Service Open",
+        "There's no active service session right now. Ask an admin to start one."
+      );
+      return;
+    }
+
+    const attendanceRef = collection(
+      db, "organizations", organizationId, "entities", entityId, "attendance"
+    );
+
+    const dupQ = query(
+      attendanceRef,
+      where("memberCode", "==", memberCode),
+      where("sessionId", "==", session.id)
+    );
+    const dupSnap = await getDocs(dupQ);
+
+    if (!dupSnap.empty) {
+      Alert.alert("Already Checked In", `${member.name} is already recorded for this service.`);
+      return;
+    }
+
     await addDoc(attendanceRef, {
+      memberId: member.id,
       memberCode,
       name: member.name,
-      sessionId,
+      phone: member.phone || "",
+      ministry: member.ministry || "",
       entityId,
-      timestamp: new Date().toISOString(),
+      organizationId,
+      sessionId: session.id,
+      service: session.service,
+      type: session.type,
+      event: session.event || "",
+      date: session.date,
+      status: "present",
+      method: "qr",
+      timestamp: new Date().toISOString()
     });
 
     console.log("✅ Member attendance recorded:", member.name);
-
-    Alert.alert("✅ Checked In", `${member.name} (Session)`);
+    Alert.alert("✅ Checked In", `${member.name} — ${session.service} (${session.type})`);
 
   } catch (e) {
     console.log("❌ Member attendance error:", e);
+    Alert.alert("Error", "Could not record attendance. Please try again.");
   }
-} */
+}
+
+
+// ✅ FIXED: manual parsing instead of `new URL(data)` / `.searchParams` —
+// same Hermes/polyfill problem as the generator side, just on decode.
+// This works for any string, in any JS environment, no Web API needed.
+function parseDeepLink(data) {
+  const schemeMatch = data.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//);
+  if (!schemeMatch) return null;
+
+  const withoutScheme = data.slice(schemeMatch[0].length); // "attendance?church=...&session=..."
+  const [type, queryStr = ""] = withoutScheme.split("?");
+
+  const params = {};
+  queryStr.split("&").filter(Boolean).forEach(pair => {
+    const [k, v] = pair.split("=");
+    if (k) params[decodeURIComponent(k)] = v !== undefined ? decodeURIComponent(v) : "";
+  });
+
+  return { type: type.replace(/\/$/, ""), params };
+}
 
 
 // ✅ ✅ ✅ MAIN QR ROUTER
@@ -139,67 +130,62 @@ export async function handleQRCode(navigation, data) {
   try {
     console.log("📸 RAW QR:", data);
 
-    // ✅ 1. TRY MEMBER QR FIRST
-   try {
-  const parsed = JSON.parse(data);
+    // ✅ 1. MEMBER BADGE — JSON, permanent per member, in-app only
+    try {
+      const parsed = JSON.parse(data);
 
-  if (parsed.memberCode) {
-    await markMemberAttendance(
-      parsed.memberCode,
-      parsed.entityId,
-      parsed.sessionId || "default-session" // ✅ NEW
-    );
-    return; // ✅ STOP here
-  }
+      if (parsed.memberCode) {
+        await markMemberAttendance(parsed.memberCode, parsed.entityId);
+        return;
+      }
+    } catch {
+      // not a member QR → continue to URL-based links below
+    }
 
-} catch {
-  // not a member QR → continue
-}
+    // ✅ 2. URL-BASED DEEP LINKS
+    const parsedLink = parseDeepLink(data);
+    if (!parsedLink) {
+      Alert.alert("Invalid QR", "This QR code is not valid.");
+      return;
+    }
 
-    // ✅ 2. HANDLE NORMAL QR LINKS
-    const url = new URL(data);
-    const type = url.pathname.replace("/", "");
-    const params = Object.fromEntries(url.searchParams.entries());
+    const { type, params } = parsedLink;
 
     console.log("✅ QR TYPE:", type);
     console.log("✅ PARAMS:", params);
 
     switch (type) {
 
-      // ✅ ATTENDANCE QR
       case "attendance":
-        await markAttendance(params.church, params.session);
-
-        navigation.navigate("AttendanceScreen", {
-          entityId: params.church,
-          sessionId: params.session,
+        navigation.navigate("Attendance", {
+          resumeSessionId: params.session,
+          resumeEntityId: params.entity
         });
         break;
 
-      // ✅ REGISTER QR
       case "register":
         navigation.navigate("AddMember", {
-          entityId: params.church,
+          entityId: params.entity,
         });
         break;
 
-      // ✅ EVENT QR
       case "event":
-        navigation.navigate("EventScreen", {
-          entityId: params.church,
-          eventName: params.event,
+        navigation.navigate("Events", {  // ⚠️ confirm this matches your navigator's registered route name
+          eventId: params.eventId,
         });
         break;
 
-      // ✅ DONATION
       case "donate":
-        Alert.alert("Donation", "Open donation flow here");
+        navigation.navigate("Donate", {
+          entityId: params.entity,
+          amount: params.amount,
+          category: params.category,
+        });
         break;
 
-      // ✅ PRAYER
       case "prayer":
         navigation.navigate("PrayerRequestScreen", {
-          entityId: params.church,
+          entityId:params.entity ,
         });
         break;
 

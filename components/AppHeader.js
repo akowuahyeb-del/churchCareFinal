@@ -52,7 +52,7 @@ export default function AppHeader({
     <Image source={{ uri: entity.logo }} style={styles.logo} />
   ) : (
     <View style={styles.logoPlaceholder}>
-      <Ionicons name="church-outline" size={18} color="#fff" />
+      <Ionicons name="business-outline" size={13} color="#f6f5fa" />
     </View>
   )}
 
