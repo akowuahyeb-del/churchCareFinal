@@ -1021,8 +1021,34 @@ const styles = StyleSheet.create({
   chipTextActive: { color: "#fff", fontWeight: "700" },
 
   // Primary button
-  primaryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 12, padding: 13, marginTop: 6, gap: 6 },
-  primaryBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  
+primaryBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+
+  backgroundColor: "#4B3F72",
+  borderRadius: 12,
+
+  paddingVertical: 12,   
+  paddingHorizontal: 14,
+
+  marginTop: 6,
+  gap: 6,
+
+  minHeight: 44,   
+},
+
+primaryBtnText: {
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: "800",
+
+  lineHeight: 18,                 
+  includeFontPadding: false,      
+  textAlignVertical: "center",    
+},
+  
 
   // Info banner
   infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10 },

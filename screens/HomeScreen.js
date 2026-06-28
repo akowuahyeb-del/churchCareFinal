@@ -723,9 +723,12 @@ return (
           <Ionicons name={a.icon} size={22} color="#fff" />
         </View>
 
-        <Text style={styles.qaLabel}>
-          {a.label}
-        </Text>
+        <Text
+  style={styles.qaLabel}
+  numberOfLines={2}   
+>
+  {a.label}
+</Text>
       </TouchableOpacity>
     ))}
 
@@ -1009,9 +1012,23 @@ statusText: {
   qaHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   qaHeading: { fontSize: 15, fontWeight: "800", color: "#222" },
   qaRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 },
-  qaItem: { width: "30%", alignItems: "center" },
+  qaItem: {
+  width: "32%",  
+  alignItems: "center",
+},
   qaCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: "#3C3A4E", alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 6 },
-  qaLabel: { fontSize: 10, fontWeight: "700", color: "#444", marginTop: 6, textAlign: "center" },
+  
+  qaLabel: {
+  fontSize: 10,
+  fontWeight: "700",
+  color: "#444",
+  marginTop: 6,
+  textAlign: "center",
+
+  lineHeight: 14,          
+  includeFontPadding: false, 
+},
+
 
   /* Notification modal */
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-start" },

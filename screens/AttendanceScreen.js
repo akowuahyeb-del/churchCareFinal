@@ -81,6 +81,53 @@ const [qrModalVisible, setQrModalVisible] = useState(false);
   }
 };
 
+const applySessionData = async (targetSessionId) => {
+  if (!organizationId || !entityId || !targetSessionId) return false;
+
+  try {
+    const snap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "sessions"
+      )
+    );
+
+    const sessionDoc = snap.docs.find(d => d.id === targetSessionId);
+
+    if (!sessionDoc) return false;
+
+    const data = sessionDoc.data();
+
+    // ✅ FULL RESTORE (THIS IS THE KEY FIX)
+    setSelectedService(data.service);
+    setSelectedType(data.type);
+    setSelectedEvent(data.event || "");
+    setStartTime(data.startTime || "");
+    setEndTime(data.endTime || "");
+    setSessionStatus(data.status || "open");
+
+    setSessionId(targetSessionId);
+    setActiveSessionState(targetSessionId);
+    setSessionQR(data.qrPayload || null);
+
+    // ✅ persist
+    await AsyncStorage.setItem("activeSession", targetSessionId);
+    await AsyncStorage.setItem("sessionStatus", data.status || "open");
+    await AsyncStorage.setItem("sessionStartTime", data.startTime || "");
+
+    return true;
+
+  } catch (e) {
+    console.log("❌ applySessionData error:", e);
+    return false;
+  }
+};
+
+
 
 /* ════════════════════════════════════════════════════════════════
    FIX: endSession() was deriving present/total from `members.present`
@@ -376,97 +423,6 @@ useEffect(() => {
   return () => unsub();
 }, []);
 
-useEffect(() => {
-  const loadSession = async () => {
-    const session = await AsyncStorage.getItem("activeSession");
-    const status = await AsyncStorage.getItem("sessionStatus");
-    const start = await AsyncStorage.getItem("sessionStartTime");
-
-    if (session) {
-      setActiveSessionState(session);
-      setSessionId(session);
-
-      // ✅ 🔥 LOAD QR FROM FIRESTORE
-      if (organizationId && entityId) {
-        try {
-          const snap = await getDocs(
-            query(
-              collection(
-                db,
-                "organizations",
-                organizationId,
-                "entities",
-                entityId,
-                "sessions"
-              )
-            )
-          );
-
-          const sessionDoc = snap.docs.find(d => d.id === session);
-
-          if (sessionDoc) {
-            const data = sessionDoc.data();
-            setSessionQR(data.qrPayload || null); // ✅ THIS FIXES YOUR ISSUE
-          }
-
-        } catch (e) {
-          console.log("QR restore error:", e);
-        }
-      }
-    }
-
-    if (status) setSessionStatus(status);
-    if (start) setStartTime(start);
-  };
-
-  loadSession();
-}, [organizationId, entityId]);
-
-useEffect(() => {
-  const loadSessionDetails = async () => {
-    const sessionId = await AsyncStorage.getItem("activeSession");
-
-    if (!sessionId || !organizationId || !entityId) return;
-
-    try {
-      const ref = doc(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "sessions",
-        sessionId
-      );
-
-      const snap = await getDocs(query(collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "sessions"
-      )));
-
-      // ✅ safer: find this session
-      const sessionDoc = snap.docs.find(d => d.id === sessionId);
-
-      if (!sessionDoc) return;
-
-      const data = sessionDoc.data();
-
-      // ✅ restore UI state
-      setStartTime(data.startTime || "");
-      setEndTime(data.endTime || "");
-      setSessionStatus(data.status || "open");
-
-    } catch (e) {
-      console.log("❌ load session error:", e);
-    }
-  };
-
-  loadSessionDetails();
-}, [activeSession, organizationId, entityId]);
 
 useEffect(() => {
   setTargetEntities([
@@ -511,29 +467,20 @@ useEffect(() => {
 }, [organizationId, entityId, dateObj, selectedService, selectedType]);
 
 
-
 useEffect(() => {
-  const resumeSessionId = route?.params?.resumeSessionId;
-  const resumeEntityId = route?.params?.resumeEntityId;
-  if (!resumeSessionId || !organizationId || !entityId) return;
+  const restoreSession = async () => {
+    const session = await AsyncStorage.getItem("activeSession");
 
-  if (resumeEntityId && resumeEntityId !== entityId) {
-    Alert.alert(
-      "Different Church",
-      "This QR code belongs to a different church than the one currently active. Switch churches first."
-    );
-    return;
-  }
+    // ✅ GUARD: stop loop
+    if (!session || !organizationId || !entityId) return;
+    if (session === sessionId) return; // ✅ VERY IMPORTANT
 
-  const resumeSession = async () => {
-    // ...unchanged from before...
+    await applySessionData(session);
   };
 
-  resumeSession();
-}, [route?.params?.resumeSessionId, route?.params?.resumeEntityId, organizationId, entityId]);
+  restoreSession();
 
-
-
+}, [organizationId, entityId]); 
 
 
 
@@ -676,27 +623,22 @@ const loadAttendance = () => {
     where("service", "==", selectedService),
     where("type", "==", selectedType)
   );
+return onSnapshot(q, (snap) => {
+  const map = {};
 
-  return onSnapshot(q, (snap) => {
-    let map = {};
-    let present = 0;
-
-    snap.docs.forEach(d => {
-      const x = d.data();
-
-      map[x.memberId] = {
-        id: d.id,
-        status: x.status,
-        name: x.name,
-        time: x.timestamp
-      };
-
-      if (x.status === "present") present++;
-    });
-
-    setAttendance(map);
-    setPresentCount(present);
+  snap.docs.forEach(d => {
+    const x = d.data();
+    // ✅ last-write-wins per member — duplicate docs for the same person
+    // can no longer inflate the headcount
+    map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
   });
+
+  const present = Object.values(map).filter(a => a.status === "present").length;
+
+  setAttendance(map);
+  setPresentCount(present);
+});
+  
 };
 
 
@@ -848,62 +790,62 @@ const writeDelete = async (docId) => {
   ]);
 };
 
+// ✅ NEW — add near your other refs, e.g. right after the component's
+// other top-level state
+const pendingToggleRef = useRef(new Set());
 
-// ✅ TOGGLE ATTENDANCE
 const toggleAttendance = async (member, status) => {
   if (isSessionLocked && userRole !== "admin") {
     Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
     return;
   }
 
-  const existing = attendance[member.id];
+  // ✅ NEW — ignore a second tap on the same member while their first
+  // write is still in flight, instead of letting both through
+  if (pendingToggleRef.current.has(member.id)) return;
+  pendingToggleRef.current.add(member.id);
 
-  setUndoMap(prev => ({
-    ...prev,
-    [member.id]: existing ? { ...existing } : null
-  }));
+  try {
+    const existing = attendance[member.id];
 
-  const record = buildRecord(member, status);
-
-  if (existing && existing.status === status) {
-    await writeDelete(existing.id);
-
-    setAttendance(prev => {
-      const n = { ...prev };
-      delete n[member.id];
-      return n;
-    });
-
-    if (status === "present") {
-      setPresentCount(p => p - 1);
-    }
-
-  } else {
-    if (existing) await writeDelete(existing.id);
-
-    const newId = await writeAdd(record);
-
-    setAttendance(prev => ({
+    setUndoMap(prev => ({
       ...prev,
-      [member.id]: {
-        id: newId,
-        status,
-        name: member.name,
-        time: new Date().toISOString()
-      }
+      [member.id]: existing ? { ...existing } : null
     }));
 
-    setPresentCount(p => {
-      if (!existing && status === "present") return p + 1;
-      if (existing?.status === "present" && status === "absent") return p - 1;
-      if (existing?.status === "absent" && status === "present") return p + 1;
-      return p;
-    });
+    const record = buildRecord(member, status);
 
-    if (status === "absent") checkAbsenceStreak(member);
+    if (existing && existing.status === status) {
+      await writeDelete(existing.id);
+      setAttendance(prev => {
+        const n = { ...prev };
+        delete n[member.id];
+        return n;
+      });
+      if (status === "present") setPresentCount(p => p - 1);
+    } else {
+      if (existing) await writeDelete(existing.id);
+      const newId = await writeAdd(record);
+
+      setAttendance(prev => ({
+        ...prev,
+        [member.id]: { id: newId, status, name: member.name, time: new Date().toISOString() }
+      }));
+
+      setPresentCount(p => {
+        if (!existing && status === "present") return p + 1;
+        if (existing?.status === "present" && status === "absent") return p - 1;
+        if (existing?.status === "absent" && status === "present") return p + 1;
+        return p;
+      });
+
+      if (status === "absent") checkAbsenceStreak(member);
+    }
+  } finally {
+    // ✅ NEW
+    pendingToggleRef.current.delete(member.id);
   }
 };
-
 
 // ✅ UNDO MEMBER ACTION
 const undoMember = async (member) => {
@@ -955,36 +897,30 @@ const undoMember = async (member) => {
 /* ══════════ ABSENCE CHECK ══════════ */
 const checkAbsenceStreak = async (member) => {
   if (!organizationId || !entityId) return;
-
   try {
     const q = query(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "attendance"
-      ),
+      collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
       where("memberId", "==", member.id),
       where("status", "==", "absent")
     );
-
     const snap = await getDocs(q);
-
     const count = snap.docs.length;
 
     if (count >= 3) {
       setRedFlagMember(member);
       setRedFlagCount(count);
       setRedFlagModal(true);
-
     } else if (count >= 2) {
       setContactMember(member);
       setContactModal(true);
     }
-
-  } catch {}
+  } catch (e) {
+    // ✅ NEW — was a bare `catch {}`. Mark someone absent now and check
+    // your Metro/console logs — if this prints a Firestore index error,
+    // that's the actual cause, and the console message gives you a direct
+    // link to create the missing index in one click.
+    console.log("❌ checkAbsenceStreak error:", e);
+  }
 };
 
   
@@ -1131,98 +1067,99 @@ const handleGeoAttendance = async () => {
 //     setScanFeedback("");
 //   }, 2500);
 // };
-
 const handleBarCodeScanned = async ({ data: scannedRaw }) => {
   if (!organizationId || !entityId) return;
   if (scanned) return;
 
   setScanned(true);
 
-  // ✅ CASE 1: Session QR (deep link)
+  // ✅ CASE 1: Session QR — manual parsing instead of new URL(), and now
+  // restores the FULL session (service/type/startTime/etc) via
+  // applySessionData, not just sessionId.
   if (scannedRaw.startsWith("churchcare://attendance")) {
-    try {
-      const url = new URL(scannedRaw.replace("churchcare://", "https://dummy/"));
+    const withoutScheme = scannedRaw.replace("churchcare://attendance", "");
+    const queryStr = withoutScheme.startsWith("?") ? withoutScheme.slice(1) : "";
+    const qrParams = {};
+    queryStr.split("&").filter(Boolean).forEach(pair => {
+      const [k, v] = pair.split("=");
+      if (k) qrParams[decodeURIComponent(k)] = v !== undefined ? decodeURIComponent(v) : "";
+    });
 
-      const sessionId = url.searchParams.get("session");
-      const entityFromQR = url.searchParams.get("entity");
+    const scannedSessionId = qrParams.session;
+    const scannedEntityId  = qrParams.entity;
 
-      if (!sessionId) {
-        Alert.alert("Invalid QR", "Session not found.");
-        return;
-      }
-
-      if (entityFromQR && entityFromQR !== entityId) {
-        Alert.alert("Wrong church", "Switch church first.");
-        return;
-      }
-
-      // ✅ resume session directly
-      setSessionId(sessionId);
-      setActiveSessionState(sessionId);
-
-      Alert.alert("✅ Session Activated", "You are now checked into this service.");
-
-    } catch (e) {
-      Alert.alert("Invalid QR", "Could not parse QR.");
+    if (!scannedSessionId) {
+      Alert.alert("Invalid QR", "Session not found.");
+      setTimeout(() => setScanned(false), 2000);
+      return;
     }
+
+    if (scannedEntityId && scannedEntityId !== entityId) {
+      Alert.alert("Wrong Church", "This session belongs to a different church. Switch church first.");
+      setTimeout(() => setScanned(false), 2000);
+      return;
+    }
+
+    const found = await applySessionData(scannedSessionId);
+    Alert.alert(
+      found ? "✅ Session Activated" : "Session Not Found",
+      found
+        ? "You are now viewing this service's live attendance."
+        : "This session may have ended or been removed."
+    );
 
     setTimeout(() => setScanned(false), 2000);
     return;
   }
 
-  // ✅ CASE 2: Member QR
-  // ✅ ✅ FIRST: try JSON (AUTO ATTENDANCE)
-try {
-  const parsed = JSON.parse(scannedRaw);
+  // ✅ CASE 2: Member badge — FIXED: used to call markMemberAttendance(...),
+  // a function that doesn't exist in this file. Reuses toggleAttendance
+  // instead, which is consistent with every other way attendance gets
+  // marked here, and benefits from the double-tap guard above for free.
+  try {
+    const parsed = JSON.parse(scannedRaw);
 
-  if (parsed?.memberCode && parsed?.entityId) {
-    console.log("✅ AUTO ATTENDANCE TRIGGER");
+    if (parsed?.memberCode) {
+      const found = members.find(
+        m => m.memberCode === parsed.memberCode || m.id === parsed.memberCode
+      );
 
-    await markMemberAttendance(
-      parsed.memberCode,
-      parsed.entityId
-    );
+      if (!found) {
+        setScanFeedback("❌ Member not found");
+        setTimeout(() => { setScanned(false); setScanFeedback(""); }, 2000);
+        return;
+      }
 
-    setScanFeedback("✅ Checked In");
 
-    setTimeout(() => {
-      setScanned(false);
-      setScanFeedback("");
-    }, 2000);
+      if (attendance[found.id]) {
+        setScanFeedback(`⚠️ ${found.name} already marked`);
+      } else {
+        await toggleAttendance(found, "present");
+        setScanFeedback(`✅ ${found.name} marked Present`);
+      }
 
-    return; // ✅ STOP here (no manual search)
+      setTimeout(() => {
+        setScanned(false);
+        setScanFeedback("");
+      }, 2000);
+      return;
+    }
+  } catch {
+    // not JSON → continue to plain-text fallback
   }
 
-} catch {
-  // Not JSON → continue
-}
+  // ✅ CASE 3: legacy plain-text ID badges
+  const scannedCode = scannedRaw;
+  const member = members.find(
+    m => m.id === scannedCode || m.memberCode === scannedCode
+  );
 
-
-// ✅ ✅ SECOND: fallback to manual scan (your existing logic)
-
-let scannedCode = scannedRaw;
-
-const member = members.find(
-  m => m.id === scannedCode || m.memberCode === scannedCode
-);
-
-if (!member) {
-  setScanFeedback("❌ Member not found");
-
-  setTimeout(() => {
-    setScanned(false);
-    setScanFeedback("");
-  }, 2000);
-
-  return;
-}
-
-  // ✅ MUST HAVE SESSION
-  if (!sessionId) {
-    Alert.alert("No Session", "Start or scan a session QR first.");
-    setScanned(false);
+  if (!member) {
+    setScanFeedback("❌ Member not found");
+    setTimeout(() => { setScanned(false); setScanFeedback(""); }, 2000);
     return;
   }
+
 
   if (attendance[member.id]) {
     setScanFeedback(`⚠️ ${member.name} already marked`);
@@ -1237,9 +1174,7 @@ if (!member) {
   }, 2000);
 };
 
-
-
-
+ 
 
 
  /* ══════════ LOG ══════════ */
@@ -1251,14 +1186,7 @@ const openLog = async () => {
 
   try {
     const q = query(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "attendance"
-      ),
+      collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
       where("date", "==", today),
       where("service", "==", selectedService),
       where("type", "==", selectedType)
@@ -1266,18 +1194,28 @@ const openLog = async () => {
 
     const snap = await getDocs(q);
 
-    const records = snap.docs
-      .map(d => ({ docId: d.id, ...d.data() }))
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    // ✅ NEW — dedupe by memberId, keeping whichever record has the
+    // latest timestamp
+    const byMember = {};
+    snap.docs.forEach(d => {
+      const data = { docId: d.id, ...d.data() };
+      const key = data.memberId || data.docId;
+      const existing = byMember[key];
+      if (!existing || (data.timestamp || "") > (existing.timestamp || "")) {
+        byMember[key] = data;
+      }
+    });
+
+    const records = Object.values(byMember).sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "")
+    );
 
     setLogData(records);
     setLogVisible(true);
-
   } catch (e) {
     console.log(e);
   }
 };
-
 
 /* ══════════ MANAGE LISTS ══════════ */
 const saveManage = () => {

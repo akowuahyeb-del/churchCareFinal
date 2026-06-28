@@ -19,8 +19,12 @@ import {
   buildRegisterLink,
   buildEventLink,
   buildDonateLink,
-  buildPrayerLink
+  buildPrayerLink,
+  buildAttendanceSessionLink 
 } from "../utils/qrLinks";
+
+import { findOpenSession } from "../utils/findOpenSession";
+
 import QRCode from "react-native-qrcode-svg";
 import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
 
@@ -51,11 +55,14 @@ const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
 // never actually called it; it had its own separate, inconsistent
 // template strings instead. utils/qrLinks.js is now the one source of truth.
 const QR_TYPES = [
-  { key: "donate",   label: "Donation Link",       icon: "heart-outline",      color: "#E11D48" },
-  { key: "register", label: "Member Registration", icon: "person-add-outline", color: "#0984E3" },
-  { key: "event",    label: "Event Registration",  icon: "calendar-outline",   color: "#00B894" },
-  { key: "prayer",   label: "Prayer Request",      icon: "prism-outline",      color: "#6C5CE7" },
-  { key: "custom",   label: "Custom URL / Text",   icon: "link-outline",       color: "#636e72" },
+  // ✅ RE-ADDED — now backed by a real, live session lookup instead of
+  // the old Date.now() placeholder that never matched a real document
+  { key: "attendance", label: "Attendance Check-In", icon: "checkmark-circle-outline", color: "#4B3F72" },
+  { key: "donate",     label: "Donation Link",       icon: "heart-outline",            color: "#E11D48" },
+  { key: "register",   label: "Member Registration", icon: "person-add-outline",       color: "#0984E3" },
+  { key: "event",      label: "Event Registration",  icon: "calendar-outline",         color: "#00B894" },
+  { key: "prayer",     label: "Prayer Request",      icon: "prism-outline",            color: "#6C5CE7" },
+  { key: "custom",     label: "Custom URL / Text",   icon: "link-outline",             color: "#636e72" },
 ];
 
 // ── Reusable rows ─────────────────────────────────────────────────
@@ -120,6 +127,7 @@ export default function SettingsScreen() {
 
   const CHURCH_ID   = activeEntity?.entityId || "unknown";
   const CHURCH_NAME = activeEntity?.name     || "Church";
+  
 
   // ✅ FIXED: this <SectionHeader> was a bare JSX statement sitting in the
   // middle of the function body, not inside any return() — it never
@@ -190,6 +198,17 @@ export default function SettingsScreen() {
 // ✅ FIXED — derive IDs first
 const organizationId = activeEntity?.organizationId;
 const entityId = activeEntity?.entityId;
+
+const [liveSession, setLiveSession] = useState(null);
+const [liveSessionChecked, setLiveSessionChecked] = useState(false);
+
+const checkLiveSession = async () => {
+  if (!activeEntity?.organizationId || !activeEntity?.entityId) return;
+  setLiveSessionChecked(false);
+  const session = await findOpenSession(activeEntity.organizationId, activeEntity.entityId);
+  setLiveSession(session);
+  setLiveSessionChecked(true);
+};
 
 useEffect(() => {
   AsyncStorage.getItem("activeEntity").then((data) => {
@@ -380,6 +399,28 @@ const generateQR = async () => {
     return;
   }
 
+  {qrType.key === "attendance" && (
+  <View style={{ marginBottom: 10 }}>
+    {!liveSessionChecked ? (
+      <ActivityIndicator color="#4B3F72" style={{ marginVertical: 10 }} />
+    ) : liveSession ? (
+      <View style={[styles.qrChurchTag, { backgroundColor: "#e8f8f0" }]}>
+        <Ionicons name="checkmark-circle" size={14} color="#27ae60" />
+        <Text style={[styles.qrChurchTagText, { color: "#27ae60" }]}>
+          Live now: {liveSession.service} · {liveSession.type}
+        </Text>
+      </View>
+    ) : (
+      <View style={[styles.qrChurchTag, { backgroundColor: "#fce8e8" }]}>
+        <Ionicons name="alert-circle" size={14} color="#e74c3c" />
+        <Text style={[styles.qrChurchTagText, { color: "#e74c3c" }]}>
+          No service open right now — start one in Attendance first.
+        </Text>
+      </View>
+    )}
+  </View>
+)}
+
   if (qrType.key === "event" && !selectedEventId) {
     Alert.alert("Required", "Please select an event");
     return;
@@ -417,6 +458,19 @@ const generateQR = async () => {
       case "custom":
         value = qrLabel;
         break;
+
+        case "attendance": {
+  const session = await findOpenSession(activeEntity.organizationId, activeEntity.entityId);
+  if (!session) {
+    Alert.alert(
+      "No Service Open",
+      "There's no active service session right now. Start one in Attendance first, then come back here."
+    );
+    return;
+  }
+  value = buildAttendanceSessionLink(session.id, activeEntity.organizationId, activeEntity.entityId);
+  break;
+}
     }
 
     if (!value) {
@@ -427,12 +481,11 @@ const generateQR = async () => {
     setQrValue(value);
     setQrGenerated(true);
   } catch (e) {
-    // ✅ NEW — this is exactly what was missing: any error inside the
-    // try block (like the URLSearchParams crash) had nowhere to go,
-    // so it surfaced as an unhandled promise rejection / red screen
-    // instead of a normal, dismissable alert.
     console.log("❌ QR generation error:", e);
-    Alert.alert("Error", "Something went wrong generating this QR code.");
+    // ✅ TEMPORARY — shows the real error message on screen so we can see
+    // exactly what's failing, instead of a generic message. Revert this
+    // line back to the plain message once we've found the cause.
+    Alert.alert("Error", `Something went wrong generating this QR code.\n\n${e?.message || String(e)}`);
   } finally {
     setGeneratingQR(false);
   }
@@ -774,11 +827,16 @@ const generateQR = async () => {
                   <TouchableOpacity key={type.key}
   style={[styles.qrTypeCard, qrType.key === type.key && { borderColor: type.color, backgroundColor: type.color + "10" }]}
   onPress={() => {
-    setQrType(type);
-    setQrLabel("");
-    setSelectedEventId(null);
-    if (type.key === "event") loadQrEvents();
-  }}>
+  setQrType(type);
+  setQrLabel("");
+  setSelectedEventId(null);
+
+  if (type.key === "event") loadQrEvents();
+
+  if (type.key === "attendance") {
+    checkLiveSession(); // ✅ NEW
+  }
+}}>
                         <View style={[styles.qrTypeIcon, { backgroundColor: type.color + "20" }]}>
                           <Ionicons name={type.icon} size={18} color={type.color} />
                         </View>

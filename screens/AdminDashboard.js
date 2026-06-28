@@ -40,7 +40,7 @@ const TABS = [
   { key: "Attendance",  label: "Attendance",  icon: "checkmark-circle-outline", color: "#00B894", bg: "#E8FBF5" },
   { key: "Financial",   label: "Financial",   icon: "cash-outline",          color: "#FDCB6E", bg: "#FFFBEE" },
   { key: "Inventory",   label: "Inventory",   icon: "cube-outline",          color: "#E17055", bg: "#FEF0EE" },
-  { key: "History",     label: "History",     icon: "time-outline",          color: "#00CEC9", bg: "#E8FFFE" },
+  { key: "Trend",     label: "Trend",     icon: "time-outline",          color: "#00CEC9", bg: "#E8FFFE" }
 ];
 
 export default function AdminDashboard() {
@@ -350,8 +350,8 @@ export default function AdminDashboard() {
         </View>
       );
 
-      /* ── HISTORY ── */
-      case "History": return (
+      /* ── HISTORY/TREND ── */
+      case "Trend": return (
         <View>
           <View style={styles.cardGrid}>
             <StatCard title="Today's Logs"  value={25}  icon="time"          color="#6C5CE7" bg="#F0EEFF" />
