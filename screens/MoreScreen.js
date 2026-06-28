@@ -14,11 +14,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import AppHeader from "../components/AppHeader";
 import LogoutButton from "../components/LogoutButton";
-
 const MORE_ITEMS = [
   { key: "Departments", icon: "people-circle-outline", color: "#4F46E5", bg: "#EEF2FF", desc: "Manage church departments & groups" },
   { key: "Events", icon: "calendar-outline", color: "#059669", bg: "#ECFDF5", desc: "Church calendar & programmes" },
   { key: "Finance", icon: "cash-outline", color: "#D97706", bg: "#FFFBEB", desc: "Financial reports & accounting" },
+
+  { key: "History", icon: "book-outline", color: "#00CEC9", bg: "#E8FFFE", desc: "Church history & records" },
+
   { key: "Settings", icon: "settings-outline", color: "#4B3F72", bg: "#F5F3FF", desc: "App preferences & controls" },
   { key: "Help", icon: "help-circle-outline", color: "#0984E3", bg: "#EBF4FD", desc: "AI assistant & support" },
 ];
@@ -59,6 +61,7 @@ export default function MoreScreen() {
               Help: "Help",
               Departments: "Departments",
               Events: "Events",
+              History: "HistoryScreen"
             };
 
             return (

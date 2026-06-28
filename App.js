@@ -42,6 +42,7 @@ import AssignMemberRolesScreen from "./screens/AssignMemberRolesScreen";
 
 
 
+
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -132,6 +133,7 @@ function RootStack() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Roles"component={RolesScreen}options={{ title: "Roles & Privileges" }}/>
        <Stack.Screen name="AssignMemberRolesScreen" component={AssignMemberRolesScreen} />
+       <Stack.Screen name="HistoryScreen" component={HistoryScreen} />
 
 
 
