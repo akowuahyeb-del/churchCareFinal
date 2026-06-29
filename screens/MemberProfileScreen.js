@@ -41,6 +41,9 @@ const ACTION_CONFIG = {
   },
 };
 
+const SERIOUS_ACTIONS = ["expel", "investigation"];
+
+
 // Profile fields — match MembersScreen.js's DEFAULT_MEMBER shape exactly.
 // The original screen used baptism/emergency/duration, which don't exist
 // anywhere in the real member document — those fields always rendered
@@ -92,6 +95,7 @@ export default function MemberProfileScreen({ route, navigation }) {
   const [dateOfDeath, setDateOfDeath] = useState("");
 
   const [actionNote, setActionNote] = useState("");
+  const [eldersCount, setEldersCount] = useState(0);
 
   const [requestModal, setRequestModal] = useState(false);
   const [requestField, setRequestField] = useState("");
@@ -202,6 +206,22 @@ export default function MemberProfileScreen({ route, navigation }) {
       console.log("❌ Load contributions error:", e);
     }
   };
+const loadEldersCount = async () => {
+  if (!organizationId || !entityId) return;
+
+  try {
+    const q = query(
+      collection(db, "organizations", organizationId, "entities", entityId, "members"),
+      where("permissions", "array-contains", "elder_approval")
+    );
+
+    const snap = await getDocs(q);
+    setEldersCount(snap.size);
+  } catch (e) {
+    console.log("❌ Load elders error:", e);
+  }
+};
+
 
   useEffect(() => {
     if (!memberId || !organizationId || !entityId) return;
@@ -209,6 +229,12 @@ export default function MemberProfileScreen({ route, navigation }) {
     loadAttendance();
     loadContributions();
   }, [memberId, organizationId, entityId]);
+
+  useEffect(() => {
+  if (organizationId && entityId) {
+    loadEldersCount();
+  }
+}, [organizationId, entityId]);
 
   /* ────────────── DERIVED "SMART" STATS ────────────── */
   const presentCount = attendanceHistory.filter(a => a.status === "present").length;
@@ -219,9 +245,27 @@ export default function MemberProfileScreen({ route, navigation }) {
   const lastAttended = attendanceHistory.find(a => a.status === "present");
   const totalGiven = contributions.reduce((s, c) => s + (c.amount || 0), 0);
 
+
+/* ────────────── ELDER THRESHOLD LOGIC ────────────── */
+const getElderThreshold = (action) => {
+  // ✅ Override per member (optional)
+  if (member?.customThresholds?.[action]) {
+    return member.customThresholds[action];
+  }
+
+  if (eldersCount === 0) return 0;
+
+  return Math.ceil((2 / 3) * eldersCount);
+};
+
+
   /* ────────────── PERMISSIONS ────────────── */
   const isSelf = !!viewerMemberId && viewerMemberId === memberId;
   const canManageMembers = hasPermission({ permissions: viewerPermissions }, "manage_members");
+  const isElder = hasPermission(
+  { permissions: viewerPermissions },
+  "elder_approval"
+);
 
   const isDeceased = member?.status === "deceased";
   const isDisciplined = !!member?.disciplinaryStatus;
@@ -332,36 +376,67 @@ export default function MemberProfileScreen({ route, navigation }) {
   };
 
   /* ────────────── DISCIPLINARY APPROVAL CHAIN ────────────── */
-  const grantApproval = async (action) => {
-    if (!viewerMemberId) {
-      Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
+ const grantApproval = async (action) => {
+
+  // ✅ Check if serious (elder-only)
+  const isSerious = SERIOUS_ACTIONS.includes(action);
+
+  if (isSerious && !isElder) {
+    Alert.alert("Restricted", "Only Elders can approve this action.");
+    return;
+  }
+
+  if (!viewerMemberId) {
+    Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
+    return;
+  }
+
+  const current = approvalsFor(action);
+
+  if (current.includes(viewerMemberId)) {
+    Alert.alert("Already Approved", "You've already approved this action.");
+    return;
+  }
+
+  const updated = [...current, viewerMemberId];
+  const newPending = { ...pendingApprovals, [action]: updated };
+
+  try {
+    const refDoc = memberRef();
+    if (!refDoc) return;
+
+    await updateDoc(refDoc, { pendingApprovals: newPending });
+
+    setMember(prev => ({
+      ...prev,
+      pendingApprovals: newPending,
+    }));
+
+    // ✅ Compute threshold
+    const requiredThreshold = isSerious
+      ? getElderThreshold(action)
+      : ACTION_CONFIG[action]?.threshold;
+
+    if (!requiredThreshold) {
+      Alert.alert("Error", "Invalid threshold configuration.");
       return;
     }
-    const current = approvalsFor(action);
-    if (current.includes(viewerMemberId)) {
-      Alert.alert("Already Approved", "You've already approved this action.");
-      return;
+
+    // ✅ Execute or wait
+    if (updated.length >= requiredThreshold) {
+      await executeAction(action, newPending);
+    } else {
+      Alert.alert(
+        "Approval Recorded",
+        `${updated.length} of ${requiredThreshold} approvals collected.`
+      );
     }
 
-    const updated = [...current, viewerMemberId];
-    const newPending = { ...pendingApprovals, [action]: updated };
-
-    try {
-      await updateDoc(memberRef(), { pendingApprovals: newPending });
-      setMember(prev => ({ ...prev, pendingApprovals: newPending }));
-
-      if (updated.length >= ACTION_CONFIG[action].threshold) {
-        await executeAction(action, newPending);
-      } else {
-        Alert.alert(
-          "Approval Recorded",
-          `${updated.length} of ${ACTION_CONFIG[action].threshold} approvals collected.`
-        );
-      }
-    } catch (e) {
-      Alert.alert("Error", "Could not record your approval.");
-    }
-  };
+  } catch (e) {
+    console.log("❌ Approval error:", e);
+    Alert.alert("Error", "Could not record your approval.");
+  }
+};
 
   const executeAction = async (action, pendingSnapshot) => {
     try {

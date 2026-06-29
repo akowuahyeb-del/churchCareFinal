@@ -13,11 +13,19 @@ export const PERMISSION_GROUPS = [
         label: "Manage Roles & Permissions",
         description: "Create, edit, deactivate, and delete roles. Assign roles to members."
       },
+
       {
         key: "manage_members",
         label: "Manage Members",
         description: "Add, edit, and remove member records."
       },
+
+{
+  key: "elder_approval",
+  label: "Elder Approval Authority",
+  description: "Allows participation in high-level disciplinary approvals (2/3 governance rule)."
+},
+
       {
         key: "manage_church_settings",
         label: "Manage Church Settings",
@@ -52,16 +60,7 @@ export const PERMISSION_GROUPS = [
     ]
 
   },
-  {
-    group: "People",
-    permissions: [
-      {
-        key: "manage_attendance",
-        label: "Manage Attendance",
-        description: "Mark and correct attendance records."
-      }
-    ]
-  },
+  
   {
     group: "Finance",
     permissions: [
@@ -155,6 +154,24 @@ export const DEFAULT_ROLES = [
     isDefault: false,
     active: true
   },
+
+  {
+  id: "elders",
+  label: "Elders",
+  description:
+    "Spiritual governance body responsible for high-level disciplinary and adjudication decisions.",
+  permissions: [
+    "manage_members",
+    "elder_approval",
+    "view_reports"
+  ],
+  protected: false,
+  isDefault: false,
+  active: true
+},
+
+
+
   {
     id: "pastor",
     label: "Pastor",
