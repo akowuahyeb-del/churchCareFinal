@@ -2,122 +2,237 @@ import React, { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, Modal,
-  Image, Alert, Dimensions, Platform
+  Image, Alert, ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { db } from "../firebase";
+import { db, storage } from "../firebase";
 import {
-  collection, addDoc, getDocs, updateDoc,
-  doc, query, where, serverTimestamp
+  doc, getDoc, updateDoc, addDoc,
+  collection, query, where, getDocs
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+import QRCodeDisplay from "../components/QRCodeDisplay";
+import { hasPermission, ALL_PERMISSION_KEYS } from "../constants/permissions";
 
 // ─────────────────────────────────────────────────
-// ROLE LEVELS (hierarchy for approval chain)
-// admin > pastor > elder > deacon > member
+// Disciplinary actions — field names match MembersScreen.js exactly
+// (disciplinaryStatus / disciplinaryNote / disciplinaryDate) so both
+// screens always agree on a member's real standing. Approval thresholds
+// replace the old hardcoded "pastor"/"elder" role-name checks — anyone
+// holding manage_members can approve, and an action fires once enough
+// DISTINCT people have approved, tracked by viewerMemberId.
 // ─────────────────────────────────────────────────
-const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
-
-const REQUIRED_APPROVALS = {
-  suspend:    ["pastor", "elder"],   // needs pastor + elder
-  reprimand:  ["elder"],             // needs at least elder
-  demote:     ["pastor", "admin"],   // needs pastor + admin
+const ACTION_CONFIG = {
+  suspend: {
+    label: "Suspend Member", color: "#e67e22", icon: "ban-outline", threshold: 2,
+    description: "Suspends the member. Requires 2 separate approvals from people with member-management access."
+  },
+  reprimand: {
+    label: "Reprimand Member", color: "#c0392b", icon: "warning-outline", threshold: 1,
+    description: "Issues a formal reprimand. Requires 1 approval."
+  },
+  demote: {
+    label: "Demote Member", color: "#8e44ad", icon: "arrow-down-circle-outline", threshold: 2,
+    description: "Demotes the member's standing. Requires 2 separate approvals."
+  },
 };
+
+// Profile fields — match MembersScreen.js's DEFAULT_MEMBER shape exactly.
+// The original screen used baptism/emergency/duration, which don't exist
+// anywhere in the real member document — those fields always rendered
+// blank no matter what was actually saved.
+const PROFILE_FIELDS = [
+  { key: "phone",              label: "Phone",               selfEditable: true  },
+  { key: "address",            label: "Address",             selfEditable: false },
+  { key: "occupation",         label: "Occupation",          selfEditable: false },
+  { key: "ministry",           label: "Ministry",            selfEditable: false },
+  { key: "baptismStatus",      label: "Baptism Status",      selfEditable: false },
+  { key: "emergencyContact",   label: "Emergency Contact",   selfEditable: false },
+  { key: "membershipDuration", label: "Membership Duration", selfEditable: false },
+];
 
 export default function MemberProfileScreen({ route, navigation }) {
 
-  // memberId + current user's role passed from MembersScreen
-  const memberId  = route?.params?.memberId  || "demo_member";
-  const viewerRole= route?.params?.role      || "member"; // "admin"|"pastor"|"elder"|"deacon"|"member"
-
-  const isAdmin   = ROLE_LEVEL[viewerRole] >= ROLE_LEVEL["admin"];
-  const isPastor  = ROLE_LEVEL[viewerRole] >= ROLE_LEVEL["pastor"];
-  const isElder   = ROLE_LEVEL[viewerRole] >= ROLE_LEVEL["elder"];
-  const isDeacon  = ROLE_LEVEL[viewerRole] >= ROLE_LEVEL["deacon"];
-  const isMember  = viewerRole === "member";
-
-  /* ── MEMBER STATE ── */
-  const [member, setMember] = useState({
-    id: memberId,
-    name: "John Doe",
-    phone: "0240000000",
-    address: "Accra, Ghana",
-    occupation: "Teacher",
-    ministry: "Choir",
-    baptism: "Not Baptised",
-    emergency: "Mother — 0200000000",
-    duration: "2 years",
-    joinDate: "2022-01-15",
-    status: "active",   // active | suspended | deceased | inactive
-    profileImage: null,
-    dateOfDeath: null,
-  });
-
-  /* ── PENDING APPROVALS ── */
-  // { suspend: ["elder"], reprimand: [], demote: ["pastor"] }
-  const [approvals, setApprovals] = useState({ suspend: [], reprimand: [], demote: [] });
-
-  /* ── RECORDS ── */
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [contributions, setContributions]         = useState([]);
-
-  /* ── ACTIVE TAB ── */
-  const [tab, setTab] = useState("profile"); // profile | attendance | contributions | status
-
-  /* ── EDIT MODAL ── */
-  const [editModal, setEditModal]   = useState(false);
-  const [editField, setEditField]   = useState("");
-  const [editLabel, setEditLabel]   = useState("");
-  const [editInput, setEditInput]   = useState("");
-
-  /* ── DECEASED MODAL ── */
-  const [deceasedModal, setDeceasedModal] = useState(false);
-  const [dateOfDeath, setDateOfDeath]     = useState("");
-
-  /* ── APPROVAL REQUEST MODAL ── */
-  const [approvalModal, setApprovalModal]   = useState(false);
-  const [approvalAction, setApprovalAction] = useState("");
-
-  /* ── PENDING REQUEST MODAL (for non-admins) ── */
-  const [requestModal, setRequestModal]     = useState(false);
-  const [requestAction, setRequestAction]   = useState("");
-
-useEffect(() => {
   const memberId = route?.params?.memberId;
 
-  if (!memberId) return;
+  // ⚠️ There's no real Firebase Auth → member linkage anywhere in this
+  // app yet (every screen so far hardcodes userRole = "admin"). Until
+  // that exists, pass the logged-in admin's own memberId as
+  // viewerMemberId — this screen will then look up their REAL
+  // permissions the exact same way AssignMemberRolesScreen already
+  // writes them. Falls back to an explicit viewerPermissions array, or
+  // to [] (no special access) if neither is given — least-privilege by
+  // default, instead of silently assuming admin like the old version did.
+  const viewerMemberId = route?.params?.viewerMemberId || null;
+  const [viewerPermissions, setViewerPermissions] = useState(route?.params?.viewerPermissions || []);
 
-  console.log("MEMBER QR:", memberId);
+  const [activeEntity, setActiveEntity] = useState(null);
+  const organizationId = activeEntity?.organizationId;
+  const entityId = activeEntity?.entityId;
 
-}, [route?.params]);
+  const [member, setMember] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [contributions, setContributions] = useState([]);
 
-  /* ────────────── LOAD DATA ────────────── */
-  useEffect(() => { loadAttendance(); loadContributions(); }, []);
+  const [tab, setTab] = useState("profile");
 
+  const [editModal, setEditModal] = useState(false);
+  const [editField, setEditField] = useState("");
+  const [editLabel, setEditLabel] = useState("");
+  const [editInput, setEditInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const [deceasedModal, setDeceasedModal] = useState(false);
+  const [dateOfDeath, setDateOfDeath] = useState("");
+
+  const [actionNote, setActionNote] = useState("");
+
+  const [requestModal, setRequestModal] = useState(false);
+  const [requestField, setRequestField] = useState("");
+  const [requestLabel, setRequestLabel] = useState("");
+  const [requestValue, setRequestValue] = useState("");
+
+  const [badgeModalVisible, setBadgeModalVisible] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  /* ────────────── ACTIVE ENTITY ────────────── */
+  useEffect(() => {
+    AsyncStorage.getItem("activeEntity").then(data => {
+      if (data) {
+        try { setActiveEntity(JSON.parse(data)); } catch (_) {}
+      }
+    });
+  }, []);
+
+  /* ────────────── VIEWER PERMISSIONS ────────────── */
+  useEffect(() => {
+    if (route?.params?.viewerPermissions) return; // already provided directly
+    if (!viewerMemberId || !organizationId || !entityId) return;
+
+    const loadViewerPermissions = async () => {
+      try {
+        const snap = await getDoc(
+          doc(db, "organizations", organizationId, "entities", entityId, "members", viewerMemberId)
+        );
+        if (snap.exists()) {
+          setViewerPermissions(snap.data().permissions || []);
+        }
+      } catch (e) {
+        console.log("❌ Load viewer permissions error:", e);
+      }
+    };
+
+    loadViewerPermissions();
+  }, [viewerMemberId, organizationId, entityId]);
+
+  /* ────────────── LOAD REAL DATA ────────────── */
+  const memberRef = () => {
+  if (!organizationId || !entityId || !memberId) return null;
+  return doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    memberId
+  );
+};
+
+  const loadMember = async () => {
+    setLoading(true);
+    try {
+      const snap = await getDoc(memberRef());
+      if (snap.exists()) {
+        setMember({ id: snap.id, ...snap.data() });
+      } else {
+        Alert.alert("Not Found", "This member record could not be found.");
+      }
+    } catch (e) {
+      console.log("❌ Load member error:", e);
+      Alert.alert("Error", "Could not load this member's profile.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ FIXED: was collection(db, "attendance") — a flat, unscoped path
+  // that doesn't match where AttendanceScreen actually writes records
+  // (organizations/{orgId}/entities/{entityId}/attendance). This always
+  // returned nothing real.
   const loadAttendance = async () => {
+    if (!organizationId || !entityId) return;
     try {
-      const q = query(collection(db, "attendance"), where("memberId", "==", memberId));
+      const q = query(
+        collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
+        where("memberId", "==", memberId)
+      );
       const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => b.date?.localeCompare(a.date));
+      const data = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
       setAttendanceHistory(data);
-    } catch (e) { console.log(e); }
+    } catch (e) {
+      console.log("❌ Load attendance error:", e);
+    }
   };
 
+  // ✅ FIXED: same bug, was collection(db, "contributions") — the real
+  // path (fixed several turns ago in DonateScreen.js) is nested under
+  // organizations/{orgId}/entities/{entityId}/contributions.
   const loadContributions = async () => {
+    if (!organizationId || !entityId) return;
     try {
-      const q = query(collection(db, "contributions"), where("memberId", "==", memberId));
+      const q = query(
+        collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
+        where("memberId", "==", memberId)
+      );
       const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => b.date?.localeCompare(a.date));
+      const data = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
       setContributions(data);
-    } catch (e) { console.log(e); }
+    } catch (e) {
+      console.log("❌ Load contributions error:", e);
+    }
   };
 
-  /* ────────────── PROFILE PHOTO ────────────── */
+  useEffect(() => {
+    if (!memberId || !organizationId || !entityId) return;
+    loadMember();
+    loadAttendance();
+    loadContributions();
+  }, [memberId, organizationId, entityId]);
+
+  /* ────────────── DERIVED "SMART" STATS ────────────── */
+  const presentCount = attendanceHistory.filter(a => a.status === "present").length;
+  const absentCount = attendanceHistory.filter(a => a.status === "absent").length;
+  const attendanceRate = attendanceHistory.length > 0
+    ? Math.round((presentCount / attendanceHistory.length) * 100)
+    : null;
+  const lastAttended = attendanceHistory.find(a => a.status === "present");
+  const totalGiven = contributions.reduce((s, c) => s + (c.amount || 0), 0);
+
+  /* ────────────── PERMISSIONS ────────────── */
+  const isSelf = !!viewerMemberId && viewerMemberId === memberId;
+  const canManageMembers = hasPermission({ permissions: viewerPermissions }, "manage_members");
+
+  const isDeceased = member?.status === "deceased";
+  const isDisciplined = !!member?.disciplinaryStatus;
+  const pendingApprovals = member?.pendingApprovals || {};
+  const approvalsFor = (action) => pendingApprovals[action] || [];
+  const isFullyApproved = (action) => approvalsFor(action).length >= ACTION_CONFIG[action].threshold;
+
+  /* ────────────── PROFILE PHOTO (real upload now) ────────────── */
   const pickImage = async () => {
+    if (!(canManageMembers || isSelf)) return;
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission needed", "Please allow photo access to upload a profile picture.");
@@ -127,98 +242,201 @@ useEffect(() => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.7
     });
-    if (!result.canceled) {
-      setMember(prev => ({ ...prev, profileImage: result.assets[0].uri }));
-      // TODO: upload to Firebase Storage and save URL to Firestore
+    if (result.canceled) return;
+
+    setUploadingPhoto(true);
+    try {
+      // ✅ FIXED: was only setMember(...) locally with a "TODO: upload to
+      // Firebase Storage" comment — never actually uploaded or saved.
+      const blob = await (await fetch(result.assets[0].uri)).blob();
+      const storageRef = ref(storage, `member-photos/${entityId}/${memberId}.jpg`);
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+
+      await updateDoc(memberRef(), { profileImage: url });
+      setMember(prev => ({ ...prev, profileImage: url }));
+    } catch (e) {
+      console.log("❌ Photo upload error:", e);
+      Alert.alert("Upload failed", "Could not upload photo. Please try again.");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
-  /* ────────────── EDIT FIELD ────────────── */
+  /* ────────────── EDIT FIELD (real persistence now) ────────────── */
   const openEdit = (field, label, value) => {
-    setEditField(field); setEditLabel(label); setEditInput(value);
+    setEditField(field); setEditLabel(label); setEditInput(value || "");
     setEditModal(true);
   };
 
-  const saveEdit = () => {
-    setMember(prev => ({ ...prev, [editField]: editInput }));
-    setEditModal(false);
-    // TODO: updateDoc(doc(db,"members",memberId), { [editField]: editInput })
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      // ✅ FIXED: was setMember(...) only, with "TODO: updateDoc(...)"
+      await updateDoc(memberRef(), { [editField]: editInput });
+      setMember(prev => ({ ...prev, [editField]: editInput }));
+      setEditModal(false);
+    } catch (e) {
+      Alert.alert("Error", "Could not save this change.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  /* ────────────── APPROVAL LOGIC ────────────── */
-  // Check if current viewer's role satisfies one of the required approver roles
-  const canApprove = (action) => {
-    return REQUIRED_APPROVALS[action]?.includes(viewerRole) || isAdmin;
+  /* ────────────── SELF-SERVICE EDIT REQUEST (now actually recorded) ── */
+  const openRequest = (field, label) => {
+    setRequestField(field); setRequestLabel(label); setRequestValue("");
+    setRequestModal(true);
   };
 
-  // Check if all required approvals are collected
-  const isFullyApproved = (action) => {
-    const required = REQUIRED_APPROVALS[action] || [];
-    return required.every(r => approvals[action].includes(r));
-  };
-
-  const grantApproval = (action) => {
-    if (approvals[action].includes(viewerRole)) {
-      Alert.alert("Already approved", "You have already approved this action.");
+  const submitEditRequest = async () => {
+    if (!requestValue.trim()) {
+      Alert.alert("Required", "Please enter a proposed value.");
       return;
     }
-    const updated = { ...approvals, [action]: [...approvals[action], viewerRole] };
-    setApprovals(updated);
-
-    if (isFullyApproved2(action, updated)) {
-      executeAction(action);
-    } else {
-      Alert.alert("Approval recorded", `Waiting for remaining approvals to execute ${action}.`);
+    try {
+      // ✅ FIXED: original just showed an Alert with nothing saved
+      // anywhere — an admin had no actual way to ever see this request.
+      await addDoc(
+        collection(db, "organizations", organizationId, "entities", entityId, "edit_requests"),
+        {
+          memberId,
+          memberName: member?.name || "",
+          field: requestField,
+          fieldLabel: requestLabel,
+          proposedValue: requestValue.trim(),
+          status: "pending",
+          requestedAt: new Date().toISOString(),
+        }
+      );
+      Alert.alert("Request Sent", "Your edit request has been submitted for admin approval.");
+      setRequestModal(false);
+    } catch (e) {
+      Alert.alert("Error", "Could not submit your request.");
     }
-  };
-
-  const isFullyApproved2 = (action, state) => {
-    const required = REQUIRED_APPROVALS[action] || [];
-    return required.every(r => state[action].includes(r));
-  };
-
-  const executeAction = (action) => {
-    if (action === "suspend") {
-      setMember(prev => ({ ...prev, status: "suspended" }));
-      Alert.alert("Action executed", "Member has been suspended.");
-    } else if (action === "reprimand") {
-      Alert.alert("Action executed", "Member has been reprimanded and notified.");
-    } else if (action === "demote") {
-      Alert.alert("Action executed", "Member has been demoted.");
-    }
-    setApprovals(prev => ({ ...prev, [action]: [] })); // reset
-  };
-
-  const reinstate = () => {
-    setMember(prev => ({ ...prev, status: "active" }));
-    setApprovals(prev => ({ ...prev, suspend: [] }));
-    // TODO: updateDoc
   };
 
   /* ────────────── DECEASED ────────────── */
-  const confirmDeceased = () => {
+  const confirmDeceased = async () => {
     if (!dateOfDeath.trim()) {
       Alert.alert("Date required", "Please enter the date of death.");
       return;
     }
-    setMember(prev => ({ ...prev, status: "deceased", dateOfDeath }));
-    setDeceasedModal(false);
-    // TODO: updateDoc(doc(db,"members",memberId), { status:"deceased", dateOfDeath })
+    try {
+      await updateDoc(memberRef(), { status: "deceased", dateOfDeath: dateOfDeath.trim() });
+      setMember(prev => ({ ...prev, status: "deceased", dateOfDeath: dateOfDeath.trim() }));
+      setDeceasedModal(false);
+    } catch (e) {
+      Alert.alert("Error", "Could not update status.");
+    }
   };
 
-  /* ────────────── APPROVAL LABELS ────────────── */
-  const approvalStatus = (action) => {
-    const required = REQUIRED_APPROVALS[action] || [];
-    const done = approvals[action];
-    return required.map(r => ({ role: r, approved: done.includes(r) }));
+  /* ────────────── DISCIPLINARY APPROVAL CHAIN ────────────── */
+  const grantApproval = async (action) => {
+    if (!viewerMemberId) {
+      Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
+      return;
+    }
+    const current = approvalsFor(action);
+    if (current.includes(viewerMemberId)) {
+      Alert.alert("Already Approved", "You've already approved this action.");
+      return;
+    }
+
+    const updated = [...current, viewerMemberId];
+    const newPending = { ...pendingApprovals, [action]: updated };
+
+    try {
+      await updateDoc(memberRef(), { pendingApprovals: newPending });
+      setMember(prev => ({ ...prev, pendingApprovals: newPending }));
+
+      if (updated.length >= ACTION_CONFIG[action].threshold) {
+        await executeAction(action, newPending);
+      } else {
+        Alert.alert(
+          "Approval Recorded",
+          `${updated.length} of ${ACTION_CONFIG[action].threshold} approvals collected.`
+        );
+      }
+    } catch (e) {
+      Alert.alert("Error", "Could not record your approval.");
+    }
   };
 
-  const isDeceased = member.status === "deceased";
-  const isSuspended = member.status === "suspended";
+  const executeAction = async (action, pendingSnapshot) => {
+    try {
+      const cleared = { ...(pendingSnapshot || pendingApprovals), [action]: [] };
+
+      // ✅ FIXED: now writes disciplinaryStatus/disciplinaryNote/
+      // disciplinaryDate — the EXACT fields MembersScreen.js already
+      // reads to show "⚠️ SUSPENDED" badges and the Reinstate button.
+      // The original screen wrote member.status === "suspended" instead,
+      // a field MembersScreen never looks at — the two screens could
+      // disagree about whether someone was actually suspended.
+      await updateDoc(memberRef(), {
+        disciplinaryStatus: action,
+        disciplinaryNote: actionNote || "",
+        disciplinaryDate: new Date().toISOString().split("T")[0],
+        pendingApprovals: cleared,
+      });
+      setMember(prev => ({
+        ...prev,
+        disciplinaryStatus: action,
+        disciplinaryNote: actionNote || "",
+        disciplinaryDate: new Date().toISOString().split("T")[0],
+        pendingApprovals: cleared,
+      }));
+      setActionNote("");
+      Alert.alert("Action Executed", `Member has been ${action}ed.`);
+    } catch (e) {
+      Alert.alert("Error", "Could not execute this action.");
+    }
+  };
+
+  const reinstate = async () => {
+    try {
+      await updateDoc(memberRef(), {
+        disciplinaryStatus: null,
+        disciplinaryNote: null,
+        disciplinaryDate: null,
+      });
+      setMember(prev => ({ ...prev, disciplinaryStatus: null, disciplinaryNote: null, disciplinaryDate: null }));
+      Alert.alert("Reinstated", "This member has been reinstated.");
+    } catch (e) {
+      Alert.alert("Error", "Could not reinstate this member.");
+    }
+  };
 
   /* ════════════════════════════════════════════
                       RENDER
   ════════════════════════════════════════════ */
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator color="#4B3F72" size="large" />
+      </View>
+    );
+  }
+
+  if (!member) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center", padding: 30 }]}>
+        <Ionicons name="person-remove-outline" size={48} color="#ccc" />
+        <Text style={{ marginTop: 12, color: "#888", textAlign: "center" }}>
+          This member's profile could not be loaded.
+        </Text>
+        <TouchableOpacity style={[styles.modalSaveBtn, { marginTop: 16, paddingHorizontal: 24 }]} onPress={() => navigation?.goBack()}>
+          <Text style={styles.white}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const memberBadgeValue = member.memberCode
+    ? JSON.stringify({ memberCode: member.memberCode, entityId })
+    : null;
+
   return (
     <View style={styles.container}>
 
@@ -228,66 +446,96 @@ useEffect(() => {
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Member Profile</Text>
-        <View style={styles.rolePill}>
-          <Text style={styles.roleText}>{viewerRole}</Text>
-        </View>
+        {canManageMembers && (
+          <View style={styles.rolePill}>
+            <Text style={styles.roleText}>Admin View</Text>
+          </View>
+        )}
       </View>
 
       {/* ── PROFILE HERO ── */}
       <View style={styles.hero}>
         <TouchableOpacity
           style={styles.avatarWrap}
-          onPress={(isAdmin || isPastor || isElder) ? pickImage : undefined}
-          activeOpacity={(isAdmin || isPastor || isElder) ? 0.7 : 1}
+          onPress={(canManageMembers || isSelf) ? pickImage : undefined}
+          activeOpacity={(canManageMembers || isSelf) ? 0.7 : 1}
         >
-          {member.profileImage
-            ? <Image source={{ uri: member.profileImage }} style={styles.avatar} />
-            : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitials}>
-                  {member.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                </Text>
-              </View>
-            )
-          }
-          {(isAdmin || isPastor || isElder) && (
+          {uploadingPhoto ? (
+            <View style={styles.avatarPlaceholder}><ActivityIndicator color="#fff" /></View>
+          ) : member.profileImage ? (
+            <Image source={{ uri: member.profileImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitials}>
+                {(member.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {(canManageMembers || isSelf) && !uploadingPhoto && (
             <View style={styles.cameraOverlay}>
               <Ionicons name="camera" size={14} color="#fff" />
             </View>
           )}
         </TouchableOpacity>
 
-        <Text style={styles.heroName}>{member.name}</Text>
-        <Text style={styles.heroMinistry}>{member.ministry}</Text>
+        <Text style={styles.heroName}>{member.name || "Unnamed Member"}</Text>
+        <Text style={styles.heroMinistry}>{member.ministry || "No ministry assigned"}</Text>
+
+        {member.memberCode && (
+          <Text style={styles.heroCode}>ID: {member.memberCode}</Text>
+        )}
 
         {/* Status badge */}
         <View style={[styles.statusBadge, {
           backgroundColor:
-            member.status === "active"    ? "#e8f8f0" :
-            member.status === "suspended" ? "#fff3e0" :
-            member.status === "deceased"  ? "#f0f0f0" : "#fce8e8"
+            isDeceased ? "#f0f0f0" :
+            isDisciplined ? "#fff3e0" : "#e8f8f0"
         }]}>
           <View style={[styles.statusDot, {
             backgroundColor:
-              member.status === "active"    ? "#27ae60" :
-              member.status === "suspended" ? "#e67e22" :
-              member.status === "deceased"  ? "#888"    : "#e74c3c"
+              isDeceased ? "#888" :
+              isDisciplined ? "#e67e22" : "#27ae60"
           }]} />
           <Text style={[styles.statusLabel, {
             color:
-              member.status === "active"    ? "#27ae60" :
-              member.status === "suspended" ? "#e67e22" :
-              member.status === "deceased"  ? "#666"    : "#e74c3c"
+              isDeceased ? "#666" :
+              isDisciplined ? "#e67e22" : "#27ae60"
           }]}>
-            {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-            {member.status === "deceased" && member.dateOfDeath ? ` · ${member.dateOfDeath}` : ""}
+            {isDeceased
+              ? `Deceased${member.dateOfDeath ? ` · ${member.dateOfDeath}` : ""}`
+              : isDisciplined
+                ? member.disciplinaryStatus.charAt(0).toUpperCase() + member.disciplinaryStatus.slice(1)
+                : "Active"}
           </Text>
         </View>
+
+        {/* Quick stats — derived from real loaded attendance/contributions */}
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Text style={styles.statPillValue}>{attendanceRate !== null ? `${attendanceRate}%` : "—"}</Text>
+            <Text style={styles.statPillLabel}>Attendance</Text>
+          </View>
+          <View style={styles.statPill}>
+            <Text style={styles.statPillValue}>₵{totalGiven.toLocaleString()}</Text>
+            <Text style={styles.statPillLabel}>Total Given</Text>
+          </View>
+          <View style={styles.statPill}>
+            <Text style={styles.statPillValue}>{absentCount}</Text>
+            <Text style={styles.statPillLabel}>Absences</Text>
+          </View>
+        </View>
+
+        {member.memberCode && (canManageMembers || isSelf) && (
+          <TouchableOpacity style={styles.badgeBtn} onPress={() => setBadgeModalVisible(true)}>
+            <Ionicons name="qr-code-outline" size={14} color="#fff" />
+            <Text style={styles.badgeBtnText}>View Member Badge</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── TABS ── */}
       <View style={styles.tabRow}>
-        {["profile","attendance","contributions","status"].map(t => (
+        {["profile", "attendance", "contributions", "status"].map(t => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabActive]}
@@ -304,20 +552,30 @@ useEffect(() => {
 
         {/* ══ TAB: PROFILE ══ */}
         {tab === "profile" && (
-          <View>
-            {[
-              { key: "phone",      label: "Phone",      memberEditable: true },
-              { key: "address",    label: "Address",    memberEditable: false },
-              { key: "occupation", label: "Occupation", memberEditable: false },
-              { key: "ministry",   label: "Ministry",   memberEditable: false },
-              { key: "baptism",    label: "Baptism",    memberEditable: false },
-              { key: "emergency",  label: "Emergency",  memberEditable: false },
-              { key: "duration",   label: "Duration",   memberEditable: false },
-              { key: "joinDate",   label: "Join Date",  memberEditable: false },
-            ].map(({ key, label, memberEditable }) => {
-              // Members can only edit phone; admins/leaders can edit all
-              const canEdit = isAdmin || isPastor || isElder || (isMember && memberEditable);
-              const needsApproval = isMember && !memberEditable;
+          <View style={{ marginTop: 8 }}>
+            {member.communicant === "yes" && (
+              <View style={[styles.communicantBanner, {
+                backgroundColor: member.communicantStatus === "invalid" ? "#fce8e8" : "#e8f8f0"
+              }]}>
+                <Ionicons
+                  name={member.communicantStatus === "invalid" ? "alert-circle" : "checkmark-circle"}
+                  size={16}
+                  color={member.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60"}
+                />
+                <Text style={{
+                  marginLeft: 8, fontSize: 12, fontWeight: "600",
+                  color: member.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60"
+                }}>
+                  Communicant — {member.communicantStatus === "invalid"
+                    ? `Invalid since ${member.communicantInvalidSince || "—"}`
+                    : "Active"}
+                </Text>
+              </View>
+            )}
+
+            {PROFILE_FIELDS.map(({ key, label, selfEditable }) => {
+              const canEditField = canManageMembers || (isSelf && selfEditable);
+              const canRequestField = isSelf && !selfEditable && !canManageMembers;
 
               return (
                 <View key={key} style={styles.infoRow}>
@@ -325,7 +583,7 @@ useEffect(() => {
                     <Text style={styles.infoLabel}>{label}</Text>
                     <Text style={styles.infoValue}>{member[key] || "—"}</Text>
                   </View>
-                  {canEdit && !isDeceased && (
+                  {canEditField && !isDeceased && (
                     <TouchableOpacity
                       style={styles.editIconBtn}
                       onPress={() => openEdit(key, label, member[key])}
@@ -333,10 +591,10 @@ useEffect(() => {
                       <Ionicons name="pencil" size={14} color="#4B3F72" />
                     </TouchableOpacity>
                   )}
-                  {needsApproval && !isDeceased && (
+                  {canRequestField && !isDeceased && (
                     <TouchableOpacity
                       style={styles.requestBtn}
-                      onPress={() => { setRequestAction(key); setRequestModal(true); }}
+                      onPress={() => openRequest(key, label)}
                     >
                       <Text style={styles.requestBtnText}>Request edit</Text>
                     </TouchableOpacity>
@@ -351,6 +609,11 @@ useEffect(() => {
         {tab === "attendance" && (
           <View>
             <Text style={styles.sectionTitle}>Attendance History</Text>
+            {lastAttended && (
+              <Text style={styles.lastAttendedNote}>
+                Last attended: {lastAttended.date} ({lastAttended.service} · {lastAttended.type})
+              </Text>
+            )}
             {attendanceHistory.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={40} color="#ccc" />
@@ -361,7 +624,7 @@ useEffect(() => {
                 <View key={r.id} style={styles.recordRow}>
                   <View>
                     <Text style={styles.recordTitle}>{r.service} · {r.type}</Text>
-                    <Text style={styles.recordSub}>{r.date} · {r.event}</Text>
+                    <Text style={styles.recordSub}>{r.date}{r.event ? ` · ${r.event}` : ""}</Text>
                   </View>
                   <View style={[styles.recordBadge, {
                     backgroundColor: r.status === "present" ? "#e8f8f0" : "#fce8e8"
@@ -389,9 +652,7 @@ useEffect(() => {
               <>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total Contributions</Text>
-                  <Text style={styles.totalAmount}>
-                    GH₵ {contributions.reduce((s, c) => s + (c.amount || 0), 0).toLocaleString()}
-                  </Text>
+                  <Text style={styles.totalAmount}>GH₵ {totalGiven.toLocaleString()}</Text>
                 </View>
                 {contributions.map(c => (
                   <View key={c.id} style={styles.recordRow}>
@@ -414,87 +675,58 @@ useEffect(() => {
 
             <View style={styles.statusCard}>
               <Text style={styles.statusCardLabel}>Current Status</Text>
-              <Text style={styles.statusCardValue}>{member.status.toUpperCase()}</Text>
+              <Text style={styles.statusCardValue}>
+                {isDeceased ? "DECEASED" : isDisciplined ? member.disciplinaryStatus.toUpperCase() : "ACTIVE"}
+              </Text>
+              {isDisciplined && member.disciplinaryDate && (
+                <Text style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                  Since {member.disciplinaryDate}
+                  {member.disciplinaryNote ? ` — "${member.disciplinaryNote}"` : ""}
+                </Text>
+              )}
             </View>
 
-            {/* Only show action buttons if not deceased */}
-            {!isDeceased && (
-              <>
-
-                {/* ── SUSPEND ── Admin/Pastor/Elder only */}
-                {(isAdmin || isPastor || isElder) && (
-                  <ActionBlock
-                    title="Suspend Member"
-                    color="#e67e22"
-                    icon="ban-outline"
-                    description="Suspends the member. Requires approval from Pastor + Elder."
-                    approvalStatuses={approvalStatus("suspend")}
-                    fullyApproved={isFullyApproved("suspend")}
-                    canApprove={canApprove("suspend")}
-                    onApprove={() => grantApproval("suspend")}
-                    onExecute={() => executeAction("suspend")}
-                    disabled={isSuspended}
-                    disabledLabel="Already suspended"
-                  >
-                    {isSuspended && isAdmin && (
-                      <TouchableOpacity style={[styles.actionExecBtn, { backgroundColor: "#27ae60", marginTop: 6 }]}
-                        onPress={reinstate}>
-                        <Ionicons name="refresh" size={14} color="#fff" style={{ marginRight: 4 }} />
-                        <Text style={styles.white}>Reinstate</Text>
-                      </TouchableOpacity>
-                    )}
-                  </ActionBlock>
-                )}
-
-                {/* ── REPRIMAND ── Admin/Pastor/Elder */}
-                {(isAdmin || isPastor || isElder) && (
-                  <ActionBlock
-                    title="Reprimand Member"
-                    color="#c0392b"
-                    icon="warning-outline"
-                    description="Issues a formal reprimand. Requires Elder approval."
-                    approvalStatuses={approvalStatus("reprimand")}
-                    fullyApproved={isFullyApproved("reprimand")}
-                    canApprove={canApprove("reprimand")}
-                    onApprove={() => grantApproval("reprimand")}
-                    onExecute={() => executeAction("reprimand")}
-                  />
-                )}
-
-                {/* ── DEMOTE ── Admin/Pastor only */}
-                {(isAdmin || isPastor) && (
-                  <ActionBlock
-                    title="Demote Member"
-                    color="#8e44ad"
-                    icon="arrow-down-circle-outline"
-                    description="Demotes the member's role. Requires Pastor + Admin approval."
-                    approvalStatuses={approvalStatus("demote")}
-                    fullyApproved={isFullyApproved("demote")}
-                    canApprove={canApprove("demote")}
-                    onApprove={() => grantApproval("demote")}
-                    onExecute={() => executeAction("demote")}
-                  />
-                )}
-
-                {/* ── DECEASED ── Admin/Pastor only */}
-                {(isAdmin || isPastor) && (
-                  <TouchableOpacity
-                    style={[styles.deceasedBtn]}
-                    onPress={() => setDeceasedModal(true)}
-                  >
-                    <Ionicons name="ribbon-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                    <Text style={styles.white}>Mark as Deceased</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-
-            {/* Members — no action buttons, just view */}
-            {isMember && (
+            {!canManageMembers && (
               <View style={styles.emptyState}>
                 <Ionicons name="lock-closed-outline" size={36} color="#ccc" />
-                <Text style={styles.emptyText}>Status changes require admin approval</Text>
+                <Text style={styles.emptyText}>
+                  {isSelf
+                    ? "Status changes require admin approval. Contact a church administrator if you have questions about your status."
+                    : "You don't have permission to manage this member's status."}
+                </Text>
               </View>
+            )}
+
+            {canManageMembers && !isDeceased && (
+              <>
+                {isDisciplined && (
+                  <TouchableOpacity style={[styles.actionExecBtn, { backgroundColor: "#27ae60", marginBottom: 10 }]} onPress={reinstate}>
+                    <Ionicons name="refresh" size={14} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={styles.white}>Reinstate Member</Text>
+                  </TouchableOpacity>
+                )}
+
+                {!isDisciplined && Object.entries(ACTION_CONFIG).map(([action, cfg]) => (
+                  <ActionBlock
+                    key={action}
+                    title={cfg.label}
+                    color={cfg.color}
+                    icon={cfg.icon}
+                    description={cfg.description}
+                    approvedCount={approvalsFor(action).length}
+                    threshold={cfg.threshold}
+                    fullyApproved={isFullyApproved(action)}
+                    onApprove={() => grantApproval(action)}
+                    note={actionNote}
+                    onNoteChange={setActionNote}
+                  />
+                ))}
+
+                <TouchableOpacity style={styles.deceasedBtn} onPress={() => setDeceasedModal(true)}>
+                  <Ionicons name="ribbon-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={styles.white}>Mark as Deceased</Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         )}
@@ -514,8 +746,8 @@ useEffect(() => {
               placeholder={`Enter ${editLabel}`}
             />
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={styles.modalSaveBtn} onPress={saveEdit}>
-                <Text style={styles.white}>Save</Text>
+              <TouchableOpacity style={[styles.modalSaveBtn, saving && { opacity: 0.6 }]} onPress={saveEdit} disabled={saving}>
+                <Text style={styles.white}>{saving ? "Saving..." : "Save"}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditModal(false)}>
                 <Text style={styles.white}>Cancel</Text>
@@ -535,20 +767,17 @@ useEffect(() => {
             <Text style={styles.modalTitle}>Mark as Deceased</Text>
             <Text style={styles.modalSubText}>
               This will set the member's status to <Text style={{ fontWeight: "700" }}>Deceased</Text> and
-              hide all action buttons. This cannot be undone easily.
+              hide all action buttons.
             </Text>
             <TextInput
               style={styles.modalInput}
               value={dateOfDeath}
               onChangeText={setDateOfDeath}
-              placeholder="Date of death (e.g. 2024-06-01)"
+              placeholder="Date of death (e.g. 2026-06-01)"
               autoFocus
             />
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalSaveBtn, { backgroundColor: "#555" }]}
-                onPress={confirmDeceased}
-              >
+              <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: "#555" }]} onPress={confirmDeceased}>
                 <Text style={styles.white}>Confirm</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setDeceasedModal(false)}>
@@ -566,17 +795,17 @@ useEffect(() => {
             <Ionicons name="send-outline" size={30} color="#4B3F72" style={{ alignSelf: "center", marginBottom: 10 }} />
             <Text style={styles.modalTitle}>Request Edit</Text>
             <Text style={styles.modalSubText}>
-              Changes to <Text style={{ fontWeight: "700" }}>{requestAction}</Text> require admin approval.
-              Your request will be sent to the admin for review.
+              Changes to <Text style={{ fontWeight: "700" }}>{requestLabel}</Text> require admin approval.
             </Text>
             <TextInput
               style={styles.modalInput}
-              placeholder={`Proposed new value for ${requestAction}`}
+              placeholder={`Proposed new value for ${requestLabel}`}
+              value={requestValue}
+              onChangeText={setRequestValue}
               autoFocus
             />
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={styles.modalSaveBtn}
-                onPress={() => { Alert.alert("Request sent", "Your edit request has been submitted for admin approval."); setRequestModal(false); }}>
+              <TouchableOpacity style={styles.modalSaveBtn} onPress={submitEditRequest}>
                 <Text style={styles.white}>Submit</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setRequestModal(false)}>
@@ -587,17 +816,34 @@ useEffect(() => {
         </View>
       </Modal>
 
+      {/* ══════════ BADGE MODAL ══════════ */}
+      <Modal visible={badgeModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            {memberBadgeValue && (
+              <QRCodeDisplay
+                value={memberBadgeValue}
+                title={member.name}
+                subtitle="Scan at check-in to mark attendance automatically"
+                onClose={() => setBadgeModalVisible(false)}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
 
 /* ─────────────────────────────────────────
-   ActionBlock — reusable approval action card
-───────────────────────────────────────── */
+   ActionBlock — approval-chain card, driven by real permission-based
+   threshold counts instead of hardcoded role names
+───────────────────────────────────── */
 function ActionBlock({
   title, color, icon, description,
-  approvalStatuses, fullyApproved, canApprove,
-  onApprove, onExecute, disabled, disabledLabel, children
+  approvedCount, threshold, fullyApproved,
+  onApprove, note, onNoteChange
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -616,42 +862,30 @@ function ActionBlock({
 
       {expanded && (
         <View style={styles.actionBlockBody}>
-          {/* Approval chain */}
-          <Text style={styles.approvalChainLabel}>Approval chain:</Text>
-          <View style={styles.approvalChain}>
-            {approvalStatuses.map(({ role, approved }) => (
-              <View key={role} style={[styles.approvalPill, { backgroundColor: approved ? "#e8f8f0" : "#f5f5f5" }]}>
-                <Ionicons
-                  name={approved ? "checkmark-circle" : "ellipse-outline"}
-                  size={14}
-                  color={approved ? "#27ae60" : "#bbb"}
-                />
-                <Text style={[styles.approvalPillText, { color: approved ? "#27ae60" : "#999" }]}>
-                  {role}
-                </Text>
-              </View>
-            ))}
+          <Text style={styles.approvalChainLabel}>
+            {approvedCount} of {threshold} approval{threshold > 1 ? "s" : ""} collected
+          </Text>
+          <View style={styles.approvalProgressTrack}>
+            <View style={[
+              styles.approvalProgressFill,
+              { width: `${Math.min(100, (approvedCount / threshold) * 100)}%`, backgroundColor: color }
+            ]} />
           </View>
 
-          {disabled ? (
-            <Text style={styles.disabledLabel}>{disabledLabel}</Text>
-          ) : (
+          {!fullyApproved && (
             <>
-              {canApprove && !fullyApproved && (
-                <TouchableOpacity style={[styles.approveBtn, { backgroundColor: color }]} onPress={onApprove}>
-                  <Ionicons name="checkmark" size={14} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.white}>Grant My Approval</Text>
-                </TouchableOpacity>
-              )}
-              {fullyApproved && (
-                <TouchableOpacity style={[styles.actionExecBtn, { backgroundColor: color }]} onPress={onExecute}>
-                  <Ionicons name="flash" size={14} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.white}>Execute Action</Text>
-                </TouchableOpacity>
-              )}
+              <TextInput
+                style={[styles.modalInput, { marginTop: 10 }]}
+                placeholder="Reason / note (optional)"
+                value={note}
+                onChangeText={onNoteChange}
+              />
+              <TouchableOpacity style={[styles.approveBtn, { backgroundColor: color }]} onPress={onApprove}>
+                <Ionicons name="checkmark" size={14} color="#fff" style={{ marginRight: 4 }} />
+                <Text style={styles.white}>Grant My Approval</Text>
+              </TouchableOpacity>
             </>
           )}
-          {children}
         </View>
       )}
     </View>
@@ -664,7 +898,6 @@ function ActionBlock({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f4f6fb" },
 
-  /* Top bar */
   topBar: {
     backgroundColor: "#4B3F72", paddingTop: 50, paddingBottom: 14,
     paddingHorizontal: 16, flexDirection: "row", alignItems: "center"
@@ -674,8 +907,7 @@ const styles = StyleSheet.create({
   rolePill: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   roleText: { color: "#fff", fontSize: 11, fontWeight: "600" },
 
-  /* Hero */
-  hero: { backgroundColor: "#4B3F72", alignItems: "center", paddingBottom: 24, paddingTop: 8 },
+  hero: { backgroundColor: "#4B3F72", alignItems: "center", paddingBottom: 20, paddingTop: 8 },
   avatarWrap: { position: "relative" },
   avatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, borderColor: "#fff" },
   avatarPlaceholder: {
@@ -693,6 +925,7 @@ const styles = StyleSheet.create({
   },
   heroName: { color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 10 },
   heroMinistry: { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 2 },
+  heroCode: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4, fontWeight: "600" },
   statusBadge: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 5,
@@ -701,7 +934,18 @@ const styles = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
   statusLabel: { fontSize: 12, fontWeight: "700" },
 
-  /* Tabs */
+  statsRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  statPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" },
+  statPillValue: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  statPillLabel: { color: "rgba(255,255,255,0.7)", fontSize: 9, marginTop: 2, fontWeight: "600" },
+
+  badgeBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 7, marginTop: 14
+  },
+  badgeBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+
   tabRow: {
     flexDirection: "row", backgroundColor: "#fff",
     borderBottomWidth: 1, borderBottomColor: "#eee"
@@ -711,7 +955,11 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 11, color: "#aaa", fontWeight: "600" },
   tabTextActive: { color: "#4B3F72" },
 
-  /* Info rows */
+  communicantBanner: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: 10, padding: 12, marginVertical: 6
+  },
+
   infoRow: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#fff", padding: 13,
@@ -720,20 +968,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 10, color: "#aaa", fontWeight: "600", textTransform: "uppercase", marginBottom: 2 },
   infoValue: { fontSize: 14, color: "#222", fontWeight: "500" },
-  editIconBtn: {
-    backgroundColor: "#f0edf9", borderRadius: 8,
-    padding: 8, marginLeft: 8
-  },
-  requestBtn: {
-    backgroundColor: "#e8f0fe", borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8
-  },
+  editIconBtn: { backgroundColor: "#f0edf9", borderRadius: 8, padding: 8, marginLeft: 8 },
+  requestBtn: { backgroundColor: "#e8f0fe", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 },
   requestBtnText: { fontSize: 10, color: "#4B3F72", fontWeight: "600" },
 
-  /* Section */
   sectionTitle: { fontSize: 15, fontWeight: "700", color: "#333", marginTop: 16, marginBottom: 8 },
+  lastAttendedNote: { fontSize: 12, color: "#888", marginBottom: 10, fontStyle: "italic" },
 
-  /* Records */
   recordRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     backgroundColor: "#fff", padding: 12, borderRadius: 10, marginVertical: 3,
@@ -744,7 +985,6 @@ const styles = StyleSheet.create({
   recordBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   contribAmount: { fontSize: 14, fontWeight: "700", color: "#27ae60" },
 
-  /* Contributions total */
   totalRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     backgroundColor: "#e8f8f0", padding: 14, borderRadius: 10, marginBottom: 8
@@ -752,7 +992,6 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 13, color: "#555", fontWeight: "600" },
   totalAmount: { fontSize: 18, fontWeight: "800", color: "#27ae60" },
 
-  /* Status card */
   statusCard: {
     backgroundColor: "#fff", padding: 16, borderRadius: 10,
     alignItems: "center", marginBottom: 12,
@@ -761,7 +1000,6 @@ const styles = StyleSheet.create({
   statusCardLabel: { fontSize: 11, color: "#aaa", textTransform: "uppercase", fontWeight: "600" },
   statusCardValue: { fontSize: 22, fontWeight: "800", color: "#4B3F72", marginTop: 4 },
 
-  /* Action blocks */
   actionBlock: {
     backgroundColor: "#fff", borderRadius: 10, marginVertical: 5,
     borderLeftWidth: 4, overflow: "hidden",
@@ -773,34 +1011,27 @@ const styles = StyleSheet.create({
   actionBlockDesc: { fontSize: 11, color: "#999", marginTop: 1 },
   actionBlockBody: { paddingHorizontal: 14, paddingBottom: 14 },
 
-  approvalChainLabel: { fontSize: 11, color: "#aaa", fontWeight: "600", marginBottom: 6, textTransform: "uppercase" },
-  approvalChain: { flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 10 },
-  approvalPill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20
-  },
-  approvalPillText: { fontSize: 11, fontWeight: "600" },
+  approvalChainLabel: { fontSize: 11, color: "#aaa", fontWeight: "600", marginBottom: 6 },
+  approvalProgressTrack: { height: 6, backgroundColor: "#f0f0f0", borderRadius: 3, overflow: "hidden" },
+  approvalProgressFill: { height: 6, borderRadius: 3 },
 
   approveBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    padding: 10, borderRadius: 8, marginTop: 4
+    padding: 10, borderRadius: 8, marginTop: 10
   },
   actionExecBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     padding: 10, borderRadius: 8
   },
-  disabledLabel: { fontSize: 12, color: "#bbb", fontStyle: "italic", marginTop: 4 },
 
   deceasedBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     backgroundColor: "#555", padding: 13, borderRadius: 10, marginTop: 8
   },
 
-  /* Empty state */
-  emptyState: { alignItems: "center", paddingVertical: 40 },
+  emptyState: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 16 },
   emptyText: { color: "#bbb", fontSize: 13, marginTop: 10, textAlign: "center" },
 
-  /* Modals */
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center" },
   modalBox: { backgroundColor: "#fff", margin: 24, padding: 20, borderRadius: 16 },
   modalTitle: { fontSize: 17, fontWeight: "700", color: "#222", textAlign: "center", marginBottom: 6 },

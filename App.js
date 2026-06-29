@@ -36,6 +36,7 @@ import CompleteProfileScreen from "./screens/CompleteProfileScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import RolesScreen from "./screens/RolesScreen";
 import AssignMemberRolesScreen from "./screens/AssignMemberRolesScreen";
+import { ChurchProvider } from "./context/ChurchContext";
 
 
 
@@ -159,19 +160,17 @@ const linking = {
 
 export default function App() {
   return (
-    <View style={{ flex: 1 }}>
+    <ChurchProvider>
       <StatusBar
         translucent={false}
         backgroundColor="#4B3F72"
         barStyle="light-content"
       />
 
-      {/* ✅ FIXED */}
       <NavigationContainer linking={linking}>
         <RootStack />
       </NavigationContainer>
-
-    </View>
+    </ChurchProvider>
   );
 }
 

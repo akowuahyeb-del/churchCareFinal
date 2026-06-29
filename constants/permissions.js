@@ -48,7 +48,9 @@ export const PERMISSION_GROUPS = [
         label: "Manage Pastor's Message",
         description: "Edit the homepage message from the pastor."
       }
+      
     ]
+
   },
   {
     group: "People",
@@ -73,6 +75,32 @@ export const PERMISSION_GROUPS = [
         label: "View Financial Reports",
         description: "View P&L, balance sheet, ledger, and cash flow (read-only)."
       },
+
+      {
+  group: "People",
+  permissions: [
+    {
+      key: "manage_attendance",
+      label: "Manage Attendance",
+      description: "Mark and correct attendance records."
+    },
+    {
+      key: "start_session",
+      label: "Start Service Session",
+      description: "Allows user to start a service session"
+    },
+    {
+      key: "end_session",
+      label: "End Service Session",
+      description: "Allows user to end and lock a service session"
+    },
+    {
+      key: "unlock_session",
+      label: "Unlock Service Session",
+      description: "Allows user to unlock a locked session"
+    }
+  ]
+},
       {
         key: "manage_donations",
         label: "Manage Donations",
@@ -90,6 +118,9 @@ export const PERMISSION_GROUPS = [
       }
     ]
   }
+
+
+  
 ];
 
 export const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap(g =>
@@ -151,8 +182,8 @@ export const DEFAULT_ROLES = [
   {
     id: "usher",
     label: "Usher",
-    description: "Marks attendance during services.",
-    permissions: ["manage_attendance"],
+    description: "Marks attendance and manages session flow.",
+    permissions: ["manage_attendance", "start_session", "end_session"],
     protected: false,
     isDefault: false,
     active: true

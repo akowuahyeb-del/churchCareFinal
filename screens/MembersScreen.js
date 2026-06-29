@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import { hasPermission } from "../constants/permissions";
+import { ALL_PERMISSION_KEYS } from "../constants/permissions";
 
 // ── Constants ─────────────────────────────────────────────────────
 const MEMBERS_CACHE_KEY = "members_cache_v1";
@@ -548,7 +549,18 @@ const executeReinstate = async () => {
           );
           return (
             <TouchableOpacity activeOpacity={0.88}
-              onPress={() => navigation.navigate("MemberProfile", { memberId: item.id, role: viewerRole })}>
+
+              onPress={() => navigation.navigate("MemberProfile", {
+  memberId: item.id,
+  // ⚠️ TEMPORARY — same placeholder pattern already used everywhere else
+  // in this app (userRole = "admin" in AttendanceScreen, SettingsScreen,
+  // etc). Replace with the real logged-in admin's memberId once Firebase
+  // Auth → member linkage exists; MemberProfileScreen will then look up
+  // their real permissions automatically instead of needing this.
+  viewerPermissions: ALL_PERMISSION_KEYS
+})} >
+              
+              
               <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
 
                 {/* ── Card header ── */}
