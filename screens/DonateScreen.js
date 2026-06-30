@@ -225,12 +225,29 @@ export default function DonateScreen({ route, navigation }) {
           acknowledgedAt: new Date().toISOString().split("T")[0],
         }),
       };
+    
 
-      await addDoc(
-        collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
-        payload
-      );
+     const docRef = await addDoc(
+  collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
+  payload
+);
 
+const savedData = { id: docRef.id, ...payload };
+
+// ✅ auto-generate receipt ONLY if acknowledged
+if (savedData.status === "acknowledged") {
+  try {
+  await generateDonationReceipt(
+  savedData,
+  churchName,
+  activeEntity?.logo || null
+);
+
+
+  } catch (e) {
+    console.log("Receipt generation failed:", e);
+  }
+}
       Alert.alert(
         acknowledged ? "Thank You! 🙏" : "Recorded — Awaiting Acknowledgment",
         acknowledged

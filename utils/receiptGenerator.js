@@ -2,7 +2,8 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
-const buildReceiptHtml = (donation, churchName) => {
+const buildReceiptHtml = (donation, churchName, logoUrl) => {
+
   const {
     memberName, amount, type, method, methodLabel,
     momoProvider, reference, note, date, acknowledgedByName, acknowledgedAt
@@ -30,13 +31,19 @@ const buildReceiptHtml = (donation, churchName) => {
       </head>
       <body>
         <div class="header">
-          <div class="church">${churchName || "Church"}</div>
-          <div class="title">Donation Receipt</div>
-        </div>
+  <img src="${logoUrl || "https://via.placeholder.com/80"}" class="logo" />
+  <div class="church">${churchName || "Church"}</div>
+  <div class="title">Donation Receipt</div>
+</div>
 
         <div class="amount-box">
           <div class="amount">GH₵ ${Number(amount || 0).toLocaleString()}</div>
         </div>
+        <div class="row">
+  <span class="label">Receipt ID</span>
+  <span class="value">${donation.id || "—"}</span>
+</div>
+
 
         <div class="row"><span class="label">Donor</span><span class="value">${memberName || "Anonymous"}</span></div>
         <div class="row"><span class="label">Category</span><span class="value">${type || "—"}</span></div>
@@ -60,9 +67,9 @@ const buildReceiptHtml = (donation, churchName) => {
   `;
 };
 
-export const generateDonationReceipt = async (donation, churchName) => {
+export const generateDonationReceipt = async (donation, churchName, logoUrl) => {
   try {
-    const html = buildReceiptHtml(donation, churchName);
+    const html = buildReceiptHtml(donation, churchName,logoUrl);
     const { uri } = await Print.printToFileAsync({ html });
 
     const canShare = await Sharing.isAvailableAsync();
@@ -77,4 +84,6 @@ export const generateDonationReceipt = async (donation, churchName) => {
     console.log("❌ Receipt generation error:", e);
     throw e;
   }
+
+  
 };
