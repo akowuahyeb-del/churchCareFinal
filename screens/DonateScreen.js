@@ -73,7 +73,7 @@ export default function DonateScreen({ route, navigation }) {
     });
   }, []);
 
- useEffect(() => {
+useEffect(() => {
   if (!organizationId || !entityId) return;
 
   const ref = collection(
@@ -99,7 +99,7 @@ export default function DonateScreen({ route, navigation }) {
   });
 
   return unsub;
-}, [organizationId, entityId]);
+}, [organizationId, entityId]);   // ✅ this is correct
 
 
 
@@ -381,7 +381,6 @@ if (savedData.status === "acknowledged") {
   >
     <Ionicons name="qr-code-outline" size={20} color="#fff" />
   </TouchableOpacity>
-
   
 </View>
 
@@ -389,7 +388,11 @@ if (savedData.status === "acknowledged") {
 {/* ✅ ACTION ROW */}
 <View style={styles.actionRow}>
 <TouchableOpacity
-  style={styles.actionItem}
+  
+  style={[
+    styles.actionItem,
+    pendingCount > 0 && styles.actionItemAlert
+  ]}
   onPress={() =>
     navigation.navigate("Approval", {
       organizationId,
@@ -399,34 +402,43 @@ if (savedData.status === "acknowledged") {
   }
 >
 
-  {/* ✅ LEFT SIDE */}
+  {/* ✅ LEFT SIDE (Approve) */}
   <View style={styles.actionLeft}>
     <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
     <Text style={styles.actionText}>Approve</Text>
   </View>
 
-  {/* ✅ RIGHT SIDE (BADGE + ARROW) */}
+  {/* ✅ RIGHT SIDE (INSIDE BUTTON NOW) */}
   <View style={styles.actionRight}>
 
-  {pendingCount > 0 && (
-    <>
-      {/* 🔴 COUNT BADGE */}
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{pendingCount}</Text>
-      </View>
+    {pendingCount > 0 && (
+      <>
+        {/* ✅ Divider */}
+        <View style={styles.divider} />
 
-      {/* 💰 TOTAL */}
-      <Text style={styles.pendingAmount}>
-        GH₵ {pendingTotal.toLocaleString()}
-      </Text>
-    </>
-  )}
+        {/* ✅ Count */}
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{pendingCount}</Text>
+        </View>
 
-  <Ionicons name="chevron-forward" size={16} color="#999" />
+        {/* ✅ Pending Info */}
+        <View style={styles.pendingBox}>
+          <Text style={styles.pendingLabel}>Pending</Text>
+          <Text style={styles.pendingAmountStrong}>
+            GH₵ {pendingTotal.toLocaleString()}
+          </Text>
+        </View>
+      </>
+    )}
 
-</View>
+    <Ionicons name="chevron-forward" size={16} color="#999" />
+
+  </View>
 
 </TouchableOpacity>
+
+
+
 
 
   <TouchableOpacity
@@ -438,18 +450,43 @@ if (savedData.status === "acknowledged") {
     <Ionicons name="chevron-forward" size={16} color="#999" />
   </TouchableOpacity>
 
+
 <View style={styles.totalPill}>
   <Text style={styles.totalPillText}>
     GH₵ {totalGiven.toLocaleString()}
   </Text>
+
+  {/* ✅ UPDATED LABEL */}
   <Text style={styles.totalPillLabel}>Confirmed</Text>
+<View style={styles.actionRightWrapper}>
+
+  {/* ✅ Divider */}
+  {pendingCount > 0 && <View style={styles.divider} />}
+
+  <View style={styles.actionRight}>
+
+    {pendingCount > 0 && (
+      <>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{pendingCount}</Text>
+        </View>
+
+        <View style={styles.pendingBox}>
+          <Text style={styles.pendingLabel}>Pending</Text>
+          <Text style={styles.pendingAmountStrong}>
+            GH₵ {pendingTotal.toLocaleString()}
+          </Text>
+        </View>
+      </>
+    )}
+
+    <Ionicons name="chevron-forward" size={16} color="#999" />
+
+  </View>
 </View>
 
-{pendingTotal > 0 && (
-  <Text style={styles.pendingSummary}>
-    Pending: GH₵ {pendingTotal.toLocaleString()}
-  </Text>
-)}
+  
+</View>
 
 
 </View>
@@ -912,25 +949,25 @@ const styles = StyleSheet.create({
 
 actionRow: {
   flexDirection: "row",
-  justifyContent: "space-between",
+  justifyContent: "space-between", 
   paddingHorizontal: 16,
   paddingVertical: 10,
   backgroundColor: "#fff",
-  borderBottomWidth: 1,
-  borderBottomColor: "#eee",
 },
 
 actionItem: {
   flexDirection: "row",
   alignItems: "center",
-  gap: 6,
+  justifyContent: "space-between", 
   backgroundColor: "#f8f9fb",
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  borderRadius: 20,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  borderRadius: 14,
   borderWidth: 1,
   borderColor: "#eee",
 },
+
+
 
 actionText: {
   fontSize: 12,
@@ -940,7 +977,7 @@ actionText: {
 actionRight: {
   flexDirection: "row",
   alignItems: "center",
-  gap: 6,
+  gap: 10,
 },
 
 badge: {
@@ -968,6 +1005,39 @@ pendingSummary: {
   fontSize: 10,
   marginTop: 2,
   textAlign: "center",
+},
+pendingBox: {
+  alignItems: "flex-end",
+},
+
+pendingLabel: {
+  fontSize: 9,
+  color: "#B91C1C",
+  fontWeight: "700",
+  textTransform: "uppercase",
+},
+
+pendingAmountStrong: {
+  fontSize: 12,
+  fontWeight: "900",
+  color: "#DC2626", 
+},
+
+actionLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12, 
+},
+actionRightWrapper: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+divider: {
+  width: 1,
+  height: 24,
+  backgroundColor: "#ddd",
+  marginHorizontal: 10,
 },
 
 
