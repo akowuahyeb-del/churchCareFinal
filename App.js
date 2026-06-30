@@ -37,6 +37,9 @@ import WelcomeScreen from "./screens/WelcomeScreen";
 import RolesScreen from "./screens/RolesScreen";
 import AssignMemberRolesScreen from "./screens/AssignMemberRolesScreen";
 import { ChurchProvider } from "./context/ChurchContext";
+import VerifyReceiptScreen from "./screens/VerifyReceiptScreen";
+import ApprovalScreen from "./screens/ApprovalScreen";
+
 
 
 
@@ -135,6 +138,9 @@ function RootStack() {
       <Stack.Screen name="Roles"component={RolesScreen}options={{ title: "Roles & Privileges" }}/>
        <Stack.Screen name="AssignMemberRolesScreen" component={AssignMemberRolesScreen} />
        <Stack.Screen name="HistoryScreen" component={HistoryScreen} />
+       <Stack.Screen name="VerifyReceipt"component={VerifyReceiptScreen} />
+       <Stack.Screen name="Approval" component={ApprovalScreen}/>
+
 
 
 

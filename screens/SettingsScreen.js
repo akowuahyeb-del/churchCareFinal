@@ -34,6 +34,9 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { storage, db } from "../firebase";
 
+import { query, where, onSnapshot } from "firebase/firestore";
+
+
 
 
 // ── Role config ───────────────────────────────────────────────────
@@ -125,8 +128,15 @@ export default function SettingsScreen() {
   // every render — same bug class we fixed in HomeScreen earlier.
   const [activeEntity, setActiveEntity] = useState(null);
 
-  const CHURCH_ID   = activeEntity?.entityId || "unknown";
-  const CHURCH_NAME = activeEntity?.name     || "Church";
+const CHURCH_ID   = activeEntity?.entityId || "unknown";
+const CHURCH_NAME = activeEntity?.name || "Church";
+
+
+const organizationId = activeEntity?.organizationId;
+const entityId = CHURCH_ID;
+const viewerName = CHURCH_NAME || "Admin";
+const [pendingCount, setPendingCount] = useState(0);
+
   
 
   // ✅ FIXED: this <SectionHeader> was a bare JSX statement sitting in the
@@ -195,9 +205,9 @@ export default function SettingsScreen() {
 
 
 
-// ✅ FIXED — derive IDs first
-const organizationId = activeEntity?.organizationId;
-const entityId = activeEntity?.entityId;
+// // ✅ FIXED — derive IDs first
+// const organizationId = activeEntity?.organizationId;
+// const entityId = activeEntity?.entityId;
 
 const [liveSession, setLiveSession] = useState(null);
 const [liveSessionChecked, setLiveSessionChecked] = useState(false);
@@ -226,6 +236,29 @@ useEffect(() => {
     console.log("✅ ACTIVE ENTITY IN SETTINGS:", activeEntity);
   }
 }, [activeEntity]);
+
+
+useEffect(() => {
+  if (!organizationId || !entityId) return;
+
+  const ref = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
+
+  const q = query(ref, where("status", "==", "pending"));
+
+  const unsub = onSnapshot(q, snap => {
+    setPendingCount(snap.size);
+  });
+
+  return unsub;
+}, [organizationId, entityId]);
+
 
   // ── Notifications ──
   const [notifService,    setNotifService]    = useState(true);
@@ -604,6 +637,42 @@ const generateQR = async () => {
           <ToggleRow icon="gift-outline"          label="Birthday Wishes"       sub="Auto birthday messages"  value={notifBirthday}   onChange={setNotifBirthday}   color="#E11D48" />
           <ToggleRow icon="prism-outline"         label="Prayer Requests"       sub="New prayer requests"     value={notifPrayer}     onChange={setNotifPrayer}     color="#6C5CE7" />
         </View>
+
+{/* ── FINANCE ── */}
+<SectionHeader title="Finance" />
+
+{/* ✅ Approve Donations (Fintech style row) */}
+<TouchableOpacity
+  style={styles.approvalRow}
+  onPress={() =>
+    navigation.navigate("Approval", {
+      organizationId,
+      entityId,
+      viewerName,
+    })
+  }
+>
+
+  {/* ✅ LEFT ICON */}
+  <View style={styles.approvalIcon}>
+    <Ionicons name="checkmark-done-outline" size={16} color="#27ae60" />
+  </View>
+
+  {/* ✅ TEXT SECTION */}
+  <View style={{ flex: 1 }}>
+    <Text style={styles.approvalTitle}>
+      Approve Donations {pendingCount > 0 ? `(${pendingCount})` : ""}
+    </Text>
+    <Text style={styles.approvalSub}>
+      Review pending contributions
+    </Text>
+  </View>
+
+  {/* ✅ RIGHT ARROW (IMPORTANT UX) */}
+  <Ionicons name="chevron-forward" size={18} color="#999" />
+
+</TouchableOpacity>
+
 
         {/* ── DISPLAY ── */}
         <SectionHeader title="Display & Appearance" />
@@ -1278,4 +1347,55 @@ logoPlaceholder: {
   justifyContent: "center",
   alignItems: "center",
 },
+
+approvalBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  backgroundColor: "#27ae60",  // ✅ strong green (action color)
+  padding: 16,
+  borderRadius: 12,
+},
+
+approvalText: {
+  color: "#fff",
+  fontSize: 15,
+  fontWeight: "800",
+},
+
+approvalSub: {
+  color: "rgba(255,255,255,0.8)",
+  fontSize: 11,
+  marginTop: 2,
+},
+approvalRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 14,
+  paddingHorizontal: 6,
+},
+
+approvalIcon: {
+  width: 32,
+  height: 32,
+  borderRadius: 10,
+  backgroundColor: "#E8F8F0",
+  alignItems: "center",
+  justifyContent: "center",
+  marginRight: 10,
+},
+
+approvalTitle: {
+  fontSize: 14,
+  fontWeight: "700",
+  color: "#222",
+},
+
+approvalSub: {
+  fontSize: 11,
+  color: "#888",
+  marginTop: 2,
+},
+
+
 });

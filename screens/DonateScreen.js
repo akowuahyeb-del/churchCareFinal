@@ -309,19 +309,62 @@ if (savedData.status === "acknowledged") {
     <View style={styles.container}>
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Donate</Text>
-          {memberName && <Text style={styles.headerSub}>{memberName}</Text>}
-        </View>
-        <View style={styles.totalPill}>
-          <Text style={styles.totalPillText}>GH₵ {totalGiven.toLocaleString()}</Text>
-          <Text style={styles.totalPillLabel}>Total Given</Text>
-        </View>
-      </View>
+    <View style={styles.header}>
+  <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+    <Ionicons name="arrow-back" size={20} color="#fff" />
+  </TouchableOpacity>
+
+  <View style={{ flex: 1 }}>
+    <Text style={styles.headerTitle}>Donate</Text>
+    {memberName && (
+      <Text style={styles.headerSub}>{memberName}</Text>
+    )}
+  </View>
+  <TouchableOpacity
+    onPress={() => navigation.navigate("VerifyReceipt")}
+    style={styles.scanBtn}
+  >
+    <Ionicons name="qr-code-outline" size={20} color="#fff" />
+  </TouchableOpacity>
+
+  <View style={styles.totalPill}>
+    <Text style={styles.totalPillText}>
+      GH₵ {totalGiven.toLocaleString()}
+    </Text>
+    <Text style={styles.totalPillLabel}>Total Given</Text>
+  </View>
+</View>
+
+{/* ✅ ACTION ROW */}
+<View style={styles.actionRow}>
+
+  <TouchableOpacity
+    style={styles.actionItem}
+    onPress={() =>
+      navigation.navigate("Approval", {
+        organizationId,
+        entityId,
+        viewerName,
+      })
+    }
+  >
+    <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
+    <Text style={styles.actionText}>Approve</Text>
+    <Ionicons name="chevron-forward" size={16} color="#999" />
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.actionItem}
+    onPress={() => navigation.navigate("VerifyReceipt")}
+  >
+    <Ionicons name="qr-code-outline" size={16} color="#4B3F72" />
+    <Text style={styles.actionText}>Scan</Text>
+    <Ionicons name="chevron-forward" size={16} color="#999" />
+  </TouchableOpacity>
+
+</View>
+
+
 
       {/* ✅ FINTECH-STYLE ICON TABS */}
       <View style={styles.fintechTabRow}>
@@ -770,4 +813,40 @@ const styles = StyleSheet.create({
   pendingRecordedBy: { fontSize: 11, color: "#aaa", marginTop: 4 },
   acknowledgeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#27ae60", borderRadius: 10, padding: 11, marginTop: 12 },
   acknowledgeBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  scanBtn: {
+  marginRight: 10,
+  padding: 8,
+  borderRadius: 10,
+  backgroundColor: "rgba(255,255,255,0.15)",
+},
+
+actionRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  backgroundColor: "#fff",
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+},
+
+actionItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  backgroundColor: "#f8f9fb",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "#eee",
+},
+
+actionText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#333",
+},
+
+
 });
