@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, doc, updateDoc,
-  query, where, serverTimestamp
+  query, where, serverTimestamp,onSnapshot
 } from "firebase/firestore";
 
 import { PAYMENT_METHODS, MOMO_PROVIDERS, detectMomoProvider, isValidGhanaPhone, findMethod } from "../constants/donationMethods";
@@ -71,9 +71,15 @@ export default function DonateScreen({ route, navigation }) {
   }, []);
 
   useEffect(() => {
-    if (!organizationId || !entityId) return;
-    loadHistory();
-  }, [organizationId, entityId]);
+  if (!organizationId || !entityId) return;
+
+  const unsubscribe = loadHistory();
+
+  return () => {
+    if (unsubscribe) unsubscribe(); 
+  };
+}, [organizationId, entityId, memberId]);
+
 
   useEffect(() => {
     const presetAmount = route?.params?.amount;
@@ -105,25 +111,43 @@ export default function DonateScreen({ route, navigation }) {
     }
   }, [route?.params?.entityId, entityId]);
 
-  const loadHistory = async () => {
-    if (!organizationId || !entityId) return;
-    try {
-      const contributionsRef = collection(
-        db, "organizations", organizationId, "entities", entityId, "contributions"
-      );
-      const q = memberId
-        ? query(contributionsRef, where("memberId", "==", memberId))
-        : query(contributionsRef);
+ const loadHistory = () => {
+  if (!organizationId || !entityId) return;
 
-      const snap = await getDocs(q);
+  const contributionsRef = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
+
+  const q = memberId
+    ? query(contributionsRef, where("memberId", "==", memberId))
+    : query(contributionsRef);
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snap) => {
       const data = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        .sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return bTime - aTime;
+        });
+
       setHistory(data);
-    } catch (e) {
-      console.log(e);
+    },
+    (error) => {
+      console.log("Realtime error:", error);
     }
-  };
+  );
+
+  return unsubscribe; // ✅ VERY IMPORTANT
+};
+
 
   const finalAmount = selectedAmount || customAmount;
 
@@ -161,7 +185,8 @@ export default function DonateScreen({ route, navigation }) {
       return;
     }
 
-    setLoading(true);
+    if (loading) return; 
+     setLoading(true);
     try {
       const methodInfo = findMethod(selectedMethod);
 
@@ -171,7 +196,7 @@ export default function DonateScreen({ route, navigation }) {
       // and that option only appears at all if they actually hold that
       // permission (see selfAcknowledge checkbox below).
       const acknowledged = canAcknowledge && selfAcknowledge;
-
+      const now = new Date();
       const payload = {
         memberId:   memberId   || "anonymous",
         memberName: memberName || "Anonymous",
@@ -180,7 +205,7 @@ export default function DonateScreen({ route, navigation }) {
         note:       note.trim(),
         entityId,
         organizationId,
-        date:       new Date().toISOString().split("T")[0],
+        date:new Date().toISOString().split("T")[0],
         createdAt:  serverTimestamp(),
 
         method:       selectedMethod,
