@@ -61,6 +61,9 @@ export default function DonateScreen({ route, navigation }) {
   const [history,    setHistory]    = useState([]);
   const [activeTab,  setActiveTab]  = useState("give"); // give | history | pending
   const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+   const [pendingTotal, setPendingTotal] = useState(0);
+
 
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -70,15 +73,34 @@ export default function DonateScreen({ route, navigation }) {
     });
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
   if (!organizationId || !entityId) return;
 
-  const unsubscribe = loadHistory();
+  const ref = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
 
-  return () => {
-    if (unsubscribe) unsubscribe(); 
-  };
-}, [organizationId, entityId, memberId]);
+  const q = query(ref, where("status", "==", "pending"));
+
+  const unsub = onSnapshot(q, (snap) => {
+    let total = 0;
+
+    snap.forEach(doc => {
+      total += Number(doc.data().amount) || 0;
+    });
+
+    setPendingCount(snap.size);
+    setPendingTotal(total);
+  });
+
+  return unsub;
+}, [organizationId, entityId]);
+
 
 
   useEffect(() => {
@@ -110,6 +132,39 @@ export default function DonateScreen({ route, navigation }) {
       );
     }
   }, [route?.params?.entityId, entityId]);
+
+useEffect(() => {
+  if (!organizationId || !entityId) return;
+
+  const ref = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
+
+  const q = query(ref, where("status", "==", "pending"));
+
+  const unsub = onSnapshot(q, (snap) => {
+    let total = 0;
+
+    snap.forEach(doc => {
+      total += Number(doc.data().amount) || 0;
+    });
+
+    setPendingCount(snap.size);   
+    setPendingTotal(total);       
+  });
+
+  return unsub;
+}, [organizationId, entityId]);
+
+  // const q = query(ref, where("status", "==", "pending"));
+
+  
+
 
  const loadHistory = () => {
   if (!organizationId || !entityId) return;
@@ -327,31 +382,52 @@ if (savedData.status === "acknowledged") {
     <Ionicons name="qr-code-outline" size={20} color="#fff" />
   </TouchableOpacity>
 
-  <View style={styles.totalPill}>
-    <Text style={styles.totalPillText}>
-      GH₵ {totalGiven.toLocaleString()}
-    </Text>
-    <Text style={styles.totalPillLabel}>Total Given</Text>
-  </View>
+  
 </View>
+
 
 {/* ✅ ACTION ROW */}
 <View style={styles.actionRow}>
+<TouchableOpacity
+  style={styles.actionItem}
+  onPress={() =>
+    navigation.navigate("Approval", {
+      organizationId,
+      entityId,
+      viewerName,
+    })
+  }
+>
 
-  <TouchableOpacity
-    style={styles.actionItem}
-    onPress={() =>
-      navigation.navigate("Approval", {
-        organizationId,
-        entityId,
-        viewerName,
-      })
-    }
-  >
+  {/* ✅ LEFT SIDE */}
+  <View style={styles.actionLeft}>
     <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
     <Text style={styles.actionText}>Approve</Text>
-    <Ionicons name="chevron-forward" size={16} color="#999" />
-  </TouchableOpacity>
+  </View>
+
+  {/* ✅ RIGHT SIDE (BADGE + ARROW) */}
+  <View style={styles.actionRight}>
+
+  {pendingCount > 0 && (
+    <>
+      {/* 🔴 COUNT BADGE */}
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{pendingCount}</Text>
+      </View>
+
+      {/* 💰 TOTAL */}
+      <Text style={styles.pendingAmount}>
+        GH₵ {pendingTotal.toLocaleString()}
+      </Text>
+    </>
+  )}
+
+  <Ionicons name="chevron-forward" size={16} color="#999" />
+
+</View>
+
+</TouchableOpacity>
+
 
   <TouchableOpacity
     style={styles.actionItem}
@@ -361,6 +437,20 @@ if (savedData.status === "acknowledged") {
     <Text style={styles.actionText}>Scan</Text>
     <Ionicons name="chevron-forward" size={16} color="#999" />
   </TouchableOpacity>
+
+<View style={styles.totalPill}>
+  <Text style={styles.totalPillText}>
+    GH₵ {totalGiven.toLocaleString()}
+  </Text>
+  <Text style={styles.totalPillLabel}>Confirmed</Text>
+</View>
+
+{pendingTotal > 0 && (
+  <Text style={styles.pendingSummary}>
+    Pending: GH₵ {pendingTotal.toLocaleString()}
+  </Text>
+)}
+
 
 </View>
 
@@ -846,6 +936,38 @@ actionText: {
   fontSize: 12,
   fontWeight: "700",
   color: "#333",
+},
+actionRight: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+},
+
+badge: {
+  backgroundColor: "#E11D48", // 🔴 red
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 4,
+},
+
+badgeText: {
+  color: "#fff",
+  fontSize: 10,
+  fontWeight: "800",
+},
+pendingAmount: {
+  fontSize: 11,
+  fontWeight: "700",
+  color: "#D97706", // amber tone
+},
+pendingSummary: {
+  color: "#FFDDAA",
+  fontSize: 10,
+  marginTop: 2,
+  textAlign: "center",
 },
 
 
