@@ -1,10 +1,6 @@
-// constants/permissions.js
-//
-// ✅ Single source of truth for every permission key in the app, and the
-// standard starting set of roles. Add a new permission here once, and it
-// automatically shows up in the role editor's checklist everywhere.
-
 export const PERMISSION_GROUPS = [
+
+  // ✅ ADMINISTRATION
   {
     group: "Administration",
     permissions: [
@@ -13,19 +9,16 @@ export const PERMISSION_GROUPS = [
         label: "Manage Roles & Permissions",
         description: "Create, edit, deactivate, and delete roles. Assign roles to members."
       },
-
       {
         key: "manage_members",
         label: "Manage Members",
         description: "Add, edit, and remove member records."
       },
-
-{
-  key: "elder_approval",
-  label: "Elder Approval Authority",
-  description: "Allows participation in high-level disciplinary approvals (2/3 governance rule)."
-},
-
+      {
+        key: "elder_approval",
+        label: "Elder Approval Authority",
+        description: "Allows participation in high-level disciplinary approvals (2/3 governance rule)."
+      },
       {
         key: "manage_church_settings",
         label: "Manage Church Settings",
@@ -33,6 +26,8 @@ export const PERMISSION_GROUPS = [
       }
     ]
   },
+
+  // ✅ SERVICE & PROGRAM
   {
     group: "Service & Program",
     permissions: [
@@ -56,11 +51,37 @@ export const PERMISSION_GROUPS = [
         label: "Manage Pastor's Message",
         description: "Edit the homepage message from the pastor."
       }
-      
     ]
-
   },
-  
+
+  // ✅ PEOPLE (FIXED POSITION ✅)
+  {
+    group: "People",
+    permissions: [
+      {
+        key: "manage_attendance",
+        label: "Manage Attendance",
+        description: "Mark and correct attendance records."
+      },
+      {
+        key: "start_session",
+        label: "Start Service Session",
+        description: "Allows user to start a service session"
+      },
+      {
+        key: "end_session",
+        label: "End Service Session",
+        description: "Allows user to end and lock a service session"
+      },
+      {
+        key: "unlock_session",
+        label: "Unlock Service Session",
+        description: "Allows user to unlock a locked session"
+      }
+    ]
+  },
+
+  // ✅ FINANCE (CLEANED ✅)
   {
     group: "Finance",
     permissions: [
@@ -74,32 +95,6 @@ export const PERMISSION_GROUPS = [
         label: "View Financial Reports",
         description: "View P&L, balance sheet, ledger, and cash flow (read-only)."
       },
-
-      {
-  group: "People",
-  permissions: [
-    {
-      key: "manage_attendance",
-      label: "Manage Attendance",
-      description: "Mark and correct attendance records."
-    },
-    {
-      key: "start_session",
-      label: "Start Service Session",
-      description: "Allows user to start a service session"
-    },
-    {
-      key: "end_session",
-      label: "End Service Session",
-      description: "Allows user to end and lock a service session"
-    },
-    {
-      key: "unlock_session",
-      label: "Unlock Service Session",
-      description: "Allows user to unlock a locked session"
-    }
-  ]
-},
       {
         key: "manage_donations",
         label: "Manage Donations",
@@ -107,75 +102,74 @@ export const PERMISSION_GROUPS = [
       }
     ]
   },
+
+  // ✅ INSIGHTS
   {
     group: "Insights",
     permissions: [
       {
         key: "view_reports",
         label: "View Reports & AI Insights",
-        description: "View dashboards and AI-generated financial insights."
+        description: "View dashboards and AI-generated insights."
       }
     ]
   }
-
-
-  
 ];
 
+
+// ✅ ALL KEYS
 export const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap(g =>
   g.permissions.map(p => p.key)
 );
 
-export const findPermission = (key) =>
-  PERMISSION_GROUPS.flatMap(g => g.permissions).find(p => p.key === key) || null;
 
-// ✅ STANDARD STARTING ROLES — seeded into Firestore the first time an
-// organization opens the Roles screen with an empty roles collection.
-// Admins are free to rename, re-permission, deactivate, or delete any of
-// these except the two flagged below (protected / isDefault).
+// ✅ LOOKUP
+export const findPermission = (key) =>
+  PERMISSION_GROUPS.flatMap(g => g.permissions)
+    .find(p => p.key === key) || null;
+
+
+// ✅ DEFAULT ROLES
 export const DEFAULT_ROLES = [
+
   {
     id: "super_admin",
     label: "Super Admin",
-    description:
-      "Full unrestricted access, including managing other admins' roles. Exactly one role like this must always exist, so it can't be edited, deactivated, or deleted.",
+    description: "Full unrestricted access",
     permissions: ALL_PERMISSION_KEYS,
     protected: true,
     isDefault: false,
     active: true
   },
+
   {
     id: "admin",
     label: "Administrator",
-    description:
-      "Day-to-day administrative access. Cannot manage roles — only a Super Admin can do that, to prevent privilege escalation.",
+    description: "Day-to-day admin access",
     permissions: ALL_PERMISSION_KEYS.filter(k => k !== "manage_roles"),
     protected: false,
     isDefault: false,
     active: true
   },
 
+  // ✅ FIXED ELDER ROLE ✅
   {
-  id: "elders",
-  label: "Elders",
-  description:
-    "Spiritual governance body responsible for high-level disciplinary and adjudication decisions.",
-  permissions: [
-    "manage_members",
-    "elder_approval",
-    "view_reports"
-  ],
-  protected: false,
-  isDefault: false,
-  active: true
-},
-
-
+    id: "elders",
+    label: "Elders",
+    description: "Governance authority for disciplinary decisions",
+    permissions: [
+      "manage_members",
+      "elder_approval",
+      "view_reports"
+    ],
+    protected: false,
+    isDefault: false,
+    active: true
+  },
 
   {
     id: "pastor",
     label: "Pastor",
-    description: "Manages the service program, preachers, and the pastor's message.",
     permissions: [
       "manage_program",
       "manage_preachers",
@@ -187,57 +181,56 @@ export const DEFAULT_ROLES = [
     isDefault: false,
     active: true
   },
+
   {
     id: "finance_officer",
     label: "Finance Officer",
-    description: "Manages financial records, journal entries, and donations.",
-    permissions: ["manage_finance", "view_finance_reports", "manage_donations"],
+    permissions: [
+      "manage_finance",
+      "view_finance_reports",
+      "manage_donations"
+    ],
     protected: false,
-    isDefault: false,
     active: true
   },
+
   {
     id: "usher",
     label: "Usher",
-    description: "Marks attendance and manages session flow.",
-    permissions: ["manage_attendance", "start_session", "end_session"],
-    protected: false,
-    isDefault: false,
+    permissions: [
+      "manage_attendance",
+      "start_session",
+      "end_session"
+    ],
     active: true
   },
+
   {
     id: "media_team",
     label: "Media Team",
-    description: "Uploads carousel banners and manages events.",
     permissions: ["manage_events"],
-    protected: false,
-    isDefault: false,
     active: true
   },
+
   {
     id: "member",
     label: "Member",
-    description:
-      "Default role every member starts with. Every member needs a fallback role, so this can be renamed and re-permissioned, but not deactivated or deleted.",
     permissions: [],
-    protected: false,
     isDefault: true,
     active: true
   }
 ];
 
-// ✅ Reusable everywhere else in the app — gate a screen, button, or nav
-// item behind a permission instead of hardcoding role names.
-// e.g. hasPermission(currentMember, "manage_finance")
+
+// ✅ PERMISSION CHECK
 export const hasPermission = (member, key) => {
-  // ✅ Super Admin override (CRITICAL)
   if (member?.roles?.includes("super_admin")) return true;
 
   return Array.isArray(member?.permissions) &&
     member.permissions.includes(key);
 };
 
-// ✅ Union of every permission across a set of role objects — this is what
-// gets written onto a member's record as their effective permission set.
+
+// ✅ MERGE
 export const mergePermissions = (roleObjects = []) =>
   Array.from(new Set(roleObjects.flatMap(r => r.permissions || [])));
