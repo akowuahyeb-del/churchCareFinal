@@ -24,24 +24,29 @@ export default function OrganisationHierarchyCard() {
       <Text style={styles.subtitle}>
         Current church governance structure
       </Text>
+       <View style={styles.badge}>
+  <Text style={styles.badgeText}>
+    Read Only
+  </Text>
+</View>
 
       <View style={styles.treeContainer}>
-        <Text style={styles.rootNode}>
-          🏛 National Assembly
-        </Text>
+  <Text style={styles.rootNode}>
+    🏛 National Assembly
+  </Text>
 
-        <Text style={styles.levelOne}>
-          └─ Presbytery
-        </Text>
+  <Text style={styles.levelOne}>
+    └─ Presbytery (Future)
+  </Text>
 
-        <Text style={styles.levelTwo}>
-          └─ District
-        </Text>
+  <Text style={styles.levelTwo}>
+    └─ District (Future)
+  </Text>
 
-        <Text style={styles.levelThree}>
-          └─ Congregation
-        </Text>
-      </View>
+  <Text style={styles.levelThree}>
+    └─ Congregation (Current)
+  </Text>
+</View>
 
       <View style={styles.infoBox}>
         <Ionicons
@@ -140,4 +145,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: "#555",
   },
+  badge: {
+  alignSelf: "flex-start",
+  backgroundColor: "#E8F8F5",
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 12,
+  marginBottom: 12,
+},
+
+badgeText: {
+  color: "#16A085",
+  fontSize: 12,
+  fontWeight: "700",
+},
 });
