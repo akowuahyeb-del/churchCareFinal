@@ -207,6 +207,7 @@ export default function SubscriptionScreen({ route }) {
                   <Text style={styles.planRowName}>{p.label}</Text>
                   <Text style={styles.planRowTagline}>{p.tagline}</Text>
                 </View>
+
                 <Text style={styles.planRowPrice}>
                   {p.price === null ? "Custom" : p.price === 0 ? "Free" : `GH₵${p.price}`}
                   {p.price ? <Text style={styles.planRowCycle}>/{p.billingCycle === "monthly" ? "mo" : "yr"}</Text> : null}
@@ -352,5 +353,17 @@ popularBadgeText: {
   fontWeight: "800",
   color: "#D97706",
 },
+topFeaturesLabel: {
+  fontSize: 11,
+  fontWeight: "800",
+  color: "#4B3F72",
+  marginTop: 4,
+},
 
+topFeaturesText: {
+  fontSize: 11,
+  color: "#666",
+  lineHeight: 18,
+  marginTop: 4,
+},
 });

@@ -356,9 +356,6 @@ if (
     }
   };
 
-  // ✅ acknowledged-only total — pending records aren't counted as
-  // confirmed giving yet, which is the whole point of the acknowledgment
-  // requirement
   const acknowledgedHistory = history.filter(h => h.status === "acknowledged" || !h.status);
   const pendingHistory = history.filter(h => h.status === "pending");
   const totalGiven = acknowledgedHistory.reduce((s, h) => s + (h.amount || 0), 0);
