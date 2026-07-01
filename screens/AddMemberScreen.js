@@ -87,7 +87,27 @@ const handleSaveMember = async () => {
     Alert.alert("Error", "No active church selected");
     return;
   }
+if (!editingId && membersLimit.isAtLimit) {
+  Alert.alert(
+    "Member Limit Reached",
+    `You have reached your member limit.
 
+Current: ${membersLimit.used} / ${membersLimit.limit} members
+
+Upgrade your plan to continue adding members.`,
+    [
+      {
+        text: "View Plans",
+        onPress: () => navigation.navigate("Subscription"),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+  return;
+}
   console.log("🔥 DEBUG SAVE:", {
     organizationId,
     entityId,
