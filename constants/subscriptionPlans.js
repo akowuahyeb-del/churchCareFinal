@@ -66,7 +66,7 @@ export const PLANS = {
     billingCycle: "monthly",
     tagline: "For multi-branch organizations",
     limits: {
-      [LIMITS.MAX_MEMBERS]: null,
+      [LIMITS.MAX_MEMBERS]: 7,
       [LIMITS.MAX_ENTITIES]: null,
       [LIMITS.MAX_ADMINS]: null,
     },
