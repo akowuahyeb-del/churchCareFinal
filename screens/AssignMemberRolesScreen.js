@@ -32,8 +32,10 @@ export default function AssignMemberRolesScreen({ route }) {
 
   const [organizationId, setOrganizationId] = useState(null);
   const [entityId, setEntityId] = useState(null);
-  const { adminsLimit } = useSubscription(organizationId,entityId
-);
+  const { adminsLimit } = useSubscription(organizationId,entityId);
+
+    console.log("ADMIN LIMIT:", adminsLimit);
+
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoleIds, setSelectedRoleIds] = useState(user.roles || []);
