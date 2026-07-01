@@ -150,10 +150,7 @@ export default function MembersScreen({ navigation }) {
   const entityId = activeEntity?.entityId || "";
 const organizationId = activeEntity?.organizationId || "";
 
-const { membersLimit } = useSubscription(
-  organizationId,
-  entityId
-);
+const { membersLimit } = useSubscription(organizationId,entityId);
 
 
 const toggleActions = () => {
