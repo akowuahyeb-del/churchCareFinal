@@ -24,15 +24,15 @@ export default function RoadmapCard() {
           size={22}
           color="#F39C12"
         />
-
-        <Text style={styles.title}>
-          Organisation Roadmap
-        </Text>
+<Text style={styles.title}>
+  Church Structure Roadmap
+</Text>
+        
       </View>
 
       <Text style={styles.subtitle}>
-        Upcoming hierarchy and governance features
-      </Text>
+  Upcoming organisational hierarchy features
+</Text>
 
       {upcomingFeatures.map((feature) => (
         <View
@@ -59,11 +59,12 @@ export default function RoadmapCard() {
         />
 
         <Text style={styles.infoText}>
-          The governance foundation is now in place.
-          Future updates will introduce hierarchy
-          management, organisational reporting,
-          search, and entity controls.
-        </Text>
+  ChurchCare currently supports governance at the
+  congregation level. Future releases will introduce
+  presbyteries, districts, congregational hierarchies,
+  organisational search, reporting, and broader
+  administrative oversight across the church structure.
+</Text>
       </View>
     </View>
   );

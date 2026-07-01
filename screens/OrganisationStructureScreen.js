@@ -12,6 +12,7 @@ import VisibilityScopeCard from "../components/VisibilityScopeCard";
 import OrganisationTemplateCard
   from "../components/OrganisationTemplateCard";
 
+import RoadmapCard from "../components/RoadmapCard";
 import {
   ORGANIZATION_TEMPLATES,
 } from "../constants/organizationTemplates";
@@ -60,7 +61,7 @@ export default function OrganisationStructureScreen({
     ]}
     scopeDescription="Only within this congregation"
   />
-
+   <RoadmapCard />
 </ScrollView>
 
     </View>
