@@ -93,6 +93,16 @@ export default function AssignMemberRolesScreen({ route }) {
     setSaving(true);
     try {
       const selectedRoleObjects = roles.filter(r => selectedRoleIds.includes(r.id));
+
+console.log(
+  "SELECTED ROLES:",
+  selectedRoleObjects.map(r => ({
+    id: r.id,
+    label: r.label
+  }))
+);
+
+
       const effectivePermissions = mergePermissions(selectedRoleObjects);
 
       // ⚠️ Assumes members live at
