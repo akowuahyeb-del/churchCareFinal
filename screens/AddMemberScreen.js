@@ -10,10 +10,15 @@ import { collection, addDoc } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect } from "react";
+import { useSubscription } from "../utils/subscription";
 
 export default function AddMemberScreen({ navigation, route }) {
 
   const { memberData, editingId, entityId, organizationId } = route.params || {};
+  const { membersLimit } = useSubscription(
+  organizationId,
+  entityId
+);
 
   /* ── step engine ── */
   const [step, setStep] = useState(0);
