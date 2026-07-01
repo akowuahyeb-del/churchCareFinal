@@ -7,12 +7,12 @@ import {
 
 import AppHeader from "../components/AppHeader";
 import HierarchyLevelsCard from "../components/HierarchyLevelsCard";
+import OrganisationHierarchyCard from "../components/OrganisationHierarchyCard";
 import CurrentNodeCard from "../components/CurrentNodeCard";
 import VisibilityScopeCard from "../components/VisibilityScopeCard";
-import OrganisationTemplateCard
-  from "../components/OrganisationTemplateCard";
-
+import OrganisationTemplateCard from "../components/OrganisationTemplateCard";
 import RoadmapCard from "../components/RoadmapCard";
+
 import {
   ORGANIZATION_TEMPLATES,
 } from "../constants/organizationTemplates";
@@ -25,45 +25,47 @@ export default function OrganisationStructureScreen({
 
   return (
     <View style={styles.container}>
-
       <AppHeader
         title="Organisation Structure"
         subtitle="Governance & hierarchy"
         onBack={() => navigation.goBack()}
       />
+
       <ScrollView>
+        <OrganisationTemplateCard
+          templateName="Presbyterian Structure"
+          description="National Assembly → Presbytery → District → Congregation"
+          status="Active"
+        />
 
-  <OrganisationTemplateCard
-    templateName="Presbyterian Structure"
-    description="National Assembly → Presbytery → District → Congregation"
-    status="Active"
-  />
+        <HierarchyLevelsCard
+          templateName={template.name}
+          levels={template.levels}
+        />
 
-  <HierarchyLevelsCard
-    templateName={template.name}
-    levels={template.levels}
-  />
+        {/* NEW HIERARCHY CARD */}
+        <OrganisationHierarchyCard />
 
-  <CurrentNodeCard
-    nodeName="Prince of Peace Congregation"
-    nodeLevel="Congregation"
-    reportsTo="Not Configured"
-    status="Active"
-  />
+        <CurrentNodeCard
+          nodeName="Prince of Peace Congregation"
+          nodeLevel="Congregation"
+          reportsTo="Not Configured"
+          status="Active"
+        />
 
-  <VisibilityScopeCard
-    level="Congregation"
-    permissions={[
-      "Members",
-      "Attendance",
-      "Finance",
-      "Events",
-    ]}
-    scopeDescription="Only within this congregation"
-  />
-   <RoadmapCard />
-</ScrollView>
+        <VisibilityScopeCard
+          level="Congregation"
+          permissions={[
+            "Members",
+            "Attendance",
+            "Finance",
+            "Events",
+          ]}
+          scopeDescription="Only within this congregation"
+        />
 
+        <RoadmapCard />
+      </ScrollView>
     </View>
   );
 }
