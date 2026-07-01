@@ -172,8 +172,10 @@ export default function SubscriptionScreen({ route }) {
 {/* ── UNLOCKED FEATURES ── */}
 <View
   onLayout={(e) => {
-    setFeaturesSectionY(e.nativeEvent.layout.y);
-  }}
+  const y = e.nativeEvent.layout.y;
+  console.log("FEATURE SECTION Y =", y);
+  setFeaturesSectionY(y);
+}}
 >
   <Text style={styles.sectionTitle}>Unlocked Features</Text>
 </View>
