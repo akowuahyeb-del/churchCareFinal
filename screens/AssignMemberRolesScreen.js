@@ -114,6 +114,12 @@ console.log(
 const isAdminLevelUser = effectivePermissions.some(permission =>
   ADMIN_PERMISSIONS.includes(permission)
 );
+console.log("ADMIN DETECTION:", {
+  isAdminLevelUser,
+  selectedRoleIds,
+  effectivePermissions,
+});
+
       // ⚠️ Assumes members live at
       // organizations/{organizationId}/entities/{entityId}/members/{memberId}.
       // Adjust this path if your Members screen stores them somewhere else.
