@@ -47,6 +47,7 @@ export default function SubscriptionScreen({ route }) {
 
   const [upgrading, setUpgrading] = useState(null); // planId currently checking out
   const scrollRef = React.useRef(null);
+  const [featuresSectionY, setFeaturesSectionY] = useState(0);
   const scrollToFeatures = () => {
   scrollRef.current?.scrollTo({
     y: 320,
@@ -168,7 +169,13 @@ export default function SubscriptionScreen({ route }) {
         </View>
 
 {/* ── UNLOCKED FEATURES ── */}
-<Text style={styles.sectionTitle}>Unlocked Features</Text>
+<View
+  onLayout={(e) => {
+    setFeaturesSectionY(e.nativeEvent.layout.y);
+  }}
+>
+  <Text style={styles.sectionTitle}>Unlocked Features</Text>
+</View>
 
 <View style={styles.usageCard}>
   {plan.features.length === 0 ? (
