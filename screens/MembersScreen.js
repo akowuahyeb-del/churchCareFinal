@@ -919,14 +919,35 @@ const executeReinstate = async () => {
       }
 
       const { entityId, organizationId } = JSON.parse(data);
+     if (membersLimit.isAtLimit) {
+  Alert.alert(
+    "Member Limit Reached",
+    `You have reached your member limit.
 
-      resetForm?.();
+Current: ${membersLimit.used} / ${membersLimit.limit} members
 
-      // ✅ ✅ FIXED NAME HERE
-      navigation.navigate("AddMember", {
-        entityId,
-        organizationId,
-      });
+Upgrade your plan to continue adding members.`,
+    [
+      {
+        text: "View Plans",
+        onPress: () => navigation.navigate("Subscription"),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+  return;
+}
+
+resetForm?.();
+
+navigation.navigate("AddMember", {
+  entityId,
+  organizationId,
+});
+      
     }}
   >
     <Ionicons name="person-add-outline" size={18} color="#fff" />
