@@ -48,6 +48,28 @@ export default function OrganisationHierarchyCard() {
   </Text>
 </View>
 
+<View style={styles.statsRow}>
+  <View style={styles.stat}>
+    <Text style={styles.statNumber}>1</Text>
+    <Text style={styles.statLabel}>Assembly</Text>
+  </View>
+
+  <View style={styles.stat}>
+    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statLabel}>Presbyteries</Text>
+  </View>
+
+  <View style={styles.stat}>
+    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statLabel}>Districts</Text>
+  </View>
+
+  <View style={styles.stat}>
+    <Text style={styles.statNumber}>1</Text>
+    <Text style={styles.statLabel}>Congregation</Text>
+  </View>
+</View>
+
       <View style={styles.infoBox}>
         <Ionicons
           name="information-circle-outline"
@@ -158,5 +180,27 @@ badgeText: {
   color: "#16A085",
   fontSize: 12,
   fontWeight: "700",
+},
+statsRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: 16,
+},
+
+stat: {
+  flex: 1,
+  alignItems: "center",
+},
+
+statNumber: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#16A085",
+},
+
+statLabel: {
+  fontSize: 11,
+  color: "#777",
+  textAlign: "center",
 },
 });
