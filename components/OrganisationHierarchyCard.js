@@ -7,6 +7,33 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 export default function OrganisationHierarchyCard() {
+
+    const hierarchyCounts = {
+  assembly: 1,
+  presbyteries: 0,
+  districts: 0,
+  congregations: 1,
+};
+
+const hierarchyTree = [
+  {
+    label: "National Assembly",
+    level: 0,
+  },
+  {
+    label: "Presbytery (Future)",
+    level: 1,
+  },
+  {
+    label: "District (Future)",
+    level: 2,
+  },
+  {
+    label: "Congregation (Current)",
+    level: 3,
+  },
+];
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -30,44 +57,69 @@ export default function OrganisationHierarchyCard() {
   </Text>
 </View>
 
-      <View style={styles.treeContainer}>
-  <Text style={styles.rootNode}>
-    🏛 National Assembly
-  </Text>
-
-  <Text style={styles.levelOne}>
-    └─ Presbytery (Future)
-  </Text>
-
-  <Text style={styles.levelTwo}>
-    └─ District (Future)
-  </Text>
-
-  <Text style={styles.levelThree}>
-    └─ Congregation (Current)
-  </Text>
+     <View style={styles.treeContainer}>
+  {hierarchyTree.map((item, index) => (
+    <Text
+      key={index}
+      style={[
+        styles.treeItem,
+        {
+          marginLeft: item.level * 20,
+        },
+      ]}
+    >
+      {item.level === 0 ? "🏛 " : "└─ "}
+      {item.label}
+    </Text>
+  ))}
 </View>
 
 <View style={styles.statsRow}>
   <View style={styles.stat}>
-    <Text style={styles.statNumber}>1</Text>
-    <Text style={styles.statLabel}>Assembly</Text>
+  <Text style={styles.statLabel}>HQ</Text>
+  <Text style={styles.statNumber}>
+  {hierarchyCounts.assembly}
+</Text>
+</View>
+
+  <View style={styles.legendContainer}>
+  <View style={styles.legendItem}>
+    <View style={styles.currentDot} />
+    <Text style={styles.legendText}>
+      Curr
+    </Text>
   </View>
 
-  <View style={styles.stat}>
-    <Text style={styles.statNumber}>0</Text>
-    <Text style={styles.statLabel}>Presbyteries</Text>
+  <View style={styles.legendItem}>
+    <View style={styles.futureDot} />
+    <Text style={styles.legendText}>
+      Plan
+    </Text>
   </View>
+</View>
 
   <View style={styles.stat}>
-    <Text style={styles.statNumber}>0</Text>
-    <Text style={styles.statLabel}>Districts</Text>
-  </View>
+  <Text style={styles.statLabel}>Presb</Text>
+  <Text style={styles.statNumber}>
+  {hierarchyCounts.presbyteries}
+</Text>
+</View>
 
   <View style={styles.stat}>
-    <Text style={styles.statNumber}>1</Text>
-    <Text style={styles.statLabel}>Congregation</Text>
-  </View>
+  <Text style={styles.statLabel}>Dist</Text>
+  <Text style={styles.statNumber}>
+  {hierarchyCounts.districts}
+</Text>
+
+</View>
+
+  <View style={styles.stat}>
+  <Text style={styles.statLabel}>Congr</Text>
+  <Text style={styles.statNumber}>
+  {hierarchyCounts.districts}
+</Text>
+
+</View>
 </View>
 
       <View style={styles.infoBox}>
@@ -197,10 +249,47 @@ statNumber: {
   fontWeight: "700",
   color: "#16A085",
 },
-
 statLabel: {
-  fontSize: 11,
+  fontSize: 10,
   color: "#777",
   textAlign: "center",
+},
+
+legendContainer: {
+  flexDirection: "row",
+  justifyContent: "center",
+  marginBottom: 16,
+},
+
+legendItem: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginHorizontal: 12,
+},
+
+currentDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: "#27AE60",
+  marginRight: 6,
+},
+
+futureDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: "#F39C12",
+  marginRight: 6,
+},
+
+legendText: {
+  fontSize: 12,
+  color: "#555",
+},
+treeItem: {
+  fontSize: 14,
+  color: "#444",
+  marginBottom: 8,
 },
 });
