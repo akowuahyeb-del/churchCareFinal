@@ -76,6 +76,7 @@ export default function CreateChurchScreen({ navigation }) {
 
   const [errors, setErrors] = useState({});
   const { entitiesLimit } = useSubscription();
+  console.log("ENTITIES LIMIT:", entitiesLimit);
 
   // ── Validation per step ────────────────────────────────────────
   const validate = () => {
