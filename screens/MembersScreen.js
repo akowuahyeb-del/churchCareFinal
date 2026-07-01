@@ -17,6 +17,7 @@ import {
 import AppHeader from "../components/AppHeader";
 import { hasPermission } from "../constants/permissions";
 import { ALL_PERMISSION_KEYS } from "../constants/permissions";
+import { useSubscription } from "../utils/subscription";
 
 // ── Constants ─────────────────────────────────────────────────────
 const MEMBERS_CACHE_KEY = "members_cache_v1";
@@ -146,6 +147,13 @@ export default function MembersScreen({ navigation }) {
 
   // ── List item edit modal ──
   const [listModal, setListModal] = useState({ visible: false, type: null, input: "", index: null });
+  const entityId = activeEntity?.entityId || "";
+const organizationId = activeEntity?.organizationId || "";
+
+const { membersLimit } = useSubscription(
+  organizationId,
+  entityId
+);
 
 
 const toggleActions = () => {
