@@ -8,6 +8,7 @@ import {
 import AppHeader from "../components/AppHeader";
 import StructureTemplateCard from "../components/StructureTemplateCard";
 import CurrentNodeCard from "../components/CurrentNodeCard";
+import VisibilityScopeCard from "../components/VisibilityScopeCard";
 
 import {
   ORGANIZATION_TEMPLATES,
@@ -36,12 +37,22 @@ export default function OrganisationStructureScreen({
         />
 
         <CurrentNodeCard
-  nodeName="Prince of Peace Congregation"
-  nodeLevel="Congregation"
-  reportsTo="Not Configured"
-  status="Active"
-/>
-
+          nodeName="Prince of Peace Congregation"
+          nodeLevel="Congregation"
+           reportsTo="Not Configured"
+           status="Active"
+          />
+        <VisibilityScopeCard
+          level="Congregation"
+          permissions={[
+         "Members",
+         "Attendance",
+         "Finance",
+          "Events",
+          ]}
+        scopeDescription="Only within this congregation"
+       />
+          
       </ScrollView>
 
     </View>
