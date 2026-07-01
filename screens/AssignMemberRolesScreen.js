@@ -121,6 +121,13 @@ console.log("ADMIN DETECTION:", {
   effectivePermissions,
 });
 
+console.log("ADMIN LIMIT CHECK:", {
+  used: adminsLimit.used,
+  limit: adminsLimit.limit,
+  isAtLimit: adminsLimit.isAtLimit,
+  isAdminLevelUser,
+});
+
       // ⚠️ Assumes members live at
       // organizations/{organizationId}/entities/{entityId}/members/{memberId}.
       // Adjust this path if your Members screen stores them somewhere else.
