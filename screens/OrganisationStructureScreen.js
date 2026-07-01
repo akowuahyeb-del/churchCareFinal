@@ -9,6 +9,8 @@ import AppHeader from "../components/AppHeader";
 import HierarchyLevelsCard from "../components/HierarchyLevelsCard";
 import CurrentNodeCard from "../components/CurrentNodeCard";
 import VisibilityScopeCard from "../components/VisibilityScopeCard";
+import OrganisationTemplateCard
+  from "../components/OrganisationTemplateCard";
 
 import {
   ORGANIZATION_TEMPLATES,
@@ -28,32 +30,38 @@ export default function OrganisationStructureScreen({
         subtitle="Governance & hierarchy"
         onBack={() => navigation.goBack()}
       />
-
       <ScrollView>
 
-        <HierarchyLevelsCard
-          templateName={template.name}
-          levels={template.levels}
-        />
+  <OrganisationTemplateCard
+    templateName="Presbyterian Structure"
+    description="National Assembly → Presbytery → District → Congregation"
+    status="Active"
+  />
 
-        <CurrentNodeCard
-          nodeName="Prince of Peace Congregation"
-          nodeLevel="Congregation"
-           reportsTo="Not Configured"
-           status="Active"
-          />
-        <VisibilityScopeCard
-          level="Congregation"
-          permissions={[
-         "Members",
-         "Attendance",
-         "Finance",
-          "Events",
-          ]}
-        scopeDescription="Only within this congregation"
-       />
-          
-      </ScrollView>
+  <HierarchyLevelsCard
+    templateName={template.name}
+    levels={template.levels}
+  />
+
+  <CurrentNodeCard
+    nodeName="Prince of Peace Congregation"
+    nodeLevel="Congregation"
+    reportsTo="Not Configured"
+    status="Active"
+  />
+
+  <VisibilityScopeCard
+    level="Congregation"
+    permissions={[
+      "Members",
+      "Attendance",
+      "Finance",
+      "Events",
+    ]}
+    scopeDescription="Only within this congregation"
+  />
+
+</ScrollView>
 
     </View>
   );
