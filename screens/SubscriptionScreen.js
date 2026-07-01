@@ -48,9 +48,10 @@ export default function SubscriptionScreen({ route }) {
   const [upgrading, setUpgrading] = useState(null); // planId currently checking out
   const scrollRef = React.useRef(null);
   const [featuresSectionY, setFeaturesSectionY] = useState(0);
+  
   const scrollToFeatures = () => {
   scrollRef.current?.scrollTo({
-    y: 320,
+    y: Math.max(0, featuresSectionY - 16),
     animated: true,
   });
 };
