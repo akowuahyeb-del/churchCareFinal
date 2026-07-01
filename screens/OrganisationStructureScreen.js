@@ -7,6 +7,7 @@ import {
 
 import AppHeader from "../components/AppHeader";
 import StructureTemplateCard from "../components/StructureTemplateCard";
+import CurrentNodeCard from "../components/CurrentNodeCard";
 
 import {
   ORGANIZATION_TEMPLATES,
@@ -33,6 +34,13 @@ export default function OrganisationStructureScreen({
           templateName={template.name}
           levels={template.levels}
         />
+
+        <CurrentNodeCard
+  nodeName="Prince of Peace Congregation"
+  nodeLevel="Congregation"
+  reportsTo="Not Configured"
+  status="Active"
+/>
 
       </ScrollView>
 
