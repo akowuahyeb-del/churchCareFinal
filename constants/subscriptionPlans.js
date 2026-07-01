@@ -68,7 +68,7 @@ export const PLANS = {
     limits: {
       [LIMITS.MAX_MEMBERS]: null,
       [LIMITS.MAX_ENTITIES]: null,
-      [LIMITS.MAX_ADMINS]: 4,
+      [LIMITS.MAX_ADMINS]: null,
     },
     features: [
       FEATURES.QR_GENERATOR,

@@ -128,6 +128,29 @@ console.log("ADMIN LIMIT CHECK:", {
   isAdminLevelUser,
 });
 
+if (isAdminLevelUser && adminsLimit.isAtLimit) {
+  Alert.alert(
+    "Admin Limit Reached",
+    `You have reached your admin limit.
+
+Current: ${adminsLimit.used} / ${adminsLimit.limit} administrators
+
+Upgrade your plan to assign additional administrative roles.`,
+    [
+      {
+        text: "View Plans",
+        onPress: () => navigation.navigate("Subscription"),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+
+  setSaving(false);
+  return;
+}
       // ⚠️ Assumes members live at
       // organizations/{organizationId}/entities/{entityId}/members/{memberId}.
       // Adjust this path if your Members screen stores them somewhere else.
