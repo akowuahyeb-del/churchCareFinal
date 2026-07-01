@@ -7,12 +7,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 export default function OrganisationHierarchyCard() {
-
-    const hierarchyCounts = {
+const hierarchyCounts = {
   assembly: 1,
-  presbyteries: 0,
-  districts: 0,
-  congregations: 1,
+  presbyteries: 3,
+  districts: 8,
+  congregations: 24,
 };
 
 const hierarchyTree = [
@@ -21,15 +20,15 @@ const hierarchyTree = [
     level: 0,
   },
   {
-    label: "Presbytery (Future)",
+    label: "Greater Accra Presbytery",
     level: 1,
   },
   {
-    label: "District (Future)",
+    label: "Airport District",
     level: 2,
   },
   {
-    label: "Congregation (Current)",
+    label: "Prince of Peace Congregation",
     level: 3,
   },
 ];
