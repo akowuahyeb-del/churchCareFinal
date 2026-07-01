@@ -37,6 +37,7 @@ import { storage, db } from "../firebase";
 import { query, where, onSnapshot } from "firebase/firestore";
 import FeatureGate from "../components/FeatureGate";
 import { FEATURES } from "../constants/subscriptionPlans";
+import { useSubscription } from "../utils/subscription";
 
 
 
@@ -140,13 +141,19 @@ const entityId = CHURCH_ID;
 const viewerName = CHURCH_NAME || "Admin";
 const [pendingCount, setPendingCount] = useState(0);
 const planId = activeEntity?.subscription?.plan || "free";
+const {
+  plan,
+  status,
+  daysLeftInTrial,
+  isTrialExpired
+} = useSubscription(
+  organizationId,
+  entityId
+);
 
   
 
-  // ✅ FIXED: this <SectionHeader> was a bare JSX statement sitting in the
-  // middle of the function body, not inside any return() — it never
-  // rendered. Moved into the real JSX tree in Patch 3, right above the
-  // logo upload row it was clearly meant to label.
+
  const uploadChurchLogo = async () => {
   try {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -644,6 +651,17 @@ const generateQR = async () => {
 
 {/* ── FINANCE ── */}
 <SectionHeader title="Finance" />
+<TapRow
+  icon="card-outline"
+  label="Subscription & Billing"
+  sub={
+  status === "trialing" && !isTrialExpired
+    ? `${plan.label} • ${daysLeftInTrial} days left`
+    : `${plan.label} • ${status}`
+}
+  onPress={() => navigation.navigate("Subscription")}
+  color="#4B3F72"
+/>
 
 {/* ✅ Approve Donations (Fintech style row) */}
 <TouchableOpacity
@@ -656,10 +674,13 @@ const generateQR = async () => {
     })
   }
 >
+  
 
   {/* ✅ LEFT ICON */}
   <View style={styles.approvalIcon}>
     <Ionicons name="checkmark-done-outline" size={16} color="#27ae60" />
+
+
   </View>
 
   {/* ✅ TEXT SECTION */}
@@ -765,6 +786,9 @@ const generateQR = async () => {
                 onPress={() => { setStatusAction(accountStatus === "active" ? "deactivate" : "reinstate"); setAccountStatusModal(true); }}
                 color={accountStatus === "active" ? "#e74c3c" : "#00B894"}
               />
+
+
+
             </View>
           </>
         )}
