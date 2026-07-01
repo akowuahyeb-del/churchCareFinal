@@ -195,6 +195,13 @@ export default function SubscriptionScreen({ route }) {
           const isCurrent = pid === planId;
           return (
             <View key={pid} style={[styles.planRow, isCurrent && styles.planRowActive]}>
+              {pid === "pro" && (
+  <View style={styles.popularBadge}>
+    <Text style={styles.popularBadgeText}>
+      ⭐ MOST POPULAR
+    </Text>
+  </View>
+)}
               <View style={styles.planRowHeader}>
                 <View>
                   <Text style={styles.planRowName}>{p.label}</Text>
@@ -331,4 +338,19 @@ const styles = StyleSheet.create({
   fontWeight: "700",
   color: "#27ae60",
 },
+popularBadge: {
+  alignSelf: "flex-start",
+  backgroundColor: "#FFF3CD",
+  borderRadius: 20,
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  marginBottom: 10,
+},
+
+popularBadgeText: {
+  fontSize: 10,
+  fontWeight: "800",
+  color: "#D97706",
+},
+
 });
