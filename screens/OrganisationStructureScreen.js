@@ -6,7 +6,7 @@ import {
 } from "react-native";
 
 import AppHeader from "../components/AppHeader";
-import StructureTemplateCard from "../components/StructureTemplateCard";
+import HierarchyLevelsCard from "../components/HierarchyLevelsCard";
 import CurrentNodeCard from "../components/CurrentNodeCard";
 import VisibilityScopeCard from "../components/VisibilityScopeCard";
 
@@ -31,7 +31,7 @@ export default function OrganisationStructureScreen({
 
       <ScrollView>
 
-        <StructureTemplateCard
+        <HierarchyLevelsCard
           templateName={template.name}
           levels={template.levels}
         />
