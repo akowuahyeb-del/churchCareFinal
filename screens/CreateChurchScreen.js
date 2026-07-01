@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { auth } from "../firebase";
+import { useSubscription } from "../utils/subscription";
 
 const { width: W } = Dimensions.get("window");
 const TOTAL_STEPS = 4;
@@ -74,6 +75,7 @@ export default function CreateChurchScreen({ navigation }) {
   const [showPass,      setShowPass]      = useState(false);
 
   const [errors, setErrors] = useState({});
+  const { entitiesLimit } = useSubscription();
 
   // ── Validation per step ────────────────────────────────────────
   const validate = () => {
