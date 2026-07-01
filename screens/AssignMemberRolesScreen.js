@@ -16,6 +16,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { findPermission, mergePermissions } from "../constants/permissions";
+import { useSubscription } from "../utils/subscription";
+
 
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
@@ -23,6 +25,8 @@ export default function AssignMemberRolesScreen({ route }) {
 
   const [organizationId, setOrganizationId] = useState(null);
   const [entityId, setEntityId] = useState(null);
+  const { adminsLimit } = useSubscription(organizationId,entityId
+);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRoleIds, setSelectedRoleIds] = useState(user.roles || []);
