@@ -14,7 +14,10 @@ import {
   orderBy, where, serverTimestamp, Timestamp
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { app } from "../firebase"; // if you export app
+import { app } from "../firebase"; 
+import FeatureGate from "../components/FeatureGate";
+import { FEATURES } from "../constants/subscriptionPlans";
+
 
 
 const { width: W } = Dimensions.get("window");
@@ -98,6 +101,7 @@ export default function AdminFinanceScreen() {
   const [ledgerAccount, setLedgerAccount] = useState("Cash");
 const functions = getFunctions(app); // or just getFunctions()
 const generateInsightFn = httpsCallable(functions, "generateFinanceInsight");
+const planId = activeEntity?.subscription?.plan || "free";
 
 
   /* ── Load transactions ── */
@@ -697,61 +701,74 @@ const generateInsightFn = httpsCallable(functions, "generateFinanceInsight");
               ))}
             </View>
           )}
+{/* ══ AI INSIGHTS ══ */}
+{tab === "ai" && (
+  <FeatureGate
+    feature={FEATURES.AI_INSIGHTS}
+    planId={planId}
+    onUpgrade={() => navigation.navigate("Subscription")}
+  >
+    <View>
 
-          {/* ══ AI INSIGHTS ══ */}
-          {tab === "ai" && (
-            <View>
-              <View style={styles.aiHeader}>
-                <Ionicons name="sparkles" size={28} color="#6C5CE7" />
-                <Text style={styles.aiTitle}>AI Financial Insights</Text>
-                <Text style={styles.aiSub}>Powered by Claude AI</Text>
-              </View>
+      <View style={styles.aiHeader}>
+        <Ionicons name="sparkles" size={28} color="#6C5CE7" />
+        <Text style={styles.aiTitle}>AI Financial Insights</Text>
+        <Text style={styles.aiSub}>Powered by Claude AI</Text>
+      </View>
 
-              <View style={styles.aiSummaryRow}>
-                <AiMetric label="Income" value={`₵${fmt(totalIncome)}`} color="#00B894" />
-                <AiMetric label="Expenses" value={`₵${fmt(totalExpenses)}`} color="#E17055" />
-                <AiMetric label="Profit" value={`₵${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
-              </View>
+      <View style={styles.aiSummaryRow}>
+        <AiMetric label="Income" value={`₵${fmt(totalIncome)}`} color="#00B894" />
+        <AiMetric label="Expenses" value={`₵${fmt(totalExpenses)}`} color="#E17055" />
+        <AiMetric label="Profit" value={`₵${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
+      </View>
 
-              <TouchableOpacity style={styles.aiBtn} onPress={generateAiInsight} disabled={aiLoading}>
-                {aiLoading
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <><Ionicons name="sparkles-outline" size={16} color="#fff" /><Text style={styles.aiBtnText}>Generate AI Insight</Text></>
-                }
-              </TouchableOpacity>
+      <TouchableOpacity style={styles.aiBtn} onPress={generateAiInsight} disabled={aiLoading}>
+        {aiLoading
+          ? <ActivityIndicator color="#fff" size="small" />
+          : <>
+              <Ionicons name="sparkles-outline" size={16} color="#fff" />
+              <Text style={styles.aiBtnText}>Generate AI Insight</Text>
+            </>
+        }
+      </TouchableOpacity>
 
-              {aiInsight ? (
-                <View style={styles.aiInsightBox}>
-                  <View style={styles.aiInsightHeader}>
-                    <Ionicons name="bulb-outline" size={16} color="#6C5CE7" />
-                    <Text style={styles.aiInsightTitle}>Analysis & Recommendations</Text>
-                  </View>
-                  <Text style={styles.aiInsightText}>{aiInsight}</Text>
-                </View>
-              ) : (
-                <View style={styles.aiPlaceholder}>
-                  <Ionicons name="analytics-outline" size={48} color="#ddd" />
-                  <Text style={styles.aiPlaceholderText}>
-                    Tap "Generate AI Insight" for expense categorization, budget forecasting, donation trend prediction, and anomaly detection.
-                  </Text>
-                </View>
-              )}
+      {aiInsight ? (
+        <View style={styles.aiInsightBox}>
+          <View style={styles.aiInsightHeader}>
+            <Ionicons name="bulb-outline" size={16} color="#6C5CE7" />
+            <Text style={styles.aiInsightTitle}>Analysis & Recommendations</Text>
+          </View>
+          <Text style={styles.aiInsightText}>{aiInsight}</Text>
+        </View>
+      ) : (
+        <View style={styles.aiPlaceholder}>
+          <Ionicons name="analytics-outline" size={48} color="#ddd" />
+          <Text style={styles.aiPlaceholderText}>
+            Tap "Generate AI Insight" for expense categorization,
+            budget forecasting, donation trend prediction, and anomaly detection.
+          </Text>
+        </View>
+      )}
 
-              {/* Donation trend */}
-              <SectionCard title="Donation Trend" icon="trending-up-outline" color="#6C5CE7">
-                <SimpleLineViz data={monthlyIncome} color="#6C5CE7" />
-              </SectionCard>
+      {/* Donation trend */}
+      <SectionCard title="Donation Trend" icon="trending-up-outline" color="#6C5CE7">
+        <SimpleLineViz data={monthlyIncome} color="#6C5CE7" />
+      </SectionCard>
 
-              {/* Budget vs Actual mock */}
-              <SectionCard title="Budget vs Actual" icon="bar-chart-outline" color="#0984E3">
-                <MiniBarChart data={["Salaries","Utilities","Maintenance","Transport"].map((l,i) => ({
-                  label:l, income:[3000,1000,500,400][i], expense:[3200,1100,450,380][i]
-                }))} labelI="Budget" labelE="Actual" />
-              </SectionCard>
-            </View>
-          )}
+      {/* Budget vs Actual */}
+      <SectionCard title="Budget vs Actual" icon="bar-chart-outline" color="#0984E3">
+        <MiniBarChart data={[
+          { label:"Salaries", income:3000, expense:3200 },
+          { label:"Utilities", income:1000, expense:1100 },
+          { label:"Maintenance", income:500, expense:450 },
+          { label:"Transport", income:400, expense:380 },
+        ]} labelI="Budget" labelE="Actual" />
+      </SectionCard>
 
-          <View style={{ height: 40 }} />
+    </View>
+  </FeatureGate>
+)}
+     <View style={{ height: 40 }} />
         </ScrollView>
       )}
 

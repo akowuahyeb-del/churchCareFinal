@@ -39,6 +39,7 @@ import AssignMemberRolesScreen from "./screens/AssignMemberRolesScreen";
 import { ChurchProvider } from "./context/ChurchContext";
 import VerifyReceiptScreen from "./screens/VerifyReceiptScreen";
 import ApprovalScreen from "./screens/ApprovalScreen";
+import SubscriptionScreen from "./screens/SubscriptionScreen";
 
 
 
@@ -140,6 +141,8 @@ function RootStack() {
        <Stack.Screen name="HistoryScreen" component={HistoryScreen} />
        <Stack.Screen name="VerifyReceipt"component={VerifyReceiptScreen} />
        <Stack.Screen name="Approval" component={ApprovalScreen}/>
+       <Stack.Screen name="Subscription"component={SubscriptionScreen}options={{ headerShown: false }}/>
+
 
 
 

@@ -14,6 +14,11 @@ import {
 import { PAYMENT_METHODS, MOMO_PROVIDERS, detectMomoProvider, isValidGhanaPhone, findMethod } from "../constants/donationMethods";
 import { hasPermission } from "../constants/permissions";
 import { generateDonationReceipt } from "../utils/receiptGenerator";
+import FeatureGate from "../components/FeatureGate";
+import { FEATURES, planHasFeature } from "../constants/subscriptionPlans";
+import { useSubscription } from "../utils/subscription";
+
+
 
 const AMOUNTS = ["10", "20", "50", "100", "200", "500"];
 
@@ -29,11 +34,7 @@ const CATEGORIES = [
 export default function DonateScreen({ route, navigation }) {
   const memberId   = route?.params?.memberId   || null;
   const memberName = route?.params?.memberName || null;
-
-  // ⚠️ Same placeholder pattern as MemberProfileScreen — replace with a
-  // real Firebase Auth → member lookup once that linkage exists. Until
-  // then this is how the screen knows whether the person recording a
-  // donation is themselves authorized to acknowledge it.
+  
   const viewerName = route?.params?.viewerName || "Staff";
   const [viewerPermissions] = useState(route?.params?.viewerPermissions || []);
   const canAcknowledge = hasPermission({ permissions: viewerPermissions }, "manage_donations");
@@ -42,6 +43,7 @@ export default function DonateScreen({ route, navigation }) {
   const organizationId = activeEntity?.organizationId || null;
   const entityId       = activeEntity?.entityId       || null;
   const churchName     = activeEntity?.name || "Church";
+  const { planId } = useSubscription(organizationId,entityId);
 
   const [selectedCategory, setSelectedCategory] = useState("Offering");
   const [selectedAmount,   setSelectedAmount]   = useState("");
@@ -132,38 +134,6 @@ useEffect(() => {
       );
     }
   }, [route?.params?.entityId, entityId]);
-
-useEffect(() => {
-  if (!organizationId || !entityId) return;
-
-  const ref = collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "contributions"
-  );
-
-  const q = query(ref, where("status", "==", "pending"));
-
-  const unsub = onSnapshot(q, (snap) => {
-    let total = 0;
-
-    snap.forEach(doc => {
-      total += Number(doc.data().amount) || 0;
-    });
-
-    setPendingCount(snap.size);   
-    setPendingTotal(total);       
-  });
-
-  return unsub;
-}, [organizationId, entityId]);
-
-  // const q = query(ref, where("status", "==", "pending"));
-
-  
 
 
  const loadHistory = () => {
@@ -290,7 +260,10 @@ useEffect(() => {
 const savedData = { id: docRef.id, ...payload };
 
 // ✅ auto-generate receipt ONLY if acknowledged
-if (savedData.status === "acknowledged") {
+if (
+  savedData.status === "acknowledged" &&
+  planHasFeature(planId, FEATURES.DONATION_RECEIPTS)
+) {
   try {
   await generateDonationReceipt(
   savedData,
@@ -321,26 +294,56 @@ if (savedData.status === "acknowledged") {
     }
   };
 
-  const acknowledgeDonation = async (item) => {
-    if (!canAcknowledge) {
-      Alert.alert("Not Authorized", "You don't have permission to acknowledge donations.");
-      return;
-    }
-    try {
-      await updateDoc(
-        doc(db, "organizations", organizationId, "entities", entityId, "contributions", item.id),
-        {
-          status: "acknowledged",
-          acknowledgedByName: viewerName,
-          acknowledgedAt: new Date().toISOString().split("T")[0],
-        }
-      );
-      Alert.alert("✅ Acknowledged", `Donation of GH₵ ${item.amount} confirmed.`);
-      loadHistory();
-    } catch (e) {
-      Alert.alert("Error", "Could not acknowledge this donation.");
-    }
-  };
+ const acknowledgeDonation = async (item) => {
+  // ✅ Subscription check
+  if (!planHasFeature(planId, FEATURES.DONATION_APPROVALS)) {
+    Alert.alert(
+      "Upgrade Required",
+      "Donation approvals require the Pro plan."
+    );
+    return;
+  }
+
+  // ✅ Existing permission check
+  if (!canAcknowledge) {
+    Alert.alert(
+      "Not Authorized",
+      "You don't have permission to acknowledge donations."
+    );
+    return;
+  }
+
+  try {
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "contributions",
+        item.id
+      ),
+      {
+        status: "acknowledged",
+        acknowledgedByName: viewerName,
+        acknowledgedAt: new Date().toISOString().split("T")[0],
+      }
+    );
+
+    Alert.alert(
+      "✅ Acknowledged",
+      `Donation of GH₵ ${item.amount} confirmed.`
+    );
+
+    loadHistory();
+  } catch (e) {
+    Alert.alert(
+      "Error",
+      "Could not acknowledge this donation."
+    );
+  }
+};
 
   const handleReceipt = async (item) => {
     setGeneratingReceiptId(item.id);
@@ -764,20 +767,26 @@ if (savedData.status === "acknowledged") {
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 6 }}>
                       <Text style={[styles.historyAmt, { color: cat.color }]}>GH₵ {item.amount?.toLocaleString()}</Text>
-                      <TouchableOpacity
-                        style={styles.receiptBtn}
-                        onPress={() => handleReceipt(item)}
-                        disabled={generatingReceiptId === item.id}
-                      >
-                        {generatingReceiptId === item.id ? (
-                          <ActivityIndicator size="small" color="#4B3F72" />
-                        ) : (
-                          <>
-                            <Ionicons name="receipt-outline" size={12} color="#4B3F72" />
-                            <Text style={styles.receiptBtnText}>Receipt</Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
+                      <FeatureGate
+  feature={FEATURES.DONATION_RECEIPTS}
+  planId={planId}
+  onUpgrade={() => navigation.navigate("Subscription")}
+>
+  <TouchableOpacity
+    style={styles.receiptBtn}
+    onPress={() => handleReceipt(item)}
+    disabled={generatingReceiptId === item.id}
+  >
+    {generatingReceiptId === item.id ? (
+      <ActivityIndicator size="small" color="#4B3F72" />
+    ) : (
+      <>
+        <Ionicons name="receipt-outline" size={12} color="#4B3F72" />
+        <Text style={styles.receiptBtnText}>Receipt</Text>
+      </>
+    )}
+  </TouchableOpacity>
+</FeatureGate>
                     </View>
                   </View>
                 );
@@ -820,10 +829,20 @@ if (savedData.status === "acknowledged") {
                   </View>
                   <Text style={styles.pendingRecordedBy}>Recorded by {item.recordedBy || "—"}</Text>
 
-                  <TouchableOpacity style={styles.acknowledgeBtn} onPress={() => acknowledgeDonation(item)}>
-                    <Ionicons name="checkmark-circle-outline" size={15} color="#fff" />
-                    <Text style={styles.acknowledgeBtnText}>Acknowledge</Text>
-                  </TouchableOpacity>
+     <FeatureGate
+  feature={FEATURES.DONATION_APPROVALS}
+  planId={planId}
+  onUpgrade={() => navigation.navigate("Subscription")}
+>
+  <TouchableOpacity
+    style={styles.acknowledgeBtn}
+    onPress={() => acknowledgeDonation(item)}
+  >
+    <Ionicons name="checkmark-circle-outline" size={15} color="#fff" />
+    <Text style={styles.acknowledgeBtnText}>Acknowledge</Text>
+  </TouchableOpacity>
+</FeatureGate>
+
                 </View>
               );
             })

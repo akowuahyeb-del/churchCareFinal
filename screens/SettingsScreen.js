@@ -35,6 +35,9 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage, db } from "../firebase";
 
 import { query, where, onSnapshot } from "firebase/firestore";
+import FeatureGate from "../components/FeatureGate";
+import { FEATURES } from "../constants/subscriptionPlans";
+
 
 
 
@@ -136,6 +139,7 @@ const organizationId = activeEntity?.organizationId;
 const entityId = CHURCH_ID;
 const viewerName = CHURCH_NAME || "Admin";
 const [pendingCount, setPendingCount] = useState(0);
+const planId = activeEntity?.subscription?.plan || "free";
 
   
 
@@ -784,30 +788,30 @@ const generateQR = async () => {
 </TouchableOpacity>
 
 
-       {/* ── NEW: QR CODE GENERATOR ── */}
+      {/* ── NEW: QR CODE GENERATOR ── */}
 {canDo("deacon") && (
-  <>
-    <SectionHeader title="QR Code Generator" />
+  <FeatureGate
+    feature={FEATURES.QR_GENERATOR}
+    planId={planId}
+    onUpgrade={() => navigation.navigate("Subscription")}
+  >
+    <>
+      <SectionHeader title="QR Code Generator" />
 
-    <View style={styles.card}>
-      <TapRow
-        icon="qr-code-outline"
-        label="Generate Dynamic QR"
-        sub="Create QR for attendance, events, and more"
-        onPress={() => { resetQR(); setQrModal(true); }}
-        color="#4B3F72"
-        badge="New"
-      />
-    </View>
-
-    {/* ✅ ✅ THIS IS THE EXACT PLACE FOR STATIC QR DISPLAY */}
-    
-
-  </>
+      <View style={styles.card}>
+        <TapRow
+          icon="qr-code-outline"
+          label="Generate Dynamic QR"
+          sub="Create QR for attendance, events, and more"
+          onPress={() => { resetQR(); setQrModal(true); }}
+          color="#4B3F72"
+          badge="New"
+        />
+      </View>
+    </>
+  </FeatureGate>
 )}
          
-
-
         {/* ── DATA MANAGEMENT ── */}
         <SectionHeader title="Data Management" />
         <View style={styles.card}>
