@@ -102,31 +102,10 @@ export default function AssignMemberRolesScreen({ route }) {
     try {
       const selectedRoleObjects = roles.filter(r => selectedRoleIds.includes(r.id));
 
-console.log(
-  "SELECTED ROLES:",
-  selectedRoleObjects.map(r => ({
-    id: r.id,
-    label: r.label
-  }))
-);
-
-
       const effectivePermissions = mergePermissions(selectedRoleObjects);
 const isAdminLevelUser = effectivePermissions.some(permission =>
   ADMIN_PERMISSIONS.includes(permission)
 );
-console.log("ADMIN DETECTION:", {
-  isAdminLevelUser,
-  selectedRoleIds,
-  effectivePermissions,
-});
-
-console.log("ADMIN LIMIT CHECK:", {
-  used: adminsLimit.used,
-  limit: adminsLimit.limit,
-  isAtLimit: adminsLimit.isAtLimit,
-  isAdminLevelUser,
-});
 
 if (isAdminLevelUser && adminsLimit.isAtLimit) {
   Alert.alert(
