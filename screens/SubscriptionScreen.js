@@ -22,6 +22,18 @@ const STATUS_COLOR = {
   free: "#888",
 };
 
+const FEATURE_LABELS = {
+  ai_insights: "AI Financial Insights",
+  qr_generator: "QR Code Generator",
+  donation_receipts: "Donation Receipts",
+  donation_approvals: "Donation Approval Workflow",
+  data_export: "Data Export & Backup",
+  multi_branch: "Multi-Branch Churches",
+  advanced_roles: "Advanced Roles & Permissions",
+  custom_branding: "Custom Branding",
+  priority_support: "Priority Support",
+};
+
 export default function SubscriptionScreen({ route }) {
   const navigation = useNavigation();
   const [activeEntity, setActiveEntity] = useState(null);
@@ -34,6 +46,13 @@ export default function SubscriptionScreen({ route }) {
   const canManageBilling = hasPermission({ permissions: viewerPermissions }, "manage_church_settings");
 
   const [upgrading, setUpgrading] = useState(null); // planId currently checking out
+  const scrollRef = React.useRef(null);
+  const scrollToFeatures = () => {
+  scrollRef.current?.scrollTo({
+    y: 320,
+    animated: true,
+  });
+};
 
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -99,7 +118,10 @@ export default function SubscriptionScreen({ route }) {
     <View style={styles.container}>
       <AppHeader title="Subscription & Billing" showBack onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }}>
+     <ScrollView
+  ref={scrollRef}
+  contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
+>
 
         {/* ── CURRENT PLAN CARD ── */}
         <View style={styles.planCard}>
@@ -137,7 +159,38 @@ export default function SubscriptionScreen({ route }) {
           <Text style={styles.planPrice}>
             {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `GH₵ ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
           </Text>
+        <TouchableOpacity onPress={scrollToFeatures}>
+  <Text style={styles.featureCount}>
+    {plan.features.length} Features Included
+  </Text>
+</TouchableOpacity>
+
         </View>
+
+{/* ── UNLOCKED FEATURES ── */}
+<Text style={styles.sectionTitle}>Unlocked Features</Text>
+
+<View style={styles.usageCard}>
+  {plan.features.length === 0 ? (
+    <Text style={styles.planFeatureMuted}>
+      This plan includes core features only.
+    </Text>
+  ) : (
+    plan.features.map(feature => (
+      <View key={feature} style={styles.planFeatureItem}>
+        <Ionicons
+          name="checkmark-circle"
+          size={16}
+          color="#27ae60"
+        />
+        <Text style={styles.planFeatureText}>
+  {FEATURE_LABELS[feature] || feature}
+</Text>
+      </View>
+    ))
+  )}
+</View>
+
 
         {/* ── USAGE ── */}
         <Text style={styles.sectionTitle}>Usage</Text>
@@ -284,4 +337,10 @@ const styles = StyleSheet.create({
 
   infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 12, marginTop: 10 },
   infoBannerText: { flex: 1, fontSize: 11, color: "#4B3F72" },
+  featureCount: {
+  marginTop: 6,
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#27ae60",
+},
 });
