@@ -1,4 +1,8 @@
-import React from "react";
+import React, {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   View,
   Text,
@@ -6,8 +10,51 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import {
+  collection,
+  getDocs,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
+
 export default function OrganisationHierarchyCard() {
-const hierarchyCounts = {
+const [organizations, setOrganizations] =
+  useState([]);
+  useEffect(() => {
+  loadOrganizations();
+}, []);
+
+async function loadOrganizations() {
+  try {
+    const snapshot = await getDocs(
+      collection(db, "organizations")
+    );
+
+    const data = snapshot.docs.map(
+      (doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })
+    );
+
+    setOrganizations(data);
+    console.log(
+  "Organizations loaded:",
+  data
+);
+  } catch (error) {
+    console.error(
+      "Failed to load organizations:",
+      error
+    );
+  }
+}
+console.log(
+  "Organizations:",
+  organizations
+);
+
+    const hierarchyCounts = {
   assembly: 1,
   presbyteries: 3,
   districts: 8,
