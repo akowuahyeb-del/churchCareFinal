@@ -46,15 +46,7 @@ export default function SubscriptionScreen({ route }) {
   const canManageBilling = hasPermission({ permissions: viewerPermissions }, "manage_church_settings");
 
   const [upgrading, setUpgrading] = useState(null); // planId currently checking out
-  const scrollRef = React.useRef(null);
-  const [featuresSectionY, setFeaturesSectionY] = useState(0);
   
-  const scrollToFeatures = () => {
-  scrollRef.current?.scrollTo({
-    y: Math.max(0, featuresSectionY - 16),
-    animated: true,
-  });
-};
 
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -119,9 +111,7 @@ export default function SubscriptionScreen({ route }) {
   return (
     <View style={styles.container}>
       <AppHeader title="Subscription & Billing" showBack onBack={() => navigation.goBack()} />
-
-     <ScrollView
-  ref={scrollRef}
+<ScrollView
   contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
 >
 
@@ -161,24 +151,12 @@ export default function SubscriptionScreen({ route }) {
           <Text style={styles.planPrice}>
             {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `GH₵ ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
           </Text>
-        <TouchableOpacity onPress={scrollToFeatures}>
-  <Text style={styles.featureCount}>
-    {plan.features.length} Features Included
-  </Text>
-</TouchableOpacity>
 
         </View>
-
 {/* ── UNLOCKED FEATURES ── */}
-<View
-  onLayout={(e) => {
-  const y = e.nativeEvent.layout.y;
-  console.log("FEATURE SECTION Y =", y);
-  setFeaturesSectionY(y);
-}}
->
-  <Text style={styles.sectionTitle}>Unlocked Features</Text>
-</View>
+<Text style={styles.sectionTitle}>
+  Unlocked Features
+</Text>
 
 <View style={styles.usageCard}>
   {plan.features.length === 0 ? (
