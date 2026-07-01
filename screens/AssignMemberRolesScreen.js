@@ -111,7 +111,9 @@ console.log(
 
 
       const effectivePermissions = mergePermissions(selectedRoleObjects);
-
+const isAdminLevelUser = effectivePermissions.some(permission =>
+  ADMIN_PERMISSIONS.includes(permission)
+);
       // ⚠️ Assumes members live at
       // organizations/{organizationId}/entities/{entityId}/members/{memberId}.
       // Adjust this path if your Members screen stores them somewhere else.
