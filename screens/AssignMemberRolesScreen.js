@@ -19,6 +19,13 @@ import { findPermission, mergePermissions } from "../constants/permissions";
 import { useSubscription } from "../utils/subscription";
 
 
+const ADMIN_PERMISSIONS = [
+  "manage_roles",
+  "manage_members",
+  "manage_church_settings",
+  "manage_finance",
+];
+
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
   const user = route.params?.user || {};
