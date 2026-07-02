@@ -23,6 +23,7 @@ export default function OrganisationSetupScreen() {
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
+  const isSuperAdmin = true;
 
   const [templateId, setTemplateId] = useState("presbyterian");
   const [nodes, setNodes] = useState([]);
