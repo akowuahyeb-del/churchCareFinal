@@ -739,7 +739,17 @@ const generateQR = async () => {
           </>
         )}
 
-        
+        <TapRow
+  icon="git-branch-outline"
+  label="Organisation Hierarchy"
+  sub="Set up your church structure"
+  onPress={() =>
+    navigation.navigate("OrganisationSetup")
+  }
+  color="#4B3F72"
+/>
+
+
 
 <SectionHeader title="Church Branding" />
 <View style={styles.card}>
@@ -817,8 +827,9 @@ const generateQR = async () => {
     Roles & Privileges
   </Text>
 
-  <Ionicons name="chevron-forward" size={18} color="#999" />
+ <Ionicons name="chevron-forward" size={18} color="#999" />
 </TouchableOpacity>
+
 
 
       {/* ── NEW: QR CODE GENERATOR ── */}

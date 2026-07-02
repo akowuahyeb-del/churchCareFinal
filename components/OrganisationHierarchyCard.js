@@ -18,11 +18,13 @@ import {
 import { db } from "../firebase";
 
 export default function OrganisationHierarchyCard() {
+     console.log("🚀 OrganisationHierarchyCard rendered");
 const [organizations, setOrganizations] =
   useState([]);
   useEffect(() => {
   loadOrganizations();
 }, []);
+
 
 async function loadOrganizations() {
   try {
@@ -42,6 +44,7 @@ async function loadOrganizations() {
   "Organizations loaded:",
   data
 );
+console.log("Organizations loaded:", data);
   } catch (error) {
     console.error(
       "Failed to load organizations:",
@@ -79,7 +82,9 @@ const hierarchyTree = [
     level: 3,
   },
 ];
-
+console.log(
+  "OrganisationHierarchyCard rendered"
+);
   return (
     <View style={styles.card}>
       <View style={styles.header}>
