@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import AppHeader from "../components/AppHeader";
 import * as Location from "expo-location";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function AttendanceSettingsScreen({ navigation }) {
 
@@ -73,98 +74,176 @@ const useCurrentLocation = async () => {
 
       <ScrollView contentContainerStyle={styles.content}>
         
-       
-<View style={styles.card}>
+<ScrollView
+  contentContainerStyle={{
+    padding: 16,
+    paddingBottom: 40,
+  }}
+>
 
-  <Text style={styles.cardTitle}>
-    Location-Based Attendance
-  </Text>
+  {/* LOCATION SETTINGS */}
 
-  <Text style={styles.description}>
-    Allow members to check in only when they are within the approved church attendance area.
-  </Text>
+  <View style={styles.fintechCard}>
 
-  <View style={styles.settingRow}>
-    <View style={{ flex: 1 }}>
-      <Text style={styles.settingLabel}>
-        Location-Based Attendance
-      </Text>
+    <View style={styles.fintechHeader}>
+      <View style={styles.iconBubble}>
+        <Ionicons
+          name="location-outline"
+          size={22}
+          color="#4B3F72"
+        />
+      </View>
 
-      <Text style={styles.settingSub}>
-        Verify member location before attendance is recorded
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.fintechTitle}>
+          Location-Based Attendance
+        </Text>
+
+        <Text style={styles.fintechDescription}>
+          Verify member location before attendance is recorded.
+        </Text>
+      </View>
     </View>
 
-    <Switch
-      value={geoEnabled}
-      onValueChange={setGeoEnabled}
-    />
+    <View style={styles.settingRow}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.settingLabel}>
+          Enable Verification
+        </Text>
+
+        <Text style={styles.settingSub}>
+          Members must be within the church area.
+        </Text>
+      </View>
+
+      <Switch
+        value={geoEnabled}
+        onValueChange={setGeoEnabled}
+      />
+    </View>
+
+    <Text style={styles.fieldTitle}>
+      Check-In Radius
+    </Text>
+
+    <View style={styles.fintechInput}>
+      <TextInput
+        style={styles.fintechInputText}
+        value={checkInRadius}
+        onChangeText={setCheckInRadius}
+        keyboardType="numeric"
+        placeholder="150"
+      />
+    </View>
+
+    <Text style={styles.helperText}>
+      Recommended: 100–200 metres
+    </Text>
+
   </View>
 
-  <Text style={styles.inputLabel}>
-    Check-In Radius (metres)
-  </Text>
+  {/* CHURCH LOCATION */}
 
-  <TextInput
-    style={styles.input}
-    keyboardType="numeric"
-    value={checkInRadius}
-    onChangeText={setCheckInRadius}
-    placeholder="150"
-  />
+  <View style={styles.fintechCard}>
 
-  <Text style={styles.helperText}>
-    Recommended: 100–200 metres
-  </Text>
+    <View style={styles.fintechHeader}>
+      <View style={styles.iconBubble}>
+        <Ionicons
+          name="pin-outline"
+          size={22}
+          color="#4B3F72"
+        />
+      </View>
 
-</View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.fintechTitle}>
+          Church Attendance Location
+        </Text>
 
-<View style={styles.card}>
+        <Text style={styles.fintechDescription}>
+          Used to validate geo-based attendance.
+        </Text>
+      </View>
+    </View>
 
-  <Text style={styles.cardTitle}>
-    Church Attendance Location
-  </Text>
+    <Text style={styles.fieldTitle}>
+      Latitude
+    </Text>
 
-  <Text style={styles.description}>
-    Set the church location used for attendance verification.
-  </Text>
+    <View style={styles.fintechInput}>
+      <TextInput
+        style={styles.fintechInputText}
+        value={latitude}
+        onChangeText={setLatitude}
+        placeholder="6.6885"
+      />
+    </View>
 
-  <Text style={styles.inputLabel}>
-    Latitude
-  </Text>
+    <Text style={styles.fieldTitle}>
+      Longitude
+    </Text>
 
-  <TextInput
-    style={styles.input}
-    value={latitude}
-    onChangeText={setLatitude}
-    keyboardType="numeric"
-    placeholder="e.g. 6.6885"
-  />
+    <View style={styles.fintechInput}>
+      <TextInput
+        style={styles.fintechInputText}
+        value={longitude}
+        onChangeText={setLongitude}
+        placeholder="-1.6244"
+      />
+    </View>
 
-  <Text style={styles.inputLabel}>
-    Longitude
-  </Text>
+    <TouchableOpacity
+      style={styles.locationAction}
+      onPress={useCurrentLocation}
+    >
+      <Ionicons
+        name="locate"
+        size={18}
+        color="#4B3F72"
+      />
 
-  <TextInput
-    style={styles.input}
-    value={longitude}
-    onChangeText={setLongitude}
-    keyboardType="numeric"
-    placeholder="e.g. -1.6244"
-  />
+      <Text style={styles.locationActionText}>
+        Use Current Location
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+
+  {/* LOCATION PREVIEW */}
+
+  {(latitude && longitude) && (
+    <View style={styles.previewCard}>
+      <Text style={styles.previewLabel}>
+        CURRENT LOCATION
+      </Text>
+
+      <Text style={styles.previewValue}>
+        📍 Latitude: {latitude}
+      </Text>
+
+      <Text style={styles.previewValue}>
+        📍 Longitude: {longitude}
+      </Text>
+    </View>
+  )}
+
+  {/* SAVE */}
 
   <TouchableOpacity
-    style={styles.locationButton}
-   onPress={useCurrentLocation}
+    style={styles.primarySaveButton}
   >
-    <Text style={styles.locationButtonText}>
-      Use Current Location
+    <Ionicons
+      name="save-outline"
+      size={18}
+      color="#fff"
+    />
+
+    <Text style={styles.primarySaveText}>
+      Save Changes
     </Text>
   </TouchableOpacity>
 
-</View>
-
-
+</ScrollView>
        
 
       </ScrollView>
@@ -211,5 +290,146 @@ const styles = StyleSheet.create({
 locationButtonText: {
   color: "#fff",
   fontWeight: "700",
+},
+saveButton: {
+  backgroundColor: "#4B3F72",
+  borderRadius: 12,
+  padding: 16,
+  marginTop: 20,
+  marginBottom: 30,
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+saveButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 15,
+},
+fintechCard: {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 20,
+  padding: 18,
+  marginBottom: 16,
+},
+
+fintechHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 18,
+},
+
+iconBubble: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "#EEF0FA",
+  justifyContent: "center",
+  alignItems: "center",
+  marginRight: 12,
+},
+
+fintechTitle: {
+  fontSize: 18,
+  fontWeight: "800",
+  color: "#222",
+},
+
+fintechDescription: {
+  fontSize: 13,
+  color: "#777",
+  marginTop: 4,
+},
+
+fieldTitle: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#777",
+  marginTop: 14,
+  marginBottom: 6,
+  textTransform: "uppercase",
+},
+
+fintechInput: {
+  backgroundColor: "#F8FAFC",
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+  borderRadius: 14,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+},
+
+fintechInputText: {
+  fontSize: 15,
+  color: "#222",
+  fontWeight: "600",
+},
+
+locationAction: {
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: 8,
+
+  marginTop: 18,
+
+  paddingVertical: 14,
+
+  backgroundColor: "#EEF0FA",
+
+  borderRadius: 14,
+},
+
+locationActionText: {
+  color: "#4B3F72",
+  fontWeight: "700",
+  fontSize: 14,
+},
+
+previewCard: {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 20,
+  padding: 18,
+  marginBottom: 16,
+},
+
+previewLabel: {
+  fontSize: 11,
+  color: "#999",
+  fontWeight: "800",
+  marginBottom: 8,
+},
+
+previewValue: {
+  fontSize: 14,
+  color: "#222",
+  marginBottom: 4,
+},
+
+primarySaveButton: {
+  backgroundColor: "#4B3F72",
+
+  height: 58,
+
+  borderRadius: 16,
+
+  flexDirection: "row",
+  justifyContent: "center",
+  alignItems: "center",
+
+  gap: 8,
+},
+
+primarySaveText: {
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: "800",
+},
+
+helperText: {
+  marginTop: 8,
+  color: "#888",
+  fontSize: 12,
 },
 });
