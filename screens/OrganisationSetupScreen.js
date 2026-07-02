@@ -323,12 +323,22 @@ export default function OrganisationSetupScreen() {
           </View>
 
           {/* ── TEMPLATE ROW ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Governance Template</Text>
-            <TouchableOpacity style={styles.changeBtn} onPress={() => setTemplateModal(true)}>
-              <Text style={styles.changeBtnText}>Change</Text>
-            </TouchableOpacity>
-          </View>
+         <View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle}>
+    Governance Template
+  </Text>
+
+  {isSuperAdmin && (
+    <TouchableOpacity
+      style={styles.changeBtn}
+      onPress={() => setTemplateModal(true)}
+    >
+      <Text style={styles.changeBtnText}>
+        Change
+      </Text>
+    </TouchableOpacity>
+  )}
+</View>
 
           <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: "#4B3F72" }]}>
             <Text style={styles.templateName}>{template.name}</Text>
