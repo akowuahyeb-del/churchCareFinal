@@ -727,6 +727,16 @@ const generateQR = async () => {
             <SectionHeader title="Church Information" />
             <View style={styles.card}>
               <TapRow icon="business-outline"   label="Church Details"   sub="Name, address, contact"    onPress={() => setChurchInfoModal(true)} color="#4B3F72" />
+              <TapRow
+  icon="people-circle-outline"
+  label="Attendance Settings"
+  sub="QR, Geo Attendance and Check-In Rules"
+  onPress={() =>
+    navigation.navigate("AttendanceSettings")
+  }
+  color="#27AE60"
+/>
+              
               <TapRow icon="people-outline"     label="Manage Roles"     sub="Assign roles to members"   onPress={() => navigation.navigate("Roles")} color="#0984E3" />   onPress={() => Alert.alert("Manage Roles", "Role management is in the Members section.")} color="#0984E3" />
               <TapRow
   icon="git-network-outline"
