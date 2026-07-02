@@ -135,18 +135,17 @@ export default function CreateChurchScreen({ navigation }) {
 
   try {
     // ✅ 1. CREATE ORGANIZATION FIRST
- const orgRef = await addDoc(collection(db, "organizations"), {
-  name: churchName.trim(),
+ console.log("STEP 1 - Creating organization");
 
+const orgRef = await addDoc(collection(db, "organizations"), {
+  name: churchName.trim(),
+  denomination: denomination.trim(),
   status: "pending_approval",
   approvalStatus: "pending",
-
-  denomination: denomination.trim(),
-
   createdAt: new Date().toISOString(),
 });
 
-    const organizationId = orgRef.id;
+console.log("✅ STEP 1 SUCCESS");
 
     // ✅ 2. CREATE CHURCH (ENTITY)
     const churchRef = await addDoc(

@@ -1611,6 +1611,12 @@ const attendanceRate =
           onLongPress={(i,v)=>{setManageEditIdx(i);setManageInput(v);setManageType("event");setManageModal(true);}}
           onAdd={()=>{setManageType("event");setManageModal(true);}} />
 
+
+
+
+
+
+
 /* ════════════════════════════════════════════════════════════════
    FIX: Session Dashboard block — "Last Session" now reads ONLY
    from the lastSession snapshot object (present/total/rate fields

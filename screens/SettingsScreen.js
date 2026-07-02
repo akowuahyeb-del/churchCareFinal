@@ -876,9 +876,7 @@ const generateQR = async () => {
           <TapRow icon="star-outline"               label="Rate the App"     sub="Leave a review"                   onPress={() => Alert.alert("Thank you!", "Redirecting to App Store…")} color="#D97706" />
           <TapRow icon="document-text-outline"      label="Terms of Service" sub="Read our terms"                   onPress={() => Alert.alert("Terms of Service", "By using ChurchCare, you agree to our terms.")} color="#0984E3" />
           <TapRow icon="mail-outline"               label="Contact Support"  sub="Get help from our team"           onPress={() => Alert.alert("Contact Support", "Email: support@churchcare.app")} color="#00B894" />
-        </View>
-     
-     {isSuperAdmin && (
+              {isSuperAdmin && (
   <TapRow
     icon="hourglass-outline"
     label="Pending Churches"
@@ -889,6 +887,9 @@ const generateQR = async () => {
     color="#F39C12"
   />
 )}
+        </View>
+     
+   
 
 
         {/* ── ACCOUNT ── */}
