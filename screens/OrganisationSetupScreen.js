@@ -349,18 +349,30 @@ export default function OrganisationSetupScreen() {
           </View>
 
           {/* ── NODE TREE ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              Hierarchy Nodes ({nodes.length})
-            </Text>
-            <TouchableOpacity
-              style={styles.addRootBtn}
-              onPress={() => openAddNode(template.levels[0].id, "")}
-            >
-              <Ionicons name="add" size={14} color="#4B3F72" />
-              <Text style={styles.addRootBtnText}>Add Root</Text>
-            </TouchableOpacity>
-          </View>
+         <View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle}>
+    Hierarchy Nodes ({nodes.length})
+  </Text>
+
+  {isSuperAdmin && (
+    <TouchableOpacity
+      style={styles.addRootBtn}
+      onPress={() =>
+        openAddNode(template.levels[0].id, "")
+      }
+    >
+      <Ionicons
+        name="add"
+        size={14}
+        color="#4B3F72"
+      />
+
+      <Text style={styles.addRootBtnText}>
+        Add Root
+      </Text>
+    </TouchableOpacity>
+  )}
+</View>
 
           {nodes.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -392,10 +404,22 @@ export default function OrganisationSetupScreen() {
                 />
               ))}
 
-              <TouchableOpacity style={styles.seedSecondaryBtn} onPress={() => setSeedModal(true)}>
-                <Ionicons name="flash-outline" size={13} color="#4B3F72" />
-                <Text style={styles.seedSecondaryBtnText}>Re-seed Sample Structure</Text>
-              </TouchableOpacity>
+              {isSuperAdmin && (
+  <TouchableOpacity
+    style={styles.seedSecondaryBtn}
+    onPress={() => setSeedModal(true)}
+  >
+    <Ionicons
+      name="flash-outline"
+      size={13}
+      color="#4B3F72"
+    />
+
+    <Text style={styles.seedSecondaryBtnText}>
+      Re-seed Sample Structure
+    </Text>
+  </TouchableOpacity>
+)}
             </>
           )}
 
