@@ -286,6 +286,13 @@ export default function OrganisationSetupScreen() {
 
   const thisEntityNode = nodes.find(n => n.entityId === entityId);
 
+const canEditNode = (node) => {
+  if (isSuperAdmin) return true;
+
+  return node.entityId === entityId;
+};
+
+
   return (
     <View style={styles.container}>
       <AppHeader
@@ -412,7 +419,7 @@ export default function OrganisationSetupScreen() {
                   onDelete={deleteNode}
                   onAddChild={(parentId, childLevelId) => openAddNode(childLevelId, parentId)}
                   isSuperAdmin={isSuperAdmin}
-                  canEditNode={canEditNode}
+                  
                 />
               ))}
 
@@ -626,7 +633,7 @@ export default function OrganisationSetupScreen() {
    Recursive tree row — renders a node and all its children
    indented, with edit/delete/add-child actions
 ───────────────────────────────────────────────────────── */
-function NodeTree({ node, depth, templateId, template, getChildren, currentEntityId, onEdit, onDelete, onAddChild, isSuperAdmin,canEditNode, }) {
+function NodeTree({ node, depth, templateId, template, getChildren, currentEntityId, onEdit, onDelete, onAddChild, isSuperAdmin, }) {
   const [expanded, setExpanded] = useState(true);
   const level = getLevelById(templateId, node.levelId);
   const children = getChildren(node.id);
@@ -685,7 +692,8 @@ function NodeTree({ node, depth, templateId, template, getChildren, currentEntit
               <Ionicons name="add-circle-outline" size={18} color="#27ae60" />
             </TouchableOpacity>
           )}
-          {canEditNode(node) && (
+     
+{canEditNode(node) && (
   <TouchableOpacity
     style={styles.treeActionBtn}
     onPress={() => onEdit(node)}
@@ -697,7 +705,6 @@ function NodeTree({ node, depth, templateId, template, getChildren, currentEntit
     />
   </TouchableOpacity>
 )}
-
          {isSuperAdmin && (
   <TouchableOpacity
     style={styles.treeActionBtn}
@@ -727,7 +734,7 @@ function NodeTree({ node, depth, templateId, template, getChildren, currentEntit
           onDelete={onDelete}
           onAddChild={onAddChild}
            isSuperAdmin={isSuperAdmin}
-           canEditNode={canEditNode}
+           
         />
       ))}
     </View>
