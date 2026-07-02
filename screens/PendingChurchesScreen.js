@@ -22,30 +22,60 @@ import AppHeader from "../components/AppHeader";
 export default function PendingChurchesScreen({ navigation }) {
   const [churches, setChurches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({
+  pending: 0,
+  approved: 0,
+  rejected: 0,
+  total: 0,
+});
 
   const loadChurches = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const q = query(
-        collection(db, "organizations"),
-        where("approvalStatus", "==", "pending")
-      );
+    // Load ALL organizations
+    const allSnap = await getDocs(
+      collection(db, "organizations")
+    );
 
-      const snap = await getDocs(q);
+    const allChurches = allSnap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
 
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
+    // Dashboard summary
+    setSummary({
+      pending: allChurches.filter(
+        c => c.approvalStatus === "pending"
+      ).length,
 
-      setChurches(data);
-    } catch (err) {
-      console.log("Load pending churches error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      approved: allChurches.filter(
+        c => c.approvalStatus === "approved"
+      ).length,
+
+      rejected: allChurches.filter(
+        c => c.approvalStatus === "rejected"
+      ).length,
+
+      total: allChurches.length,
+    });
+
+    // Only show pending churches in the list
+    const pendingChurches = allChurches.filter(
+      c => c.approvalStatus === "pending"
+    );
+
+    setChurches(pendingChurches);
+
+  } catch (err) {
+    console.log(
+      "Load pending churches error:",
+      err
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     loadChurches();

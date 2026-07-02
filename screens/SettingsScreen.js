@@ -127,6 +127,9 @@ export default function SettingsScreen() {
 
   const navigation = useNavigation();
 
+  const isSuperAdmin = true;
+
+
   // ✅ FIXED: was declared AFTER CHURCH_ID/CHURCH_NAME referenced it,
   // throwing "Cannot access 'activeEntity' before initialization" on
   // every render — same bug class we fixed in HomeScreen earlier.
@@ -874,6 +877,19 @@ const generateQR = async () => {
           <TapRow icon="document-text-outline"      label="Terms of Service" sub="Read our terms"                   onPress={() => Alert.alert("Terms of Service", "By using ChurchCare, you agree to our terms.")} color="#0984E3" />
           <TapRow icon="mail-outline"               label="Contact Support"  sub="Get help from our team"           onPress={() => Alert.alert("Contact Support", "Email: support@churchcare.app")} color="#00B894" />
         </View>
+     
+     {isSuperAdmin && (
+  <TapRow
+    icon="hourglass-outline"
+    label="Pending Churches"
+    sub="Review church registrations"
+    onPress={() =>
+      navigation.navigate("PendingChurches")
+    }
+    color="#F39C12"
+  />
+)}
+
 
         {/* ── ACCOUNT ── */}
         <SectionHeader title="Account" />
