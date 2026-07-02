@@ -127,8 +127,54 @@ export default function OrganisationSetupScreen() {
     }
     if (!organizationId) return;
 
+    // ✅ Find existing linked nodes
+const linkedNodes = nodes.filter(
+  n => n.entityId === entityId
+);
+
+// ✅ Is the user removing the current link?
+const removingCurrentLink =
+  editingNode?.entityId === entityId &&
+  !linkSelf;
+
+// ✅ Is the user trying to create/edit a node as linked?
+const addingLink =
+  linkSelf;
+
+// ✅ Existing linked nodes excluding the node being edited
+const otherLinkedNodes = linkedNodes.filter(
+  n => n.id !== editingNode?.id
+);
+
+// ✅ Prevent zero linked nodes
+const creatingWithoutLink =
+  linkedNodes.length === 0 &&
+  !linkSelf;
+
+if (removingCurrentLink || creatingWithoutLink) {
+  Alert.alert(
+    "Hierarchy Link Required",
+    "At least one hierarchy node must be linked to this church."
+  );
+  return;
+}
+
+// ✅ Prevent multiple linked nodes
+if (addingLink && otherLinkedNodes.length > 0) {
+  Alert.alert(
+    "Already Linked",
+    `This church is already linked to "${otherLinkedNodes[0].name}". Only one hierarchy node can be linked to an entity.`
+  );
+  return;
+}
+
+    
     setSaving(true);
     try {
+
+      // ✅ Hierarchy must always have one linked node
+
+
       const payload = {
         name: nodeName.trim(),
         levelId: nodeLevelId,
