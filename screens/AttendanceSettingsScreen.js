@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Switch,
   TextInput,
+  Alert,
 } from "react-native";
 import AppHeader from "../components/AppHeader";
+import * as Location from "expo-location";
 
 export default function AttendanceSettingsScreen({ navigation }) {
 
@@ -16,6 +18,49 @@ const [geoEnabled, setGeoEnabled] = useState(true);
 const [checkInRadius, setCheckInRadius] = useState("150");
 const [latitude, setLatitude] = useState("");
 const [longitude, setLongitude] = useState("");
+
+
+const useCurrentLocation = async () => {
+  try {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Required",
+        "Location access is required."
+      );
+      return;
+    }
+
+    const location =
+      await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+    setLatitude(
+      location.coords.latitude.toString()
+    );
+
+    setLongitude(
+      location.coords.longitude.toString()
+    );
+
+    Alert.alert(
+      "Location Captured",
+      "Church location updated successfully."
+    );
+
+  } catch (e) {
+    console.log("LOCATION ERROR:", e);
+
+    Alert.alert(
+      "Error",
+      "Unable to retrieve current location."
+    );
+  }
+};
+
 
 
   return (
@@ -110,9 +155,7 @@ const [longitude, setLongitude] = useState("");
 
   <TouchableOpacity
     style={styles.locationButton}
-    onPress={() => {
-      console.log("Use Current Location");
-    }}
+   onPress={useCurrentLocation}
   >
     <Text style={styles.locationButtonText}>
       Use Current Location
