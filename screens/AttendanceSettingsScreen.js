@@ -14,6 +14,8 @@ export default function AttendanceSettingsScreen({ navigation }) {
 
 const [geoEnabled, setGeoEnabled] = useState(true);
 const [checkInRadius, setCheckInRadius] = useState("150");
+const [latitude, setLatitude] = useState("");
+const [longitude, setLongitude] = useState("");
 
 
   return (
@@ -72,7 +74,52 @@ const [checkInRadius, setCheckInRadius] = useState("150");
 
 </View>
 
+<View style={styles.card}>
 
+  <Text style={styles.cardTitle}>
+    Church Attendance Location
+  </Text>
+
+  <Text style={styles.description}>
+    Set the church location used for attendance verification.
+  </Text>
+
+  <Text style={styles.inputLabel}>
+    Latitude
+  </Text>
+
+  <TextInput
+    style={styles.input}
+    value={latitude}
+    onChangeText={setLatitude}
+    keyboardType="numeric"
+    placeholder="e.g. 6.6885"
+  />
+
+  <Text style={styles.inputLabel}>
+    Longitude
+  </Text>
+
+  <TextInput
+    style={styles.input}
+    value={longitude}
+    onChangeText={setLongitude}
+    keyboardType="numeric"
+    placeholder="e.g. -1.6244"
+  />
+
+  <TouchableOpacity
+    style={styles.locationButton}
+    onPress={() => {
+      console.log("Use Current Location");
+    }}
+  >
+    <Text style={styles.locationButtonText}>
+      Use Current Location
+    </Text>
+  </TouchableOpacity>
+
+</View>
 
 
        
@@ -110,4 +157,16 @@ const styles = StyleSheet.create({
     color: "#666",
     lineHeight: 20,
   },
+  locationButton: {
+  marginTop: 16,
+  backgroundColor: "#27AE60",
+  padding: 14,
+  borderRadius: 10,
+  alignItems: "center",
+},
+
+locationButtonText: {
+  color: "#fff",
+  fontWeight: "700",
+},
 });
