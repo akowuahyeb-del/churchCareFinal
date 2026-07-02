@@ -87,6 +87,83 @@ export const ORGANIZATION_TEMPLATES = {
       { id: "local_assembly",     label: "Local Assembly",     plural: "Local Assemblies",   icon: "home-outline",     color: "#E17055", rank: 4, visibility: ["members","attendance","finance","events"] },
     ],
   },
+independent: {
+  id: "independent",
+  name: "Independent Church",
+  description:
+    "Flexible structure for independent churches with headquarters, regions, branches, and local churches.",
+
+  levels: [
+    {
+      id: "head_office",
+      label: "Head Office",
+      plural: "Head Offices",
+      rank: 1,
+      icon: "business-outline",
+      color: "#4B3F72",
+      description: "Central governing office",
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+        "roles",
+      ],
+    },
+
+    {
+      id: "region",
+      label: "Region",
+      plural: "Regions",
+      rank: 2,
+      icon: "map-outline",
+      color: "#0984E3",
+      description: "Regional oversight",
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+      ],
+    },
+
+    {
+      id: "branch",
+      label: "Branch",
+      plural: "Branches",
+      rank: 3,
+      icon: "git-branch-outline",
+      color: "#27AE60",
+      description: "Branch administration",
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+
+    {
+      id: "local_church",
+      label: "Local Church",
+      plural: "Local Churches",
+      rank: 4,
+      icon: "home-outline",
+      color: "#E17055",
+      description: "Local congregation",
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+      ],
+    },
+  ],
+},
+
+
+
 };
 
 export const getTemplate = (templateId) =>
