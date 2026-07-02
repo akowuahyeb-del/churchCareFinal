@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSubscription } from "../utils/subscription";
 import { getPlan } from "../constants/subscriptionPlans";
+import { DEV_CONFIG } from "../constants/devConfig";
 
 // ✅ Wraps any premium UI. Renders children if the org's current plan
 // unlocks `feature`; otherwise renders a compact upgrade prompt instead
@@ -15,9 +16,27 @@ import { getPlan } from "../constants/subscriptionPlans";
 //     <AIInsightsTab />
 //   </FeatureGate>
 export default function FeatureGate({
-  feature, organizationId, entityId, children, onUpgrade, silent = false
+  feature,
+  organizationId,
+  entityId,
+  children,
+  onUpgrade,
+  silent = false
 }) {
-  const { hasFeature, plan, loading } = useSubscription(organizationId, entityId);
+
+  const {
+    hasFeature,
+    plan,
+    loading
+  } = useSubscription(
+    organizationId,
+    entityId
+  );
+
+  // ✅ SUPER ADMIN / DEV BYPASS
+  if (DEV_CONFIG.BYPASS_FEATURE_GATES) {
+    return children;
+  }
 
   if (loading) return null;
   if (hasFeature(feature)) return children;

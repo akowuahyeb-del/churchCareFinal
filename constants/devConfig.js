@@ -1,0 +1,8 @@
+export const DEV_CONFIG = {
+  SUPER_ADMIN_MODE: true,
+
+  BYPASS_FEATURE_GATES: true,
+  BYPASS_SUBSCRIPTIONS: true,
+  BYPASS_ENTITY_LIMITS: true,
+  BYPASS_APPROVALS: true,
+};
