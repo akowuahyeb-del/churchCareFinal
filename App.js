@@ -44,7 +44,7 @@ import OrganisationStructureScreen from "./screens/OrganisationStructureScreen";
 import OrganisationSetupScreen from "./screens/OrganisationSetupScreen";
 import PendingChurchesScreen from "./screens/PendingChurchesScreen";
 import SuperAdminScreen from "./screens/SuperAdminScreen";
-
+import AttendanceSettingsScreen from "./screens/AttendanceSettingsScreen";
 
 
 
@@ -148,7 +148,7 @@ function RootStack() {
        <Stack.Screen name="OrganisationSetup"component={OrganisationSetupScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="PendingChurches"component={PendingChurchesScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="SuperAdmin"component={SuperAdminScreen}options={{ headerShown: false }}/>
-
+       <Stack.Screen name="AttendanceSettings"component={AttendanceSettingsScreen}/>
 
 
 
