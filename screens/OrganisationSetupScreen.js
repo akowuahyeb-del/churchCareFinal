@@ -411,8 +411,11 @@ export default function OrganisationSetupScreen() {
                   onEdit={openEditNode}
                   onDelete={deleteNode}
                   onAddChild={(parentId, childLevelId) => openAddNode(childLevelId, parentId)}
+                  isSuperAdmin={isSuperAdmin}
                 />
               ))}
+
+
 
               {isSuperAdmin && (
   <TouchableOpacity
@@ -622,7 +625,7 @@ export default function OrganisationSetupScreen() {
    Recursive tree row — renders a node and all its children
    indented, with edit/delete/add-child actions
 ───────────────────────────────────────────────────────── */
-function NodeTree({ node, depth, templateId, template, getChildren, currentEntityId, onEdit, onDelete, onAddChild }) {
+function NodeTree({ node, depth, templateId, template, getChildren, currentEntityId, onEdit, onDelete, onAddChild, isSuperAdmin, }) {
   const [expanded, setExpanded] = useState(true);
   const level = getLevelById(templateId, node.levelId);
   const children = getChildren(node.id);
@@ -676,9 +679,18 @@ function NodeTree({ node, depth, templateId, template, getChildren, currentEntit
           <TouchableOpacity style={styles.treeActionBtn} onPress={() => onEdit(node)}>
             <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.treeActionBtn} onPress={() => onDelete(node)}>
-            <Ionicons name="trash-outline" size={16} color="#e74c3c" />
-          </TouchableOpacity>
+         {isSuperAdmin && (
+  <TouchableOpacity
+    style={styles.treeActionBtn}
+    onPress={() => onDelete(node)}
+  >
+    <Ionicons
+      name="trash-outline"
+      size={16}
+      color="#e74c3c"
+    />
+  </TouchableOpacity>
+)}
         </View>
       </View>
 
@@ -695,6 +707,7 @@ function NodeTree({ node, depth, templateId, template, getChildren, currentEntit
           onEdit={onEdit}
           onDelete={onDelete}
           onAddChild={onAddChild}
+           isSuperAdmin={isSuperAdmin}
         />
       ))}
     </View>
