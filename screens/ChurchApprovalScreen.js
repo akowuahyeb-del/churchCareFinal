@@ -189,9 +189,31 @@ export default function ChurchApprovalScreen() {
 
                 {/* ✅ Shows the template they chose at registration */}
                 <View style={styles.templatePreview}>
-                  <Ionicons name="git-branch-outline" size={12} color="#4B3F72" />
-                  <Text style={styles.templatePreviewText}>{template.name}</Text>
-                </View>
+  <Ionicons
+    name="git-branch-outline"
+    size={12}
+    color="#4B3F72"
+  />
+  <Text style={styles.templatePreviewText}>
+    {template.name}
+  </Text>
+</View>
+
+<Text
+  style={{
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 10,
+  }}
+>
+  Registration Level:{" "}
+  <Text style={{ fontWeight: "700" }}>
+    {getLevelById(
+      org.templateId,
+      org.levelId
+    )?.label || org.levelId || "Not supplied"}
+  </Text>
+</Text>
 
                 <View style={styles.templateLevelRow}>
                   {template.levels.map((l, i) => (
