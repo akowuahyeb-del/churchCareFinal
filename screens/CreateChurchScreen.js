@@ -27,14 +27,23 @@ export default function CreateChurchScreen() {
 
   // Step 2 — Governance (the merge point)
   const [templateId, setTemplateId] = useState("presbyterian");
+  const [levelId, setLevelId] = useState(null);
 
   const template = getTemplate(templateId);
 
   const canNext = () => {
-    if (step === 0) return churchName.trim() && denomination.trim() && location.trim();
-    if (step === 1) return !!templateId;
-    return true;
-  };
+  if (step === 0)
+    return (
+      churchName.trim() &&
+      denomination.trim() &&
+      location.trim()
+    );
+
+  if (step === 1)
+    return !!templateId && !!levelId;
+
+  return true;
+};
 
   const handleSubmit = async () => {
     if (!churchName.trim() || !templateId) return;
@@ -52,6 +61,7 @@ export default function CreateChurchScreen() {
         // ✅ Template stored HERE at creation — not in a separate later step.
         // This is what ApprovalScreen reads to auto-seed the hierarchy.
         templateId,
+        levelId,
         status: "pending",
         createdAt: new Date().toISOString(),
       });
@@ -99,6 +109,9 @@ await setDoc(
       setSaving(false);
     }
   };
+
+
+
 
   return (
     <View style={styles.container}>
@@ -179,7 +192,10 @@ await setDoc(
               <TouchableOpacity
                 key={t.id}
                 style={[styles.templateCard, templateId === t.id && styles.templateCardActive]}
-                onPress={() => setTemplateId(t.id)}
+                onPress={() => {
+  setTemplateId(t.id);
+  setLevelId(null);
+}}
               >
                 <View style={styles.templateCardTop}>
                   <View style={{ flex: 1 }}>
@@ -208,6 +224,55 @@ await setDoc(
               </TouchableOpacity>
             ))}
 
+<Text style={styles.label}>
+  Registration Level *
+</Text>
+
+<Text style={styles.stepSubtitle}>
+  Select the level at which this church is registering.
+</Text>
+
+{template.levels.map(level => (
+  <TouchableOpacity
+    key={level.id}
+    style={[
+      styles.templateCard,
+      levelId === level.id && styles.templateCardActive
+    ]}
+    onPress={() => setLevelId(level.id)}
+  >
+    <View style={styles.templateCardTop}>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.templateCardName,
+            levelId === level.id && { color: "#4B3F72" }
+          ]}
+        >
+          {level.label}
+        </Text>
+
+        <Text style={styles.templateCardDesc}>
+          Register as a {level.label}
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.radioOuter,
+          levelId === level.id && styles.radioOuterActive
+        ]}
+      >
+        {levelId === level.id && (
+          <View style={styles.radioInner} />
+        )}
+      </View>
+    </View>
+  </TouchableOpacity>
+))}
+
+
+
             <View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />
               <Text style={styles.infoBoxText}>
@@ -235,10 +300,21 @@ await setDoc(
                 highlight
               />
               <SummaryRow
+  label="Registration Level"
+  value={
+    template.levels.find(
+      l => l.id === levelId
+    )?.label || "Not Selected"
+  }
+/>
+              <SummaryRow
                 label="Structure"
                 value={getTemplate(templateId).levels.map(l => l.label).join(" → ")}
               />
             </View>
+
+
+
 
             <View style={[styles.infoBox, { backgroundColor: "#fff3e0" }]}>
               <Ionicons name="time-outline" size={14} color="#e67e22" />
