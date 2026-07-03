@@ -207,18 +207,19 @@ const validateRegistration = async (org) => {
       const template = getTemplate(templateId);
 
       // Activate the structure settings doc
-      await setDoc(
-        doc(db, "organizations", org.id, "settings", "structure"),
-        {
-          templateId,
-          status: "active",
-          organizationId: org.id,
-          entityId,
-          activatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-     const level = template.levels.find(
+     await setDoc(
+  doc(db, "organizations", org.id, "settings", "structure"),
+  {
+    templateId,
+    status: "active",
+    organizationId: org.id,
+    entityId,
+    activatedAt: new Date().toISOString(),
+  },
+  { merge: true }
+);
+
+const level = template.levels.find(
   l => l.id === org.levelId
 );
 
@@ -231,9 +232,7 @@ if (!level) {
 const nodeRef = doc(
   collection(
     db,
-    "organizations",
-    org.id,
-    "nodes"
+    "governanceNodes"
   )
 );
 
@@ -251,10 +250,8 @@ await setDoc(nodeRef, {
 
   parentNodeId: null,
 
-  // National nodes are the root authority
   pendingLink: level.id !== "national",
 
-  // Prevent accidental edits/deletion later
   isLocked: level.id === "national",
 
   templateId: org.templateId,
@@ -266,20 +263,15 @@ await setDoc(nodeRef, {
   updatedAt: new Date().toISOString(),
 });
 
+// Save governance node reference on the organisation
+await updateDoc(
+  doc(db, "organizations", org.id),
+  {
+    governanceNodeId: nodeRef.id,
+  }
+);
+
 if (level.id === "presbytery") {
-  const nationalSnap = await getDocs(
-    query(
-      collection(
-        db,
-        "organizations",
-        org.id,
-        "nodes"
-      ),
-      where("templateId", "==", org.templateId),
-      where("levelId", "==", "national"),
-      where("status", "==", "active")
-    )
-  );
 
   if (!nationalSnap.empty) {
     const nationalNode = nationalSnap.docs[0];
@@ -316,6 +308,7 @@ if (level.id === "district") {
     suggestedParents,
   });
 }
+
 
 if (level.id === "congregation") {
   const districtSnap = await getDocs(
