@@ -184,10 +184,14 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${e
         <div style="text-align:center;">
           <span class="status ${acknowledgedByName ? "acknowledged" : "pending"}">
             ${
-              acknowledgedByName
-                ? `✓ Acknowledged by ${acknowledgedByName}${acknowledgedAt ? ` on ${acknowledgedAt}` : ""}`
-                : "Pending Acknowledgment"
-            }
+  acknowledgedByName
+    ? `✓ Acknowledged by ${acknowledgedByName}${
+        acknowledgedAt
+          ? ` on ${new Date(acknowledgedAt).toLocaleString()}`
+          : ""
+      }`
+    : "Pending Acknowledgment"
+}
           </span>
         </div>
 

@@ -67,6 +67,13 @@ export default function CreateChurchScreen() {
         }
       );
 
+await setDoc(
+  doc(db, "organizations", orgRef.id),
+  {
+    rootEntityId: entityRef.id,
+  },
+  { merge: true }
+);
       // ✅ Store the structure template immediately — OrganisationStructureScreen
       // reads from here, so it won't show "Not Configured" even before approval
       await setDoc(

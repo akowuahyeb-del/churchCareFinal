@@ -38,14 +38,15 @@ import RolesScreen from "./screens/RolesScreen";
 import AssignMemberRolesScreen from "./screens/AssignMemberRolesScreen";
 import { ChurchProvider } from "./context/ChurchContext";
 import VerifyReceiptScreen from "./screens/VerifyReceiptScreen";
-import ApprovalScreen from "./screens/ApprovalScreen";
+import ApprovalScreen from "./screens/ChurchApprovalScreen";
 import SubscriptionScreen from "./screens/SubscriptionScreen";
 import OrganisationStructureScreen from "./screens/OrganisationStructureScreen";
 import OrganisationManageScreen from "./screens/OrganisationManageScreen";
 import PendingChurchesScreen from "./screens/PendingChurchesScreen";
 import SuperAdminScreen from "./screens/SuperAdminScreen";
 import AttendanceSettingsScreen from "./screens/AttendanceSettingsScreen";
-
+import ApproveDonationsScreen from "./screens/ApproveDonationsScreen";
+import ChurchApprovalScreen from "./screens/ChurchApprovalScreen";
 
 
 
@@ -149,6 +150,8 @@ function RootStack() {
        <Stack.Screen name="PendingChurches"component={PendingChurchesScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="SuperAdmin"component={SuperAdminScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="AttendanceSettings"component={AttendanceSettingsScreen}/>
+       <Stack.Screen name="ApproveDonations"component={ApproveDonationsScreen}/>
+       <Stack.Screen name="ChurchApproval"component={ChurchApprovalScreen}/>
 
 
 

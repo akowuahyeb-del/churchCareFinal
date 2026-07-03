@@ -247,7 +247,7 @@ useEffect(() => {
         status: acknowledged ? "acknowledged" : "pending",
         ...(acknowledged && {
           acknowledgedByName: viewerName,
-          acknowledgedAt: new Date().toISOString().split("T")[0],
+          acknowledgedAt: new Date().toISOString(),
         }),
       };
     

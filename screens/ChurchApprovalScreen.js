@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import { getTemplate, getLevelById } from "../constants/organizationTemplates";
 
-export default function ApprovalScreen() {
+export default function ChurchApprovalScreen() {
   const navigation = useNavigation();
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);

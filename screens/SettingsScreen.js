@@ -670,7 +670,7 @@ const generateQR = async () => {
 <TouchableOpacity
   style={styles.approvalRow}
   onPress={() =>
-    navigation.navigate("Approval", {
+    navigation.navigate("ApproveDonations", {
       organizationId,
       entityId,
       viewerName,
