@@ -41,6 +41,7 @@ const validateRegistration = async (org) => {
     levelId,
     name,
     location,
+    denomination,
   } = org;
 
   if (!templateId) {
