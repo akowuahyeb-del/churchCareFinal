@@ -48,7 +48,10 @@ export default function SuperAdminScreen({ navigation }) {
   const [tab, setTab] = useState("overview");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [governanceNodes, setGovernanceNodes] = useState([]);
+   const [pendingLinks, setPendingLinks] = useState([]);
 
+   
   // ── PLATFORM METRICS ──
   const [metrics, setMetrics] = useState({
     totalOrgs: 0,
@@ -105,9 +108,10 @@ export default function SuperAdminScreen({ navigation }) {
     setLoading(true);
     try {
       await Promise.all([
-        loadOrganizations(),
-        loadFeatureFlags(),
-      ]);
+  loadOrganizations(),
+  loadGovernanceNodes(),
+  loadFeatureFlags(),
+]);
       startLiveActivityListener();
     } catch (e) {
       console.log("❌ SuperAdmin loadAll:", e);
@@ -123,6 +127,45 @@ export default function SuperAdminScreen({ navigation }) {
       if (activityUnsubRef.current) activityUnsubRef.current();
     };
   }, []);
+
+
+const loadGovernanceNodes = async () => {
+  try {
+    const snap = await getDocs(
+      collection(db, "governanceNodes")
+    );
+
+    console.log(
+      "✅ governanceNodes found:",
+      snap.size
+    );
+
+    const nodes = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    console.log(
+      "✅ governanceNodes data:",
+      nodes
+    );
+
+    setGovernanceNodes(nodes);
+
+    setPendingLinks(
+      nodes.filter(n => n.pendingLink)
+    );
+
+  } catch (e) {
+    console.log(
+      "❌ loadGovernanceNodes:",
+      e
+    );
+  }
+};
+
+
+
 
   // ─────────────────────────────────────────────────────────────────
   // LOAD ORGANIZATIONS + AGGREGATE METRICS
@@ -179,6 +222,8 @@ export default function SuperAdminScreen({ navigation }) {
       );
 
       setOrgs(enriched);
+
+
 
       // ── AGGREGATE PLATFORM METRICS ──
       const planCounts = {};
@@ -501,11 +546,12 @@ export default function SuperAdminScreen({ navigation }) {
   // RENDER TABS
   // ─────────────────────────────────────────────────────────────────
   const TABS = [
-    { key: "overview",  label: "Overview",  icon: "grid-outline" },
-    { key: "churches",  label: "Churches",  icon: "business-outline" },
-    { key: "activity",  label: "Activity",  icon: "pulse-outline" },
-    { key: "flags",     label: "Flags",     icon: "flag-outline" },
-  ];
+  { key: "overview",   label: "Overview",   icon: "grid-outline" },
+  { key: "churches",   label: "Churches",   icon: "business-outline" },
+  { key: "governance", label: "Governance", icon: "git-branch-outline" },
+  { key: "activity",   label: "Activity",   icon: "pulse-outline" },
+  { key: "flags",      label: "Flags",      icon: "flag-outline" },
+];
 
   return (
     <View style={styles.container}>
@@ -579,6 +625,13 @@ export default function SuperAdminScreen({ navigation }) {
                 <KPICard icon="people-outline"   color="#0984E3" label="Total Members"  value={metrics.totalMembers.toLocaleString()} />
                 <KPICard icon="calendar-outline" color="#6C5CE7" label="Sessions Run"   value={metrics.totalSessions.toLocaleString()} />
                 <KPICard icon="wallet-outline"   color="#27ae60" label="Donations Rec." value={`GH₵${metrics.totalContributions.toLocaleString()}`} />
+                <Text style={{ color: "#fff" }}>
+  Governance Nodes: {governanceNodes.length}
+</Text>
+
+<Text style={{ color: "#F39C12" }}>
+  Pending Links: {pendingLinks.length}
+</Text>
               </View>
 
               {/* Monthly revenue */}
@@ -683,6 +736,70 @@ export default function SuperAdminScreen({ navigation }) {
               )}
             </>
           )}
+
+
+  {tab === "governance" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Governance Registry
+    </Text>
+
+    <View style={styles.card}>
+      <InfoPair
+        label="Total Nodes"
+        value={governanceNodes.length}
+      />
+
+      <InfoPair
+        label="Pending Links"
+        value={pendingLinks.length}
+      />
+    </View>
+
+    {pendingLinks.length === 0 ? (
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="checkmark-circle-outline"
+          size={40}
+          color="#27ae60"
+        />
+        <Text style={styles.emptyText}>
+          No pending governance links
+        </Text>
+      </View>
+    ) : (
+      pendingLinks.map(node => (
+        <View
+          key={node.id}
+          style={styles.orgCard}
+        >
+          <Text style={styles.orgName}>
+            {node.name}
+          </Text>
+
+          <Text style={styles.orgSub}>
+            Level: {node.levelId}
+          </Text>
+
+          <Text
+            style={{
+              color: "#F39C12",
+              marginTop: 6,
+            }}
+          >
+            Waiting for parent assignment
+          </Text>
+        </View>
+      ))
+    )}
+  </>
+)}
+
+
+
+
+
+
 
           {/* ════════════════════ ACTIVITY TAB ════════════════════ */}
           {tab === "activity" && (
