@@ -41,7 +41,7 @@ import VerifyReceiptScreen from "./screens/VerifyReceiptScreen";
 import ApprovalScreen from "./screens/ApprovalScreen";
 import SubscriptionScreen from "./screens/SubscriptionScreen";
 import OrganisationStructureScreen from "./screens/OrganisationStructureScreen";
-import OrganisationSetupScreen from "./screens/OrganisationSetupScreen";
+import OrganisationManageScreen from "./screens/OrganisationManageScreen";
 import PendingChurchesScreen from "./screens/PendingChurchesScreen";
 import SuperAdminScreen from "./screens/SuperAdminScreen";
 import AttendanceSettingsScreen from "./screens/AttendanceSettingsScreen";
@@ -145,7 +145,7 @@ function RootStack() {
        <Stack.Screen name="Approval" component={ApprovalScreen}/>
        <Stack.Screen name="Subscription"component={SubscriptionScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="OrganisationStructure"component={OrganisationStructureScreen}/>
-       <Stack.Screen name="OrganisationSetup"component={OrganisationSetupScreen}options={{ headerShown: false }}/>
+       <Stack.Screen name="OrganisationManage"component={OrganisationManageScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="PendingChurches"component={PendingChurchesScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="SuperAdmin"component={SuperAdminScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="AttendanceSettings"component={AttendanceSettingsScreen}/>

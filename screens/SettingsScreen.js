@@ -747,12 +747,12 @@ const generateQR = async () => {
   }
   color="#00B894"
 />
-              
+    
             </View>
           </>
         )}
 
-        <TapRow
+        {/* <TapRow
   icon="git-branch-outline"
   label="Organisation Hierarchy"
   sub="Set up your church structure"
@@ -760,7 +760,16 @@ const generateQR = async () => {
     navigation.navigate("OrganisationSetup")
   }
   color="#4B3F72"
+/> */}
+
+<TapRow
+  icon="git-branch-outline"
+  label="Organisation Hierarchy"
+  sub="Set up your church structure"
+  onPress={() => navigation.navigate("OrganisationManage")}
+  color="#4B3F72"
 />
+
 
 
 

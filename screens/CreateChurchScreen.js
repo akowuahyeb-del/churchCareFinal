@@ -1,484 +1,334 @@
-
-import React, { useState, useRef } from "react";
+// screens/CreateChurchScreen.js — multi-step wizard with template baked in
+import React, { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ScrollView, SafeAreaView, StatusBar,
-  KeyboardAvoidingView, Platform, Dimensions,
-  Animated, ActivityIndicator, Image
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  ScrollView, Alert, ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
-import { auth } from "../firebase";
-import { useSubscription } from "../utils/subscription";
+import { ORGANIZATION_TEMPLATES, getTemplate } from "../constants/organizationTemplates";
 
-const { width: W } = Dimensions.get("window");
-const TOTAL_STEPS = 4;
+const STEPS = ["Identity", "Governance", "Confirm"];
 
-// ── Validation helpers ────────────────────────────────────────────
-const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-const isValidPhone = (p) => /^\+?[\d\s\-()]{8,15}$/.test(p.trim());
+export default function CreateChurchScreen() {
+  const navigation = useNavigation();
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
 
-// ── Step indicator ────────────────────────────────────────────────
-function StepDots({ current, total }) {
-  return (
-    <View style={styles.dots}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View key={i} style={[styles.dot, i === current && styles.dotActive, i < current && styles.dotDone]} />
-      ))}
-    </View>
-  );
-}
-
-// ── Field component ───────────────────────────────────────────────
-function Field({ label, required, error, children }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}{required && <Text style={{ color: "#e74c3c" }}> *</Text>}</Text>
-      {children}
-      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
-    </View>
-  );
-}
-
-export default function CreateChurchScreen({ navigation }) {
-
-  const [step,    setStep]    = useState(0);
-  const [saving,  setSaving]  = useState(false);
-  const slideAnim = useRef(new Animated.Value(0)).current;
-
-  // Step 0 — Church identity
+  // Step 1 — Identity
   const [churchName,    setChurchName]    = useState("");
   const [denomination,  setDenomination]  = useState("");
-  const [foundedYear,   setFoundedYear]   = useState("");
-  const [motto,         setMotto]         = useState("");
+  const [location,      setLocation]      = useState("");
+  const [contactName,   setContactName]   = useState("");
+  const [contactPhone,  setContactPhone]  = useState("");
+  const [contactEmail,  setContactEmail]  = useState("");
 
-  // Step 1 — Location
-  const [country,  setCountry]  = useState("Ghana");
-  const [region,   setRegion]   = useState("");
-  const [district, setDistrict] = useState("");
-  const [address,  setAddress]  = useState("");
-  const [gps,      setGps]      = useState("");
+  // Step 2 — Governance (the merge point)
+  const [templateId, setTemplateId] = useState("presbyterian");
 
-  // Step 2 — Contact
-  const [phone,   setPhone]   = useState("");
-  const [email,   setEmail]   = useState("");
-  const [website, setWebsite] = useState("");
+  const template = getTemplate(templateId);
 
-  // Step 3 — Admin account
-  const [adminName,     setAdminName]     = useState("");
-  const [adminPhone,    setAdminPhone]    = useState("");
-  const [adminEmail,    setAdminEmail]    = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [confirmPass,   setConfirmPass]   = useState("");
-  const [showPass,      setShowPass]      = useState(false);
-
-  const [errors, setErrors] = useState({});
-  const { entitiesLimit } = useSubscription();
-  console.log("ENTITIES LIMIT:", entitiesLimit);
-
-  // ── Validation per step ────────────────────────────────────────
-  const validate = () => {
-    const e = {};
-    if (step === 0) {
-      if (!churchName.trim())   e.churchName   = "Church name is required";
-      if (!denomination.trim()) e.denomination = "Denomination is required";
-    }
-    if (step === 1) {
-      if (!country.trim())  e.country  = "Country is required";
-      if (!region.trim())   e.region   = "Region is required";
-      if (!address.trim())  e.address  = "Address is required";
-    }
-    if (step === 2) {
-      if (!phone.trim())              e.phone = "Phone number is required";
-      else if (!isValidPhone(phone))  e.phone = "Enter a valid phone number";
-      if (email && !isValidEmail(email)) e.email = "Enter a valid email address";
-    }
-    if (step === 3) {
-      if (!adminName.trim())          e.adminName     = "Your full name is required";
-      if (!adminEmail.trim())         e.adminEmail    = "Email is required";
-      else if (!isValidEmail(adminEmail)) e.adminEmail = "Enter a valid email";
-      if (!adminPassword)             e.adminPassword = "Password is required";
-      else if (adminPassword.length < 6) e.adminPassword = "Minimum 6 characters";
-      if (adminPassword !== confirmPass)  e.confirmPass   = "Passwords do not match";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
+  const canNext = () => {
+    if (step === 0) return churchName.trim() && denomination.trim() && location.trim();
+    if (step === 1) return !!templateId;
+    return true;
   };
 
-  // ── Slide animation between steps ─────────────────────────────
-  const animateNext = (direction = 1) => {
-    Animated.sequence([
-      Animated.timing(slideAnim, { toValue: -direction * W, duration: 180, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue:  direction * W, duration: 0,   useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0,               duration: 220, useNativeDriver: true }),
-    ]).start();
-  };
+  const handleSubmit = async () => {
+    if (!churchName.trim() || !templateId) return;
+    setSaving(true);
 
-  const goNext = () => {
-    if (!validate()) return;
-    animateNext(1);
-    setStep(s => s + 1);
-  };
-
-  const goBack = () => {
-    setErrors({});
-    animateNext(-1);
-    setStep(s => s - 1);
-  };
-
-  const handleCreateChurch = async () => {
-  if (!validate()) return;
-
-  setSaving(true);
-
-  try {
-    // ✅ 1. CREATE ORGANIZATION FIRST
- console.log("STEP 1 - Creating organization");
-
-const orgRef = await addDoc(collection(db, "organizations"), {
-  name: churchName.trim(),
-  denomination: denomination.trim(),
-  status: "pending_approval",
-  approvalStatus: "pending",
-  createdAt: new Date().toISOString(),
-});
-
-console.log("✅ STEP 1 SUCCESS");
-
-    // ✅ 2. CREATE CHURCH (ENTITY)
-    const churchRef = await addDoc(
-      collection(db, "organizations", organizationId, "entities"),
-      {
+    try {
+      // ✅ Create the organization document
+      const orgRef = await addDoc(collection(db, "organizations"), {
         name: churchName.trim(),
+        denomination: denomination.trim(),
+        location: location.trim(),
+        contactName: contactName.trim(),
+        contactPhone: contactPhone.trim(),
+        contactEmail: contactEmail.trim(),
+        // ✅ Template stored HERE at creation — not in a separate later step.
+        // This is what ApprovalScreen reads to auto-seed the hierarchy.
+        templateId,
+        status: "pending",
         createdAt: new Date().toISOString(),
-      }
-    );
+      });
 
-    const entityId = churchRef.id;
-    // ✅ SAVE CHURCH IDENTITY (DENOMINATION + CODE)
-await setDoc(
-  doc(db, "organizations", organizationId, "settings", "identity"),
-  {
-    denominationCode: "PCG",  // 🔥 you can later make this user input
-    churchCode: churchName
-      .split(" ")
-      .map(w => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 3), // e.g. POP from Prince of Peace
-  },
-  { merge: true }
-);
-
-
-const firebaseUser = auth.currentUser;
-
-if (!firebaseUser) {
-  throw new Error("User not authenticated");
-}
-
-const userId = firebaseUser.uid;
-
-    // ✅ 3. CREATE ADMIN USER
-   await setDoc(doc(db, "users", userId), {
-  uid: userId,  // ✅ FIXED (was "id")
-  name: adminName.trim(),
-  phone: adminPhone.trim(),
-  email: adminEmail.trim(),
-  role: "admin",
-  organizationId,
-  entityId,
-  createdAt: new Date().toISOString(),
-});
-
-    // ✅ 4. SAVE SESSION DATA
-    await AsyncStorage.multiSet([
-      ["isLoggedIn", "true"],
-["currentUser", JSON.stringify({
-  uid: userId,  
-  name: adminName.trim(),
-  email: adminEmail.trim(),
-  role: "admin",
-  organizationId,
-  entityId
-})],
-
-      ["activeEntity", JSON.stringify({
-        organizationId,
-        entityId,
-        name: churchName.trim()
-      })],
-
-      ["userEntities", JSON.stringify([
+      // ✅ Create the first entity (the congregation being registered)
+      const entityRef = await addDoc(
+        collection(db, "organizations", orgRef.id, "entities"),
         {
-          entityId,
-          name: churchName.trim()
+          name: churchName.trim(),
+          organizationId: orgRef.id,
+          status: "pending",
+          createdAt: new Date().toISOString(),
         }
-      ])]
-    ]);
+      );
 
-    // ✅ 5. NAVIGATE
-    navigation.replace("MainTabs");
+      // ✅ Store the structure template immediately — OrganisationStructureScreen
+      // reads from here, so it won't show "Not Configured" even before approval
+      await setDoc(
+        doc(db, "organizations", orgRef.id, "settings", "structure"),
+        {
+          templateId,
+          status: "pending", // nodes will be seeded on approval
+          organizationId: orgRef.id,
+          entityId: entityRef.id,
+        }
+      );
 
-  } catch (err) {
-    console.log("❌ FULL ERROR:", err);
-    Alert.alert("Error", err.message);
+      Alert.alert(
+        "✅ Submitted",
+        `${churchName} has been submitted for review. You'll be notified once approved.`
+      );
+      navigation.goBack();
 
-  } finally {
-    setSaving(false);
-  }
-};
+    } catch (e) {
+      console.log("❌ CreateChurch error:", e);
+      Alert.alert("Error", "Could not submit. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      
-
-  // ── Step content ───────────────────────────────────────────────
-  const steps = [
-    // ─── STEP 0: Church Identity ───────────────────────────────
-    <ScrollView key={0} showsVerticalScrollIndicator={false} contentContainerStyle={styles.stepScroll}>
-      <View style={styles.stepIcon}><Ionicons name="business" size={32} color="#4B3F72" /></View>
-      <Text style={styles.stepTitle}>Church Identity</Text>
-      <Text style={styles.stepSub}>Tell us about your church</Text>
-
-      <Field label="Church Name"    required error={errors.churchName}>
-        <TextInput style={[styles.input, errors.churchName && styles.inputError]}
-          placeholder="e.g. Grace Community Church"
-          value={churchName} onChangeText={t => { setChurchName(t); setErrors(p => ({ ...p, churchName: null })); }} />
-      </Field>
-
-      <Field label="Denomination" required error={errors.denomination}>
-        <TextInput style={[styles.input, errors.denomination && styles.inputError]}
-          placeholder="e.g. Pentecostal, Baptist, Catholic…"
-          value={denomination} onChangeText={t => { setDenomination(t); setErrors(p => ({ ...p, denomination: null })); }} />
-      </Field>
-
-      <Field label="Year Founded">
-        <TextInput style={styles.input} placeholder="e.g. 1995" keyboardType="number-pad"
-          value={foundedYear} onChangeText={setFoundedYear} maxLength={4} />
-      </Field>
-
-      <Field label="Church Motto / Vision">
-        <TextInput style={[styles.input, { height: 64, textAlignVertical: "top" }]}
-          placeholder="e.g. Reaching the unreached…" multiline
-          value={motto} onChangeText={setMotto} />
-      </Field>
-    </ScrollView>,
-
-    // ─── STEP 1: Location ──────────────────────────────────────
-    <ScrollView key={1} showsVerticalScrollIndicator={false} contentContainerStyle={styles.stepScroll}>
-      <View style={styles.stepIcon}><Ionicons name="location" size={32} color="#0984E3" /></View>
-      <Text style={styles.stepTitle}>Location</Text>
-      <Text style={styles.stepSub}>Where is your church located?</Text>
-
-      <Field label="Country" required error={errors.country}>
-        <TextInput style={[styles.input, errors.country && styles.inputError]}
-          placeholder="e.g. Ghana" value={country}
-          onChangeText={t => { setCountry(t); setErrors(p => ({ ...p, country: null })); }} />
-      </Field>
-
-      <Field label="Region / State" required error={errors.region}>
-        <TextInput style={[styles.input, errors.region && styles.inputError]}
-          placeholder="e.g. Greater Accra" value={region}
-          onChangeText={t => { setRegion(t); setErrors(p => ({ ...p, region: null })); }} />
-      </Field>
-
-      <Field label="District / City">
-        <TextInput style={styles.input} placeholder="e.g. Accra Metropolitan"
-          value={district} onChangeText={setDistrict} />
-      </Field>
-
-      <Field label="Street Address" required error={errors.address}>
-        <TextInput style={[styles.input, { height: 64, textAlignVertical: "top" }, errors.address && styles.inputError]}
-          placeholder="e.g. 12 Faith Avenue, North Kaneshie" multiline value={address}
-          onChangeText={t => { setAddress(t); setErrors(p => ({ ...p, address: null })); }} />
-      </Field>
-
-      <Field label="GPS / Digital Address">
-        <TextInput style={styles.input} placeholder="e.g. GA-123-4567"
-          value={gps} onChangeText={setGps} autoCapitalize="characters" />
-      </Field>
-    </ScrollView>,
-
-    // ─── STEP 2: Contact ───────────────────────────────────────
-    <ScrollView key={2} showsVerticalScrollIndicator={false} contentContainerStyle={styles.stepScroll}>
-      <View style={styles.stepIcon}><Ionicons name="call" size={32} color="#00B894" /></View>
-      <Text style={styles.stepTitle}>Contact Details</Text>
-      <Text style={styles.stepSub}>How can people reach your church?</Text>
-
-      <Field label="Church Phone" required error={errors.phone}>
-        <View style={[styles.phoneRow, errors.phone && styles.inputError]}>
-          <Ionicons name="call-outline" size={16} color="#4B3F72" style={{ marginRight: 8 }} />
-          <TextInput style={styles.phoneInput} placeholder="+233 20 000 0000"
-            keyboardType="phone-pad" value={phone}
-            onChangeText={t => { setPhone(t); setErrors(p => ({ ...p, phone: null })); }} />
-        </View>
-      </Field>
-
-      <Field label="Church Email" error={errors.email}>
-        <TextInput style={[styles.input, errors.email && styles.inputError]}
-          placeholder="church@example.com" keyboardType="email-address"
-          autoCapitalize="none" value={email}
-          onChangeText={t => { setEmail(t); setErrors(p => ({ ...p, email: null })); }} />
-      </Field>
-
-      <Field label="Website (optional)">
-        <TextInput style={styles.input} placeholder="www.yourchurch.org"
-          autoCapitalize="none" keyboardType="url" value={website} onChangeText={setWebsite} />
-      </Field>
-    </ScrollView>,
-
-    // ─── STEP 3: Admin Account ─────────────────────────────────
-    <ScrollView key={3} showsVerticalScrollIndicator={false} contentContainerStyle={styles.stepScroll}>
-      <View style={styles.stepIcon}><Ionicons name="shield-checkmark" size={32} color="#6C5CE7" /></View>
-      <Text style={styles.stepTitle}>Admin Account</Text>
-      <Text style={styles.stepSub}>Create the administrator account for your church</Text>
-
-      <View style={styles.adminNote}>
-        <Ionicons name="information-circle-outline" size={16} color="#0984E3" />
-        <Text style={styles.adminNoteText}>This account will have full admin access. Keep credentials safe.</Text>
-      </View>
-
-      <Field label="Your Full Name" required error={errors.adminName}>
-        <TextInput style={[styles.input, errors.adminName && styles.inputError]}
-          placeholder="e.g. Kwame Mensah" value={adminName}
-          onChangeText={t => { setAdminName(t); setErrors(p => ({ ...p, adminName: null })); }} />
-      </Field>
-
-      <Field label="Your Phone">
-        <TextInput style={styles.input} placeholder="+233 20 000 0000"
-          keyboardType="phone-pad" value={adminPhone} onChangeText={setAdminPhone} />
-      </Field>
-
-      <Field label="Admin Email" required error={errors.adminEmail}>
-        <TextInput style={[styles.input, errors.adminEmail && styles.inputError]}
-          placeholder="admin@yourchurch.org" keyboardType="email-address"
-          autoCapitalize="none" value={adminEmail}
-          onChangeText={t => { setAdminEmail(t); setErrors(p => ({ ...p, adminEmail: null })); }} />
-      </Field>
-
-      <Field label="Password" required error={errors.adminPassword}>
-        <View style={[styles.phoneRow, errors.adminPassword && styles.inputError]}>
-          <TextInput style={styles.phoneInput} placeholder="Minimum 6 characters"
-            secureTextEntry={!showPass} value={adminPassword}
-            onChangeText={t => { setAdminPassword(t); setErrors(p => ({ ...p, adminPassword: null })); }} />
-          <TouchableOpacity onPress={() => setShowPass(p => !p)}>
-            <Ionicons name={showPass ? "eye-off-outline" : "eye-outline"} size={18} color="#aaa" />
-          </TouchableOpacity>
-        </View>
-      </Field>
-
-      <Field label="Confirm Password" required error={errors.confirmPass}>
-        <TextInput style={[styles.input, errors.confirmPass && styles.inputError]}
-          placeholder="Re-enter password" secureTextEntry={!showPass}
-          value={confirmPass}
-          onChangeText={t => { setConfirmPass(t); setErrors(p => ({ ...p, confirmPass: null })); }} />
-      </Field>
-    </ScrollView>,
-  ];
-
-  /* ══════════════════════ RENDER ══════════════════════ */
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
+    <View style={styles.container}>
 
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
-        {step > 0
-          ? <TouchableOpacity style={styles.backBtn} onPress={goBack}>
-              <Ionicons name="arrow-back" size={18} color="#fff" />
-            </TouchableOpacity>
-          : <TouchableOpacity style={styles.backBtn} onPress={() => navigation.replace("Login")}>
-              <Ionicons name="close" size={18} color="#fff" />
-            </TouchableOpacity>
-        }
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Text style={styles.headerTitle}>Register Church</Text>
-          <Text style={styles.headerSub}>Step {step + 1} of {TOTAL_STEPS}</Text>
-        </View>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity onPress={() => step > 0 ? setStep(s => s - 1) : navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Register Church</Text>
+        <View style={{ width: 20 }} />
       </View>
 
-      {/* Progress bar */}
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${((step + 1) / TOTAL_STEPS) * 100}%` }]} />
+      {/* STEP INDICATOR */}
+      <View style={styles.stepRow}>
+        {STEPS.map((s, i) => (
+          <View key={s} style={styles.stepItem}>
+            <View style={[styles.stepCircle, i <= step && styles.stepCircleActive]}>
+              {i < step
+                ? <Ionicons name="checkmark" size={12} color="#fff" />
+                : <Text style={[styles.stepNum, i <= step && { color: "#fff" }]}>{i + 1}</Text>}
+            </View>
+            <Text style={[styles.stepLabel, i === step && styles.stepLabelActive]}>{s}</Text>
+            {i < STEPS.length - 1 && (
+              <View style={[styles.stepLine, i < step && styles.stepLineActive]} />
+            )}
+          </View>
+        ))}
       </View>
 
-      {/* Step dots */}
-      <StepDots current={step} total={TOTAL_STEPS} />
+      <ScrollView contentContainerStyle={styles.body}>
 
-      {/* Animated step content */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Animated.View style={[styles.stepContainer, { transform: [{ translateX: slideAnim }] }]}>
-          {steps[step]}
-        </Animated.View>
-      </KeyboardAvoidingView>
+        {/* ── STEP 1: IDENTITY ── */}
+        {step === 0 && (
+          <View>
+            <Text style={styles.stepTitle}>Church Details</Text>
+            <Text style={styles.stepSubtitle}>Tell us about your church</Text>
 
-      {/* Bottom buttons */}
-      <View style={styles.footer}>
-        {step < TOTAL_STEPS - 1 ? (
-          <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
+            <Text style={styles.label}>Church Name *</Text>
+            <TextInput style={styles.input} value={churchName} onChangeText={setChurchName}
+              placeholder="e.g. Prince of Peace Presbyterian Church" />
+
+            <Text style={styles.label}>Denomination *</Text>
+            <TextInput style={styles.input} value={denomination} onChangeText={setDenomination}
+              placeholder="e.g. Presbyterian Church of Ghana" />
+
+            <Text style={styles.label}>Location *</Text>
+            <TextInput style={styles.input} value={location} onChangeText={setLocation}
+              placeholder="e.g. Tema, Greater Accra" />
+
+            <Text style={styles.sectionDivider}>Contact Person</Text>
+
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput style={styles.input} value={contactName} onChangeText={setContactName}
+              placeholder="Administrator's name" />
+
+            <Text style={styles.label}>Phone</Text>
+            <TextInput style={styles.input} value={contactPhone} onChangeText={setContactPhone}
+              placeholder="e.g. 0241234567" keyboardType="phone-pad" />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput style={styles.input} value={contactEmail} onChangeText={setContactEmail}
+              placeholder="admin@church.org" keyboardType="email-address" autoCapitalize="none" />
+          </View>
+        )}
+
+        {/* ── STEP 2: GOVERNANCE TEMPLATE ── */}
+        {/* ✅ THIS IS THE MERGE — template picked here, not separately in Settings */}
+        {step === 1 && (
+          <View>
+            <Text style={styles.stepTitle}>Governance Structure</Text>
+            <Text style={styles.stepSubtitle}>
+              Choose the hierarchy model that matches your church's governing structure.
+              This determines how your church is organized in the system.
+            </Text>
+
+            {Object.values(ORGANIZATION_TEMPLATES).map(t => (
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.templateCard, templateId === t.id && styles.templateCardActive]}
+                onPress={() => setTemplateId(t.id)}
+              >
+                <View style={styles.templateCardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.templateCardName, templateId === t.id && { color: "#4B3F72" }]}>
+                      {t.name}
+                    </Text>
+                    <Text style={styles.templateCardDesc}>{t.description}</Text>
+                  </View>
+                  <View style={[styles.radioOuter, templateId === t.id && styles.radioOuterActive]}>
+                    {templateId === t.id && <View style={styles.radioInner} />}
+                  </View>
+                </View>
+
+                {/* Show the level chain */}
+                <View style={styles.levelChain}>
+                  {t.levels.map((l, i) => (
+                    <View key={l.id} style={styles.levelChainItem}>
+                      <View style={[styles.levelChainDot, { backgroundColor: l.color }]} />
+                      <Text style={styles.levelChainLabel}>{l.label}</Text>
+                      {i < t.levels.length - 1 && (
+                        <Ionicons name="chevron-forward" size={10} color="#ccc" />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />
+              <Text style={styles.infoBoxText}>
+                Your hierarchy nodes will be automatically created when your church is approved.
+                You can rename them and add branches in Settings afterward.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── STEP 3: CONFIRM ── */}
+        {step === 2 && (
+          <View>
+            <Text style={styles.stepTitle}>Confirm & Submit</Text>
+            <Text style={styles.stepSubtitle}>Review your details before submitting for approval.</Text>
+
+            <View style={styles.summaryCard}>
+              <SummaryRow label="Church Name" value={churchName} />
+              <SummaryRow label="Denomination" value={denomination} />
+              <SummaryRow label="Location" value={location} />
+              <SummaryRow label="Contact" value={contactName || "—"} />
+              <SummaryRow
+                label="Governance"
+                value={getTemplate(templateId).name}
+                highlight
+              />
+              <SummaryRow
+                label="Structure"
+                value={getTemplate(templateId).levels.map(l => l.label).join(" → ")}
+              />
+            </View>
+
+            <View style={[styles.infoBox, { backgroundColor: "#fff3e0" }]}>
+              <Ionicons name="time-outline" size={14} color="#e67e22" />
+              <Text style={[styles.infoBoxText, { color: "#e67e22" }]}>
+                Your registration goes to a developer for review. Once approved, your hierarchy
+                will be set up automatically and you'll receive a notification.
+              </Text>
+            </View>
+          </View>
+        )}
+
+      </ScrollView>
+
+      {/* BOTTOM ACTION */}
+      <View style={styles.bottomBar}>
+        {step < STEPS.length - 1 ? (
+          <TouchableOpacity
+            style={[styles.nextBtn, !canNext() && { opacity: 0.4 }]}
+            onPress={() => setStep(s => s + 1)}
+            disabled={!canNext()}
+          >
             <Text style={styles.nextBtnText}>Continue</Text>
             <Ionicons name="arrow-forward" size={16} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.nextBtn, { backgroundColor: "#00B894" }, saving && { opacity: 0.6 }]}
-            onPress={handleCreateChurch} disabled={saving}>
+          <TouchableOpacity
+            style={[styles.nextBtn, saving && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={saving}
+          >
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <><Ionicons name="checkmark-circle-outline" size={18} color="#fff" /><Text style={styles.nextBtnText}>Create Church</Text></>
-            }
+              : <Text style={styles.nextBtnText}>Submit for Approval</Text>}
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity style={styles.cancelLink} onPress={() => navigation.replace("Login")}>
-          <Text style={styles.cancelLinkText}>Already have an account? Sign in</Text>
-        </TouchableOpacity>
       </View>
 
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function SummaryRow({ label, value, highlight }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={[styles.summaryValue, highlight && { color: "#4B3F72", fontWeight: "800" }]}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#4B3F72" },
+  container: { flex: 1, backgroundColor: "#f4f6fb" },
+  header: { backgroundColor: "#4B3F72", paddingTop: 50, paddingBottom: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "700" },
 
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 10, paddingTop: 4 },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  headerTitle: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11, marginTop: 1 },
+  stepRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  stepItem: { flex: 1, flexDirection: "row", alignItems: "center" },
+  stepCircle: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#eee", alignItems: "center", justifyContent: "center", marginRight: 6 },
+  stepCircleActive: { backgroundColor: "#4B3F72" },
+  stepNum: { fontSize: 11, fontWeight: "800", color: "#aaa" },
+  stepLabel: { fontSize: 11, color: "#aaa", fontWeight: "600" },
+  stepLabelActive: { color: "#4B3F72", fontWeight: "800" },
+  stepLine: { flex: 1, height: 2, backgroundColor: "#eee", marginHorizontal: 6 },
+  stepLineActive: { backgroundColor: "#4B3F72" },
 
-  progressTrack: { height: 3, backgroundColor: "rgba(255,255,255,0.2)", marginHorizontal: 0 },
-  progressFill: { height: 3, backgroundColor: "#1BA97F" },
+  body: { padding: 16, paddingBottom: 100 },
+  stepTitle: { fontSize: 18, fontWeight: "800", color: "#222", marginBottom: 4 },
+  stepSubtitle: { fontSize: 13, color: "#888", marginBottom: 20, lineHeight: 18 },
 
-  dots: { flexDirection: "row", justifyContent: "center", gap: 8, paddingVertical: 10 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.25)" },
-  dotActive: { backgroundColor: "#fff", width: 24 },
-  dotDone: { backgroundColor: "#1BA97F" },
+  label: { fontSize: 12, fontWeight: "700", color: "#777", marginBottom: 5, marginTop: 10 },
+  input: { backgroundColor: "#fff", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#e8e8e8", fontSize: 14, marginBottom: 4 },
+  sectionDivider: { fontSize: 13, fontWeight: "800", color: "#4B3F72", marginTop: 20, marginBottom: 4, borderBottomWidth: 1, borderBottomColor: "#eee", paddingBottom: 6 },
 
-  stepContainer: { flex: 1 },
-  stepScroll: { padding: 16, paddingBottom: 40, backgroundColor: "#f4f6fb" },
+  templateCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: "transparent", elevation: 1 },
+  templateCardActive: { borderColor: "#4B3F72", backgroundColor: "#fafafe" },
+  templateCardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  templateCardName: { fontSize: 14, fontWeight: "800", color: "#222" },
+  templateCardDesc: { fontSize: 12, color: "#888", marginTop: 2 },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#ccc", alignItems: "center", justifyContent: "center", marginTop: 2 },
+  radioOuterActive: { borderColor: "#4B3F72" },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#4B3F72" },
+  levelChain: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4, marginTop: 12 },
+  levelChainItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  levelChainDot: { width: 6, height: 6, borderRadius: 3 },
+  levelChainLabel: { fontSize: 10, color: "#666", fontWeight: "600" },
 
-  stepIcon: { width: 64, height: 64, borderRadius: 20, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", marginBottom: 12, elevation: 2 },
-  stepTitle: { fontSize: 20, fontWeight: "900", color: "#222", marginBottom: 4 },
-  stepSub: { fontSize: 13, color: "#888", marginBottom: 20, lineHeight: 18 },
+  infoBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 12, marginTop: 12 },
+  infoBoxText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
 
-  field: { marginBottom: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 5 },
-  fieldError: { fontSize: 11, color: "#e74c3c", marginTop: 3 },
+  summaryCard: { backgroundColor: "#fff", borderRadius: 14, padding: 16, elevation: 1 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" },
+  summaryLabel: { fontSize: 12, color: "#aaa", fontWeight: "600" },
+  summaryValue: { fontSize: 12, color: "#222", fontWeight: "600", flex: 1, textAlign: "right" },
 
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 13, fontSize: 13, color: "#222", borderWidth: 1.5, borderColor: "#eee" },
-  inputError: { borderColor: "#e74c3c" },
-
-  phoneRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 12, paddingHorizontal: 13, borderWidth: 1.5, borderColor: "#eee" },
-  phoneInput: { flex: 1, fontSize: 13, color: "#222", paddingVertical: 13 },
-
-  adminNote: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#EBF4FD", borderRadius: 10, padding: 12, marginBottom: 14 },
-  adminNoteText: { flex: 1, fontSize: 12, color: "#0984E3", lineHeight: 18 },
-
-  footer: { backgroundColor: "#fff", padding: 16, paddingBottom: Platform.OS === "ios" ? 28 : 16, borderTopWidth: 1, borderTopColor: "#f0f0f0" },
-  nextBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 14, padding: 15, gap: 8 },
-  nextBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  cancelLink: { alignItems: "center", paddingTop: 12 },
-  cancelLinkText: { fontSize: 12, color: "#888" },
+  bottomBar: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", padding: 16, borderTopWidth: 1, borderTopColor: "#eee" },
+  nextBtn: { backgroundColor: "#4B3F72", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  nextBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });
