@@ -33,9 +33,8 @@ export const FEATURES = {
 };
 
 export const LIMITS = {
-  MAX_MEMBERS:  "maxMembers",
-  MAX_ENTITIES: "maxEntities", // branches/congregations per organization
-  MAX_ADMINS:   "maxAdmins",
+  MAX_MEMBERS: "maxMembers",
+  MAX_ADMINS: "maxAdmins",
 };
 
 // `null` limit = unlimited.
@@ -48,10 +47,9 @@ export const PLANS = {
     billingCycle: "monthly",
     tagline: "Get started with the basics",
     limits: {
-      [LIMITS.MAX_MEMBERS]: 50,
-      [LIMITS.MAX_ENTITIES]: 1,
-      [LIMITS.MAX_ADMINS]: 2,
-    },
+  [LIMITS.MAX_MEMBERS]: 50,
+  [LIMITS.MAX_ADMINS]: 2,
+},
     features: [], // no premium features
   },
   basic: {
@@ -62,10 +60,10 @@ export const PLANS = {
     billingCycle: "monthly",
     tagline: "For a single growing church",
     limits: {
-      [LIMITS.MAX_MEMBERS]: 300,
-      [LIMITS.MAX_ENTITIES]: 3,
-      [LIMITS.MAX_ADMINS]: 5,
-    },
+  [LIMITS.MAX_MEMBERS]: 300,
+  [LIMITS.MAX_ENTITIES]: 3,
+  [LIMITS.MAX_ADMINS]: 5,
+},
     features: [
       FEATURES.QR_GENERATOR,
       FEATURES.DONATION_RECEIPTS,
@@ -82,10 +80,9 @@ export const PLANS = {
   tagline: "For growing churches and multi-branch ministries",
 
   limits: {
-    [LIMITS.MAX_MEMBERS]: 1000,
-    [LIMITS.MAX_ENTITIES]: 5,
-    [LIMITS.MAX_ADMINS]: 10,
-  },
+  [LIMITS.MAX_MEMBERS]: 1000,
+  [LIMITS.MAX_ADMINS]: 10,
+},
 
   features: [
     FEATURES.QR_GENERATOR,
@@ -121,10 +118,9 @@ export const PLANS = {
   tagline: "National church bodies, dioceses, presbyteries & custom deployments",
 
   limits: {
-    [LIMITS.MAX_MEMBERS]: null,
-    [LIMITS.MAX_ENTITIES]: null,
-    [LIMITS.MAX_ADMINS]: null,
-  },
+  [LIMITS.MAX_MEMBERS]: null,
+  [LIMITS.MAX_ADMINS]: null,
+},
 
   features: Object.values(FEATURES),
 

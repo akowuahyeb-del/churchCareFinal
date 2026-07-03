@@ -58,7 +58,10 @@ const seedTrialSubscription = async (
 
 export function useSubscription(organizationId, entityId) {
   const [subscription, setSubscription] = useState(null);
-  const [usage, setUsage] = useState({ members: 0, entities: 0, admins: 0 });
+const [usage, setUsage] = useState({
+  members: 0,
+  admins: 0
+});
   const [loading, setLoading] = useState(true);
 
   // ✅ Real-time — an upgrade/downgrade or a webhook-driven status change
@@ -107,20 +110,25 @@ return () => unsub && unsub();
   const loadUsage = useCallback(async () => {
     if (!organizationId || !entityId) return;
     try {
-      const [membersSnap, entitiesSnap] = await Promise.all([
-        getDocs(collection(db, "organizations", organizationId, "entities", entityId, "members")),
-        getDocs(collection(db, "organizations", organizationId, "entities")),
-      ]);
+      const membersSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members"
+  )
+);
 
       const admins = membersSnap.docs.filter(d =>
         (d.data().permissions || []).includes("manage_members")
       ).length;
 
-      setUsage({
-        members: membersSnap.size,
-        entities: entitiesSnap.size,
-        admins,
-      });
+     setUsage({
+  members: membersSnap.size,
+  admins,
+});
     } catch (e) {
       console.log("❌ Load usage error:", e);
     }
@@ -162,19 +170,18 @@ return () => unsub && unsub();
   };
 
   return {
-    subscription,
-    plan: getPlan(effectivePlanId),
-    planId: effectivePlanId,
-    status: subscription?.status || "free",
-    isActive,
-    isTrialExpired,
-    daysLeftInTrial,
-    usage,
-    loading,
-    hasFeature,
-    membersLimit: checkLimit(LIMITS.MAX_MEMBERS, "members"),
-    entitiesLimit: checkLimit(LIMITS.MAX_ENTITIES, "entities"),
-    adminsLimit: checkLimit(LIMITS.MAX_ADMINS, "admins"),
-    refreshUsage: loadUsage,
-  };
+  subscription,
+  plan: getPlan(effectivePlanId),
+  planId: effectivePlanId,
+  status: subscription?.status || "free",
+  isActive,
+  isTrialExpired,
+  daysLeftInTrial,
+  usage,
+  loading,
+  hasFeature,
+  membersLimit: checkLimit(LIMITS.MAX_MEMBERS, "members"),
+  adminsLimit: checkLimit(LIMITS.MAX_ADMINS, "admins"),
+  refreshUsage: loadUsage,
+};
 }
