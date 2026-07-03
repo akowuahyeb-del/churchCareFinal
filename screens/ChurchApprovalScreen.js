@@ -60,7 +60,7 @@ const validateRegistration = async (org) => {
     case "national": {
   const existingNational = await getDocs(
     query(
-      collection(db, "organizations"),
+      collection(db, "governanceNodes"),
       where("status", "==", "active"),
       where("templateId", "==", templateId),
       where("levelId", "==", "national")
@@ -79,7 +79,7 @@ const validateRegistration = async (org) => {
     case "presbytery": {
   const existingPresbyteries = await getDocs(
     query(
-      collection(db, "organizations"),
+      collection(db, "governanceNodes"),
       where("status", "==", "active"),
       where("templateId", "==", templateId),
       where("levelId", "==", "presbytery")
@@ -107,7 +107,7 @@ const validateRegistration = async (org) => {
     case "district": {
   const existingDistricts = await getDocs(
     query(
-      collection(db, "organizations"),
+      collection(db, "governanceNodes"),
       where("status", "==", "active"),
       where("templateId", "==", templateId),
       where("levelId", "==", "district")
@@ -135,7 +135,7 @@ const validateRegistration = async (org) => {
    case "congregation": {
   const existingCongregations = await getDocs(
     query(
-      collection(db, "organizations"),
+      collection(db, "governanceNodes"),
       where("status", "==", "active"),
       where("templateId", "==", templateId),
       where("levelId", "==", "congregation")
@@ -271,7 +271,16 @@ await updateDoc(
   }
 );
 
+
 if (level.id === "presbytery") {
+  const nationalSnap = await getDocs(
+    query(
+      collection(db, "governanceNodes"),
+      where("templateId", "==", org.templateId),
+      where("levelId", "==", "national"),
+      where("status", "==", "active")
+    )
+  );
 
   if (!nationalSnap.empty) {
     const nationalNode = nationalSnap.docs[0];
@@ -284,20 +293,16 @@ if (level.id === "presbytery") {
   }
 }
 
+
 if (level.id === "district") {
   const presbyterySnap = await getDocs(
-    query(
-      collection(
-        db,
-        "organizations",
-        org.id,
-        "nodes"
-      ),
-      where("templateId", "==", org.templateId),
-      where("levelId", "==", "presbytery"),
-      where("status", "==", "active")
-    )
-  );
+  query(
+    collection(db, "governanceNodes"),
+    where("templateId", "==", org.templateId),
+    where("levelId", "==", "presbytery"),
+    where("status", "==", "active")
+  )
+);
 
   const suggestedParents = presbyterySnap.docs.map(doc => ({
     nodeId: doc.id,
@@ -311,19 +316,14 @@ if (level.id === "district") {
 
 
 if (level.id === "congregation") {
-  const districtSnap = await getDocs(
-    query(
-      collection(
-        db,
-        "organizations",
-        org.id,
-        "nodes"
-      ),
-      where("templateId", "==", org.templateId),
-      where("levelId", "==", "district"),
-      where("status", "==", "active")
-    )
-  );
+ const districtSnap = await getDocs(
+  query(
+    collection(db, "governanceNodes"),
+    where("templateId", "==", org.templateId),
+    where("levelId", "==", "district"),
+    where("status", "==", "active")
+  )
+);
 
   const suggestedParents = districtSnap.docs.map(d => ({
     nodeId: d.id,
@@ -339,9 +339,9 @@ if (level.id === "congregation") {
 
       await loadPending();
       Alert.alert(
-        "✅ Approved",
-        `${org.name} is now active. A full ${template.name} hierarchy has been created automatically.`
-      );
+  "✅ Approved",
+  `${org.name} is now active. A ${level.label} governance node has been created successfully.`
+);
 
     } catch (e) {
       console.log("❌ approveChurch error:", e);
@@ -467,10 +467,16 @@ if (level.id === "congregation") {
                 <View style={styles.infoBox}>
                   <Ionicons name="information-circle-outline" size={12} color="#0984E3" />
                   <Text style={styles.infoBoxText}>
-                    Approving will activate this church and auto-create a{" "}
-                    <Text style={{ fontWeight: "800" }}>{template.name}</Text> hierarchy
-                    ({template.levels.length} levels, {template.levels.length} nodes).
-                  </Text>
+  Approving will activate this church and create a single{" "}
+  <Text style={{ fontWeight: "800" }}>
+    {getLevelById(
+      org.templateId,
+      org.levelId
+    )?.label || org.levelId}
+  </Text>{" "}
+  governance node.
+  Parent linking can be completed later.
+</Text>
                 </View>
 
                 <View style={styles.cardActions}>
