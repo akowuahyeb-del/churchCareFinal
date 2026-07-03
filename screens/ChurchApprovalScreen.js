@@ -35,13 +35,81 @@ export default function ChurchApprovalScreen() {
     }
   };
 
+const validateRegistration = async (org) => {
+  const {
+    templateId,
+    levelId,
+    name,
+    location,
+  } = org;
+
+  if (!templateId) {
+    throw new Error("Missing governance template.");
+  }
+
+  if (!levelId) {
+    throw new Error("Missing registration level.");
+  }
+
+  if (!name?.trim()) {
+    throw new Error("Organisation name is required.");
+  }
+
+  switch (levelId) {
+    case "national": {
+  const existingNational = await getDocs(
+    query(
+      collection(db, "organizations"),
+      where("status", "==", "active"),
+      where("templateId", "==", templateId),
+      where("levelId", "==", "national")
+    )
+  );
+
+  if (!existingNational.empty) {
+    throw new Error(
+      `A National body for ${denomination} already exists and is locked.`
+    );
+  }
+
+  break;
+}
+
+    case "presbytery":
+      // TODO:
+      // Presbytery name must be unique
+      break;
+
+    case "district":
+      // TODO:
+      // District name must be unique
+      break;
+
+    case "congregation":
+      // TODO:
+      // Same name allowed
+      // Use location for duplicate detection
+      break;
+
+    default:
+      throw new Error(
+        `Unsupported registration level: ${levelId}`
+      );
+  }
+
+  return true;
+};
+
+
   // ✅ THE KEY INTEGRATION POINT:
   // When a church is approved, the templateId stored at creation time
   // is read and used to auto-seed the full hierarchy — no manual
   // "Seed Structure" step needed by the admin.
-  const approveChurch = async (org) => {
-    setProcessing(org.id);
-    try {
+ const approveChurch = async (org) => {
+  setProcessing(org.id);
+
+  try {
+    await validateRegistration(org);
       // 1. Activate the organization
       await updateDoc(doc(db, "organizations", org.id), {
         status: "active",
