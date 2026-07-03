@@ -250,7 +250,9 @@ await setDoc(nodeRef, {
 
   parentNodeId: null,
 
-  pendingLink: true,
+  pendingLink: level.id !== "national",
+
+  isLocked: level.id === "national",
 
   templateId: org.templateId,
 
