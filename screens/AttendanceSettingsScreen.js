@@ -432,4 +432,18 @@ helperText: {
   color: "#888",
   fontSize: 12,
 },
+settingRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+
+  marginTop: 20,   // add this
+  paddingTop: 12,
+},
+fintechInputText: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#374151",
+}
+
 });
