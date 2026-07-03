@@ -45,7 +45,7 @@ export const PLANS = {
     price: 0,
     currency: "GHS",
     billingCycle: "monthly",
-    tagline: "Get started with the basics",
+      tagline: "For small congregations",
     limits: {
   [LIMITS.MAX_MEMBERS]: 50,
   [LIMITS.MAX_ADMINS]: 2,
@@ -58,10 +58,9 @@ export const PLANS = {
     price: 50,
     currency: "GHS",
     billingCycle: "monthly",
-    tagline: "For a single growing church",
+    tagline: "For growing congregations",
     limits: {
   [LIMITS.MAX_MEMBERS]: 300,
-  [LIMITS.MAX_ENTITIES]: 3,
   [LIMITS.MAX_ADMINS]: 5,
 },
     features: [
@@ -77,7 +76,7 @@ export const PLANS = {
   price: 150,
   currency: "GHS",
   billingCycle: "monthly",
-  tagline: "For growing churches and multi-branch ministries",
+    tagline: "For large congregations and ministrie",
 
   limits: {
   [LIMITS.MAX_MEMBERS]: 1000,
@@ -115,7 +114,7 @@ export const PLANS = {
   currency: "GHS",
   billingCycle: "annual",
 
-  tagline: "National church bodies, dioceses, presbyteries & custom deployments",
+  tagline: "For larger denominations and national church bodies",
 
   limits: {
   [LIMITS.MAX_MEMBERS]: null,

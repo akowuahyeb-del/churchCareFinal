@@ -44,7 +44,7 @@ export default function SubscriptionScreen({ route }) {
   const {
     subscription, plan, planId, status, isActive, isTrialExpired,
     daysLeftInTrial, usage, loading,
-    membersLimit, entitiesLimit, adminsLimit,
+    membersLimit,adminsLimit,
   } = useSubscription(organizationId, entityId);
 
   // ✅ Calls a Cloud Function — same pattern as the AI insight call
@@ -143,7 +143,6 @@ export default function SubscriptionScreen({ route }) {
         <Text style={styles.sectionTitle}>Usage</Text>
         <View style={styles.usageCard}>
           <UsageBar label="Members" data={membersLimit} />
-          <UsageBar label="Branches" data={entitiesLimit} />
           <UsageBar label="Admins" data={adminsLimit} />
         </View>
 
