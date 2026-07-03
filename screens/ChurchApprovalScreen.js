@@ -131,11 +131,35 @@ const validateRegistration = async (org) => {
   break;
 }
 
-    case "congregation":
-      // TODO:
-      // Same name allowed
-      // Use location for duplicate detection
-      break;
+   case "congregation": {
+  const existingCongregations = await getDocs(
+    query(
+      collection(db, "organizations"),
+      where("status", "==", "active"),
+      where("templateId", "==", templateId),
+      where("levelId", "==", "congregation")
+    )
+  );
+
+  const duplicate = existingCongregations.docs.find((d) => {
+    const data = d.data();
+
+    return (
+      data.name?.trim().toLowerCase() ===
+        name?.trim().toLowerCase() &&
+      data.location?.trim().toLowerCase() ===
+        location?.trim().toLowerCase()
+    );
+  });
+
+  if (duplicate) {
+    throw new Error(
+      `A congregation named "${name}" already exists in "${location}".`
+    );
+  }
+
+  break;
+}
 
     default:
       throw new Error(
