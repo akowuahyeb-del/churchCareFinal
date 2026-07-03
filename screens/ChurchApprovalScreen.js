@@ -257,7 +257,11 @@ const validateRegistration = async (org) => {
 
     } catch (e) {
       console.log("❌ approveChurch error:", e);
-      Alert.alert("Error", "Approval failed: " + e.message);
+      Alert.alert(
+  "Validation Failed",
+  e.message,
+  [{ text: "OK" }]
+);
     } finally {
       setProcessing(null);
     }
