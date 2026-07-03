@@ -75,15 +75,61 @@ const validateRegistration = async (org) => {
   break;
 }
 
-    case "presbytery":
-      // TODO:
-      // Presbytery name must be unique
-      break;
+    case "presbytery": {
+  const existingPresbyteries = await getDocs(
+    query(
+      collection(db, "organizations"),
+      where("status", "==", "active"),
+      where("templateId", "==", templateId),
+      where("levelId", "==", "presbytery")
+    )
+  );
 
-    case "district":
-      // TODO:
-      // District name must be unique
-      break;
+  const duplicate = existingPresbyteries.docs.find((d) => {
+    const data = d.data();
+
+    return (
+      data.name?.trim().toLowerCase() ===
+      name?.trim().toLowerCase()
+    );
+  });
+
+  if (duplicate) {
+    throw new Error(
+      `Presbytery "${name}" already exists. Presbytery names must be unique.`
+    );
+  }
+
+  break;
+}
+
+    case "district": {
+  const existingDistricts = await getDocs(
+    query(
+      collection(db, "organizations"),
+      where("status", "==", "active"),
+      where("templateId", "==", templateId),
+      where("levelId", "==", "district")
+    )
+  );
+
+  const duplicate = existingDistricts.docs.find((d) => {
+    const data = d.data();
+
+    return (
+      data.name?.trim().toLowerCase() ===
+      name?.trim().toLowerCase()
+    );
+  });
+
+  if (duplicate) {
+    throw new Error(
+      `District "${name}" already exists. District names must be unique.`
+    );
+  }
+
+  break;
+}
 
     case "congregation":
       // TODO:
