@@ -737,7 +737,14 @@ const generateQR = async () => {
   color="#27AE60"
 />
               
-              <TapRow icon="people-outline"     label="Manage Roles"     sub="Assign roles to members"   onPress={() => navigation.navigate("Roles")} color="#0984E3" />   onPress={() => Alert.alert("Manage Roles", "Role management is in the Members section.")} color="#0984E3" />
+     <TapRow
+  icon="people-outline"
+  label="Manage Roles"
+  sub="Assign roles to members"
+  onPress={() => navigation.navigate("Roles")}
+  color="#0984E3"
+/>         
+              
               <TapRow
   icon="git-network-outline"
   label="Organisation Structure"
@@ -747,28 +754,19 @@ const generateQR = async () => {
   }
   color="#00B894"
 />
-    
-            </View>
-          </>
-        )}
-
-        {/* <TapRow
-  icon="git-branch-outline"
-  label="Organisation Hierarchy"
-  sub="Set up your church structure"
-  onPress={() =>
-    navigation.navigate("OrganisationSetup")
-  }
-  color="#4B3F72"
-/> */}
-
-<TapRow
+    <TapRow
   icon="git-branch-outline"
   label="Organisation Hierarchy"
   sub="Set up your church structure"
   onPress={() => navigation.navigate("OrganisationManage")}
   color="#4B3F72"
 />
+            </View>
+          </>
+        )}
+
+
+
 
 
 
@@ -827,32 +825,22 @@ const generateQR = async () => {
                 onPress={() => { setStatusAction(accountStatus === "active" ? "deactivate" : "reinstate"); setAccountStatusModal(true); }}
                 color={accountStatus === "active" ? "#e74c3c" : "#00B894"}
               />
-
+                        
+<TapRow
+  icon="shield-checkmark-outline"
+  label="Roles & Privileges"
+  sub="Manage user access and permissions"
+  onPress={() => navigation.navigate("Roles")}
+  color="#6C5CE7"
+/>
 
 
             </View>
           </>
         )}
-          <TouchableOpacity
-  style={{
-    padding: 14,
-    backgroundColor: "#fff",
-    marginBottom: 8,
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  }}
-  onPress={() => navigation.navigate("Roles")}
->
-  <Text style={{ fontWeight: "600" }}>
-    Roles & Privileges
-  </Text>
-
- <Ionicons name="chevron-forward" size={18} color="#999" />
-</TouchableOpacity>
 
 
+ 
 
       {/* ── NEW: QR CODE GENERATOR ── */}
 {canDo("deacon") && (

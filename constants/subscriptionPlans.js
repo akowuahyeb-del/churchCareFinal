@@ -6,15 +6,30 @@
 // it up everywhere automatically.
 
 export const FEATURES = {
-  AI_INSIGHTS:      "ai_insights",       // AdminFinanceScreen's AI tab
-  QR_GENERATOR:     "qr_generator",      // Settings → Generate Dynamic QR
-  ADVANCED_ROLES:   "advanced_roles",    // custom roles beyond the 7 defaults
-  DATA_EXPORT:      "data_export",       // Settings → Export/Backup
-  DONATION_RECEIPTS:"donation_receipts", // PDF receipt generation
-  DONATION_APPROVALS:"donation_approvals",
-  MULTI_BRANCH:     "multi_branch",      // more than 1 entity per organization
+  AI_INSIGHTS: "ai_insights",
+
+  QR_GENERATOR: "qr_generator",
+
+  ADVANCED_ROLES: "advanced_roles",
+
+  DATA_EXPORT: "data_export",
+
+  DONATION_RECEIPTS: "donation_receipts",
+
+  DONATION_APPROVALS: "donation_approvals",
+
+  MULTI_BRANCH: "multi_branch",
+
   PRIORITY_SUPPORT: "priority_support",
-  CUSTOM_BRANDING:  "custom_branding",   // church logo upload
+
+  CUSTOM_BRANDING: "custom_branding",
+
+  // NEW
+  GEO_ATTENDANCE: "geo_attendance",
+
+  ATTENDANCE_SETTINGS: "attendance_settings",
+
+  ADVANCED_REPORTS: "advanced_reports",
 };
 
 export const LIMITS = {
@@ -58,44 +73,82 @@ export const PLANS = {
       FEATURES.MULTI_BRANCH,
     ],
   },
-  pro: {
-    id: "pro",
-    label: "Pro",
-    price: 150,
-    currency: "GHS",
-    billingCycle: "monthly",
-    tagline: "For multi-branch organizations",
-    limits: {
-      [LIMITS.MAX_MEMBERS]: null,
-      [LIMITS.MAX_ENTITIES]: null,
-      [LIMITS.MAX_ADMINS]: null,
-    },
-    features: [
-      FEATURES.QR_GENERATOR,
-      FEATURES.DONATION_RECEIPTS,
-      FEATURES.DATA_EXPORT,
-      FEATURES.MULTI_BRANCH,
-      FEATURES.AI_INSIGHTS,
-      FEATURES.ADVANCED_ROLES,
-      FEATURES.CUSTOM_BRANDING,
-      FEATURES.PRIORITY_SUPPORT,
-      FEATURES.DONATION_APPROVALS,
-    ],
+ pro: {
+  id: "pro",
+  label: "Pro",
+  price: 150,
+  currency: "GHS",
+  billingCycle: "monthly",
+  tagline: "For growing churches and multi-branch ministries",
+
+  limits: {
+    [LIMITS.MAX_MEMBERS]: 1000,
+    [LIMITS.MAX_ENTITIES]: 5,
+    [LIMITS.MAX_ADMINS]: 10,
   },
-  enterprise: {
-    id: "enterprise",
-    label: "Enterprise",
-    price: null, // "Contact us"
-    currency: "GHS",
-    billingCycle: "annual",
-    tagline: "Custom deployments & dedicated support",
-    limits: {
-      [LIMITS.MAX_MEMBERS]: null,
-      [LIMITS.MAX_ENTITIES]: null,
-      [LIMITS.MAX_ADMINS]: null,
-    },
-    features: Object.values(FEATURES), // everything
+
+  features: [
+    FEATURES.QR_GENERATOR,
+    FEATURES.DONATION_RECEIPTS,
+    FEATURES.DATA_EXPORT,
+    FEATURES.MULTI_BRANCH,
+
+    // Attendance
+    FEATURES.GEO_ATTENDANCE,
+    FEATURES.ATTENDANCE_SETTINGS,
+
+    // Management
+    FEATURES.ADVANCED_ROLES,
+    FEATURES.DONATION_APPROVALS,
+
+    // Reporting
+    FEATURES.ADVANCED_REPORTS,
+
+    // Branding
+    FEATURES.CUSTOM_BRANDING,
+
+    // Support
+    FEATURES.PRIORITY_SUPPORT,
+  ],
+},
+ enterprise: {
+  id: "enterprise",
+  label: "Enterprise",
+  price: null, // Contact Sales
+  currency: "GHS",
+  billingCycle: "annual",
+
+  tagline: "National church bodies, dioceses, presbyteries & custom deployments",
+
+  limits: {
+    [LIMITS.MAX_MEMBERS]: null,
+    [LIMITS.MAX_ENTITIES]: null,
+    [LIMITS.MAX_ADMINS]: null,
   },
+
+  features: Object.values(FEATURES),
+
+  enterpriseFeatures: [
+    "Unlimited organisations",
+    "Unlimited hierarchy levels",
+    "National / presbytery governance",
+    "Cross-entity reporting",
+    "Organisation hierarchy management",
+    "Advanced approval workflows",
+    "AI insights & analytics",
+    "Custom branding",
+    "Custom domain",
+    "Single sign-on (SSO)",
+    "Dedicated onboarding",
+    "Data migration assistance",
+    "API access",
+    "Priority support",
+    "SLA support",
+    "Dedicated account manager",
+    "Custom integrations",
+    "Whitelabel deployment",
+  ],
+},
 };
 
 export const PLAN_ORDER = ["free", "basic", "pro", "enterprise"];
