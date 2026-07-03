@@ -9,6 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { ORGANIZATION_TEMPLATES, getTemplate } from "../constants/organizationTemplates";
+import { auth } from "../firebase";
 
 const STEPS = ["Identity", "Governance", "Confirm"];
 
@@ -28,8 +29,11 @@ export default function CreateChurchScreen() {
   // Step 2 — Governance (the merge point)
   const [templateId, setTemplateId] = useState("presbyterian");
   const [levelId, setLevelId] = useState(null);
+  const [parentNodeId, setParentNodeId] = useState(null);
 
   const template = getTemplate(templateId);
+
+  
 
   const canNext = () => {
   if (step === 0)
@@ -45,26 +49,53 @@ export default function CreateChurchScreen() {
   return true;
 };
 
-  const handleSubmit = async () => {
-    if (!churchName.trim() || !templateId) return;
-    setSaving(true);
+/* 
+const user = auth.currentUser;
 
-    try {
-      // ✅ Create the organization document
-      const orgRef = await addDoc(collection(db, "organizations"), {
-        name: churchName.trim(),
-        denomination: denomination.trim(),
-        location: location.trim(),
-        contactName: contactName.trim(),
-        contactPhone: contactPhone.trim(),
-        contactEmail: contactEmail.trim(),
-        // ✅ Template stored HERE at creation — not in a separate later step.
-        // This is what ApprovalScreen reads to auto-seed the hierarchy.
-        templateId,
-        levelId,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      });
+if (!user) {
+  Alert.alert(
+    "Authentication Required",
+    "You must be signed in before registering a church."
+  );
+  return;
+} */
+
+console.log("===== SUBMIT START =====");
+console.log("Current User:", auth.currentUser);
+
+const handleSubmit = async () => {
+  if (!churchName.trim() || !templateId) return;
+
+  setSaving(true);
+
+  try {
+    const user = auth.currentUser;
+
+    // ✅ Create the organization document
+    const orgRef = await addDoc(collection(db, "organizations"), {
+      name: churchName.trim(),
+      denomination: denomination.trim(),
+      location: location.trim(),
+      contactName: contactName.trim(),
+      contactPhone: contactPhone.trim(),
+      contactEmail: contactEmail.trim(),
+
+      // ✅ Applicant information
+      submittedByUid: user?.uid || null,
+      submittedByEmail: user?.email || null,
+
+      // ✅ Governance
+      templateId,
+      levelId,
+      parentNodeId,
+
+      // ✅ Status
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    });
+
+    // Keep the rest of your existing code unchanged
+  
 
       // ✅ Create the first entity (the congregation being registered)
       const entityRef = await addDoc(
@@ -76,6 +107,16 @@ export default function CreateChurchScreen() {
           createdAt: new Date().toISOString(),
         }
       );
+
+console.log(
+  "✅ Creating governance node",
+  {
+    name: org.name,
+    levelId: level.id,
+    organizationId: org.id,
+  }
+);
+
 
 await setDoc(
   doc(db, "organizations", orgRef.id),
@@ -110,7 +151,10 @@ await setDoc(
     }
   };
 
-
+console.log(
+  "✅ Current User:",
+  auth.currentUser
+);
 
 
   return (
@@ -239,7 +283,10 @@ await setDoc(
       styles.templateCard,
       levelId === level.id && styles.templateCardActive
     ]}
-    onPress={() => setLevelId(level.id)}
+    onPress={() => {
+  setLevelId(level.id);
+  setParentNodeId(null);
+}}
   >
     <View style={styles.templateCardTop}>
       <View style={{ flex: 1 }}>

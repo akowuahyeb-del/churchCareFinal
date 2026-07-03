@@ -336,6 +336,32 @@ if (level.id === "congregation") {
   });
 }
 
+// ✅ Notify applicant
+if (org.submittedByUid) {
+  await setDoc(
+    doc(
+      collection(
+        db,
+        "users",
+        org.submittedByUid,
+        "notifications"
+      )
+    ),
+    {
+      type: "church_approved",
+
+      title: "Registration Approved",
+
+      message: `${org.name} has been approved and activated.`,
+
+      organizationId: org.id,
+
+      read: false,
+
+      createdAt: new Date().toISOString(),
+    }
+  );
+}
 
       await loadPending();
       Alert.alert(
