@@ -217,37 +217,49 @@ const validateRegistration = async (org) => {
         },
         { merge: true }
       );
+     const level = template.levels.find(
+  l => l.id === org.levelId
+);
 
-      // Create one node per level, top to bottom
-      const nodeRefs = [];
-      const nodesRef = collection(db, "organizations", org.id, "nodes");
-      const batch1 = writeBatch(db);
+if (!level) {
+  throw new Error(
+    `Unknown registration level: ${org.levelId}`
+  );
+}
 
-      for (let i = 0; i < template.levels.length; i++) {
-        const level = template.levels[i];
-        const isBottom = i === template.levels.length - 1;
-        const nodeRef = doc(nodesRef);
-        nodeRefs.push({ ref: nodeRef, rank: level.rank, levelId: level.id });
+const nodeRef = doc(
+  collection(
+    db,
+    "organizations",
+    org.id,
+    "nodes"
+  )
+);
 
-        batch1.set(nodeRef, {
-          name: isBottom ? org.name : `${org.denomination} ${level.label}`,
-          levelId: level.id,
-          parentNodeId: null, // patched below
-          entityId: isBottom ? entityId : null, // ✅ links the congregation entity
-          organizationId: org.id,
-          status: "active",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
-      await batch1.commit();
+await setDoc(nodeRef, {
+  name: org.name,
 
-      // Patch parentNodeId top-down
-      const batch2 = writeBatch(db);
-      for (let i = 1; i < nodeRefs.length; i++) {
-        batch2.update(nodeRefs[i].ref, { parentNodeId: nodeRefs[i - 1].ref.id });
-      }
-      await batch2.commit();
+  levelId: level.id,
+
+  organizationId: org.id,
+
+  entityId:
+    level.id === "congregation"
+      ? entityId
+      : null,
+
+  parentNodeId: null,
+
+  pendingLink: true,
+
+  templateId: org.templateId,
+
+  status: "active",
+
+  createdAt: new Date().toISOString(),
+
+  updatedAt: new Date().toISOString(),
+});
 
       await loadPending();
       Alert.alert(
