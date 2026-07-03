@@ -108,31 +108,33 @@ return () => unsub && unsub();
 
   // ✅ Live usage counts — what limits actually check against
   const loadUsage = useCallback(async () => {
-    if (!organizationId || !entityId) return;
-    try {
-      const membersSnap = await getDocs(
-  collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members"
-  )
-);
+  if (!organizationId || !entityId) return;
 
-      const admins = membersSnap.docs.filter(d =>
-        (d.data().permissions || []).includes("manage_members")
-      ).length;
+  try {
+    const membersSnap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members"
+      )
+    );
 
-     setUsage({
-  members: membersSnap.size,
-  admins,
-});
-    } catch (e) {
-      console.log("❌ Load usage error:", e);
-    }
-  }, [organizationId, entityId]);
+    const admins = membersSnap.docs.filter(d =>
+      (d.data().permissions || []).includes("manage_members")
+    ).length;
+
+    setUsage({
+      members: membersSnap.size,
+      admins,
+    });
+
+  } catch (e) {
+    console.log("❌ Load usage error:", e);
+  }
+}, [organizationId, entityId]);
 
   useEffect(() => { loadUsage(); }, [loadUsage]);
 
