@@ -265,6 +265,84 @@ await setDoc(nodeRef, {
   updatedAt: new Date().toISOString(),
 });
 
+if (level.id === "presbytery") {
+  const nationalSnap = await getDocs(
+    query(
+      collection(
+        db,
+        "organizations",
+        org.id,
+        "nodes"
+      ),
+      where("templateId", "==", org.templateId),
+      where("levelId", "==", "national"),
+      where("status", "==", "active")
+    )
+  );
+
+  if (!nationalSnap.empty) {
+    const nationalNode = nationalSnap.docs[0];
+
+    await updateDoc(nodeRef, {
+      parentNodeId: nationalNode.id,
+      pendingLink: false,
+      linkedAt: new Date().toISOString(),
+    });
+  }
+}
+
+if (level.id === "district") {
+  const presbyterySnap = await getDocs(
+    query(
+      collection(
+        db,
+        "organizations",
+        org.id,
+        "nodes"
+      ),
+      where("templateId", "==", org.templateId),
+      where("levelId", "==", "presbytery"),
+      where("status", "==", "active")
+    )
+  );
+
+  const suggestedParents = presbyterySnap.docs.map(doc => ({
+    nodeId: doc.id,
+    name: doc.data().name,
+  }));
+
+  await updateDoc(nodeRef, {
+    suggestedParents,
+  });
+}
+
+if (level.id === "congregation") {
+  const districtSnap = await getDocs(
+    query(
+      collection(
+        db,
+        "organizations",
+        org.id,
+        "nodes"
+      ),
+      where("templateId", "==", org.templateId),
+      where("levelId", "==", "district"),
+      where("status", "==", "active")
+    )
+  );
+
+  const suggestedParents = districtSnap.docs.map(d => ({
+    nodeId: d.id,
+    name: d.data().name,
+    levelId: d.data().levelId,
+  }));
+
+  await updateDoc(nodeRef, {
+    suggestedParents,
+  });
+}
+
+
       await loadPending();
       Alert.alert(
         "✅ Approved",
