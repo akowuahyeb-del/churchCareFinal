@@ -250,8 +250,10 @@ await setDoc(nodeRef, {
 
   parentNodeId: null,
 
+  // National nodes are the root authority
   pendingLink: level.id !== "national",
 
+  // Prevent accidental edits/deletion later
   isLocked: level.id === "national",
 
   templateId: org.templateId,
