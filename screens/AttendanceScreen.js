@@ -1486,12 +1486,28 @@ const TIMES =
             </View>
 
             <Text style={styles.fieldLabel}>Start Time</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 9:00 AM"
-              value={startTime}
-              onChangeText={setStartTime}
-            />
+
+<View style={styles.chipRow}>
+  {TIMES.map(time => (
+    <TouchableOpacity
+      key={time}
+      style={[
+        styles.chip,
+        startTime === time && styles.chipActive
+      ]}
+      onPress={() => setStartTime(time)}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          startTime === time && styles.chipTextActive
+        ]}
+      >
+        {time}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
             <Text style={styles.fieldLabel}>Expected End Time</Text>
             <TextInput
