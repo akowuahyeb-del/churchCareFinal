@@ -874,7 +874,18 @@ const generateQR = async () => {
             <TapRow icon="cloud-download-outline" label="Backup Church Data" sub="Export full church database"  onPress={() => Alert.alert("Backup", "Backup initiated. Download link will be emailed.")} color="#00B894" />
           )}
           <TapRow icon="trash-outline"           label="Clear Local Cache"   sub="Remove offline device data"  onPress={() => setClearDataModal(true)} color="#e74c3c" />
+        
+<TapRow
+  icon="swap-horizontal-outline"
+  label="TEST Transfer Request"
+  sub="Open transfer request screen"
+  onPress={() => navigation.navigate("TransferRequest")}
+  color="#4B3F72"
+/>
+
         </View>
+       
+
 
         {/* ── ABOUT ── */}
         <SectionHeader title="About" />
