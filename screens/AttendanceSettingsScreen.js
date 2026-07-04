@@ -14,8 +14,16 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Switch, Alert, ActivityIndicator
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -24,6 +32,7 @@ import { useNavigation } from "@react-navigation/native";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 // ─────────────────────────────────────────────────────────────────
 // DEFAULTS — what a brand-new entity gets before an admin configures it
@@ -41,6 +50,32 @@ export const ATTENDANCE_SETTINGS_DEFAULTS = {
   defaultType:          "First Service",
   defaultStartTime:     "9:00 AM",
   defaultEvent:         "None",
+  // Dynamic master data
+serviceOptions: [
+  "Sunday",
+  "Wednesday",
+  "Friday",
+  "Saturday",
+  "Special",
+],
+
+typeOptions: [
+  "First Service",
+  "Second Service",
+  "Third Service",
+  "Evening Service",
+  "Youth",
+  "Children",
+],
+
+timeOptions: [
+  "7:00 AM",
+  "8:00 AM",
+  "9:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "6:00 PM",
+],
 
   // Absence alerts
   absenceWarningCount:  2,         // contacts modal after this many absences
@@ -68,7 +103,20 @@ export default function AttendanceSettingsScreen() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [locating, setLocating] = useState(false);
-  const [dirty,    setDirty]    = useState(false); // unsaved changes exist
+  const [dirty,    setDirty]    = useState(false); 
+  // Service Defaults Modal
+const [itemModalVisible, setItemModalVisible] = useState(false);
+
+const [editingMode, setEditingMode] = useState("service");
+
+
+const [editingIndex, setEditingIndex] = useState(null);
+
+const [itemName, setItemName] = useState("");
+
+const [timeValue, setTimeValue] = useState(new Date());
+
+const [showTimePicker, setShowTimePicker] = useState(false);
 
   // ── BOOTSTRAP ──
   useEffect(() => {
@@ -130,7 +178,130 @@ export default function AttendanceSettingsScreen() {
     setSettings(prev => ({ ...prev, [key]: value }));
     setDirty(true);
   };
+// ─────────────────────────────────────────────────────────────────
+// SESSION DEFAULT MODAL HANDLERS
+// ─────────────────────────────────────────────────────────────────
 
+const openAddService = () => {
+  setEditingMode("service");
+  setEditingIndex(null);
+  setItemName("");
+  setItemModalVisible(true);
+};
+
+const openAddType = () => {
+  setEditingMode("type");
+  setEditingIndex(null);
+  setItemName("");
+  setItemModalVisible(true);
+};
+
+const openAddTime = () => {
+  setEditingMode("time");
+  setEditingIndex(null);
+  setTimeValue(new Date());
+  setItemModalVisible(true);
+};
+
+const editItem = (mode, value, index) => {
+  setEditingMode(mode);
+  setEditingIndex(index);
+
+  if (mode === "time") {
+    setTimeValue(new Date());
+  } else {
+    setItemName(value);
+  }
+
+  setItemModalVisible(true);
+};
+const saveItem = () => {
+  const s = { ...settings };
+
+  if (editingMode === "service") {
+    const list = [...s.serviceOptions];
+
+    if (editingIndex === null) {
+      list.push(itemName.trim());
+    } else {
+      list[editingIndex] = itemName.trim();
+    }
+
+    update("serviceOptions", list);
+
+    // First item becomes default automatically
+    if (!settings.defaultService && list.length > 0) {
+      update("defaultService", list[0]);
+    }
+  }
+
+  if (editingMode === "type") {
+    const list = [...s.typeOptions];
+
+    if (editingIndex === null) {
+      list.push(itemName.trim());
+    } else {
+      list[editingIndex] = itemName.trim();
+    }
+
+    update("typeOptions", list);
+
+    if (!settings.defaultType && list.length > 0) {
+      update("defaultType", list[0]);
+    }
+  }
+
+  if (editingMode === "time") {
+    const formattedTime =
+      timeValue.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+
+    const list = [...s.timeOptions];
+
+    if (editingIndex === null) {
+      list.push(formattedTime);
+    } else {
+      list[editingIndex] = formattedTime;
+    }
+
+    update("timeOptions", list);
+
+    if (!settings.defaultStartTime && list.length > 0) {
+      update("defaultStartTime", list[0]);
+    }
+  }
+
+  setItemModalVisible(false);
+};
+
+const deleteItem = () => {
+  const s = { ...settings };
+
+  if (editingMode === "service") {
+    const list = [...s.serviceOptions];
+    list.splice(editingIndex, 1);
+
+    update("serviceOptions", list);
+  }
+
+  if (editingMode === "type") {
+    const list = [...s.typeOptions];
+    list.splice(editingIndex, 1);
+
+    update("typeOptions", list);
+  }
+
+  if (editingMode === "time") {
+    const list = [...s.timeOptions];
+    list.splice(editingIndex, 1);
+
+    update("timeOptions", list);
+  }
+
+  setItemModalVisible(false);
+};
   // ─────────────────────────────────────────────────────────────────
   // DETECT CURRENT GPS — so admin doesn't have to look up coordinates
   // ✅ This is the "smart" part: tap a button and your church's real
@@ -528,6 +699,98 @@ export default function AttendanceSettingsScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      
+<Modal
+  visible={itemModalVisible}
+  transparent
+  animationType="slide"
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalCard}>
+
+      <Text style={styles.modalTitle}>
+        {editingIndex === null ? "Add" : "Edit"}{" "}
+        {editingMode === "service"
+          ? "Service"
+          : editingMode === "type"
+          ? "Session Type"
+          : "Service Time"}
+      </Text>
+
+      {editingMode !== "time" ? (
+        <TextInput
+          style={styles.modalInput}
+          value={itemName}
+          onChangeText={setItemName}
+          placeholder="Enter value"
+        />
+      ) : (
+        <>
+          <TouchableOpacity
+            style={styles.timeButton}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={styles.timeButtonText}>
+              {timeValue.toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </Text>
+          </TouchableOpacity>
+
+          {showTimePicker && (
+            <DateTimePicker
+              value={timeValue}
+              mode="time"
+              is24Hour={false}
+              onChange={(event, selectedDate) => {
+                setShowTimePicker(false);
+
+                if (selectedDate) {
+                  setTimeValue(selectedDate);
+                }
+              }}
+            />
+          )}
+        </>
+      )}
+
+      <View style={styles.modalActions}>
+
+        {editingIndex !== null && (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={deleteItem}
+          >
+            <Text style={styles.deleteText}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={() => setItemModalVisible(false)}
+        >
+          <Text>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.saveModalBtn}
+          onPress={saveItem}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>
+            Save
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+    </View>
+  </View>
+</Modal>
+
+
     </View>
   );
 }
@@ -646,4 +909,78 @@ const styles = StyleSheet.create({
   saveBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
   resetBtn: { alignItems: "center", padding: 14 },
   resetBtnText: { color: "#e74c3c", fontSize: 13, fontWeight: "600" },
+
+overlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  justifyContent: "center",
+  padding: 20,
+},
+
+modalCard: {
+  backgroundColor: "#fff",
+  borderRadius: 20,
+  padding: 20,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "800",
+  marginBottom: 16,
+  color: "#222",
+},
+
+modalInput: {
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 12,
+  padding: 14,
+},
+
+timeButton: {
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 12,
+  padding: 16,
+  alignItems: "center",
+},
+
+timeButtonText: {
+  fontSize: 16,
+  fontWeight: "700",
+},
+
+modalActions: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 20,
+},
+
+saveModalBtn: {
+  backgroundColor: "#4B3F72",
+  borderRadius: 10,
+  paddingHorizontal: 18,
+  paddingVertical: 12,
+},
+
+cancelBtn: {
+  paddingHorizontal: 18,
+  paddingVertical: 12,
+  marginRight: 8,
+},
+
+deleteBtn: {
+  backgroundColor: "#FDEDED",
+  borderRadius: 10,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  marginRight: "auto",
+},
+
+deleteText: {
+  color: "#E74C3C",
+  fontWeight: "700",
+},
+
+
 });
