@@ -521,11 +521,46 @@ const deleteItem = () => {
 
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Default Service</Text>
-          <ChipPicker
-  options={settings.serviceOptions || []}
-  value={settings.defaultService}
-  onChange={v => update("defaultService", v)}
-/>
+
+<View style={styles.dynamicList}>
+  {(settings.serviceOptions || []).map((service, index) => (
+    <View
+      key={`${service}-${index}`}
+      style={styles.dynamicListRow}
+    >
+      <TouchableOpacity
+        style={[
+          styles.dynamicChip,
+          settings.defaultService === service &&
+            styles.dynamicChipActive,
+        ]}
+        onPress={() => update("defaultService", service)}
+      >
+        <Text
+          style={[
+            styles.dynamicChipText,
+            settings.defaultService === service &&
+              styles.dynamicChipTextActive,
+          ]}
+        >
+          {service}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() =>
+          editItem("service", service, index)
+        }
+      >
+        <Ionicons
+          name="create-outline"
+          size={18}
+          color="#4B3F72"
+        />
+      </TouchableOpacity>
+    </View>
+  ))}
+</View>
 
 <TouchableOpacity
   style={styles.manageBtn}
@@ -541,13 +576,47 @@ const deleteItem = () => {
   </Text>
 </TouchableOpacity>
 
-         <Text style={styles.fieldLabel}>Default Type</Text>
+<Text style={styles.fieldLabel}>Default Type</Text>
 
-<ChipPicker
-  options={settings.typeOptions || []}
-  value={settings.defaultType}
-  onChange={v => update("defaultType", v)}
-/>
+<View style={styles.dynamicList}>
+  {(settings.typeOptions || []).map((type, index) => (
+    <View
+      key={`${type}-${index}`}
+      style={styles.dynamicListRow}
+    >
+      <TouchableOpacity
+        style={[
+          styles.dynamicChip,
+          settings.defaultType === type &&
+            styles.dynamicChipActive,
+        ]}
+        onPress={() => update("defaultType", type)}
+      >
+        <Text
+          style={[
+            styles.dynamicChipText,
+            settings.defaultType === type &&
+              styles.dynamicChipTextActive,
+          ]}
+        >
+          {type}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() =>
+          editItem("type", type, index)
+        }
+      >
+        <Ionicons
+          name="create-outline"
+          size={18}
+          color="#4B3F72"
+        />
+      </TouchableOpacity>
+    </View>
+  ))}
+</View>
 
 <TouchableOpacity
   style={styles.manageBtn}
@@ -562,14 +631,50 @@ const deleteItem = () => {
     Add Type
   </Text>
 </TouchableOpacity>
+ 
+<Text style={styles.fieldLabel}>Default Start Time</Text>
 
-          <Text style={styles.fieldLabel}>Default Start Time</Text>
+<View style={styles.dynamicList}>
+  {(settings.timeOptions || []).map((time, index) => (
+    <View
+      key={`${time}-${index}`}
+      style={styles.dynamicListRow}
+    >
+      <TouchableOpacity
+        style={[
+          styles.dynamicChip,
+          settings.defaultStartTime === time &&
+            styles.dynamicChipActive,
+        ]}
+        onPress={() =>
+          update("defaultStartTime", time)
+        }
+      >
+        <Text
+          style={[
+            styles.dynamicChipText,
+            settings.defaultStartTime === time &&
+              styles.dynamicChipTextActive,
+          ]}
+        >
+          {time}
+        </Text>
+      </TouchableOpacity>
 
-<ChipPicker
-  options={settings.timeOptions || []}
-  value={settings.defaultStartTime}
-  onChange={v => update("defaultStartTime", v)}
-/>
+      <TouchableOpacity
+        onPress={() =>
+          editItem("time", time, index)
+        }
+      >
+        <Ionicons
+          name="create-outline"
+          size={18}
+          color="#4B3F72"
+        />
+      </TouchableOpacity>
+    </View>
+  ))}
+</View>
 
 <TouchableOpacity
   style={styles.manageBtn}
@@ -584,6 +689,7 @@ const deleteItem = () => {
     Add Time
   </Text>
 </TouchableOpacity>
+        
         </View>
 
         {/* ══ ABSENCE ALERTS ══ */}
@@ -1025,6 +1131,37 @@ deleteText: {
   color: "#E74C3C",
   fontWeight: "700",
 },
+dynamicList: {
+  marginBottom: 10,
+},
 
+dynamicListRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 8,
+},
+
+dynamicChip: {
+  flex: 1,
+  backgroundColor: "#f0f0f0",
+  borderRadius: 20,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  marginRight: 10,
+},
+
+dynamicChipActive: {
+  backgroundColor: "#4B3F72",
+},
+
+dynamicChipText: {
+  color: "#555",
+  fontWeight: "600",
+},
+
+dynamicChipTextActive: {
+  color: "#fff",
+},
 
 });
