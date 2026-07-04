@@ -522,10 +522,24 @@ const deleteItem = () => {
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Default Service</Text>
           <ChipPicker
-            options={["Sunday", "Wednesday", "Friday", "Saturday", "Special"]}
-            value={settings.defaultService}
-            onChange={v => update("defaultService", v)}
-          />
+  options={settings.serviceOptions || []}
+  value={settings.defaultService}
+  onChange={v => update("defaultService", v)}
+/>
+
+<TouchableOpacity
+  style={styles.manageBtn}
+  onPress={openAddService}
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={16}
+    color="#4B3F72"
+  />
+  <Text style={styles.manageBtnText}>
+    Add Service
+  </Text>
+</TouchableOpacity>
 
           <Text style={styles.fieldLabel}>Default Type</Text>
           <ChipPicker
