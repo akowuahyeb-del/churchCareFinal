@@ -1076,14 +1076,92 @@ if (editingMode === "template") {
       Service
     </Text>
 
+<ChipPicker
+  options={settings.serviceOptions || []}
+  value={templateService}
+  onChange={setTemplateService}
+/>
+
+<TouchableOpacity
+  onPress={() => {
+    setItemModalVisible(false);
+  }}
+>
+<View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    marginBottom: 12,
+  }}
+>
+  <Ionicons
+    name="information-circle-outline"
+    size={14}
+    color="#4B3F72"
+  />
+
+  <Text style={styles.manageHint}>
+    Can't find a service? Add it in Services above.
+  </Text>
+</View>
+</TouchableOpacity>
+
+<Text style={styles.fieldLabel}>
+  Type
+</Text>
+
     <ChipPicker
-      options={settings.serviceOptions || []}
-      value={templateService}
-      onChange={setTemplateService}
+      options={settings.typeOptions || []}
+      value={templateType}
+      onChange={setTemplateType}
     />
 
     <Text style={styles.fieldLabel}>
-      Type
+      Start Time
+    </Text>
+
+    <ChipPicker
+      options={settings.timeOptions || []}
+      value={templateTime}
+      onChange={setTemplateTime}
+    />
+  </>
+) : editingMode === "template" ? (
+  <>
+    <Text style={styles.fieldLabel}>
+      Template Name
+    </Text>
+
+    <TextInput
+      style={styles.modalInput}
+      value={templateName}
+      onChangeText={setTemplateName}
+      placeholder="Sunday Morning Worship"
+    />
+
+   <Text style={styles.fieldLabel}>
+  Service
+</Text>
+
+<ChipPicker
+  options={settings.serviceOptions || []}
+  value={templateService}
+  onChange={setTemplateService}
+/>
+
+<TouchableOpacity
+  onPress={() => {
+    setItemModalVisible(false);
+  }}
+>
+  <Text style={styles.manageLink}>
+    + Manage Services
+  </Text>
+</TouchableOpacity>
+
+    <Text style={styles.fieldLabel}>
+      Session Type
     </Text>
 
     <ChipPicker
@@ -1102,43 +1180,43 @@ if (editingMode === "template") {
       onChange={setTemplateTime}
     />
   </>
-) : editingMode !== "time" ? (
+) : editingMode === "time" ? (
+  <>
+    <TouchableOpacity
+      style={styles.timeButton}
+      onPress={() => setShowTimePicker(true)}
+    >
+      <Text style={styles.timeButtonText}>
+        {timeValue.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })}
+      </Text>
+    </TouchableOpacity>
+
+    {showTimePicker && (
+      <DateTimePicker
+        value={timeValue}
+        mode="time"
+        is24Hour={false}
+        onChange={(event, selectedDate) => {
+          setShowTimePicker(false);
+
+          if (selectedDate) {
+            setTimeValue(selectedDate);
+          }
+        }}
+      />
+    )}
+  </>
+) : (
   <TextInput
     style={styles.modalInput}
     value={itemName}
     onChangeText={setItemName}
     placeholder="Enter value"
   />
-) : (
-        <>
-          <TouchableOpacity
-            style={styles.timeButton}
-            onPress={() => setShowTimePicker(true)}
-          >
-            <Text style={styles.timeButtonText}>
-              {timeValue.toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </Text>
-          </TouchableOpacity>
-
-          {showTimePicker && (
-            <DateTimePicker
-              value={timeValue}
-              mode="time"
-              is24Hour={false}
-              onChange={(event, selectedDate) => {
-                setShowTimePicker(false);
-
-                if (selectedDate) {
-                  setTimeValue(selectedDate);
-                }
-              }}
-            />
-          )}
-        </>
-      )}
+)}
 
       <View style={styles.modalActions}>
 
@@ -1398,5 +1476,18 @@ dynamicChipText: {
 dynamicChipTextActive: {
   color: "#fff",
 },
-
+manageLink: {
+  color: "#4B3F72",
+  fontSize: 12,
+  fontWeight: "600",
+  marginTop: 4,
+  marginBottom: 10,
+},
+manageHint: {
+  fontSize: 11,
+  color: "#4B3F72",
+  marginTop: 6,
+  marginBottom: 12,
+  fontWeight: "600",
+},
 });
