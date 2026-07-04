@@ -148,7 +148,7 @@ export default function MembersScreen({ navigation }) {
   // ── List item edit modal ──
   const [listModal, setListModal] = useState({ visible: false, type: null, input: "", index: null });
   const { membersLimit } = useSubscription(organizationId,entityId);
-
+  const [transferHistory, setTransferHistory] = useState([]);
 
 const toggleActions = () => {
   setShowActions(prev => {
@@ -238,6 +238,43 @@ const loadMembers = useCallback(async () => {
     setLoading(false);
   }
 }, []);
+
+const loadTransferHistory = async () => {
+  if (!organizationId || !memberId) return;
+
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "transfers"
+      ),
+      where("memberId", "==", memberId)
+    );
+
+    const snap = await getDocs(q);
+
+    setTransferHistory(
+      snap.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort(
+          (a, b) =>
+            (b.requestedAt || "")
+              .localeCompare(a.requestedAt || "")
+        )
+    );
+  } catch (e) {
+    console.log(
+      "❌ loadTransferHistory:",
+      e
+    );
+  }
+};
+
 
   /* ── Form helpers ── */
   const setField = (key, val) => setMember(prev => ({ ...prev, [key]: val }));

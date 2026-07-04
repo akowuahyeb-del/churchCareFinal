@@ -104,6 +104,8 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [transferHistory, setTransferHistory] =
+  useState([]);
 
   /* ────────────── ACTIVE ENTITY ────────────── */
   useEffect(() => {
@@ -222,12 +224,43 @@ const loadEldersCount = async () => {
   }
 };
 
+const loadTransferHistory = async () => {
+  if (!organizationId || !memberId) return;
+
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "transfers"
+      ),
+      where("memberId", "==", memberId)
+    );
+
+    const snap = await getDocs(q);
+
+    setTransferHistory(
+      snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+    );
+  } catch (e) {
+    console.log(
+      "❌ loadTransferHistory:",
+      e
+    );
+  }
+};
+
 
   useEffect(() => {
     if (!memberId || !organizationId || !entityId) return;
     loadMember();
     loadAttendance();
     loadContributions();
+    loadTransferHistory();
   }, [memberId, organizationId, entityId]);
 
   useEffect(() => {
