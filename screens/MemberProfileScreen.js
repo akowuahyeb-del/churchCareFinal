@@ -868,42 +868,44 @@ const getElderThreshold = (action) => {
                 </TouchableOpacity>
               </>
             )}
+{canManageMembers && !isSelf && !isDeceased && (
+  <TouchableOpacity
+    style={[
+      styles.deceasedBtn,
+      {
+        backgroundColor: "#EEF0FA",
+        marginTop: 10,
+      },
+    ]}
+    onPress={() =>
+      navigation.navigate("TransferRequest", {
+        member,
+        isAdmin: true,
+      })
+    }
+  >
+    <Ionicons
+      name="swap-horizontal-outline"
+      size={16}
+      color="#4B3F72"
+      style={{ marginRight: 6 }}
+    />
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700",
+      }}
+    >
+      Initiate Transfer
+    </Text>
+  </TouchableOpacity>
+)}
+
+
           </View>
         )}
 
-       <TouchableOpacity
-  style={[
-    styles.deceasedBtn,
-    {
-      backgroundColor: "#EEF0FA",
-      marginTop: 10,
-    },
-  ]}
-  onPress={() =>
-    navigation.navigate("TransferRequest", {
-      member,
-      isAdmin: true,
-      viewerPermissions,
-      viewerName,
-      viewerUid,
-    })
-  }
->
-  <Ionicons
-    name="swap-horizontal-outline"
-    size={16}
-    color="#4B3F72"
-    style={{ marginRight: 6 }}
-  />
-  <Text
-    style={{
-      color: "#4B3F72",
-      fontWeight: "700",
-    }}
-  >
-    Initiate Transfer
-  </Text>
-</TouchableOpacity>
+   
       </ScrollView>
 
       {/* ══════════ EDIT MODAL ══════════ */}
