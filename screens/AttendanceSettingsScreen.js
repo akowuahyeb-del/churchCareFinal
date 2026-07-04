@@ -133,6 +133,13 @@ export default function AttendanceSettingsScreen() {
 const [itemModalVisible, setItemModalVisible] = useState(false);
 
 const [editingMode, setEditingMode] = useState("service");
+const [templateName, setTemplateName] = useState("");
+
+const [templateService, setTemplateService] = useState("");
+
+const [templateType, setTemplateType] = useState("");
+
+const [templateTime, setTemplateTime] = useState("");
 
 
 const [editingIndex, setEditingIndex] = useState(null);
@@ -228,6 +235,25 @@ const openAddTime = () => {
   setItemModalVisible(true);
 };
 
+const openAddTemplate = () => {
+  setEditingMode("template");
+  setEditingIndex(null);
+
+  setTemplateName("");
+  setTemplateService(
+    settings.defaultService || ""
+  );
+  setTemplateType(
+    settings.defaultType || ""
+  );
+  setTemplateTime(
+    settings.defaultStartTime || ""
+  );
+
+  setItemModalVisible(true);
+};
+
+
 const editItem = (mode, value, index) => {
   setEditingMode(mode);
   setEditingIndex(index);
@@ -240,6 +266,31 @@ const editItem = (mode, value, index) => {
 
   setItemModalVisible(true);
 };
+
+const editTemplate = (template, index) => {
+  setEditingMode("template");
+  setEditingIndex(index);
+
+  setTemplateName(
+    template.name
+  );
+
+  setTemplateService(
+    template.service
+  );
+
+  setTemplateType(
+    template.type
+  );
+
+  setTemplateTime(
+    template.startTime
+  );
+
+  setItemModalVisible(true);
+};
+
+
 const saveItem = () => {
   const s = { ...settings };
 
@@ -254,7 +305,6 @@ const saveItem = () => {
 
     update("serviceOptions", list);
 
-    // First item becomes default automatically
     if (!settings.defaultService && list.length > 0) {
       update("defaultService", list[0]);
     }
@@ -298,6 +348,32 @@ const saveItem = () => {
     }
   }
 
+  if (editingMode === "template") {
+    const list = [
+      ...(settings.sessionTemplates || [])
+    ];
+
+    const template = {
+      id:
+        editingIndex === null
+          ? `template_${Date.now()}`
+          : list[editingIndex].id,
+
+      name: templateName,
+      service: templateService,
+      type: templateType,
+      startTime: templateTime,
+    };
+
+    if (editingIndex === null) {
+      list.push(template);
+    } else {
+      list[editingIndex] = template;
+    }
+
+    update("sessionTemplates", list);
+  }
+
   setItemModalVisible(false);
 };
 
@@ -324,7 +400,22 @@ const deleteItem = () => {
 
     update("timeOptions", list);
   }
+if (editingMode === "template") {
 
+  const list = [
+    ...(settings.sessionTemplates || [])
+  ];
+
+  list.splice(
+    editingIndex,
+    1
+  );
+
+  update(
+    "sessionTemplates",
+    list
+  );
+}
   setItemModalVisible(false);
 };
   // ─────────────────────────────────────────────────────────────────
@@ -536,13 +627,7 @@ const deleteItem = () => {
           </>
         )}
 
-        {/* ══ SESSION DEFAULTS ══ */}
-        <SectionHeader
-          icon="calendar-outline"
-          color="#4B3F72"
-          title="Session Defaults"
-          subtitle="Pre-filled values when starting a new attendance session"
-        />
+       
 
         <View style={styles.card}>
           <Text style={styles.fieldLabel}>Default Service</Text>
@@ -717,13 +802,93 @@ const deleteItem = () => {
         
         </View>
 
-        {/* ══ ABSENCE ALERTS ══ */}
-        <SectionHeader
-          icon="notifications-outline"
-          color="#e67e22"
-          title="Absence Alerts"
-          subtitle="When to prompt pastoral follow-up"
-        />
+
+
+{/* ══ SESSION TEMPLATES ══ */}
+<SectionHeader
+  icon="albums-outline"
+  color="#16A085"
+  title="Session Templates"
+  subtitle="One-tap attendance session presets"
+/>
+
+<View style={styles.card}>
+
+  {(settings.sessionTemplates || []).map(
+    (template, index) => (
+      <View
+        key={template.id}
+        style={styles.dynamicListRow}
+      >
+        <View style={{ flex: 1 }}>
+
+          <Text
+            style={{
+              fontWeight: "700",
+              color: "#222",
+            }}
+          >
+            {template.name}
+          </Text>
+
+          <Text
+            style={{
+              fontSize: 11,
+              color: "#888",
+            }}
+          >
+            {template.service}
+            {" • "}
+            {template.type}
+            {" • "}
+            {template.startTime}
+          </Text>
+
+        </View>
+
+        <TouchableOpacity
+          onPress={() =>
+            editTemplate(
+              template,
+              index
+            )
+          }
+        >
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color="#4B3F72"
+          />
+        </TouchableOpacity>
+
+      </View>
+    )
+  )}
+
+  <TouchableOpacity
+    style={styles.manageBtn}
+    onPress={openAddTemplate}
+  >
+    <Ionicons
+      name="add-circle-outline"
+      size={16}
+      color="#16A085"
+    />
+    <Text style={styles.manageBtnText}>
+      Add Template
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+{/* ══ ABSENCE ALERTS ══ */}
+<SectionHeader
+  icon="notifications-outline"
+  color="#e67e22"
+  title="Absence Alerts"
+  subtitle="When to prompt pastoral follow-up"
+/>
+
 
         <View style={styles.card}>
           <View style={styles.thresholdRow}>
@@ -884,22 +1049,67 @@ const deleteItem = () => {
     <View style={styles.modalCard}>
 
       <Text style={styles.modalTitle}>
-        {editingIndex === null ? "Add" : "Edit"}{" "}
-        {editingMode === "service"
-          ? "Service"
-          : editingMode === "type"
-          ? "Session Type"
-          : "Service Time"}
-      </Text>
+  {editingIndex === null ? "Add" : "Edit"}{" "}
+  {editingMode === "service"
+    ? "Service"
+    : editingMode === "type"
+    ? "Session Type"
+    : editingMode === "time"
+    ? "Service Time"
+    : "Template"}
+</Text>
 
-      {editingMode !== "time" ? (
-        <TextInput
-          style={styles.modalInput}
-          value={itemName}
-          onChangeText={setItemName}
-          placeholder="Enter value"
-        />
-      ) : (
+      {editingMode === "template" ? (
+  <>
+    <Text style={styles.fieldLabel}>
+      Template Name
+    </Text>
+
+    <TextInput
+      style={styles.modalInput}
+      value={templateName}
+      onChangeText={setTemplateName}
+      placeholder="Sunday Morning Worship"
+    />
+
+    <Text style={styles.fieldLabel}>
+      Service
+    </Text>
+
+    <ChipPicker
+      options={settings.serviceOptions || []}
+      value={templateService}
+      onChange={setTemplateService}
+    />
+
+    <Text style={styles.fieldLabel}>
+      Type
+    </Text>
+
+    <ChipPicker
+      options={settings.typeOptions || []}
+      value={templateType}
+      onChange={setTemplateType}
+    />
+
+    <Text style={styles.fieldLabel}>
+      Start Time
+    </Text>
+
+    <ChipPicker
+      options={settings.timeOptions || []}
+      value={templateTime}
+      onChange={setTemplateTime}
+    />
+  </>
+) : editingMode !== "time" ? (
+  <TextInput
+    style={styles.modalInput}
+    value={itemName}
+    onChangeText={setItemName}
+    placeholder="Enter value"
+  />
+) : (
         <>
           <TouchableOpacity
             style={styles.timeButton}
