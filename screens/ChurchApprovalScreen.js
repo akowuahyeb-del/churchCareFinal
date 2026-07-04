@@ -363,6 +363,32 @@ if (org.submittedByUid) {
   );
 }
 
+// ✅ Notify applicant of approval
+if (org.submittedByUid) {
+  await setDoc(
+    doc(
+      collection(
+        db,
+        "users",
+        org.submittedByUid,
+        "notifications"
+      )
+    ),
+    {
+      type: "church_approved",
+      title: "Church Registration Approved",
+      message: `${org.name} has been approved and activated.`,
+
+      organizationId: org.id,
+      governanceNodeId: nodeRef.id,
+
+      read: false,
+
+      createdAt: new Date().toISOString(),
+    }
+  );
+}
+
       await loadPending();
       Alert.alert(
   "✅ Approved",

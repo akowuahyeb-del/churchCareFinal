@@ -47,6 +47,7 @@ import SuperAdminScreen from "./screens/SuperAdminScreen";
 import AttendanceSettingsScreen from "./screens/AttendanceSettingsScreen";
 import ApproveDonationsScreen from "./screens/ApproveDonationsScreen";
 import ChurchApprovalScreen from "./screens/ChurchApprovalScreen";
+import NotificationScreen from "./screens/NotificationScreen";
 
 
 
@@ -152,7 +153,7 @@ function RootStack() {
        <Stack.Screen name="AttendanceSettings"component={AttendanceSettingsScreen}/>
        <Stack.Screen name="ApproveDonations"component={ApproveDonationsScreen}/>
        <Stack.Screen name="ChurchApproval"component={ChurchApprovalScreen}/>
-
+       <Stack.Screen name="Notifications"component={NotificationScreen}/>
 
 
 

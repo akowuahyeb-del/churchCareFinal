@@ -28,6 +28,7 @@ import {
 import QRCodeDisplay from "../components/QRCodeDisplay";
 import { buildAttendanceSessionLink } from "../utils/qrLinks";
 import { findOpenSession } from "../utils/findOpenSession";
+import { useAttendanceSettings } from "../hooks/useAttendanceSettings";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -37,10 +38,6 @@ const TYPES      = ["First Service", "Second Service", "Third Service", "Evening
 const EVENTS     = ["None", "Easter", "Christmas", "Harvest", "Founders Day", "Convention"];
 const METHODS    = ["manual", "qr", "selfqr", "geo"];
 
-// ✅ Church GPS coordinates — store in entity settings document in
-// production rather than hardcoding. Admin sets these in Settings.
-const CHURCH_COORDS = { latitude: 5.6037, longitude: -0.1870 }; // Accra default
-const GEO_RADIUS_METERS = 150;
 
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
@@ -68,6 +65,7 @@ const fmtTime = () =>
 export default function AttendanceScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { settings: attendanceSettings } = useAttendanceSettings();
 
   // ── ENTITY CONTEXT ──
   const [activeEntity, setActiveEntity] = useState(null);
@@ -576,15 +574,12 @@ export default function AttendanceScreen() {
       );
       const snap = await getDocs(q);
       const count = snap.docs.length;
+if (count >= ABSENCE_FLAG) {
+  setRedFlagMember(member); setRedFlagCount(count); setRedFlagModal(true);
+} else if (count >= ABSENCE_WARNING) {
+  setContactMember(member); setContactModal(true);
+}
 
-      if (count >= 3) {
-        setRedFlagMember(member);
-        setRedFlagCount(count);
-        setRedFlagModal(true);
-      } else if (count >= 2) {
-        setContactMember(member);
-        setContactModal(true);
-      }
     } catch (e) {
       // ✅ If this logs a Firestore index URL, click it to create the
       // index — that's all that's needed to restore this feature.
@@ -925,6 +920,46 @@ export default function AttendanceScreen() {
     return matchSearch && matchFilter;
   });
 
+const ABSENCE_WARNING =
+  attendanceSettings?.absenceWarningThreshold ?? 2;
+
+const ABSENCE_FLAG =
+  attendanceSettings?.absenceFlagThreshold ?? 4;
+
+const CHURCH_COORDS = {
+  latitude: attendanceSettings?.latitude ?? 5.6037,
+  longitude: attendanceSettings?.longitude ?? -0.1870,
+};
+
+const GEO_RADIUS_METERS =
+  attendanceSettings?.geoRadiusMeters ?? 150;
+
+const modeTabs = [
+  {
+    key: "manual",
+    label: "Manual",
+    icon: "pencil-outline",
+  },
+  {
+    key: "qr",
+    label: "QR Scan",
+    icon: "qr-code-outline",
+  },
+
+  ...(attendanceSettings?.allowSelfCheckin
+    ? [{
+        key: "selfqr",
+        label: "Self QR",
+        icon: "phone-portrait-outline",
+      }]
+    : []),
+
+  {
+    key: "geo",
+    label: "Geo",
+    icon: "location-outline",
+  },
+];
   // ─────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────
@@ -941,6 +976,16 @@ export default function AttendanceScreen() {
             </Text>
           )}
         </View>
+
+
+<TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => navigation.navigate("AttendanceSettings")}
+>
+  <Ionicons name="settings-outline" size={18} color="#fff" />
+</TouchableOpacity>
+
+
         <View style={styles.headerRight}>
           {/* Live / offline badge */}
           {pendingCount > 0 && (
@@ -1075,26 +1120,34 @@ export default function AttendanceScreen() {
         </View>
       )}
 
-      {/* ── MODE TABS ── */}
-      <View style={styles.modeTabs}>
-        {[
-          { key: "manual", label: "Manual", icon: "pencil-outline" },
-          { key: "qr",     label: "QR Scan", icon: "qr-code-outline" },
-          { key: "selfqr", label: "Self QR",  icon: "phone-portrait-outline" },
-          { key: "geo",    label: "Geo",      icon: "location-outline" },
-        ].map(m => (
-          <TouchableOpacity
-            key={m.key}
-            style={[styles.modeTab, mode === m.key && styles.modeTabActive]}
-            onPress={() => setMode(m.key)}
-          >
-            <Ionicons name={m.icon} size={13} color={mode === m.key ? "#fff" : "#777"} />
-            <Text style={[styles.modeTabText, mode === m.key && styles.modeTabTextActive]}>
-              {m.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+     {/* ── MODE TABS ── */}
+<View style={styles.modeTabs}>
+  {modeTabs.map((m) => (
+    <TouchableOpacity
+      key={m.key}
+      style={[
+        styles.modeTab,
+        mode === m.key && styles.modeTabActive
+      ]}
+      onPress={() => setMode(m.key)}
+    >
+      <Ionicons
+        name={m.icon}
+        size={13}
+        color={mode === m.key ? "#fff" : "#777"}
+      />
+
+      <Text
+        style={[
+          styles.modeTabText,
+          mode === m.key && styles.modeTabTextActive
+        ]}
+      >
+        {m.label}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
       {/* ── SEARCH + FILTER ── */}
       {mode === "manual" && (
@@ -1142,6 +1195,8 @@ export default function AttendanceScreen() {
             const isFirst = firstTimers.has(item.id);
             const streak  = memberStreaks[item.id];
             const isPending = pendingToggleRef.current.has(item.id);
+
+
 
             return (
               <View style={[

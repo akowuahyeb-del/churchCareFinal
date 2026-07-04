@@ -28,17 +28,19 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { addDoc } from "firebase/firestore";
 import ChurchLogo from "../components/ChurchLogo";
 
-
-
-
-
-
 /* ── firebase ── */
-import { db, storage } from "../firebase";
+import { db, storage, auth } from "../firebase";
 import {
-  collection, onSnapshot, doc,
-  updateDoc, deleteDoc, setDoc
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+  setDoc,
+  query,
+  orderBy
 } from "firebase/firestore";
+
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const { width: W } = Dimensions.get("window");
@@ -70,10 +72,13 @@ export default function HomeScreen({ route }) {
 
 
 
+/* ── notifications ── */
+const [notifCount, setNotifCount] = useState(0);
+const [notifModal, setNotifModal] = useState(false);
+const [notifications, setNotifications] = useState([]);
 
-  /* ── notifications (mock) ── */
-  const [notifCount,  setNotifCount]  = useState(3);
-  const [notifModal,  setNotifModal]  = useState(false);
+  
+  
   const MOCK_NOTIFS = [
     { id:1, icon:"people-outline",      color:"#0984E3", title:"5 new members registered",    time:"2 min ago"  },
     { id:2, icon:"checkmark-circle-outline", color:"#00B894", title:"Sunday attendance marked", time:"1 hr ago"   },
@@ -180,7 +185,36 @@ useEffect(() => {
 }, []);
 
 
+useEffect(() => {
+  const uid = auth.currentUser?.uid;
 
+  if (!uid) return;
+
+  const q = query(
+    collection(
+      db,
+      "users",
+      uid,
+      "notifications"
+    ),
+    orderBy("createdAt", "desc")
+  );
+
+  const unsubscribe = onSnapshot(q, snap => {
+    const items = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    setNotifications(items);
+
+    setNotifCount(
+      items.filter(n => !n.read).length
+    );
+  });
+
+  return unsubscribe;
+}, []);
 
 
   useEffect(() => {
@@ -897,6 +931,84 @@ return (
     savePastorMessage("", "", null);
   }}
 />
+
+<Modal
+  visible={notifModal}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.overlay}>
+    <View style={styles.notifSheet}>
+
+      <View style={styles.notifHeader}>
+        <Text style={styles.notifTitle}>
+          Notifications
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => setNotifModal(false)}
+        >
+          <Ionicons
+            name="close"
+            size={22}
+            color="#222"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {notifications.length === 0 ? (
+        <Text
+          style={{
+            textAlign: "center",
+            color: "#888",
+            paddingVertical: 20,
+          }}
+        >
+          No notifications
+        </Text>
+      ) : (
+        <ScrollView>
+          {notifications.map(item => (
+            <View
+              key={item.id}
+              style={styles.notifRow}
+            >
+              <View
+                style={[
+                  styles.notifIcon,
+                  {
+                    backgroundColor:
+                      "#EEF0FA",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={18}
+                  color="#4B3F72"
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.notifText}>
+                  {item.title}
+                </Text>
+
+                <Text style={styles.notifTime}>
+                  {item.message}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+    </View>
+  </View>
+</Modal>
+
+
+
 <PreacherModal
   visible={preacherModal}
   onClose={() => {
