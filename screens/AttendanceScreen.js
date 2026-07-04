@@ -32,9 +32,9 @@ import { useAttendanceSettings } from "../hooks/useAttendanceSettings";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
-// ─────────────────────────────────────────────────────────────────
+/* // ─────────────────────────────────────────────────────────────────
 const SERVICES   = ["Sunday", "Wednesday", "Friday", "Special"];
-const TYPES      = ["First Service", "Second Service", "Third Service", "Evening Service", "Youth", "Children", "Prayer"];
+const TYPES      = ["First Service", "Second Service", "Third Service", "Evening Service", "Youth", "Children", "Prayer"]; */
 const EVENTS     = ["None", "Easter", "Christmas", "Harvest", "Founders Day", "Convention"];
 const METHODS    = ["manual", "qr", "selfqr", "geo"];
 
@@ -63,18 +63,25 @@ const fmtTime = () =>
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────
 export default function AttendanceScreen() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { settings: attendanceSettings } = useAttendanceSettings();
 
+const navigation = useNavigation();
+const route = useRoute();
   // ── ENTITY CONTEXT ──
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
 
+const {
+  settings: attendanceSettings,
+  loaded: settingsLoaded,
+} = useAttendanceSettings(
+  organizationId,
+  entityId
+);
+
   // ── SESSION STATE ──
-  const [selectedService, setSelectedService] = useState("Sunday");
-  const [selectedType,    setSelectedType]    = useState("First Service");
+const [selectedService, setSelectedService] = useState("");
+const [selectedType, setSelectedType] = useState("");
   const [selectedEvent,   setSelectedEvent]   = useState("None");
   const [startTime,       setStartTime]       = useState("");
   const [endTime,         setEndTime]         = useState("");
@@ -162,6 +169,28 @@ export default function AttendanceScreen() {
     loadMembers();
     restoreSession();
   }, [organizationId, entityId]);
+
+  // Sync defaults from Attendance Settings
+useEffect(() => {
+  if (!settingsLoaded || !attendanceSettings) return;
+
+  setSelectedService(
+    attendanceSettings.defaultService || ""
+  );
+
+  setSelectedType(
+    attendanceSettings.defaultType || ""
+  );
+
+  setStartTime(
+    attendanceSettings.defaultStartTime || ""
+  );
+
+  setSelectedEvent(
+    attendanceSettings.defaultEvent || "None"
+  );
+}, [attendanceSettings, settingsLoaded]);
+
 
   // ── ROUTE PARAMS (resume from QR scan) ──
   useEffect(() => {
@@ -921,14 +950,14 @@ if (count >= ABSENCE_FLAG) {
   });
 
 const ABSENCE_WARNING =
-  attendanceSettings?.absenceWarningThreshold ?? 2;
+  attendanceSettings?.absenceWarningCount ?? 2;
 
 const ABSENCE_FLAG =
-  attendanceSettings?.absenceFlagThreshold ?? 4;
+  attendanceSettings?.absenceFlagCount ?? 3;
 
 const CHURCH_COORDS = {
-  latitude: attendanceSettings?.latitude ?? 5.6037,
-  longitude: attendanceSettings?.longitude ?? -0.1870,
+  latitude: attendanceSettings?.geoLatitude ?? 5.6037,
+  longitude: attendanceSettings?.geoLongitude ?? -0.1870,
 };
 
 const GEO_RADIUS_METERS =
@@ -960,6 +989,18 @@ const modeTabs = [
     icon: "location-outline",
   },
 ];
+
+const SERVICES =
+  attendanceSettings?.serviceOptions || [];
+
+const TYPES =
+  attendanceSettings?.typeOptions || [];
+
+const TIMES =
+  attendanceSettings?.timeOptions || [];
+
+
+  
   // ─────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────
