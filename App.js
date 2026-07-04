@@ -21,7 +21,6 @@ import DashboardDetailsScreen  from "./screens/DashboardDetailsScreen";
 import DonateScreen            from "./screens/DonateScreen";
 import HistoryScreen           from "./screens/HistoryScreen";
 import AdminFinanceScreen      from "./screens/AdminFinanceScreen";
-import TransferRequestsScreen  from "./screens/TransferRequestsScreen";
 import AdminTransferScreen     from "./screens/AdminTransferScreen";
 import HelpScreen              from "./screens/HelpScreen";
 import DepartmentsScreen       from "./screens/DepartmentsScreen";
@@ -48,6 +47,8 @@ import AttendanceSettingsScreen from "./screens/AttendanceSettingsScreen";
 import ApproveDonationsScreen from "./screens/ApproveDonationsScreen";
 import ChurchApprovalScreen from "./screens/ChurchApprovalScreen";
 import NotificationScreen from "./screens/NotificationScreen";
+import TransferRequestScreen from "./screens/TransferRequestScreen";
+import TransferManagementScreen from "./screens/TransferManagementScreen";
 
 
 
@@ -127,7 +128,6 @@ function RootStack() {
       <Stack.Screen name="DashboardDetails"component={DashboardDetailsScreen} />
       <Stack.Screen name="Donate"          component={DonateScreen}           />
       <Stack.Screen name="Finance"         component={AdminFinanceScreen}     />
-      <Stack.Screen name="TransferRequests"component={TransferRequestsScreen} />
       <Stack.Screen name="AdminTransfers"  component={AdminTransferScreen}    />
       <Stack.Screen name="Settings"        component={SettingsScreen}         />
       <Stack.Screen name="Departments"     component={DepartmentsScreen}      />
@@ -154,8 +154,8 @@ function RootStack() {
        <Stack.Screen name="ApproveDonations"component={ApproveDonationsScreen}/>
        <Stack.Screen name="ChurchApproval"component={ChurchApprovalScreen}/>
        <Stack.Screen name="Notifications"component={NotificationScreen}/>
-
-
+       <Stack.Screen name="TransferRequest"component={TransferRequestScreen}options={{ headerShown: false }}/> 
+      <Stack.Screen name="TransferManagement"component={TransferManagementScreen}options={{ headerShown: false }}/>
 
 
 

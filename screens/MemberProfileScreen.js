@@ -60,7 +60,13 @@ const PROFILE_FIELDS = [
 
 export default function MemberProfileScreen({ route, navigation }) {
 
+ 
   const memberId = route?.params?.memberId;
+  const viewerUid =
+  route?.params?.viewerUid || viewerMemberId || null;
+
+const viewerName =
+  route?.params?.viewerName || "Staff";
 
   // ⚠️ There's no real Firebase Auth → member linkage anywhere in this
   // app yet (every screen so far hardcodes userRole = "admin"). Until
@@ -223,8 +229,18 @@ const loadEldersCount = async () => {
     console.log("❌ Load elders error:", e);
   }
 };
+console.log("🚀 loadTransferHistory called");
 
 const loadTransferHistory = async () => {
+
+  console.log(
+    "🚀 loadTransferHistory called",
+    {
+      organizationId,
+      memberId,
+    }
+  );
+
   if (!organizationId || !memberId) return;
 
   try {
@@ -239,6 +255,10 @@ const loadTransferHistory = async () => {
     );
 
     const snap = await getDocs(q);
+    console.log(
+  "📦 Transfer records found:",
+  snap.docs.length
+);
 
     setTransferHistory(
       snap.docs.map(doc => ({
@@ -254,7 +274,14 @@ const loadTransferHistory = async () => {
   }
 };
 
-
+console.log(
+  "✅ MemberProfile useEffect fired",
+  {
+    memberId,
+    organizationId,
+    entityId,
+  }
+);
   useEffect(() => {
     if (!memberId || !organizationId || !entityId) return;
     loadMember();
@@ -514,6 +541,11 @@ const getElderThreshold = (action) => {
       Alert.alert("Error", "Could not reinstate this member.");
     }
   };
+
+  console.log(
+  "TRANSFER HISTORY:",
+  transferHistory
+);
 
   /* ════════════════════════════════════════════
                       RENDER
@@ -839,6 +871,39 @@ const getElderThreshold = (action) => {
           </View>
         )}
 
+       <TouchableOpacity
+  style={[
+    styles.deceasedBtn,
+    {
+      backgroundColor: "#EEF0FA",
+      marginTop: 10,
+    },
+  ]}
+  onPress={() =>
+    navigation.navigate("TransferRequest", {
+      member,
+      isAdmin: true,
+      viewerPermissions,
+      viewerName,
+      viewerUid,
+    })
+  }
+>
+  <Ionicons
+    name="swap-horizontal-outline"
+    size={16}
+    color="#4B3F72"
+    style={{ marginRight: 6 }}
+  />
+  <Text
+    style={{
+      color: "#4B3F72",
+      fontWeight: "700",
+    }}
+  >
+    Initiate Transfer
+  </Text>
+</TouchableOpacity>
       </ScrollView>
 
       {/* ══════════ EDIT MODAL ══════════ */}
