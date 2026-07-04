@@ -77,6 +77,31 @@ timeOptions: [
   "6:00 PM",
 ],
 
+sessionTemplates: [
+  {
+    id: "sunday_morning",
+    name: "Sunday first Worship",
+    service: "Sunday",
+    type: "First Service",
+    startTime: "9:00 AM",
+  },
+
+  {
+    id: "wednesday_bible",
+    name: "Sunday Second Worship",
+    service: "Wednesday",
+    type: "Bible Study",
+    startTime: "6:00 PM",
+  },
+
+  {
+    id: "friday_prayer",
+    name: "Friday Prayer Meeting",
+    service: "Friday",
+    type: "Prayer",
+    startTime: "6:00 PM",
+  },
+],
   // Absence alerts
   absenceWarningCount:  2,         // contacts modal after this many absences
   absenceFlagCount:     3,         // red-flag modal after this many

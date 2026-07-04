@@ -83,6 +83,8 @@ const {
 const [selectedService, setSelectedService] = useState("");
 const [selectedType, setSelectedType] = useState("");
   const [selectedEvent,   setSelectedEvent]   = useState("None");
+  const [selectedTemplate, setSelectedTemplate] =
+  useState(null);
   const [startTime,       setStartTime]       = useState("");
   const [endTime,         setEndTime]         = useState("");
   const [sessionId,       setSessionId]       = useState(null);
@@ -999,6 +1001,8 @@ const TYPES =
 const TIMES =
   attendanceSettings?.timeOptions || [];
 
+  const TEMPLATES =
+  attendanceSettings?.sessionTemplates || [];
 
   
   // ─────────────────────────────────────────────────────────────────
@@ -1443,6 +1447,48 @@ const TIMES =
         <View style={styles.overlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>New Session</Text>
+
+<Text style={styles.fieldLabel}>
+  Session Template
+</Text>
+
+<View style={styles.chipRow}>
+  {TEMPLATES.map(template => (
+    <TouchableOpacity
+      key={template.id}
+      style={[
+        styles.chip,
+        selectedTemplate === template.id &&
+          styles.chipActive
+      ]}
+      onPress={() => {
+        setSelectedTemplate(template.id);
+
+        setSelectedService(
+          template.service
+        );
+
+        setSelectedType(
+          template.type
+        );
+
+        setStartTime(
+          template.startTime
+        );
+      }}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          selectedTemplate === template.id &&
+            styles.chipTextActive
+        ]}
+      >
+        {template.name}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
             <Text style={styles.fieldLabel}>Service</Text>
             <View style={styles.chipRow}>
