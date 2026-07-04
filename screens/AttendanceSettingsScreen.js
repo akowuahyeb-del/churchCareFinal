@@ -541,19 +541,49 @@ const deleteItem = () => {
   </Text>
 </TouchableOpacity>
 
-          <Text style={styles.fieldLabel}>Default Type</Text>
-          <ChipPicker
-            options={["First Service", "Second Service", "Third Service", "Evening Service", "Youth", "Children"]}
-            value={settings.defaultType}
-            onChange={v => update("defaultType", v)}
-          />
+         <Text style={styles.fieldLabel}>Default Type</Text>
+
+<ChipPicker
+  options={settings.typeOptions || []}
+  value={settings.defaultType}
+  onChange={v => update("defaultType", v)}
+/>
+
+<TouchableOpacity
+  style={styles.manageBtn}
+  onPress={openAddType}
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={16}
+    color="#4B3F72"
+  />
+  <Text style={styles.manageBtnText}>
+    Add Type
+  </Text>
+</TouchableOpacity>
 
           <Text style={styles.fieldLabel}>Default Start Time</Text>
-          <ChipPicker
-            options={["7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "6:00 PM"]}
-            value={settings.defaultStartTime}
-            onChange={v => update("defaultStartTime", v)}
-          />
+
+<ChipPicker
+  options={settings.timeOptions || []}
+  value={settings.defaultStartTime}
+  onChange={v => update("defaultStartTime", v)}
+/>
+
+<TouchableOpacity
+  style={styles.manageBtn}
+  onPress={openAddTime}
+>
+  <Ionicons
+    name="time-outline"
+    size={16}
+    color="#4B3F72"
+  />
+  <Text style={styles.manageBtnText}>
+    Add Time
+  </Text>
+</TouchableOpacity>
         </View>
 
         {/* ══ ABSENCE ALERTS ══ */}
