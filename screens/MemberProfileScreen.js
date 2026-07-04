@@ -870,13 +870,7 @@ const getElderThreshold = (action) => {
             )}
 {canManageMembers && !isSelf && !isDeceased && (
   <TouchableOpacity
-    style={[
-      styles.deceasedBtn,
-      {
-        backgroundColor: "#EEF0FA",
-        marginTop: 10,
-      },
-    ]}
+    style={styles.transferBtn}
     onPress={() =>
       navigation.navigate("TransferRequest", {
         member,
@@ -886,21 +880,35 @@ const getElderThreshold = (action) => {
   >
     <Ionicons
       name="swap-horizontal-outline"
-      size={16}
+      size={18}
       color="#4B3F72"
-      style={{ marginRight: 6 }}
     />
-    <Text
-      style={{
-        color: "#4B3F72",
-        fontWeight: "700",
-      }}
-    >
+    <Text style={styles.transferBtnText}>
       Initiate Transfer
     </Text>
   </TouchableOpacity>
 )}
 
+{isSelf && !isDeceased && !isDisciplined && (
+  <TouchableOpacity
+    style={styles.transferBtn}
+    onPress={() =>
+      navigation.navigate("TransferRequest", {
+        member,
+        isAdmin: false,
+      })
+    }
+  >
+    <Ionicons
+      name="swap-horizontal-outline"
+      size={18}
+      color="#4B3F72"
+    />
+    <Text style={styles.transferBtnText}>
+      Request Congregation Transfer
+    </Text>
+  </TouchableOpacity>
+)}
 
           </View>
         )}
@@ -1220,4 +1228,42 @@ const styles = StyleSheet.create({
   modalSaveBtn: { flex: 1, backgroundColor: "#4B3F72", padding: 12, borderRadius: 8, alignItems: "center" },
   modalCancelBtn: { flex: 1, backgroundColor: "#aaa", padding: 12, borderRadius: 8, alignItems: "center" },
   white: { color: "#fff", fontWeight: "600" },
+  transferBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#EEF0FA",
+  borderWidth: 1,
+  borderColor: "#D9DDF2",
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  borderRadius: 12,
+  marginTop: 10,
+},
+
+transferBtnText: {
+  color: "#4B3F72",
+  fontWeight: "700",
+  fontSize: 14,
+  marginLeft: 8,
+},
+transferBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#EEF0FA",
+  borderWidth: 1,
+  borderColor: "#D9DDF2",
+  borderRadius: 12,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  marginTop: 10,
+},
+
+transferBtnText: {
+  marginLeft: 8,
+  color: "#4B3F72",
+  fontWeight: "700",
+  fontSize: 14,
+},
 });

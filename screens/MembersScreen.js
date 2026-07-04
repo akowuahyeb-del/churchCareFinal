@@ -91,13 +91,6 @@ function ChipRow({ label, list = [], value, onSelect, onAdd, onEdit }) {
 
 // ── Main screen ───────────────────────────────────────────────────
 export default function MembersScreen({ navigation }) {
-Alert.alert(
-  "TEST",
-  "MembersScreen Loaded"
-);
-
-
-
   const viewerRole = "admin"; // replace with auth context
 
   // ── Entity / church ──
