@@ -88,12 +88,15 @@ export default function ConcurrentSessionsScreen() {
     ]);
   };
 
-  const resumeSession = (session) => {
-    navigation.navigate("Attendance", {
+ const resumeSession = (session) => {
+  navigation.navigate("MainTabs", {
+    screen: "Attendance",
+    params: {
       resumeSessionId: session.id,
-      resumeEntityId:  entityId,
-    });
-  };
+      resumeEntityId: entityId,
+    },
+  });
+};
 
   if (loading) {
     return (

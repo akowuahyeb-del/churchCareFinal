@@ -400,13 +400,30 @@ const attendanceGradeColor =
     ? "#F39C12"
     : "#E74C3C";
 
-/* ADD THIS HERE */
 const attendanceStatusMessage =
   filteredSessions.length === 0
     ? "No attendance data available for the selected period."
     : `Based on ${filteredSessions.length} completed session${
         filteredSessions.length > 1 ? "s" : ""
       }.`;
+
+/* ATTENDANCE TREND */
+const latestRate = filteredSessions[0]?.finalRate || 0;
+const previousRate = filteredSessions[1]?.finalRate || 0;
+
+const trendDirection =
+  latestRate > previousRate
+    ? "up"
+    : latestRate < previousRate
+    ? "down"
+    : "flat";
+
+const trendColor =
+  trendDirection === "up"
+    ? "#27AE60"
+    : trendDirection === "down"
+    ? "#E74C3C"
+    : "#BDC3C7";
 
 const peakPresent = filteredSessions.length > 0
   ? Math.max(...filteredSessions.map(s => s.finalPresent || 0))
@@ -533,9 +550,23 @@ const peakPresent = filteredSessions.length > 0
     Attendance Health
   </Text>
 
+  <View style={styles.heroRateRow}>
   <Text style={styles.heroRate}>
     {avgRate || 0}%
   </Text>
+
+  <Ionicons
+    name={
+      trendDirection === "up"
+        ? "arrow-up-circle"
+        : trendDirection === "down"
+        ? "arrow-down-circle"
+        : "remove-circle"
+    }
+    size={28}
+    color={trendColor}
+  />
+</View>
 
 
 
@@ -1387,5 +1418,10 @@ heroStatusText: {
   fontSize: 11,
   marginTop: 10,
   textAlign: "center",
+},
+heroRateRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
 },
 });
