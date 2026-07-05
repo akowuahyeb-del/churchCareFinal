@@ -1,11 +1,3 @@
-// screens/AttendanceScreen.js
-// ✅ Complete rewrite incorporating:
-//   — All bug fixes from conversation (double-tap, presentCount,
-//     listener leak, checkAbsenceStreak, handleBarCodeScanned,
-//     session restoration, Hermes URL crash)
-//   — 7 intelligence features: predictive missing panel, session health
-//     score, first-time visitor badge, streak display, vs-last-week
-//     comparison, offline write queue, real geo implementation
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -29,6 +21,7 @@ import QRCodeDisplay from "../components/QRCodeDisplay";
 import { buildAttendanceSessionLink } from "../utils/qrLinks";
 import { findOpenSession } from "../utils/findOpenSession";
 import { useAttendanceSettings } from "../hooks/useAttendanceSettings";
+import { isMemberAway, trueLocalMembers, EXCLUDED_FROM_ABSENCE_ALERTS } from "../constants/memberMobility";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -281,11 +274,14 @@ useEffect(() => {
   // so it's mathematically impossible to go negative or exceed
   // members.length.
   // ─────────────────────────────────────────────────────────────────
-  const presentCount = members.filter(m => attendance[m.id]?.status === "present").length;
-  const absentCount  = members.length - presentCount;
-  const attendanceRate = members.length > 0
-    ? Math.round((presentCount / members.length) * 100)
-    : 0;
+const presentCount = members.filter(m => attendance[m.id]?.status === "present").length;
+const todayDate = new Date().toISOString().split("T")[0];
+const localMembers = trueLocalMembers(members, todayDate);
+
+const absentCount  = localMembers.length - presentCount;
+const attendanceRate = localMembers.length > 0
+  ? Math.round((presentCount / localMembers.length) * 100)
+  : 0;
 
   // ─────────────────────────────────────────────────────────────────
   // SESSION RESTORATION
@@ -595,28 +591,49 @@ useEffect(() => {
   // composite-index error, making this feature appear to not exist.
   // Now logs properly so the index link shows up in Metro console.
   // ─────────────────────────────────────────────────────────────────
-  const checkAbsenceStreak = async (member) => {
-    if (!organizationId || !entityId) return;
-    try {
-      const q = query(
-        collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
-        where("memberId", "==", member.id),
-        where("status", "==", "absent")
-      );
-      const snap = await getDocs(q);
-      const count = snap.docs.length;
-if (count >= ABSENCE_FLAG) {
-  setRedFlagMember(member); setRedFlagCount(count); setRedFlagModal(true);
-} else if (count >= ABSENCE_WARNING) {
-  setContactMember(member); setContactModal(true);
-}
+const checkAbsenceStreak = async (member) => {
 
-    } catch (e) {
-      // ✅ If this logs a Firestore index URL, click it to create the
-      // index — that's all that's needed to restore this feature.
-      console.log("❌ checkAbsenceStreak error (check for missing Firestore index):", e);
+  // ✅ Ignore members who are officially away
+  if (
+    isMemberAway(member, todayDate) &&
+    EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
+  ) {
+    return;
+  }
+
+  if (!organizationId || !entityId) return;
+
+  try {
+    const q = query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "attendance"
+      ),
+      where("memberId", "==", member.id),
+      where("status", "==", "absent")
+    );
+
+    const snap = await getDocs(q);
+    const count = snap.docs.length;
+
+    if (count >= ABSENCE_FLAG) {
+      setRedFlagMember(member);
+      setRedFlagCount(count);
+      setRedFlagModal(true);
+
+    } else if (count >= ABSENCE_WARNING) {
+      setContactMember(member);
+      setContactModal(true);
     }
-  };
+
+  } catch (e) {
+    console.log("checkAbsenceStreak error:", e);
+  }
+};
 
   // ─────────────────────────────────────────────────────────────────
   // TRANSFER
@@ -1047,10 +1064,20 @@ const TIMES =
             </View>
           )}
           {sessionId && (
-            <TouchableOpacity style={styles.headerBtn} onPress={() => {}}>
-              <Ionicons name="git-branch-outline" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
+  <TouchableOpacity
+    style={styles.headerBtn}
+    onPress={() => navigation.navigate("ConcurrentSessions")}
+  >
+    <Ionicons name="git-branch-outline" size={18} color="#fff" />
+  </TouchableOpacity>
+)}
+<TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => navigation.navigate("GroupAttendance")}
+>
+  <Ionicons name="people-outline" size={18} color="#fff" />
+</TouchableOpacity>
+
           <TouchableOpacity style={styles.headerBtn} onPress={openLog}>
             <Ionicons name="list-outline" size={18} color="#fff" />
           </TouchableOpacity>
@@ -1228,107 +1255,6 @@ const TIMES =
         </View>
       )}
 
-      {/* ── MANUAL MODE — MEMBER LIST ── */}
-      {mode === "manual" && (
-        <FlatList
-          data={filtered}
-          keyExtractor={item => item.id}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 80 }}
-          renderItem={({ item }) => {
-            const status  = attendance[item.id]?.status;
-            const isFirst = firstTimers.has(item.id);
-            const streak  = memberStreaks[item.id];
-            const isPending = pendingToggleRef.current.has(item.id);
-
-
-
-            return (
-              <View style={[
-                styles.memberRow,
-                status === "present" && styles.memberRowPresent,
-                status === "absent"  && styles.memberRowAbsent,
-                isSessionLocked && { opacity: 0.7 }
-              ]}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberAvatarText}>
-                    {(item.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.memberNameRow}>
-                    <Text style={styles.memberName}>{item.name}</Text>
-                    {isFirst && (
-                      <View style={styles.firstTimerBadge}>
-                        <Text style={styles.firstTimerBadgeText}>First Visit 👋</Text>
-                      </View>
-                    )}
-                    {streak >= 4 && !isFirst && (
-                      <View style={styles.streakBadge}>
-                        <Text style={styles.streakBadgeText}>🔥{streak}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.memberSub}>{item.ministry || item.phone || ""}</Text>
-                </View>
-
-                {/* UNDO if marked this session */}
-                {undoMap[item.id] !== undefined && (
-                  <TouchableOpacity style={styles.undoBtn} onPress={() => undoMember(item)}>
-                    <Ionicons name="arrow-undo" size={14} color="#4B3F72" />
-                  </TouchableOpacity>
-                )}
-
-                {/* TRANSFER */}
-                <TouchableOpacity
-                  style={styles.transferBtn}
-                  onPress={() => { setSelectedMember(item); setTransferModal(true); }}
-                >
-                  <Ionicons name="swap-horizontal" size={16} color="#4B3F72" />
-                </TouchableOpacity>
-
-                {/* PRESENT */}
-                <TouchableOpacity
-                  disabled={isPending || isSessionLocked}
-                  style={[
-                    styles.markBtn, styles.btnPresent,
-                    status === "present" && styles.btnPresentActive,
-                    (isPending || isSessionLocked) && { opacity: 0.4 }
-                  ]}
-                  onPress={() => toggleAttendance(item, "present")}
-                >
-                  {isPending
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Ionicons name="checkmark" size={16} color="#fff" />}
-                </TouchableOpacity>
-
-                {/* ABSENT */}
-                <TouchableOpacity
-                  disabled={isPending || isSessionLocked}
-                  style={[
-                    styles.markBtn, styles.btnAbsent,
-                    status === "absent" && styles.btnAbsentActive,
-                    (isPending || isSessionLocked) && { opacity: 0.4 }
-                  ]}
-                  onPress={() => toggleAttendance(item, "absent")}
-                >
-                  {isPending
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Ionicons name="close" size={16} color="#fff" />}
-                </TouchableOpacity>
-              </View>
-            );
-          }}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={40} color="#ccc" />
-              <Text style={styles.emptyText}>
-                {searchTerm ? "No members match your search" : "No members added yet"}
-              </Text>
-            </View>
-          )}
-        />
-      )}
 
       {/* ── QR SCAN MODE ── */}
       {mode === "qr" && (
@@ -1687,6 +1613,9 @@ const TIMES =
         </View>
       </Modal>
 
+
+
+
       {/* ══════════ RED FLAG MODAL ══════════ */}
       <Modal visible={redFlagModal} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -1878,4 +1807,7 @@ const styles = StyleSheet.create({
   logName: { fontSize: 13, fontWeight: "700", color: "#222" },
   logSub: { fontSize: 11, color: "#aaa", marginTop: 1 },
   logStatus: { fontSize: 11, fontWeight: "700" },
+  awayMemberBadge: { backgroundColor: "#EEF0FA", borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2 },
+awayMemberBadgeText: { fontSize: 9, color: "#4B3F72", fontWeight: "800" },
+
 });
