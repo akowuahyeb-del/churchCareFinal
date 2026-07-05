@@ -542,6 +542,26 @@ const attendanceRate =
       return;
     }
 
+    // ✅ Mobility warning (does not block attendance)
+if (isMemberAway(member, todayDate)) {
+  const activePeriod = (member.awayPeriods || []).find((p) => {
+    const from = String(p.from || "").replace(/-/g, "");
+    const to = String(p.to || "").replace(/-/g, "");
+    const today = todayDate.replace(/-/g, "");
+
+    return from <= today && today <= to;
+  });
+
+  Alert.alert(
+    "Away Member",
+    `${member.name} is currently marked as Away${
+      member.schoolName ? ` (${member.schoolName})` : ""
+    }${
+      activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
+    }.\n\nAttendance can still be recorded if they are physically present.`
+  );
+}
+
     // ✅ Layer 1: synchronous pending guard
     if (pendingToggleRef.current.has(member.id)) return;
     pendingToggleRef.current.add(member.id);
@@ -1288,13 +1308,6 @@ const TIMES =
             const streak  = memberStreaks[item.id];
             const isPending = pendingToggleRef.current.has(item.id);
 
-console.log(
-  "ATTENDANCE AWAY TEST",
-  item.name,
-  item.mobilityStatus,
-  item.awayPeriods,
-  isMemberAway(item, todayDate)
-);
 
             return (
               <View style={[
@@ -1331,12 +1344,14 @@ console.log(
 
 
     {isMemberAway(item, todayDate) && (
-      <View style={styles.awayMemberBadge}>
-        <Text style={styles.awayMemberBadgeText}>
-          Away
-        </Text>
-      </View>
-    )}
+  <View style={styles.awayMemberBadge}>
+    <Text style={styles.awayMemberBadgeText}>
+      {item.schoolName
+        ? `Away • ${item.schoolName}`
+        : "Away"}
+    </Text>
+  </View>
+)}
   </View>
 
   <Text style={styles.memberSub}>
