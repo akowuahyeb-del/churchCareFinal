@@ -1139,9 +1139,16 @@ const TIMES =
             </View>
           )}
           {sessionId && (
-            <TouchableOpacity style={styles.headerBtn} onPress={() => {}}>
-              <Ionicons name="git-branch-outline" size={18} color="#fff" />
-            </TouchableOpacity>
+            <TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => setSessionModal(true)}
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={18}
+    color="#fff"
+  />
+</TouchableOpacity>
           )}
           {sessionId && (
   <TouchableOpacity
@@ -1150,6 +1157,18 @@ const TIMES =
   >
     <Ionicons
       name="git-branch-outline"
+      size={18}
+      color="#fff"
+    />
+  </TouchableOpacity>
+)}
+{sessionId && (
+  <TouchableOpacity
+    style={styles.headerBtn}
+    onPress={() => setSessionModal(true)}
+  >
+    <Ionicons
+      name="add-circle-outline"
       size={18}
       color="#fff"
     />
