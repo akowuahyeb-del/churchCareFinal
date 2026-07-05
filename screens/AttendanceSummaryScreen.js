@@ -477,10 +477,6 @@ export default function AttendanceSummaryScreen() {
       </View>
 
 
-<View style={styles.tabRow}>
-  ...
-</View>
-
 {/* ATTENDANCE HEALTH HERO */}
 <View style={styles.heroCard}>
   <Text style={styles.heroLabel}>
@@ -524,85 +520,6 @@ export default function AttendanceSummaryScreen() {
     </View>
   </View>
 </View>
-{filteredSessions.length > 0 && (
-  <View style={styles.sessionInfoCard}>
-    
-    <View style={styles.sessionInfoHeader}>
-      <Ionicons
-        name="calendar-outline"
-        size={18}
-        color="#4B3F72"
-      />
-      <Text style={styles.sessionInfoHeaderText}>
-        LAST COMPLETED SESSION
-      </Text>
-    </View>
-
-    <Text style={styles.sessionInfoService}>
-      {filteredSessions[0]?.service || "Service"}
-    </Text>
-
-    <Text style={styles.sessionInfoType}>
-      {filteredSessions[0]?.type || "Session"}
-    </Text>
-
-    <View style={styles.sessionInfoRow}>
-      <Ionicons
-        name="calendar-outline"
-        size={14}
-        color="#888"
-      />
-      <Text style={styles.sessionInfoText}>
-        {formatDate(filteredSessions[0]?.date)}
-      </Text>
-    </View>
-
-    <View style={styles.sessionInfoRow}>
-      <Ionicons
-        name="time-outline"
-        size={14}
-        color="#888"
-      />
-      <Text style={styles.sessionInfoText}>
-        {filteredSessions[0]?.startTime || "—"}
-        {filteredSessions[0]?.endTime
-          ? ` - ${filteredSessions[0]?.endTime}`
-          : ""}
-      </Text>
-    </View>
-
-    <View style={styles.sessionInfoRow}>
-      <Ionicons
-        name="business-outline"
-        size={14}
-        color="#888"
-      />
-      <Text style={styles.sessionInfoText}>
-        {activeEntity?.name}
-      </Text>
-    </View>
-
-    {filteredSessions[0]?.event && (
-      <View style={styles.sessionInfoRow}>
-        <Ionicons
-          name="flag-outline"
-          size={14}
-          color="#888"
-        />
-        <Text style={styles.sessionInfoText}>
-          {filteredSessions[0]?.event}
-        </Text>
-      </View>
-    )}
-
-    <View style={styles.completedBadge}>
-      <Text style={styles.completedBadgeText}>
-        Completed
-      </Text>
-    </View>
-
-  </View>
-)}
 
 {/* SESSION INFORMATION */}
 {filteredSessions.length > 0 && (
