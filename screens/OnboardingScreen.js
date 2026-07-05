@@ -1,65 +1,314 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+// screens/OnboardingScreen.js
+//
+// ✅ Runs once, after approval, before the dashboard. Collects the
+// minimal info needed to make the first dashboard load useful:
+// session defaults, church coordinates (for Geo check-in), and
+// a profile photo for the primary admin. Writes a completion record
+// so AppNavigator never shows this again.
 
-export default function OnboardingScreen({ navigation, route }) {
+import React, { useState } from "react";
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Alert, ActivityIndicator
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-  const { churchId, churchName, adminName } = route?.params || {};
+const STEPS = ["Welcome", "Service Setup", "Location", "Done"];
+
+export default function OnboardingScreen({ route }) {
+  const org  = route?.params?.org  || {};
+  const uid  = route?.params?.uid  || "";
+  const email = route?.params?.email || "";
+
+  const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+
+  // Step 2 — service defaults
+  const [defaultService, setDefaultService] = useState("Sunday");
+  const [defaultStart, setDefaultStart]     = useState("9:00 AM");
+  const [timezone, setTimezone]             = useState("Africa/Accra");
+
+  // Step 3 — location
+  const [latitude, setLatitude]   = useState("5.6037");
+  const [longitude, setLongitude] = useState("-0.1870");
+  const [address, setAddress]     = useState("");
+
+  const complete = async () => {
+    setSaving(true);
+    try {
+      const activeEntityRaw = await AsyncStorage.getItem("activeEntity");
+      const activeEntity = activeEntityRaw ? JSON.parse(activeEntityRaw) : null;
+
+      if (!activeEntity?.organizationId || !activeEntity?.entityId) {
+        Alert.alert("Error", "Could not find your church. Please sign out and back in.");
+        return;
+      }
+
+      const { organizationId, entityId } = activeEntity;
+
+      // Save service defaults to entity settings
+      await setDoc(
+        doc(db, "organizations", organizationId, "entities", entityId, "settings", "defaults"),
+        {
+          defaultService,
+          defaultStartTime: defaultStart,
+          timezone,
+        },
+        { merge: true }
+      );
+
+      // Save church coordinates for Geo check-in
+      if (latitude && longitude) {
+        await setDoc(
+          doc(db, "organizations", organizationId, "entities", entityId, "settings", "location"),
+          {
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+            address,
+            geoRadiusMeters: 150,
+          },
+          { merge: true }
+        );
+      }
+
+      // ✅ Mark onboarding complete — AppNavigator reads this to decide
+      // whether to show ONBOARDING or ACTIVE state on next login
+      await setDoc(
+        doc(db, "organizations", organizationId, "onboarding", uid),
+        {
+          completed: true,
+          completedAt: new Date().toISOString(),
+          uid,
+          email,
+        }
+      );
+
+      // AppNavigator's watcher fires → routes to ACTIVE → Main dashboard
+      setStep(STEPS.length - 1);
+
+    } catch (e) {
+      console.log("❌ onboarding complete error:", e);
+      Alert.alert("Error", "Could not save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
 
-      <Text style={styles.title}>🎉 Welcome {adminName}</Text>
+      {/* PROGRESS */}
+      <View style={styles.progressRow}>
+        {STEPS.map((s, i) => (
+          <View key={s} style={styles.progressItem}>
+            <View style={[styles.progressDot, i <= step && styles.progressDotActive]}>
+              {i < step && <Ionicons name="checkmark" size={11} color="#fff" />}
+            </View>
+            {i < STEPS.length - 1 && (
+              <View style={[styles.progressLine, i < step && styles.progressLineActive]} />
+            )}
+          </View>
+        ))}
+      </View>
 
-      <Text style={styles.subtitle}>
-        {churchName} has been created successfully!
-      </Text>
+      <ScrollView contentContainerStyle={styles.body}>
 
-      <TouchableOpacity
-        style={styles.btn}
-        onPress={() => {
-          navigation.replace("ChurchDashboard", {
-            churchId
-          });
-        }}
-      >
-        <Text style={styles.btnText}>Continue to Dashboard</Text>
-      </TouchableOpacity>
+        {/* STEP 0 — WELCOME */}
+        {step === 0 && (
+          <View style={styles.centered}>
+            <View style={styles.approvedBadge}>
+              <Ionicons name="checkmark-circle" size={56} color="#27ae60" />
+            </View>
+            <Text style={styles.bigTitle}>You're Approved! 🎉</Text>
+            <Text style={styles.bigSub}>
+              <Text style={{ fontWeight: "800" }}>{org.name}</Text> is now active on ChurchCare.
+              Let's take 2 minutes to set up your dashboard.
+            </Text>
+            <View style={styles.featureList}>
+              {["Attendance tracking with QR codes", "Member profiles & giving records", "Service program & preacher management", "AI-powered financial insights"].map(f => (
+                <View key={f} style={styles.featureRow}>
+                  <Ionicons name="checkmark-circle" size={16} color="#27ae60" />
+                  <Text style={styles.featureText}>{f}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
+        {/* STEP 1 — SERVICE DEFAULTS */}
+        {step === 1 && (
+          <View>
+            <Text style={styles.stepTitle}>Service Setup</Text>
+            <Text style={styles.stepSub}>
+              These defaults pre-fill your Attendance screen every Sunday so you don't have to set them manually each time.
+            </Text>
+
+            <Text style={styles.label}>Primary Service Day</Text>
+            <View style={styles.chipRow}>
+              {["Sunday", "Saturday", "Friday", "Wednesday"].map(d => (
+                <TouchableOpacity
+                  key={d}
+                  style={[styles.chip, defaultService === d && styles.chipActive]}
+                  onPress={() => setDefaultService(d)}
+                >
+                  <Text style={[styles.chipText, defaultService === d && styles.chipTextActive]}>{d}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Typical Start Time</Text>
+            <View style={styles.chipRow}>
+              {["7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM"].map(t => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.chip, defaultStart === t && styles.chipActive]}
+                  onPress={() => setDefaultStart(t)}
+                >
+                  <Text style={[styles.chipText, defaultStart === t && styles.chipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Timezone</Text>
+            <View style={styles.chipRow}>
+              {["Africa/Accra", "Africa/Lagos", "Africa/Nairobi"].map(tz => (
+                <TouchableOpacity
+                  key={tz}
+                  style={[styles.chip, timezone === tz && styles.chipActive]}
+                  onPress={() => setTimezone(tz)}
+                >
+                  <Text style={[styles.chipText, timezone === tz && styles.chipTextActive]}>{tz.replace("Africa/", "")}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* STEP 2 — LOCATION */}
+        {step === 2 && (
+          <View>
+            <Text style={styles.stepTitle}>Church Location</Text>
+            <Text style={styles.stepSub}>
+              Used by Geo check-in to verify members are physically at the church before marking them present. Accurate coordinates = no false check-ins.
+            </Text>
+
+            <Text style={styles.label}>Street Address</Text>
+            <TextInput style={styles.input} value={address} onChangeText={setAddress}
+              placeholder="e.g. Plot 14, Liberation Road, Tema" />
+
+            <Text style={styles.label}>GPS Coordinates</Text>
+            <Text style={styles.hint}>Find these on Google Maps: press and hold your church location.</Text>
+            <View style={styles.coordRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Latitude</Text>
+                <TextInput style={styles.input} value={latitude} onChangeText={setLatitude}
+                  keyboardType="decimal-pad" placeholder="e.g. 5.6037" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Longitude</Text>
+                <TextInput style={styles.input} value={longitude} onChangeText={setLongitude}
+                  keyboardType="decimal-pad" placeholder="e.g. -0.1870" />
+              </View>
+            </View>
+
+            <View style={styles.infoBox}>
+              <Ionicons name="location-outline" size={13} color="#4B3F72" />
+              <Text style={styles.infoText}>
+                You can update these anytime in Settings → Church Location. Skip this step if you're not sure — Geo check-in will use Accra as a default.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* STEP 3 — DONE */}
+        {step === STEPS.length - 1 && (
+          <View style={styles.centered}>
+            <View style={styles.approvedBadge}>
+              <Ionicons name="rocket-outline" size={56} color="#4B3F72" />
+            </View>
+            <Text style={styles.bigTitle}>All Set!</Text>
+            <Text style={styles.bigSub}>
+              Your dashboard is ready. You can add members, start tracking attendance, and manage your service program right away.
+            </Text>
+          </View>
+        )}
+
+      </ScrollView>
+
+      {/* BOTTOM ACTIONS */}
+      <View style={styles.bottomBar}>
+        {step < STEPS.length - 2 && (
+          <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(s => s + 1)}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        )}
+
+        {step < STEPS.length - 2 ? (
+          <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(s => s + 1)}>
+            <Text style={styles.nextBtnText}>Continue</Text>
+            <Ionicons name="arrow-forward" size={16} color="#fff" />
+          </TouchableOpacity>
+        ) : step === STEPS.length - 2 ? (
+          <TouchableOpacity
+            style={[styles.nextBtn, saving && { opacity: 0.6 }]}
+            onPress={complete}
+            disabled={saving}
+          >
+            {saving
+              ? <ActivityIndicator color="#fff" />
+              : <>
+                  <Text style={styles.nextBtnText}>Complete Setup</Text>
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                </>}
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#f4f6fb"
-  },
+  container: { flex: 1, backgroundColor: "#f4f6fb" },
 
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 10,
-    textAlign: "center"
-  },
+  progressRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, backgroundColor: "#4B3F72" },
+  progressItem: { flex: 1, flexDirection: "row", alignItems: "center" },
+  progressDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
+  progressDotActive: { backgroundColor: "#fff" },
+  progressLine: { flex: 1, height: 2, backgroundColor: "rgba(255,255,255,0.2)", marginHorizontal: 4 },
+  progressLineActive: { backgroundColor: "#fff" },
 
-  subtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 20,
-    color: "#555"
-  },
+  body: { padding: 20, paddingBottom: 120 },
+  centered: { alignItems: "center", paddingTop: 10 },
 
-  btn: {
-    backgroundColor: "#4B3F72",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center"
-  },
+  approvedBadge: { width: 96, height: 96, borderRadius: 48, backgroundColor: "#EEF0FA", alignItems: "center", justifyContent: "center", marginBottom: 20, marginTop: 10 },
+  bigTitle: { fontSize: 24, fontWeight: "900", color: "#222", textAlign: "center" },
+  bigSub: { fontSize: 14, color: "#888", textAlign: "center", lineHeight: 22, marginTop: 10, marginBottom: 20 },
+  featureList: { alignSelf: "stretch", gap: 10 },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", borderRadius: 10, padding: 12 },
+  featureText: { fontSize: 13, color: "#333", fontWeight: "600", flex: 1 },
 
-  btnText: {
-    color: "#fff",
-    fontWeight: "700"
-  }
+  stepTitle: { fontSize: 20, fontWeight: "800", color: "#222", marginBottom: 6 },
+  stepSub: { fontSize: 13, color: "#888", lineHeight: 19, marginBottom: 20 },
+
+  label: { fontSize: 12, fontWeight: "700", color: "#777", marginBottom: 6, marginTop: 10 },
+  hint: { fontSize: 11, color: "#aaa", marginBottom: 6, marginTop: -4 },
+  input: { backgroundColor: "#fff", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#eee", fontSize: 14, marginBottom: 6 },
+  coordRow: { flexDirection: "row", gap: 10 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e0e0e0" },
+  chipActive: { backgroundColor: "#4B3F72", borderColor: "#4B3F72" },
+  chipText: { fontSize: 12, color: "#555", fontWeight: "600" },
+  chipTextActive: { color: "#fff" },
+
+  infoBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 12, marginTop: 8 },
+  infoText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
+
+  bottomBar: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 10, backgroundColor: "#fff", padding: 16, borderTopWidth: 1, borderTopColor: "#eee" },
+  skipBtn: { padding: 10 },
+  skipText: { color: "#aaa", fontSize: 13, fontWeight: "600" },
+  nextBtn: { backgroundColor: "#4B3F72", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 8 },
+  nextBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });
