@@ -524,7 +524,166 @@ export default function AttendanceSummaryScreen() {
     </View>
   </View>
 </View>
+{filteredSessions.length > 0 && (
+  <View style={styles.sessionInfoCard}>
+    
+    <View style={styles.sessionInfoHeader}>
+      <Ionicons
+        name="calendar-outline"
+        size={18}
+        color="#4B3F72"
+      />
+      <Text style={styles.sessionInfoHeaderText}>
+        LAST COMPLETED SESSION
+      </Text>
+    </View>
 
+    <Text style={styles.sessionInfoService}>
+      {filteredSessions[0]?.service || "Service"}
+    </Text>
+
+    <Text style={styles.sessionInfoType}>
+      {filteredSessions[0]?.type || "Session"}
+    </Text>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="calendar-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {formatDate(filteredSessions[0]?.date)}
+      </Text>
+    </View>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="time-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {filteredSessions[0]?.startTime || "—"}
+        {filteredSessions[0]?.endTime
+          ? ` - ${filteredSessions[0]?.endTime}`
+          : ""}
+      </Text>
+    </View>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="business-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {activeEntity?.name}
+      </Text>
+    </View>
+
+    {filteredSessions[0]?.event && (
+      <View style={styles.sessionInfoRow}>
+        <Ionicons
+          name="flag-outline"
+          size={14}
+          color="#888"
+        />
+        <Text style={styles.sessionInfoText}>
+          {filteredSessions[0]?.event}
+        </Text>
+      </View>
+    )}
+
+    <View style={styles.completedBadge}>
+      <Text style={styles.completedBadgeText}>
+        Completed
+      </Text>
+    </View>
+
+  </View>
+)}
+
+{/* SESSION INFORMATION */}
+{filteredSessions.length > 0 && (
+  <View style={styles.sessionInfoCard}>
+
+    <View style={styles.sessionInfoHeader}>
+      <Ionicons
+        name="calendar-outline"
+        size={16}
+        color="#4B3F72"
+      />
+      <Text style={styles.sessionInfoHeaderText}>
+        LAST COMPLETED SESSION
+      </Text>
+    </View>
+
+    <Text style={styles.sessionInfoService}>
+      {filteredSessions[0]?.service || "Service"}
+    </Text>
+
+    <Text style={styles.sessionInfoType}>
+      {filteredSessions[0]?.type || "Session"}
+    </Text>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="calendar-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {formatDate(filteredSessions[0]?.date)}
+      </Text>
+    </View>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="time-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {filteredSessions[0]?.startTime || "—"}
+        {filteredSessions[0]?.endTime
+          ? ` - ${filteredSessions[0]?.endTime}`
+          : ""}
+      </Text>
+    </View>
+
+    <View style={styles.sessionInfoRow}>
+      <Ionicons
+        name="business-outline"
+        size={14}
+        color="#888"
+      />
+      <Text style={styles.sessionInfoText}>
+        {activeEntity?.name}
+      </Text>
+    </View>
+
+    {filteredSessions[0]?.event && (
+      <View style={styles.sessionInfoRow}>
+        <Ionicons
+          name="flag-outline"
+          size={14}
+          color="#888"
+        />
+        <Text style={styles.sessionInfoText}>
+          {filteredSessions[0]?.event}
+        </Text>
+      </View>
+    )}
+
+    <View style={styles.completedBadge}>
+      <Text style={styles.completedBadgeText}>
+        Completed
+      </Text>
+    </View>
+
+  </View>
+)}
 
       {loading ? (
         <View style={styles.loader}>
@@ -1076,5 +1235,120 @@ heroStatLabel: {
   color: "rgba(255,255,255,0.7)",
   fontSize: 10,
   marginTop: 2,
+},
+heroCard: {
+  backgroundColor: "#4B3F72",
+  marginHorizontal: 14,
+  marginTop: 12,
+  borderRadius: 18,
+  padding: 20,
+  alignItems: "center",
+  elevation: 2,
+},
+
+heroLabel: {
+  color: "rgba(255,255,255,0.7)",
+  fontSize: 11,
+  fontWeight: "700",
+  textTransform: "uppercase",
+},
+
+heroRate: {
+  color: "#fff",
+  fontSize: 42,
+  fontWeight: "900",
+  marginTop: 4,
+},
+
+heroSub: {
+  color: "rgba(255,255,255,0.8)",
+  fontSize: 12,
+  marginTop: 2,
+},
+
+heroStats: {
+  flexDirection: "row",
+  width: "100%",
+  justifyContent: "space-around",
+  marginTop: 18,
+},
+
+heroStat: {
+  alignItems: "center",
+},
+
+heroStatValue: {
+  color: "#fff",
+  fontSize: 20,
+  fontWeight: "800",
+},
+
+heroStatLabel: {
+  color: "rgba(255,255,255,0.7)",
+  fontSize: 10,
+  marginTop: 2,
+  textTransform: "uppercase",
+},
+sessionInfoCard: {
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 16,
+  marginHorizontal: 14,
+  marginTop: 10,
+  marginBottom: 10,
+  elevation: 1,
+},
+
+sessionInfoHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 10,
+},
+
+sessionInfoHeaderText: {
+  marginLeft: 6,
+  color: "#888",
+  fontSize: 10,
+  fontWeight: "800",
+  textTransform: "uppercase",
+},
+
+sessionInfoService: {
+  fontSize: 20,
+  fontWeight: "900",
+  color: "#4B3F72",
+},
+
+sessionInfoType: {
+  fontSize: 14,
+  color: "#666",
+  marginBottom: 12,
+},
+
+sessionInfoRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 6,
+},
+
+sessionInfoText: {
+  marginLeft: 8,
+  fontSize: 12,
+  color: "#444",
+},
+
+completedBadge: {
+  alignSelf: "flex-start",
+  marginTop: 12,
+  backgroundColor: "#E8F8F0",
+  borderRadius: 20,
+  paddingHorizontal: 12,
+  paddingVertical: 4,
+},
+
+completedBadgeText: {
+  color: "#27AE60",
+  fontSize: 11,
+  fontWeight: "800",
 },
 });
