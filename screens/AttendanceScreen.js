@@ -1300,21 +1300,38 @@ const TIMES =
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={styles.memberNameRow}>
-                    <Text style={styles.memberName}>{item.name}</Text>
-                    {isFirst && (
-                      <View style={styles.firstTimerBadge}>
-                        <Text style={styles.firstTimerBadgeText}>First Visit 👋</Text>
-                      </View>
-                    )}
-                    {streak >= 4 && !isFirst && (
-                      <View style={styles.streakBadge}>
-                        <Text style={styles.streakBadgeText}>🔥{streak}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.memberSub}>{item.ministry || item.phone || ""}</Text>
-                </View>
+  <View style={styles.memberNameRow}>
+    <Text style={styles.memberName}>{item.name}</Text>
+
+    {isFirst && (
+      <View style={styles.firstTimerBadge}>
+        <Text style={styles.firstTimerBadgeText}>
+          First Visit 👋
+        </Text>
+      </View>
+    )}
+
+    {streak >= 4 && !isFirst && (
+      <View style={styles.streakBadge}>
+        <Text style={styles.streakBadgeText}>
+          🔥{streak}
+        </Text>
+      </View>
+    )}
+
+    {isMemberAway(item, todayDate) && (
+      <View style={styles.awayMemberBadge}>
+        <Text style={styles.awayMemberBadgeText}>
+          Away
+        </Text>
+      </View>
+    )}
+  </View>
+
+  <Text style={styles.memberSub}>
+    {item.ministry || item.phone || ""}
+  </Text>
+</View>
 
                 {/* UNDO if marked this session */}
                 {undoMap[item.id] !== undefined && (
@@ -1922,4 +1939,16 @@ const styles = StyleSheet.create({
   logName: { fontSize: 13, fontWeight: "700", color: "#222" },
   logSub: { fontSize: 11, color: "#aaa", marginTop: 1 },
   logStatus: { fontSize: 11, fontWeight: "700" },
+  awayMemberBadge: {
+  backgroundColor: "#EEF0FA",
+  borderRadius: 10,
+  paddingHorizontal: 5,
+  paddingVertical: 2,
+},
+
+awayMemberBadgeText: {
+  fontSize: 9,
+  color: "#4B3F72",
+  fontWeight: "800",
+},
 });
