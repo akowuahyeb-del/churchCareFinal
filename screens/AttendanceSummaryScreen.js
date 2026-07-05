@@ -372,6 +372,7 @@ const avgRate = filteredSessions.length > 0
   : 0;
 
 /* ATTENDANCE GRADE */
+
 const attendanceGrade =
   avgRate >= 90
     ? "Excellent"
@@ -380,6 +381,15 @@ const attendanceGrade =
     : avgRate >= 60
     ? "Fair"
     : "Needs Attention";
+
+const attendanceInsight =
+  avgRate >= 90
+    ? "Outstanding engagement across the congregation."
+    : avgRate >= 75
+    ? "Healthy attendance levels with good member participation."
+    : avgRate >= 60
+    ? "Attendance is fair but there is room to improve engagement."
+    : "Attendance requires attention and pastoral follow-up.";
 
 const attendanceGradeColor =
   avgRate >= 90
@@ -390,11 +400,17 @@ const attendanceGradeColor =
     ? "#F39C12"
     : "#E74C3C";
 
+/* ADD THIS HERE */
+const attendanceStatusMessage =
+  filteredSessions.length === 0
+    ? "No attendance data available for the selected period."
+    : `Based on ${filteredSessions.length} completed session${
+        filteredSessions.length > 1 ? "s" : ""
+      }.`;
+
 const peakPresent = filteredSessions.length > 0
   ? Math.max(...filteredSessions.map(s => s.finalPresent || 0))
   : 0;
-
-
 
     
   // Chart data — last sessions chronologically
@@ -521,6 +537,8 @@ const peakPresent = filteredSessions.length > 0
     {avgRate || 0}%
   </Text>
 
+
+
   <Text style={styles.heroSub}>
     Mobility-adjusted attendance rate
   </Text>
@@ -540,6 +558,10 @@ const peakPresent = filteredSessions.length > 0
     {attendanceGrade}
   </Text>
 </View>
+<Text style={styles.heroStatusText}>
+  {attendanceStatusMessage}
+</Text>
+
 
   <View style={styles.heroStats}>
     <View style={styles.heroStat}>
@@ -651,6 +673,19 @@ const peakPresent = filteredSessions.length > 0
 
   </View>
 )}
+
+<View style={styles.healthInsightCard}>
+  <Ionicons
+    name="pulse-outline"
+    size={18}
+    color={attendanceGradeColor}
+  />
+
+  <Text style={styles.healthInsightText}>
+    {attendanceInsight}
+  </Text>
+</View>
+
 
       {loading ? (
         <View style={styles.loader}>
@@ -1330,4 +1365,27 @@ gradeBadgeText: {
   fontWeight: "800",
 },
 
+healthInsightCard: {
+  backgroundColor: "#fff",
+  marginHorizontal: 14,
+  marginBottom: 10,
+  borderRadius: 12,
+  padding: 14,
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+healthInsightText: {
+  flex: 1,
+  marginLeft: 10,
+  color: "#444",
+  fontSize: 12,
+  lineHeight: 18,
+},
+heroStatusText: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 11,
+  marginTop: 10,
+  textAlign: "center",
+},
 });
