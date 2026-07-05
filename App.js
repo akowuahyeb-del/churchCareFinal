@@ -53,6 +53,7 @@ import InKindDonationScreen from "./screens/InKindDonationScreen";
 import GroupAttendanceScreen from "./screens/GroupAttendanceScreen";
 import MemberMobilityScreen from "./screens/MemberMobilityScreen";
 import ConcurrentSessionsScreen from "./screens/ConcurrentSessionsScreen";
+import AttendanceSummaryScreen from "./screens/AttendanceSummaryScreen";
 
 
 
@@ -165,6 +166,7 @@ function RootStack() {
       <Stack.Screen name="GroupAttendance"     component={GroupAttendanceScreen}    options={{ headerShown: false }} />
       <Stack.Screen name="MemberMobility"      component={MemberMobilityScreen}     options={{ headerShown: false }} />
        <Stack.Screen name="ConcurrentSessions"  component={ConcurrentSessionsScreen} options={{ headerShown: false }} />
+       <Stack.Screen name="AttendanceSummary"component={AttendanceSummaryScreen}options={{ headerShown: false }}/>
 
 
     </Stack.Navigator>
