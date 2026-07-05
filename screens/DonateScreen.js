@@ -65,6 +65,7 @@ export default function DonateScreen({ route, navigation }) {
   const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
    const [pendingTotal, setPendingTotal] = useState(0);
+ 
 
 
   useEffect(() => {
@@ -394,12 +395,12 @@ if (
     pendingCount > 0 && styles.actionItemAlert
   ]}
   onPress={() =>
-    navigation.navigate("Approval", {
-      organizationId,
-      entityId,
-      viewerName,
-    })
-  }
+  navigation.navigate("ApproveDonations", {
+    organizationId,
+    entityId,
+    viewerName,
+  })
+}
 >
 
   {/* ✅ LEFT SIDE (Approve) */}
@@ -496,14 +497,33 @@ if (
       {/* ✅ FINTECH-STYLE ICON TABS */}
       <View style={styles.fintechTabRow}>
         {[
-          { key: "give",    label: "Give",    icon: "heart",         color: "#E11D48" },
-          { key: "history", label: "History", icon: "time",          color: "#4B3F72" },
-          ...(canAcknowledge ? [{ key: "pending", label: "Pending", icon: "alert-circle", color: "#e67e22" }] : []),
-        ].map(t => {
+  { key: "give",    label: "Give",    icon: "heart",         color: "#E11D48" },
+  { key: "history", label: "History", icon: "time",          color: "#4B3F72" },
+
+  { key: "inkind",  label: "In-Kind", icon: "cube-outline",  color: "#7C3AED" },
+
+  ...(canAcknowledge ? [
+    { key: "pending", label: "Pending", icon: "alert-circle", color: "#e67e22" }
+  ] : []),
+].map(t => {
           const active = activeTab === t.key;
           const badgeCount = t.key === "pending" ? pendingHistory.length : 0;
           return (
-            <TouchableOpacity key={t.key} style={styles.fintechTabItem} onPress={() => setActiveTab(t.key)}>
+            <TouchableOpacity
+  key={t.key}
+  style={styles.fintechTabItem}
+  onPress={() => {
+    if (t.key === "inkind") {
+      navigation.navigate("InKindDonation", {
+  viewerName,
+  viewerPermissions,
+});
+      return;
+    }
+
+    setActiveTab(t.key);
+  }}
+>
               <View style={[
                 styles.fintechCircle,
                 { backgroundColor: active ? t.color : "#fff" },

@@ -101,7 +101,7 @@ export default function AdminFinanceScreen() {
   const [ledgerAccount, setLedgerAccount] = useState("Cash");
 const functions = getFunctions(app); // or just getFunctions()
 const generateInsightFn = httpsCallable(functions, "generateFinanceInsight");
-const planId = activeEntity?.subscription?.plan || "free";
+const planId = "free";
 
 
   /* ── Load transactions ── */
@@ -115,6 +115,17 @@ const planId = activeEntity?.subscription?.plan || "free";
   AsyncStorage.getItem("churchId").then(id => {
     console.log("Finance churchId:", id);
     setChurchId(id);
+  });
+}, []);
+
+
+useEffect(() => {
+  AsyncStorage.getItem("activeEntity").then(data => {
+    if (data) {
+      try {
+        setActiveEntity(JSON.parse(data));
+      } catch (_) {}
+    }
   });
 }, []);
 

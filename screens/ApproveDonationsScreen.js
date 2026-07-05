@@ -15,29 +15,75 @@ export default function ApproveDonationsScreen({ route, navigation }) {
 
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState([]);
+  const [pendingInKind, setPendingInKind] = useState([]);
 
-  useEffect(() => {
-    if (!organizationId || !entityId) return;
+useEffect(() => {
+  if (!organizationId || !entityId) return;
 
-    const ref = collection(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "contributions"
-    );
+  // Cash donations listener
+  const cashRef = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
 
-    const q = query(ref, where("status", "==", "pending"));
+  const cashQuery = query(
+    cashRef,
+    where("status", "==", "pending")
+  );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const unsubscribe = onSnapshot(
+    cashQuery,
+    (snap) => {
+      const data = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
       setPending(data);
       setLoading(false);
-    });
+    }
+  );
 
-    return unsubscribe;
-  }, []);
+  // In-kind donations listener
+  const inKindRef = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "inkind_donations"
+  );
+
+  const inKindQuery = query(
+    inKindRef,
+    where("status", "==", "pending")
+  );
+
+  const unsubscribeInKind = onSnapshot(
+    inKindQuery,
+    (snap) => {
+      const data = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+      console.log("In-Kind Pending:", data);
+
+      setPendingInKind(data);
+    }
+  );
+
+  return () => {
+    unsubscribe();
+    unsubscribeInKind();
+  };
+
+}, [organizationId, entityId]);
+
 
   const approveDonation = async (item) => {
     try {
@@ -64,6 +110,38 @@ export default function ApproveDonationsScreen({ route, navigation }) {
       Alert.alert("Error", "Could not approve donation");
     }
   };
+const approveInKindDonation = async (item) => {
+  try {
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "inkind_donations",
+        item.id
+      ),
+      {
+        status: "acknowledged",
+        acknowledgedByName: viewerName || "Admin",
+        acknowledgedAt: new Date().toISOString(),
+      }
+    );
+
+    Alert.alert(
+      "✅ Approved",
+      "In-kind donation acknowledged successfully"
+    );
+
+  } catch (e) {
+    Alert.alert(
+      "Error",
+      "Could not approve in-kind donation"
+    );
+  }
+};
+
 
   return (
     <View style={styles.container}>
@@ -78,11 +156,11 @@ export default function ApproveDonationsScreen({ route, navigation }) {
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 20 }} />
-      ) : pending.length === 0 ? (
-        <View style={styles.empty}>
-          <Text>No pending donations 🎉</Text>
-        </View>
-      ) : (
+      ) : pending.length === 0 && pendingInKind.length === 0 ? (
+  <View style={styles.empty}>
+    <Text>No pending donations 🎉</Text>
+  </View>
+) : (
         <ScrollView style={{ padding: 16 }}>
 
           {pending.map(item => (
@@ -127,6 +205,60 @@ export default function ApproveDonationsScreen({ route, navigation }) {
             </View>
           ))}
 
+<Text
+  style={{
+    fontWeight: "800",
+    fontSize: 16,
+    marginTop: 20,
+    marginBottom: 10,
+  }}
+>
+  Pending In-Kind Donations
+</Text>
+
+{pendingInKind.map(item => (
+  <View key={item.id} style={styles.card}>
+
+    <View style={styles.row}>
+      <Text style={styles.amount}>
+        {item.quantity} {item.unit}
+      </Text>
+
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>
+          Pending
+        </Text>
+      </View>
+    </View>
+
+    <Text style={styles.meta}>
+      {item.itemName}
+    </Text>
+
+    <Text style={styles.meta}>
+      {item.donorSummary}
+    </Text>
+
+    <Text style={styles.recorded}>
+      Recorded by {item.recordedBy || "—"}
+    </Text>
+
+    <TouchableOpacity
+      style={styles.approveBtn}
+      onPress={() => approveInKindDonation(item)}
+    >
+      <Ionicons
+        name="checkmark-circle"
+        size={18}
+        color="#fff"
+      />
+      <Text style={styles.approveText}>
+        Confirm Receipt
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+))}
         </ScrollView>
       )}
 

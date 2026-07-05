@@ -736,6 +736,36 @@ const generateQR = async () => {
   }
   color="#27AE60"
 />
+<TapRow
+  icon="people-outline"
+  label="Group Attendance"
+  sub="Record attendance for choirs, teams & groups"
+  onPress={() =>
+    navigation.navigate("GroupAttendance")
+  }
+  color="#7C3AED"
+/>
+
+<TapRow
+  icon="airplane-outline"
+  label="Member Mobility"
+  sub="Tag students, transients & visiting members"
+  onPress={() =>
+    navigation.navigate("MemberMobility")
+  }
+  color="#0984E3"
+/>
+
+<TapRow
+  icon="git-branch-outline"
+  label="Concurrent Sessions"
+  sub="View all live sessions running simultaneously"
+  onPress={() =>
+    navigation.navigate("ConcurrentSessions")
+  }
+  color="#27AE60"
+/>
+
               
      <TapRow
   icon="people-outline"

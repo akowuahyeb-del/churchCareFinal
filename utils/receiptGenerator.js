@@ -231,3 +231,14 @@ export const generateDonationReceipt = async (donation, churchName, logoUrl) => 
     throw e;
   }
 };
+export const generateInKindReceipt = async (
+  donation,
+  churchName,
+  logoUrl
+) => {
+  return generateDonationReceipt(
+    donation,
+    churchName,
+    logoUrl
+  );
+};

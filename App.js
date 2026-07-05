@@ -49,6 +49,11 @@ import ChurchApprovalScreen from "./screens/ChurchApprovalScreen";
 import NotificationScreen from "./screens/NotificationScreen";
 import TransferRequestScreen from "./screens/TransferRequestScreen";
 import TransferManagementScreen from "./screens/TransferManagementScreen";
+import InKindDonationScreen from "./screens/InKindDonationScreen";
+import GroupAttendanceScreen from "./screens/GroupAttendanceScreen";
+import MemberMobilityScreen from "./screens/MemberMobilityScreen";
+import ConcurrentSessionsScreen from "./screens/ConcurrentSessionsScreen";
+
 
 
 
@@ -156,7 +161,10 @@ function RootStack() {
        <Stack.Screen name="Notifications"component={NotificationScreen}/>
        <Stack.Screen name="TransferRequest"component={TransferRequestScreen}options={{ headerShown: false }}/> 
       <Stack.Screen name="TransferManagement"component={TransferManagementScreen}options={{ headerShown: false }}/>
-
+      <Stack.Screen name="InKindDonation"component={InKindDonationScreen}/>
+      <Stack.Screen name="GroupAttendance"     component={GroupAttendanceScreen}    options={{ headerShown: false }} />
+      <Stack.Screen name="MemberMobility"      component={MemberMobilityScreen}     options={{ headerShown: false }} />
+       <Stack.Screen name="ConcurrentSessions"  component={ConcurrentSessionsScreen} options={{ headerShown: false }} />
 
 
     </Stack.Navigator>
