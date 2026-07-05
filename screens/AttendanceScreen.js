@@ -610,6 +610,13 @@ const attendanceRate =
   // Now logs properly so the index link shows up in Metro console.
   // ─────────────────────────────────────────────────────────────────
   const checkAbsenceStreak = async (member) => {
+    // ✅ Skip absence alerts for members who are officially away
+  if (
+    isMemberAway(member, todayDate) &&
+    EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
+  ) {
+    return;
+  }
     if (!organizationId || !entityId) return;
     try {
       const q = query(
