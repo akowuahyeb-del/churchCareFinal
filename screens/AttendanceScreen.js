@@ -286,10 +286,19 @@ useEffect(() => {
   // so it's mathematically impossible to go negative or exceed
   // members.length.
   // ─────────────────────────────────────────────────────────────────
-  const presentCount = members.filter(m => attendance[m.id]?.status === "present").length;
-  const absentCount  = members.length - presentCount;
-  const attendanceRate = members.length > 0
-    ? Math.round((presentCount / members.length) * 100)
+  // ✅ MOBILITY-AWARE STATS
+const todayDate = new Date().toISOString().split("T")[0];
+const localMembers = trueLocalMembers(members, todayDate);
+
+const presentCount = members.filter(
+  m => attendance[m.id]?.status === "present"
+).length;
+
+const absentCount = localMembers.length - presentCount;
+
+const attendanceRate =
+  localMembers.length > 0
+    ? Math.round((presentCount / localMembers.length) * 100)
     : 0;
 
   // ─────────────────────────────────────────────────────────────────
