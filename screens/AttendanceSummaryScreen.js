@@ -354,15 +354,49 @@ export default function AttendanceSummaryScreen() {
 
   // Overall stats
   const avgPresent = filteredSessions.length > 0
-    ? Math.round(filteredSessions.reduce((s, sess) => s + (sess.finalPresent || 0), 0) / filteredSessions.length)
-    : 0;
-  const avgRate = filteredSessions.length > 0
-    ? Math.round(filteredSessions.reduce((s, sess) => s + (sess.finalRate || 0), 0) / filteredSessions.length)
-    : 0;
-  const peakPresent = filteredSessions.length > 0
-    ? Math.max(...filteredSessions.map(s => s.finalPresent || 0))
-    : 0;
+  ? Math.round(
+      filteredSessions.reduce(
+        (s, sess) => s + (sess.finalPresent || 0),
+        0
+      ) / filteredSessions.length
+    )
+  : 0;
 
+const avgRate = filteredSessions.length > 0
+  ? Math.round(
+      filteredSessions.reduce(
+        (s, sess) => s + (sess.finalRate || 0),
+        0
+      ) / filteredSessions.length
+    )
+  : 0;
+
+/* ATTENDANCE GRADE */
+const attendanceGrade =
+  avgRate >= 90
+    ? "Excellent"
+    : avgRate >= 75
+    ? "Healthy"
+    : avgRate >= 60
+    ? "Fair"
+    : "Needs Attention";
+
+const attendanceGradeColor =
+  avgRate >= 90
+    ? "#27AE60"
+    : avgRate >= 75
+    ? "#4B3F72"
+    : avgRate >= 60
+    ? "#F39C12"
+    : "#E74C3C";
+
+const peakPresent = filteredSessions.length > 0
+  ? Math.max(...filteredSessions.map(s => s.finalPresent || 0))
+  : 0;
+
+
+
+    
   // Chart data — last sessions chronologically
   const chartSessions = [...filteredSessions].reverse().slice(-12);
   const barData = chartSessions.map(s => ({
@@ -490,6 +524,22 @@ export default function AttendanceSummaryScreen() {
   <Text style={styles.heroSub}>
     Mobility-adjusted attendance rate
   </Text>
+
+<View
+  style={[
+    styles.gradeBadge,
+    { backgroundColor: attendanceGradeColor + "20" }
+  ]}
+>
+  <Text
+    style={[
+      styles.gradeBadgeText,
+      { color: attendanceGradeColor }
+    ]}
+  >
+    {attendanceGrade}
+  </Text>
+</View>
 
   <View style={styles.heroStats}>
     <View style={styles.heroStat}>
@@ -1268,4 +1318,16 @@ completedBadgeText: {
   fontSize: 11,
   fontWeight: "800",
 },
+gradeBadge: {
+  marginTop: 10,
+  paddingHorizontal: 14,
+  paddingVertical: 5,
+  borderRadius: 20,
+},
+
+gradeBadgeText: {
+  fontSize: 12,
+  fontWeight: "800",
+},
+
 });
