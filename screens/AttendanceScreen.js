@@ -611,8 +611,18 @@ const attendanceRate =
   // ─────────────────────────────────────────────────────────────────
   const checkAbsenceStreak = async (member) => {
     // ✅ Skip absence alerts for members who are officially away
-  if (
-    isMemberAway(member, todayDate) &&
+  
+console.log(
+  "MOBILITY TEST",
+  member.name,
+  member.mobilityStatus,
+  isMemberAway(member, todayDate),
+  EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
+);
+
+  
+    if (
+    isMemberAway(member, todayDate) &
     EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
   ) {
     return;
