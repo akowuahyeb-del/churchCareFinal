@@ -1,20 +1,35 @@
+// screens/AttendanceSummaryScreen.js
+
 import React from "react";
 import {
   View,
   Text,
   StyleSheet,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import AppHeader from "../components/AppHeader";
 
 export default function AttendanceSummaryScreen() {
+  const navigation = useNavigation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        Attendance Summary
-      </Text>
+      <AppHeader
+        title="Attendance Summary"
+        subtitle="Attendance intelligence & trends"
+        showBack
+        onBack={() => navigation.goBack()}
+      />
 
-      <Text style={styles.subtitle}>
-        Coming Soon
-      </Text>
+      <View style={styles.body}>
+        <Text style={styles.title}>
+          Attendance Summary
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Coming Soon
+        </Text>
+      </View>
     </View>
   );
 }
@@ -22,9 +37,13 @@ export default function AttendanceSummaryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f4f6fb",
+  },
+
+  body: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f4f6fb",
   },
 
   title: {
