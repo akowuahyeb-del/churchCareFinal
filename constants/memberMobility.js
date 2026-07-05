@@ -34,10 +34,35 @@ export const getMobilityLabel = (status) =>
 // ✅ Check if a member's mobility makes them "effectively away" on a
 // given date (defaults to today). Uses their awayPeriods array:
 // [{ from: "2026-05-01", to: "2026-08-31", reason: "On vacation" }]
-export const isMemberAway = (member, date = new Date().toISOString().split("T")[0]) => {
-  if (!member.mobilityStatus || member.mobilityStatus === MOBILITY_STATUS.PERMANENT) return false;
-  if (!Array.isArray(member.awayPeriods) || member.awayPeriods.length === 0) return false;
-  return member.awayPeriods.some(p => p.from <= date && date <= p.to);
+export const isMemberAway = (
+  member,
+  date = new Date().toISOString().split("T")[0]
+) => {
+  if (
+    !member.mobilityStatus ||
+    member.mobilityStatus === MOBILITY_STATUS.PERMANENT
+  ) {
+    return false;
+  }
+
+  if (
+    !Array.isArray(member.awayPeriods) ||
+    member.awayPeriods.length === 0
+  ) {
+    return false;
+  }
+
+  const normalizedDate = date.replace(/-/g, "");
+
+  return member.awayPeriods.some((p) => {
+    const from = String(p.from || "").replace(/-/g, "");
+    const to = String(p.to || "").replace(/-/g, "");
+
+    return (
+      from <= normalizedDate &&
+      normalizedDate <= to
+    );
+  });
 };
 
 // ✅ True member count — those who are expected to be in the building

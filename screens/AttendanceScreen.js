@@ -612,13 +612,6 @@ const attendanceRate =
   const checkAbsenceStreak = async (member) => {
     // ✅ Skip absence alerts for members who are officially away
   
-console.log(
-  "MOBILITY TEST",
-  member.name,
-  member.mobilityStatus,
-  isMemberAway(member, todayDate),
-  EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
-);
 
   
     if (
@@ -1295,7 +1288,13 @@ const TIMES =
             const streak  = memberStreaks[item.id];
             const isPending = pendingToggleRef.current.has(item.id);
 
-
+console.log(
+  "ATTENDANCE AWAY TEST",
+  item.name,
+  item.mobilityStatus,
+  item.awayPeriods,
+  isMemberAway(item, todayDate)
+);
 
             return (
               <View style={[
@@ -1328,6 +1327,8 @@ const TIMES =
         </Text>
       </View>
     )}
+
+
 
     {isMemberAway(item, todayDate) && (
       <View style={styles.awayMemberBadge}>
