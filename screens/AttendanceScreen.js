@@ -532,6 +532,42 @@ const attendanceRate =
     }
   };
 
+const confirmAwayAttendance = (member, status) => {
+  const activePeriod = (member.awayPeriods || []).find((p) => {
+    const from = String(p.from || "").replace(/-/g, "");
+    const to = String(p.to || "").replace(/-/g, "");
+    const today = todayDate.replace(/-/g, "");
+
+    return from <= today && today <= to;
+  });
+
+  return new Promise((resolve) => {
+    Alert.alert(
+      "Away Member",
+      `${member.name} is currently marked as Away${
+        member.schoolName ? ` (${member.schoolName})` : ""
+      }${
+        activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
+      }.\n\nDo you still want to record attendance?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => resolve(false),
+        },
+        {
+          text:
+            status === "present"
+              ? "Mark Present"
+              : "Mark Absent",
+          onPress: () => resolve(true),
+        },
+      ]
+    );
+  });
+};
+
+
   const toggleAttendance = async (member, status) => {
     if (isSessionLocked && userRole !== "admin") {
       Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
@@ -541,6 +577,18 @@ const attendanceRate =
       Alert.alert("No Session", "Start a session first.");
       return;
     }
+
+// ✅ Confirm attendance for away members
+if (isMemberAway(member, todayDate)) {
+  const proceed = await confirmAwayAttendance(
+    member,
+    status
+  );
+
+  if (!proceed) {
+    return;
+  }
+}
 
     // ✅ Mobility warning (does not block attendance)
 if (isMemberAway(member, todayDate)) {
