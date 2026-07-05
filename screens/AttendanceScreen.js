@@ -29,6 +29,11 @@ import QRCodeDisplay from "../components/QRCodeDisplay";
 import { buildAttendanceSessionLink } from "../utils/qrLinks";
 import { findOpenSession } from "../utils/findOpenSession";
 import { useAttendanceSettings } from "../hooks/useAttendanceSettings";
+import {
+  isMemberAway,
+  trueLocalMembers,
+  EXCLUDED_FROM_ABSENCE_ALERTS,
+} from "../constants/memberMobility";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
