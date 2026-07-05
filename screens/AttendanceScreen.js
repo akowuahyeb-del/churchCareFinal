@@ -1072,6 +1072,29 @@ const TIMES =
               <Ionicons name="git-branch-outline" size={18} color="#fff" />
             </TouchableOpacity>
           )}
+          {sessionId && (
+  <TouchableOpacity
+    style={styles.headerBtn}
+    onPress={() => navigation.navigate("ConcurrentSessions")}
+  >
+    <Ionicons
+      name="git-branch-outline"
+      size={18}
+      color="#fff"
+    />
+  </TouchableOpacity>
+)}
+
+<TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => navigation.navigate("GroupAttendance")}
+>
+  <Ionicons
+    name="people-outline"
+    size={18}
+    color="#fff"
+  />
+</TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={openLog}>
             <Ionicons name="list-outline" size={18} color="#fff" />
           </TouchableOpacity>
