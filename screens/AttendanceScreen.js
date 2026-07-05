@@ -1156,22 +1156,10 @@ const TIMES =
     onPress={() => navigation.navigate("ConcurrentSessions")}
   >
     <Ionicons
-      name="git-branch-outline"
-      size={18}
-      color="#fff"
-    />
-  </TouchableOpacity>
-)}
-{sessionId && (
-  <TouchableOpacity
-    style={styles.headerBtn}
-    onPress={() => setSessionModal(true)}
-  >
-    <Ionicons
-      name="add-circle-outline"
-      size={18}
-      color="#fff"
-    />
+    name="layers-outline"
+  size={18}
+  color="#fff"
+/>
   </TouchableOpacity>
 )}
 
