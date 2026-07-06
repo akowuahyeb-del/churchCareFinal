@@ -1139,27 +1139,28 @@ const TIMES =
             </View>
           )}
           {sessionId && (
-            <TouchableOpacity
-  style={styles.headerBtn}
-  onPress={() => setSessionModal(true)}
->
-  <Ionicons
-    name="add-circle-outline"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-          )}
-          {sessionId && (
+  <TouchableOpacity
+    style={styles.headerBtn}
+    onPress={() => setSessionModal(true)}
+  >
+    <Ionicons
+      name="add-circle-outline"
+      size={18}
+      color="#fff"
+    />
+  </TouchableOpacity>
+)}
+
+{sessionId && (
   <TouchableOpacity
     style={styles.headerBtn}
     onPress={() => navigation.navigate("ConcurrentSessions")}
   >
     <Ionicons
-    name="layers-outline"
-  size={18}
-  color="#fff"
-/>
+      name="layers-outline"
+      size={18}
+      color="#fff"
+    />
   </TouchableOpacity>
 )}
 
@@ -1172,6 +1173,8 @@ const TIMES =
     size={18}
     color="#fff"
   />
+</TouchableOpacity>
+
 <TouchableOpacity
   style={styles.headerBtn}
   onPress={() => navigation.navigate("AttendanceSummary")}
@@ -1183,12 +1186,20 @@ const TIMES =
   />
 </TouchableOpacity>
 
+<TouchableOpacity
+  style={styles.headerBtn}
+  onPress={openLog}
+>
+  <Ionicons
+    name="list-outline"
+    size={18}
+    color="#fff"
+  />
 </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn} onPress={openLog}>
-            <Ionicons name="list-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+
+</View>
+</View>
+
 
       {/* ── SESSION STATUS BAR ── */}
       {sessionId && (sessionStatus === "open" || sessionStatus === "extended") && (
