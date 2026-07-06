@@ -1174,13 +1174,23 @@ const TIMES =
     color="#fff"
   />
 </TouchableOpacity>
-
 <TouchableOpacity
   style={styles.headerBtn}
   onPress={() => navigation.navigate("AttendanceSummary")}
 >
   <Ionicons
     name="stats-chart-outline"
+    size={18}
+    color="#fff"
+  />
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => navigation.navigate("AttendanceHistory")}
+>
+  <Ionicons
+    name="time-outline"
     size={18}
     color="#fff"
   />
@@ -1196,6 +1206,7 @@ const TIMES =
     color="#fff"
   />
 </TouchableOpacity>
+
 
 </View>
 </View>
