@@ -1,7 +1,3 @@
-
-
-import { useNavigation } from "@react-navigation/native";
-import AppHeader from "../components/AppHeader";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,6 +9,7 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 
 import {
   collection,
@@ -22,6 +19,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+import AppHeader from "../components/AppHeader";
 
 
 export default function AttendanceHistoryScreen() {
@@ -34,6 +32,8 @@ const [loading, setLoading] = useState(true);
 
 const organizationId = activeEntity?.organizationId;
 const entityId = activeEntity?.entityId;
+
+
 
 
 useEffect(() => {
@@ -91,6 +91,22 @@ const loadSessions = async () => {
   }
 };
 
+useEffect(() => {
+  AsyncStorage.getItem("activeEntity").then((data) => {
+    if (data) {
+      try {
+        setActiveEntity(JSON.parse(data));
+      } catch (_) {}
+    }
+  });
+}, []);
+
+useEffect(() => {
+  if (!organizationId || !entityId) return;
+
+  loadSessions();
+}, [organizationId, entityId]);
+
 
 
   return (
@@ -114,7 +130,17 @@ const loadSessions = async () => {
     keyExtractor={(item) => item.id}
     contentContainerStyle={{ padding: 16 }}
     renderItem={({ item }) => (
-      <TouchableOpacity style={styles.sessionCard}>
+      <TouchableOpacity
+  style={styles.sessionCard}
+  onPress={() =>
+    navigation.navigate(
+      "AttendanceSessionDetails",
+      {
+        sessionId: item.id,
+      }
+    )
+  }
+>
         <Text style={styles.sessionTitle}>
           {item.service || "Service"}
         </Text>
@@ -196,4 +222,5 @@ sessionRow: {
   justifyContent: "space-between",
   marginTop: 12,
 },
+
 });

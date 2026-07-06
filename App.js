@@ -55,6 +55,7 @@ import MemberMobilityScreen from "./screens/MemberMobilityScreen";
 import ConcurrentSessionsScreen from "./screens/ConcurrentSessionsScreen";
 import AttendanceSummaryScreen from "./screens/AttendanceSummaryScreen";
 import AttendanceHistoryScreen from "./screens/AttendanceHistoryScreen";
+import AttendanceSessionDetailsScreen from "./screens/AttendanceSessionDetailsScreen";
 
 
 
@@ -169,7 +170,7 @@ function RootStack() {
        <Stack.Screen name="ConcurrentSessions"  component={ConcurrentSessionsScreen} options={{ headerShown: false }} />
        <Stack.Screen name="AttendanceSummary"component={AttendanceSummaryScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="AttendanceHistory"component={AttendanceHistoryScreen}/>
-
+       <Stack.Screen name="AttendanceSessionDetails"component={AttendanceSessionDetailsScreen}/>
 
     </Stack.Navigator>
   );
