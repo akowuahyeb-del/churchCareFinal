@@ -4,7 +4,6 @@ import React, {
 } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -23,6 +22,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+import AppText from "../components/AppText";
 
 export default function AttendanceSessionDetailsScreen() {
   const navigation = useNavigation();
@@ -127,54 +127,55 @@ const attendanceRate =
     contentContainerStyle={{ padding: 16 }}
     ListHeaderComponent={
       <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>
-          Session Summary
-        </Text>
+        
+       <AppText style={styles.title}>
+  Session Summary
+</AppText>
 
-        <Text>
-          Present: {presentMembers.length}
-        </Text>
+        <AppText style={styles.summaryStat}>
+  Present: {presentMembers.length}
+</AppText>
 
-        <Text>
-          Absent: {absentMembers.length}
-        </Text>
+<AppText style={styles.summaryStat}>
+  Absent: {absentMembers.length}
+</AppText>
 
-        <Text>
-          Attendance Rate: {attendanceRate}%
-        </Text>
+<AppText style={styles.summaryStat}>
+  Attendance Rate: {attendanceRate}%
+</AppText>
       </View>
     }
     renderItem={({ item }) => (
       <View style={styles.memberCard}>
         <View>
-          <Text style={styles.memberName}>
-            {item.name || "Unknown Member"}
-          </Text>
+          <AppText style={styles.memberName}>
+  {item.name || "Unknown Member"}
+</AppText>
 
-          <Text style={styles.memberMeta}>
-            {item.memberCode || ""}
-          </Text>
+          <AppText style={styles.memberMeta}>
+  {item.memberCode || ""}
+</AppText>
         </View>
 
-        <Text
-          style={{
-            color:
-              item.status === "present"
-                ? "#27AE60"
-                : "#E74C3C",
-            fontWeight: "700",
-            textTransform: "capitalize",
-          }}
-        >
-          {item.status}
-        </Text>
+        <AppText
+  style={{
+    color:
+      item.status === "present"
+        ? "#27AE60"
+        : "#E74C3C",
+    fontWeight: "700",
+    textTransform: "capitalize",
+  }}
+>
+  {item.status}
+</AppText>
       </View>
     )}
     ListEmptyComponent={
       <View style={styles.content}>
-        <Text style={styles.subtitle}>
-          No attendance records found for this session.
-        </Text>
+        <AppText style={styles.subtitle}>
+  No attendance records found for this session.
+</AppText>
       </View>
     }
   />
@@ -240,5 +241,10 @@ memberMeta: {
   fontSize: 11,
   color: "#999",
   marginTop: 2,
+},
+summaryStat: {
+  fontSize: 14,
+  color: "#444",
+  marginBottom: 6,
 },
 });
