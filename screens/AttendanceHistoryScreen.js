@@ -20,6 +20,7 @@ import {
 
 import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
+import AppText from "../components/AppText";
 
 
 export default function AttendanceHistoryScreen() {
@@ -51,6 +52,7 @@ useEffect(() => {
 
   loadSessions();
 }, [organizationId, entityId]);
+
 
 const loadSessions = async () => {
   try {
@@ -101,13 +103,6 @@ useEffect(() => {
   });
 }, []);
 
-useEffect(() => {
-  if (!organizationId || !entityId) return;
-
-  loadSessions();
-}, [organizationId, entityId]);
-
-
 
   return (
     <View style={styles.container}>
@@ -141,30 +136,40 @@ useEffect(() => {
     )
   }
 >
-        <Text style={styles.sessionTitle}>
-          {item.service || "Service"}
-        </Text>
+       <AppText
+  variant="h4"
+  numberOfLines={2}
+>
+  {item.service || "Service"}
+</AppText>
 
-        <Text style={styles.sessionDate}>
-          {item.date}
-        </Text>
+        <AppText
+  variant="caption"
+  style={{ marginTop: 4 }}
+>
+  {item.date}
+</AppText>
 
         <View style={styles.sessionRow}>
-          <Text>
-            Present: {item.finalPresent || 0}
-          </Text>
+          <AppText variant="body">
+  Present: {item.finalPresent || 0}
+</AppText>
 
-          <Text>
-            {item.finalRate || 0}%
-          </Text>
+         <AppText variant="bodyBold">
+  {item.finalRate || 0}%
+</AppText>
         </View>
       </TouchableOpacity>
     )}
     ListEmptyComponent={
       <View style={styles.content}>
-        <Text style={styles.subtitle}>
-          No completed attendance sessions found.
-        </Text>
+        <AppText
+  variant="body"
+  muted
+  center
+>
+  No completed attendance sessions found.
+</AppText>
       </View>
     }
   />
@@ -192,11 +197,6 @@ const styles = StyleSheet.create({
     color: "#4B3F72",
   },
 
-  subtitle: {
-    marginTop: 8,
-    fontSize: 13,
-    color: "#888",
-  },
   sessionCard: {
   backgroundColor: "#fff",
   borderRadius: 12,
@@ -205,17 +205,9 @@ const styles = StyleSheet.create({
   elevation: 1,
 },
 
-sessionTitle: {
-  fontSize: 16,
-  fontWeight: "700",
-  color: "#4B3F72",
-},
 
-sessionDate: {
-  marginTop: 4,
-  fontSize: 12,
-  color: "#777",
-},
+
+
 
 sessionRow: {
   flexDirection: "row",
