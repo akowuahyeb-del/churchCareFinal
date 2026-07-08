@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, StyleSheet,ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Dimensions
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +23,7 @@ import {
   collection, getDocs, query, where, orderBy, limit
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
+import AppText from "../components/AppText";
 import { isMemberAway, trueLocalMembers } from "../constants/memberMobility";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -517,9 +518,14 @@ const peakPresent = filteredSessions.length > 0
             style={[styles.rangeChip, dateRange === r.key && styles.rangeChipActive]}
             onPress={() => setDateRange(r.key)}
           >
-            <Text style={[styles.rangeChipText, dateRange === r.key && styles.rangeChipTextActive]}>
-              {r.label}
-            </Text>
+            <AppText
+  style={[
+    styles.rangeChipText,
+    dateRange === r.key && styles.rangeChipTextActive
+  ]}
+>
+  {r.label}
+</AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -538,7 +544,14 @@ const peakPresent = filteredSessions.length > 0
             onPress={() => setActiveTab(t.key)}
           >
             <Ionicons name={t.icon} size={14} color={activeTab === t.key ? "#4B3F72" : "#aaa"} />
-            <Text style={[styles.tabText, activeTab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            <AppText
+  style={[
+    styles.tabText,
+    activeTab === t.key && styles.tabTextActive
+  ]}
+>
+  {t.label}
+</AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -546,14 +559,14 @@ const peakPresent = filteredSessions.length > 0
 
 {/* ATTENDANCE HEALTH HERO */}
 <View style={styles.heroCard}>
-  <Text style={styles.heroLabel}>
-    Attendance Health
-  </Text>
+  <AppText style={styles.heroLabel}>
+  Attendance Health
+</AppText>
 
   <View style={styles.heroRateRow}>
-  <Text style={styles.heroRate}>
-    {avgRate || 0}%
-  </Text>
+  <AppText style={styles.heroRate}>
+  {avgRate || 0}%
+</AppText>
 
   <Ionicons
     name={
@@ -569,10 +582,9 @@ const peakPresent = filteredSessions.length > 0
 </View>
 
 
-
-  <Text style={styles.heroSub}>
-    Mobility-adjusted attendance rate
-  </Text>
+<AppText style={styles.heroSub}>
+  Mobility-adjusted attendance rate
+</AppText>
 
 <View
   style={[
@@ -580,46 +592,51 @@ const peakPresent = filteredSessions.length > 0
     { backgroundColor: attendanceGradeColor + "20" }
   ]}
 >
-  <Text
-    style={[
-      styles.gradeBadgeText,
-      { color: attendanceGradeColor }
-    ]}
-  >
-    {attendanceGrade}
-  </Text>
+  <AppText
+  style={[
+    styles.gradeBadgeText,
+    { color: attendanceGradeColor }
+  ]}
+>
+  {attendanceGrade}
+</AppText>
 </View>
-<Text style={styles.heroStatusText}>
+
+<AppText style={styles.heroStatusText}>
   {attendanceStatusMessage}
-</Text>
+</AppText>
 
 
   <View style={styles.heroStats}>
     <View style={styles.heroStat}>
-      <Text style={styles.heroStatValue}>
-        {avgPresent}
-      </Text>
-      <Text style={styles.heroStatLabel}>
-        Avg Present
-      </Text>
+    <AppText style={styles.heroStatValue}>
+  {avgPresent}
+</AppText>
+
+<AppText style={styles.heroStatLabel}>
+  Avg Present
+</AppText>
     </View>
 
     <View style={styles.heroStat}>
-      <Text style={styles.heroStatValue}>
-        {localMemberCount}
-      </Text>
-      <Text style={styles.heroStatLabel}>
-        Local
-      </Text>
+     <AppText style={styles.heroStatValue}>
+  {localMemberCount}
+</AppText>
+
+<AppText style={styles.heroStatLabel}>
+  Local
+</AppText>
     </View>
 
     <View style={styles.heroStat}>
-      <Text style={styles.heroStatValue}>
-        {awayCount}
-      </Text>
-      <Text style={styles.heroStatLabel}>
-        Away
-      </Text>
+     <AppText style={styles.heroStatValue}>
+  {awayCount}
+</AppText>
+
+<AppText style={styles.heroStatLabel}>
+  Away
+</AppText>
+`
     </View>
   </View>
 </View>
@@ -634,18 +651,18 @@ const peakPresent = filteredSessions.length > 0
         size={16}
         color="#4B3F72"
       />
-      <Text style={styles.sessionInfoHeaderText}>
-        LAST COMPLETED SESSION
-      </Text>
+    <AppText style={styles.sessionInfoHeaderText}>
+  LAST COMPLETED SESSION
+</AppText>
     </View>
 
-    <Text style={styles.sessionInfoService}>
-      {filteredSessions[0]?.service || "Service"}
-    </Text>
+   <AppText style={styles.sessionInfoService}>
+  {filteredSessions[0]?.service || "Service"}
+</AppText>
 
-    <Text style={styles.sessionInfoType}>
-      {filteredSessions[0]?.type || "Session"}
-    </Text>
+   <AppText style={styles.sessionInfoType}>
+  {filteredSessions[0]?.type || "Session"}
+</AppText>
 
     <View style={styles.sessionInfoRow}>
       <Ionicons
@@ -653,9 +670,9 @@ const peakPresent = filteredSessions.length > 0
         size={14}
         color="#888"
       />
-      <Text style={styles.sessionInfoText}>
-        {formatDate(filteredSessions[0]?.date)}
-      </Text>
+     <AppText style={styles.sessionInfoText}>
+  {formatDate(filteredSessions[0]?.date)}
+</AppText>
     </View>
 
     <View style={styles.sessionInfoRow}>
@@ -664,12 +681,12 @@ const peakPresent = filteredSessions.length > 0
         size={14}
         color="#888"
       />
-      <Text style={styles.sessionInfoText}>
-        {filteredSessions[0]?.startTime || "—"}
-        {filteredSessions[0]?.endTime
-          ? ` - ${filteredSessions[0]?.endTime}`
-          : ""}
-      </Text>
+     <AppText style={styles.sessionInfoText}>
+  {filteredSessions[0]?.startTime || "—"}
+  {filteredSessions[0]?.endTime
+    ? ` - ${filteredSessions[0]?.endTime}`
+    : ""}
+</AppText>
     </View>
 
     <View style={styles.sessionInfoRow}>
@@ -678,9 +695,9 @@ const peakPresent = filteredSessions.length > 0
         size={14}
         color="#888"
       />
-      <Text style={styles.sessionInfoText}>
-        {activeEntity?.name}
-      </Text>
+      <AppText style={styles.sessionInfoText}>
+  {activeEntity?.name}
+</AppText>
     </View>
 
     {filteredSessions[0]?.event && (
@@ -690,16 +707,16 @@ const peakPresent = filteredSessions.length > 0
           size={14}
           color="#888"
         />
-        <Text style={styles.sessionInfoText}>
-          {filteredSessions[0]?.event}
-        </Text>
+        <AppText style={styles.sessionInfoText}>
+  {filteredSessions[0]?.event}
+</AppText>
       </View>
     )}
 
     <View style={styles.completedBadge}>
-      <Text style={styles.completedBadgeText}>
-        Completed
-      </Text>
+      <AppText style={styles.completedBadgeText}>
+  Completed
+</AppText>
     </View>
 
   </View>
@@ -712,16 +729,18 @@ const peakPresent = filteredSessions.length > 0
     color={attendanceGradeColor}
   />
 
-  <Text style={styles.healthInsightText}>
-    {attendanceInsight}
-  </Text>
+ <AppText style={styles.healthInsightText}>
+  {attendanceInsight}
+</AppText>
 </View>
 
 
       {loading ? (
         <View style={styles.loader}>
           <ActivityIndicator color="#4B3F72" size="large" />
-          <Text style={styles.loaderText}>Loading attendance intelligence…</Text>
+          <AppText style={styles.loaderText}>
+  Loading attendance intelligence…
+</AppText>
         </View>
       ) : (
         <ScrollView
@@ -745,10 +764,14 @@ const peakPresent = filteredSessions.length > 0
               {awayCount > 0 && (
                 <View style={styles.mobilityNotice}>
                   <Ionicons name="airplane-outline" size={13} color="#0984E3" />
-                  <Text style={styles.mobilityNoticeText}>
-                    <Text style={{ fontWeight: "800" }}>{awayCount} member{awayCount > 1 ? "s" : ""} away</Text> right now (students, transients).
-                    Attendance rate is calculated against the {localMemberCount} members expected locally — not the full {members.length}.
-                  </Text>
+                  <AppText style={styles.mobilityNoticeText}>
+  <AppText style={{ fontWeight: "800" }}>
+    {awayCount} member{awayCount > 1 ? "s" : ""} away
+  </AppText>
+  {" "}right now (students, transients).
+  Attendance rate is calculated against the {localMemberCount} members expected locally — not the full {members.length}.
+</AppText>
+
                 </View>
               )}
 
@@ -761,7 +784,14 @@ const peakPresent = filteredSessions.length > 0
                       style={[styles.serviceChip, serviceFilter === s && styles.serviceChipActive]}
                       onPress={() => setServiceFilter(s)}
                     >
-                      <Text style={[styles.serviceChipText, serviceFilter === s && styles.serviceChipTextActive]}>{s}</Text>
+                      <AppText
+  style={[
+    styles.serviceChipText,
+    serviceFilter === s && styles.serviceChipTextActive
+  ]}
+>
+  {s}
+</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -775,7 +805,9 @@ const peakPresent = filteredSessions.length > 0
                   {/* CHART TOGGLE + BAR CHART */}
                   <View style={styles.chartCard}>
                     <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Attendance Count</Text>
+                      <AppText style={styles.chartTitle}>
+  Attendance Count
+</AppText>
                       <View style={styles.chartToggle}>
                         {["bar", "line"].map(ct => (
                           <TouchableOpacity key={ct} style={[styles.chartToggleBtn, chartType === ct && styles.chartToggleBtnActive]}
@@ -789,11 +821,23 @@ const peakPresent = filteredSessions.length > 0
                     <View style={styles.chartLegend}>
                       <View style={styles.legendItem}>
                         <View style={[styles.legendDot, { backgroundColor: "#4B3F72" }]} />
-                        <Text style={styles.legendText}>Present</Text>
+                        <AppText style={styles.legendText}>
+  Present
+</AppText>
+
+<AppText style={styles.legendText}>
+  Below average
+</AppText>
                       </View>
                       <View style={styles.legendItem}>
                         <View style={[styles.legendDot, { backgroundColor: "#e74c3c88" }]} />
-                        <Text style={styles.legendText}>Below average</Text>
+                        <AppText style={styles.legendText}>
+  Present
+</AppText>
+
+<AppText style={styles.legendText}>
+  Below average
+</AppText>
                       </View>
                     </View>
                     {chartType === "bar"
@@ -804,23 +848,33 @@ const peakPresent = filteredSessions.length > 0
                   {/* RATE TREND */}
                   <View style={styles.chartCard}>
                     <View style={styles.chartHeader}>
-                      <Text style={styles.chartTitle}>Attendance Rate %</Text>
+                      <AppText style={styles.chartTitle}>
+  Attendance Rate %
+</AppText>
                       <View style={[styles.avgPill, { backgroundColor: avgRate >= 70 ? "#27ae6020" : "#e74c3c20" }]}>
-                        <Text style={[styles.avgPillText, { color: avgRate >= 70 ? "#27ae60" : "#e74c3c" }]}>
-                          Avg {avgRate}%
-                        </Text>
+                        <AppText
+  style={[
+    styles.avgPillText,
+    { color: avgRate >= 70 ? "#27ae60" : "#e74c3c" }
+  ]}
+>
+  Avg {avgRate}%
+</AppText>
                       </View>
                     </View>
                     <LineChart data={rateData} color={avgRate >= 70 ? "#27ae60" : "#e74c3c"} />
                     <View style={styles.rateBenchmark}>
-                      <Text style={styles.rateBenchmarkText}>
-                        Industry benchmark: 60-75% for active congregations
-                      </Text>
+                     <AppText style={styles.rateBenchmarkText}>
+  Industry benchmark: 60-75% for active congregations
+</AppText>
                     </View>
                   </View>
 
                   {/* RECENT SESSIONS LIST */}
-                  <Text style={styles.sectionTitle}>Recent Sessions</Text>
+                  <AppText style={styles.sectionTitle}>
+  Recent Sessions
+</AppText>
+
                   {filteredSessions.slice(0, 8).map(sess => (
                     <SessionRow key={sess.id} session={sess} memberCount={localMemberCount} />
                   ))}
@@ -837,11 +891,14 @@ const peakPresent = filteredSessions.length > 0
                 <>
                   <View style={styles.memberSectionHeader}>
                     <Ionicons name="flame-outline" size={16} color="#F39C12" />
-                    <Text style={styles.memberSectionTitle}>Attendance Streaks</Text>
+<AppText style={styles.memberSectionTitle}>
+  Attendance Streaks
+</AppText>
+
                   </View>
-                  <Text style={styles.memberSectionSub}>
-                    Members who have attended every session in a row — celebrate them!
-                  </Text>
+                 <AppText style={styles.memberSectionSub}>
+  Members who have attended every session in a row — celebrate them!
+</AppText>
                   {streakMembers.map(m => (
                     <MemberInsightRow key={m.id}
                       member={m}
@@ -857,9 +914,13 @@ const peakPresent = filteredSessions.length > 0
                 <>
                   <View style={[styles.memberSectionHeader, { marginTop: 16 }]}>
                     <Ionicons name="trophy-outline" size={16} color="#27ae60" />
-                    <Text style={styles.memberSectionTitle}>Most Faithful</Text>
+                    <AppText style={styles.memberSectionTitle}>
+  Most Faithful
+</AppText>
                   </View>
-                  <Text style={styles.memberSectionSub}>Highest number of sessions attended in this period</Text>
+                  <AppText style={styles.memberSectionSub}>
+  Highest number of sessions attended in this period
+</AppText>
                   {topAttenders.map((m, i) => (
                     <MemberInsightRow key={m.id}
                       member={m}
@@ -876,11 +937,17 @@ const peakPresent = filteredSessions.length > 0
                 <>
                   <View style={[styles.memberSectionHeader, { marginTop: 16 }]}>
                     <Ionicons name="alert-circle-outline" size={16} color="#e74c3c" />
-                    <Text style={styles.memberSectionTitle}>Needs Pastoral Attention</Text>
+                    <AppText style={styles.memberSectionTitle}>
+  Needs Pastoral Attention
+</AppText>
+
+<AppText style={styles.memberSectionSub}>
+  Not tagged as away, but frequently absent — pastoral follow-up recommended
+</AppText>
                   </View>
-                  <Text style={styles.memberSectionSub}>
-                    Not tagged as away, but frequently absent — pastoral follow-up recommended
-                  </Text>
+                 <AppText style={styles.memberSectionSub}>
+  Not tagged as away, but frequently absent — pastoral follow-up recommended
+</AppText>
                   {topAbsentees.map(m => (
                     <MemberInsightRow key={m.id}
                       member={m}
@@ -904,11 +971,17 @@ const peakPresent = filteredSessions.length > 0
             <>
               <View style={styles.memberSectionHeader}>
                 <Ionicons name="layers-outline" size={16} color="#7C3AED" />
-                <Text style={styles.memberSectionTitle}>Group Session Summary</Text>
+                
+<AppText style={styles.memberSectionTitle}>
+  Group Session Summary
+</AppText>
+
               </View>
-              <Text style={styles.memberSectionSub}>
-                Group attendance tracked separately — not counted in general membership metrics.
-              </Text>
+              
+<AppText style={styles.memberSectionSub}>
+  Group attendance tracked separately — not counted in general membership metrics.
+</AppText>
+
 
               {Object.entries(groupBreakdown).length === 0 ? (
                 <EmptyState icon="people-outline" title="No Group Sessions Yet"
@@ -928,11 +1001,18 @@ const peakPresent = filteredSessions.length > 0
                         <View style={styles.groupIcon}>
                           <Ionicons name="people-outline" size={18} color="#7C3AED" />
                         </View>
-                        <Text style={styles.groupCardName}>{g.name}</Text>
+                        <AppText style={styles.groupCardName}>
+  {g.name}
+</AppText>
                         <View style={[styles.rateChip, { backgroundColor: avgGroupRate >= 70 ? "#e8f8f0" : "#fce8e8" }]}>
-                          <Text style={[styles.rateChipText, { color: avgGroupRate >= 70 ? "#27ae60" : "#e74c3c" }]}>
-                            {avgGroupRate}%
-                          </Text>
+                          <AppText
+  style={[
+    styles.rateChipText,
+    { color: avgGroupRate >= 70 ? "#27ae60" : "#e74c3c" }
+  ]}
+>
+  {avgGroupRate}%
+</AppText>
                         </View>
                       </View>
                       <View style={styles.groupCardStats}>
@@ -952,11 +1032,13 @@ const peakPresent = filteredSessions.length > 0
             <>
               <View style={styles.memberSectionHeader}>
                 <Ionicons name="bulb-outline" size={16} color="#4B3F72" />
-                <Text style={styles.memberSectionTitle}>Smart Insights</Text>
+                <AppText style={styles.memberSectionTitle}>
+  Smart Insights
+</AppText>
               </View>
-              <Text style={styles.memberSectionSub}>
-                Automatically derived from your attendance patterns — updated each time you refresh.
-              </Text>
+         <AppText style={styles.memberSectionSub}>
+  Automatically derived from your attendance patterns — updated each time you refresh.
+</AppText>
 
               {insights.length === 0 ? (
                 <EmptyState icon="bulb-outline" title="More Data Needed"
@@ -967,7 +1049,9 @@ const peakPresent = filteredSessions.length > 0
                     <View style={[styles.insightIcon, { backgroundColor: ins.color + "20" }]}>
                       <Ionicons name={ins.icon} size={18} color={ins.color} />
                     </View>
-                    <Text style={styles.insightText}>{ins.text}</Text>
+          <AppText style={styles.insightText}>
+  {ins.text}
+</AppText>
                   </View>
                 ))
               )}
@@ -977,7 +1061,9 @@ const peakPresent = filteredSessions.length > 0
                 <>
                   <View style={[styles.memberSectionHeader, { marginTop: 16 }]}>
                     <Ionicons name="git-compare-outline" size={16} color="#0984E3" />
-                    <Text style={styles.memberSectionTitle}>This Period vs. Previous</Text>
+                    <AppText style={styles.memberSectionTitle}>
+  This Period vs. Previous
+</AppText>
                   </View>
                   <ComparativeSnapshot sessions={filteredSessions} members={members} />
                 </>
@@ -1000,9 +1086,14 @@ function KPICard({ icon, color, label, value, sub }) {
       <View style={[styles.kpiIcon, { backgroundColor: color + "20" }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
-      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
-      {sub && <Text style={styles.kpiSub}>{sub}</Text>}
+      <AppText style={[styles.kpiValue, { color }]}>
+  {value}
+</AppText>
+      <AppText style={styles.kpiLabel}>
+  {label}
+</AppText>
+      {sub && <AppText style={styles.kpiSub}>{sub}</AppText>}
+`
     </View>
   );
 }
@@ -1018,17 +1109,28 @@ function SessionRow({ session, memberCount }) {
     <View style={styles.sessionRow}>
       <View style={[styles.sessionRowDot, { backgroundColor: rateColor }]} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.sessionRowTitle}>
-          {session.service} · {session.type}
-        </Text>
-        <Text style={styles.sessionRowMeta}>
-          {formatDate(session.date)} · {session.startTime || "—"}
-          {session.event && session.event !== "None" ? ` · ${session.event}` : ""}
-        </Text>
+        <AppText style={styles.sessionRowTitle}>
+  {session.service} · {session.type}
+</AppText>
+       <AppText style={styles.sessionRowMeta}>
+  {formatDate(session.date)} · {session.startTime || "—"}
+  {session.event && session.event !== "None"
+    ? ` · ${session.event}`
+    : ""}
+</AppText>
       </View>
       <View style={styles.sessionRowRight}>
-        <Text style={[styles.sessionRowRate, { color: rateColor }]}>{rate}%</Text>
-        <Text style={styles.sessionRowCount}>{session.finalPresent || 0} present</Text>
+        <AppText
+  style={[
+    styles.sessionRowRate,
+    { color: rateColor }
+  ]}
+>
+  {rate}%
+</AppText>
+        <AppText style={styles.sessionRowCount}>
+  {session.finalPresent || 0} present
+</AppText>
       </View>
     </View>
   );
@@ -1037,17 +1139,34 @@ function SessionRow({ session, memberCount }) {
 function MemberInsightRow({ member, rank, rightLabel, rightColor, alert }) {
   return (
     <View style={[styles.memberRow, alert && styles.memberRowAlert]}>
-      {rank && <Text style={styles.memberRank}>#{rank}</Text>}
+      {rank && <AppText style={styles.memberRank}>#{rank}</AppText>}
       <View style={styles.memberAvatar}>
-        <Text style={styles.memberAvatarText}>
-          {(member.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-        </Text>
+        <AppText style={styles.memberAvatarText}>
+  {(member.name || "?")
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()}
+</AppText>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.memberRowName}>{member.name}</Text>
-        <Text style={styles.memberRowSub}>{member.ministry || ""}</Text>
+<AppText style={styles.memberRowName}>
+  {member.name}
+</AppText>
+
+<AppText style={styles.memberRowSub}>
+  {member.ministry || ""}
+</AppText>
       </View>
-      <Text style={[styles.memberRowRight, { color: rightColor }]}>{rightLabel}</Text>
+      <AppText
+  style={[
+    styles.memberRowRight,
+    { color: rightColor }
+  ]}
+>
+  {rightLabel}
+</AppText>
     </View>
   );
 }
@@ -1055,8 +1174,13 @@ function MemberInsightRow({ member, rank, rightLabel, rightColor, alert }) {
 function GroupStat({ label, value }) {
   return (
     <View style={styles.groupStatItem}>
-      <Text style={styles.groupStatValue}>{value}</Text>
-      <Text style={styles.groupStatLabel}>{label}</Text>
+   <AppText style={styles.groupStatValue}>
+  {value}
+</AppText>
+
+<AppText style={styles.groupStatLabel}>
+  {label}
+</AppText>
     </View>
   );
 }
@@ -1077,10 +1201,10 @@ function ComparativeSnapshot({ sessions, members }) {
   return (
     <View style={styles.compareCard}>
       <View style={styles.compareCol}>
-        <Text style={styles.compareColLabel}>Previous</Text>
-        <Text style={styles.compareValue}>{avg(previous, "finalPresent")}</Text>
-        <Text style={styles.compareRate}>{prevRate}% avg rate</Text>
-        <Text style={styles.compareSessions}>{previous.length} sessions</Text>
+  <AppText style={styles.compareColLabel}>Previous</AppText>
+<AppText style={styles.compareValue}>{avg(previous, "finalPresent")}</AppText>
+<AppText style={styles.compareRate}>{prevRate}% avg rate</AppText>
+<AppText style={styles.compareSessions}>{previous.length} sessions</AppText>
       </View>
       <View style={styles.compareArrow}>
         <Ionicons
@@ -1088,17 +1212,34 @@ function ComparativeSnapshot({ sessions, members }) {
           size={20}
           color={diff >= 0 ? "#27ae60" : "#e74c3c"}
         />
-        <Text style={[styles.compareDiff, { color: diff >= 0 ? "#27ae60" : "#e74c3c" }]}>
-          {diff >= 0 ? "+" : ""}{diff}%
-        </Text>
+        <AppText
+  style={[
+    styles.compareDiff,
+    { color: diff >= 0 ? "#27ae60" : "#e74c3c" }
+  ]}
+>
+  {diff >= 0 ? "+" : ""}{diff}%
+</AppText>
       </View>
       <View style={styles.compareCol}>
-        <Text style={styles.compareColLabel}>Recent</Text>
-        <Text style={[styles.compareValue, { color: diff >= 0 ? "#27ae60" : "#e74c3c" }]}>
-          {avg(recent, "finalPresent")}
-        </Text>
-        <Text style={styles.compareRate}>{recentRate}% avg rate</Text>
-        <Text style={styles.compareSessions}>{recent.length} sessions</Text>
+<AppText style={styles.compareColLabel}>Recent</AppText>
+
+<AppText
+  style={[
+    styles.compareValue,
+    { color: diff >= 0 ? "#27ae60" : "#e74c3c" }
+  ]}
+>
+  {avg(recent, "finalPresent")}
+</AppText>
+
+<AppText style={styles.compareRate}>
+  {recentRate}% avg rate
+</AppText>
+
+<AppText style={styles.compareSessions}>
+  {recent.length} sessions
+</AppText>
       </View>
     </View>
   );
@@ -1108,8 +1249,13 @@ function EmptyState({ icon, title, sub }) {
   return (
     <View style={styles.emptyState}>
       <Ionicons name={icon} size={44} color="#ddd" />
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyText}>{sub}</Text>
+      <AppText style={styles.emptyTitle}>
+  {title}
+</AppText>
+
+<AppText style={styles.emptyText}>
+  {sub}
+</AppText>
     </View>
   );
 }
