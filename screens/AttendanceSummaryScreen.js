@@ -636,7 +636,7 @@ const peakPresent = filteredSessions.length > 0
 <AppText style={styles.heroStatLabel}>
   Away
 </AppText>
-`
+
     </View>
   </View>
 </View>

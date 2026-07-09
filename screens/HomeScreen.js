@@ -42,6 +42,7 @@ import {
 } from "firebase/firestore";
 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import AppText from "../components/AppText";
 
 const { width: W } = Dimensions.get("window");
 
@@ -696,7 +697,9 @@ return (
 {/* ✅ QUICK ACTIONS */}
 <View style={styles.qaSection}>
   <View style={styles.qaHeaderRow}>
-    <Text style={styles.qaHeading}>Quick Actions</Text>
+    <AppText style={styles.qaHeading}>
+  Quick Actions
+</AppText>
   </View>
 
   {/* ✅ REQUIRED ROW WRAPPER */}
@@ -756,13 +759,12 @@ return (
         <View style={styles.qaCircle}>
           <Ionicons name={a.icon} size={22} color="#fff" />
         </View>
-
-        <Text
+<AppText
   style={styles.qaLabel}
-  numberOfLines={2}   
+  numberOfLines={2}
 >
   {a.label}
-</Text>
+</AppText>
       </TouchableOpacity>
     ))}
 
