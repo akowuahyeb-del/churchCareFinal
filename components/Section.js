@@ -5,9 +5,12 @@ import AppText from "./AppText";
 export default function Section({ title, children }) {
   return (
     <View style={styles.container}>
-      <AppText style={styles.title}>
-        {title}
-      </AppText>
+      <AppText
+  variant="h4"
+  style={styles.title}
+>
+  {title}
+</AppText>
       {children}
     </View>
   );
@@ -19,8 +22,6 @@ const styles = StyleSheet.create({
   },
 
   title: {
-  fontSize: 17,
-  fontWeight: "800",
   color: "#222",
   marginBottom: 10,
   paddingHorizontal: 14,
