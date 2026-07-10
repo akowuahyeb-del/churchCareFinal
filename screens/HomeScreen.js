@@ -657,6 +657,7 @@ return (
       <Text style={styles.featuredHeading}>Featured Events</Text>
     </View>
 
+
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -694,15 +695,11 @@ return (
       <StatCard label="Attendance" value="180" />
     </View>
   </Section>
+
 {/* ✅ QUICK ACTIONS */}
-<View style={styles.qaSection}>
-  <View style={styles.qaHeaderRow}>
-  <Text style={styles.qaHeading}>
-  Quick Actions
-</Text>
-
-
-  </View>
+{/* ✅ QUICK ACTIONS */}
+<Section title="Quick Actions">
+  <View style={styles.qaSection}>
 
   {/* ✅ REQUIRED ROW WRAPPER */}
   <View style={styles.qaRow}>
@@ -773,7 +770,7 @@ return (
   </View>
 </View>
 
-
+</Section>
   {/* ✅ SERVICE FLOW */}
   <Section title="Service Flow">
     <EventsTabs

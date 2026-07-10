@@ -1,10 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import AppText from "./AppText";
 
 export default function Section({ title, children }) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <AppText style={styles.title}>
+        {title}
+      </AppText>
       {children}
     </View>
   );
@@ -16,10 +19,10 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#555",
-    marginBottom: 8,
-    paddingHorizontal: 14,
-  },
+  fontSize: 17,
+  fontWeight: "800",
+  color: "#222",
+  marginBottom: 10,
+  paddingHorizontal: 14,
+},
 });
