@@ -1126,9 +1126,11 @@ statusText: {
   qaHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   qaHeading: { fontSize: 15, fontWeight: "800", color: "#222" },
   qaRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 },
-  qaItem: {
-  width: "32%",  
+ 
+ qaItem: {
+  width: "30%",
   alignItems: "center",
+  paddingHorizontal: 4,
 },
   qaCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: "#3C3A4E", alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 6 },
   
