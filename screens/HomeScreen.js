@@ -697,9 +697,11 @@ return (
 {/* ✅ QUICK ACTIONS */}
 <View style={styles.qaSection}>
   <View style={styles.qaHeaderRow}>
-    <AppText style={styles.qaHeading}>
+  <Text style={styles.qaHeading}>
   Quick Actions
-</AppText>
+</Text>
+
+
   </View>
 
   {/* ✅ REQUIRED ROW WRAPPER */}
@@ -1123,7 +1125,7 @@ statusText: {
 
   /* Quick actions */
   qaSection: { paddingHorizontal: 14, marginTop: 18, marginBottom: 6 },
-  qaHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
+  qaHeaderRow: {  marginBottom: 14 },
   qaHeading: { fontSize: 15, fontWeight: "800", color: "#222" },
   qaRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14 },
  
@@ -1134,15 +1136,17 @@ statusText: {
 },
   qaCircle: { width: 54, height: 54, borderRadius: 27, backgroundColor: "#3C3A4E", alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 6 },
   
-  qaLabel: {
+qaLabel: {
   fontSize: 10,
   fontWeight: "700",
   color: "#444",
   marginTop: 6,
   textAlign: "center",
+  lineHeight: 14,
+  includeFontPadding: false,
 
-  lineHeight: 14,          
-  includeFontPadding: false, 
+  width: "100%",
+  flexShrink: 1,
 },
 
 
