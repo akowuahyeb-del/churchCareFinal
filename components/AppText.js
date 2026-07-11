@@ -26,7 +26,11 @@ const VARIANTS = {
   h1:       { fontSize: FONT.xxxl,  fontWeight: FONT.extrabold, color: COLOR.textPrimary },
   h2:       { fontSize: FONT.xxl,   fontWeight: FONT.bold,      color: COLOR.textPrimary },
   h3:       { fontSize: FONT.xl,    fontWeight: FONT.bold,      color: COLOR.textPrimary },
-  h4:       { fontSize: FONT.lg,    fontWeight: FONT.semibold,  color: COLOR.textPrimary },
+ h4: {
+  fontSize: 18,
+  fontWeight: "900",
+  color: COLOR.textPrimary,
+},
   body:     { fontSize: FONT.md,    fontWeight: FONT.regular,   color: COLOR.textPrimary },
   bodyBold: { fontSize: FONT.md,    fontWeight: FONT.bold,      color: COLOR.textPrimary },
   label:    { fontSize: FONT.sm,    fontWeight: FONT.semibold,  color: COLOR.textSecondary },

@@ -16,9 +16,9 @@ const styles = StyleSheet.create({
 },
 
 
-  text: {
+  /* text: {
     fontSize: 15,
     fontWeight: "800",   
     color: "#222",
-  },
+  }, */
 });

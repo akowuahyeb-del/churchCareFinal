@@ -65,9 +65,10 @@ const addSession = (name) => {
 {/* ✅ TAB HEADER */}
 <View style={styles.tabRow}>
   {[
-    { key: "events", label: "Upcoming", icon: "calendar-outline" },
-    { key: "program", label: "Program", icon: "list-outline" },
-    { key: "preachers", label: "Preachers", icon: "person-outline" }
+{ key: "events", label: "Upcoming", icon: "calendar-outline" },
+{ key: "program", label: "Programme", icon: "list-outline" },
+{ key: "preachers", label: "Preachers", icon: "person-outline" }
+
   ].map(t => (
     <TouchableOpacity
       key={t.key}
@@ -75,17 +76,22 @@ const addSession = (name) => {
       onPress={() => setActiveTab(t.key)}
     >
       <Ionicons
-        name={t.icon}
-        size={14}
-        color={activeTab === t.key ? "#fff" : "#777"}
-      />
-      <Text style={[styles.tabText, activeTab === t.key && styles.activeTabText]}>
-        {t.label}
-      </Text>
+  name={t.icon}
+  size={16}
+  color={activeTab === t.key ? "#fff" : "#777"}
+/>
+
+<Text
+  allowFontScaling={false}
+  style={[
+    styles.tabText,
+    activeTab === t.key && styles.activeTabText
+  ]}
+>
+  {t.label}
+</Text>
     </TouchableOpacity>
-    
   ))}
-  
 </View>
 
  {/* ✅ SESSION SWITCHER WITH EDIT + DELETE */}
@@ -357,11 +363,39 @@ const addSession = (name) => {
 const styles = StyleSheet.create({
   container: { marginHorizontal: 14, marginTop: 12 },
 
-  tabRow: { flexDirection: "row", backgroundColor: "#eee", borderRadius: 12, padding: 4 },
-  tab: { flex: 1, flexDirection: "row", justifyContent: "center", paddingVertical: 10, gap: 5 },
-  activeTab: { backgroundColor: "#4B3F72", borderRadius: 10 },
-  tabText: { fontSize: 12, color: "#777", fontWeight: "700" },
-  activeTabText: { color: "#fff" },
+tabRow: {
+  flexDirection: "row",
+  backgroundColor: "#eee",
+  borderRadius: 12,
+  padding: 4,
+  justifyContent: "space-evenly",
+},
+
+
+tab: {
+  flex: 1,
+  minWidth: 100,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingVertical: 10,
+},
+
+activeTab: {
+  backgroundColor: "#4B3F72",
+  borderRadius: 10,
+},
+
+tabText: {
+  fontSize: 10,
+  color: "#777",
+  fontWeight: "700",
+  textAlign: "center",
+  lineHeight: 12,
+},
+
+activeTabText: {
+  color: "#fff",
+},
 
   sessionSwitchRow: {
     flexDirection: "row",
@@ -392,5 +426,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginLeft: 4,
     marginTop: 10
-  }
+  },
+  
 });
