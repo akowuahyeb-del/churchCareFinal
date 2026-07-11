@@ -374,7 +374,6 @@ tabRow: {
 
 tab: {
   flex: 1,
-  minWidth: 100,
   justifyContent: "center",
   alignItems: "center",
   paddingVertical: 10,
