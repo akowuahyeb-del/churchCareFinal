@@ -57,8 +57,18 @@ export default function AppHeader({
   )}
 
   {/* ✅ TEXT */}
-  <View style={{ marginLeft: 20 }}>
-    <Text style={styles.title}>{title}</Text>
+  <View
+  style={{
+    marginLeft: 20,
+    flex: 1,
+  }}
+>
+    <Text
+  style={styles.title}
+  numberOfLines={1}
+>
+  {title}
+</Text>
     {subtitle ? (
       <Text style={styles.subtitle}>{subtitle}</Text>
     ) : null}
@@ -97,11 +107,11 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingBottom: 14,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 8,
+  paddingBottom: 14,
+},
 
   backBtn: {
     width: 38,
@@ -119,11 +129,13 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  title: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "800",
-  },
+ title: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "800",
+  lineHeight: 24,
+  includeFontPadding: false,
+},
 
   subtitle: {
     color: "rgba(255,255,255,0.7)",

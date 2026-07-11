@@ -588,20 +588,22 @@ return (
 
     {/* ✅ NAME + STATUS */}
     <View style={styles.entityTextRow}>
-      <Text style={styles.entityText}>
-        {activeEntity?.name || "Select Church"}
-      </Text>
 
-      {/* ✅ STATUS INDICATOR */}
-      {activeEntity && (
-        <View style={styles.statusBadge}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>Active</Text>
-        </View>
-      )}
-    </View>
+  <Text style={styles.entityText}>
+    {activeEntity?.name || "Select Church"}
+  </Text>
 
-    <Ionicons name="chevron-down" size={14} color="#4B3F72" />
+  {activeEntity && (
+  <View style={styles.statusBadge}>
+  <View style={styles.statusDot} />
+  <Text style={styles.statusText}>
+    Active
+  </Text>
+</View>
+  )}
+</View>
+
+    {/* <Ionicons name="chevron-down" size={14} color="#4B3F72" /> */}
   </TouchableOpacity>
 </View>
 
@@ -695,6 +697,7 @@ return (
       <StatCard label="Attendance" value="180" />
     </View>
   </Section>
+
 
 {/* ✅ QUICK ACTIONS */}
 {/* ✅ QUICK ACTIONS */}
@@ -1079,13 +1082,13 @@ entityBar: {
 entityBtn: {
   flexDirection: "row",
   alignItems: "center",
-  backgroundColor: "#edeef2",   
+  backgroundColor: "#edeef2",
   paddingHorizontal: 12,
   paddingVertical: 8,
   borderRadius: 15,
-  alignSelf: "flex-start",
+  width: "100%",
   borderWidth: 1,
-  borderColor: "#E0E3F5",       
+  borderColor: "#E0E3F5",
 },
 
 entityText: {
@@ -1097,13 +1100,18 @@ entityText: {
 entityTextRow: {
   flexDirection: "column",
   marginHorizontal: 6,
+  flex: 1,
 },
+
+
 
 statusBadge: {
   flexDirection: "row",
   alignItems: "center",
   marginTop: 2,
+  flexShrink: 0,
 },
+
 
 statusDot: {
   width: 6,
@@ -1113,11 +1121,13 @@ statusDot: {
   marginRight: 4,
 },
 
+
 statusText: {
-  fontSize: 10,
+  fontSize: 12,
   color: "#27ae60",
   fontWeight: "600",
 },
+
 
 
   /* Quick actions */

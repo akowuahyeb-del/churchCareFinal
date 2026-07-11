@@ -67,17 +67,11 @@ export default function AppText({
   const ellipsizeMode = numberOfLines ? "tail" : undefined;
 
   return (
-    <Text
-      style={[computed, style]}
-      numberOfLines={numberOfLines}
-      ellipsizeMode={ellipsizeMode}
-      // ✅ allowFontScaling: we use our own scaling from FONT tokens,
-      // so we disable the OS accessibility font scaling to prevent
-      // double-scaling on large-text mode devices.
-      allowFontScaling={false}
-      {...rest}
-    >
-      {children}
-    </Text>
-  );
+  <Text
+    style={style}
+    {...rest}
+  >
+    {children}
+  </Text>
+);
 }

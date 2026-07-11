@@ -66,7 +66,7 @@ const addSession = (name) => {
 <View style={styles.tabRow}>
   {[
 { key: "events", label: "Upcoming", icon: "calendar-outline" },
-{ key: "program", label: "Programme", icon: "list-outline" },
+{ key: "program", label: "Programs", icon: "list-outline" },
 { key: "preachers", label: "Preachers", icon: "person-outline" }
 
   ].map(t => (
