@@ -6,7 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 
 import { Feather, AntDesign } from "@expo/vector-icons";
@@ -147,10 +150,18 @@ useEffect(() => {
     }
   };
 
-  return (
-    <View style={styles.container}>
+ return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#f7f8fb" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
 
-      <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.title}>Welcome Back</Text>
 
       <Text style={styles.subtitle}>
         Sign in to continue
@@ -188,7 +199,8 @@ useEffect(() => {
   </TouchableOpacity>
 </View>
 
-      <AppButton title="Login" onPress={handleLogin} />
+      <AppButton label="Login" onPress={handleLogin} fullWidth />
+
 
       <View style={styles.dividerRow}>
         <View style={styles.line} />
@@ -198,12 +210,12 @@ useEffect(() => {
 
       <TouchableOpacity style={styles.socialBtn}>
         <AntDesign name="google" size={18} color="#DB4437" />
-        <Text style={styles.socialText}>Continue with Google</Text>
+        <Text style={[styles.socialText, { flex: 1 }]}>Continue with Google</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.socialBtn}>
         <Feather name="phone" size={18} color="#4B3F72" />
-        <Text style={styles.socialText}>Continue with Phone</Text>
+        <Text style={[styles.socialText, { flex: 1 }]}>Continue with Phone</Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
@@ -212,16 +224,18 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
 
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-
 
 // ✅ STYLES
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
     justifyContent: "center",
     backgroundColor: "#f7f8fb"
   },
