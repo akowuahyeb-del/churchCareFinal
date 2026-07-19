@@ -259,7 +259,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0"
+    borderColor: "#e0e0e0",
+    color: "#222"
   },
 
   passwordBox: {
@@ -275,7 +276,8 @@ const styles = StyleSheet.create({
 
   passwordInput: {
     flex: 1,
-    paddingVertical: 12
+    paddingVertical: 12,
+    color: "#222"
   },
 
   dividerRow: {
