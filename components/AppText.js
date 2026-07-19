@@ -66,12 +66,25 @@ export default function AppText({
   // Without this, text clips silently on Android with no visual cue.
   const ellipsizeMode = numberOfLines ? "tail" : undefined;
 
-  return (
+return (
   <Text
-    style={style}
+    style={[
+      styles.baseText,
+      computed,
+      style,
+    ]}
+    numberOfLines={numberOfLines}
+    ellipsizeMode={ellipsizeMode}
+    allowFontScaling={false}
     {...rest}
   >
     {children}
   </Text>
 );
 }
+const styles = StyleSheet.create({
+  baseText: {
+  includeFontPadding: true,
+  flexShrink: 1,
+}
+});

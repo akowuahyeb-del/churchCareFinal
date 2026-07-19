@@ -4,7 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput } from "reac
 import { Ionicons } from "@expo/vector-icons";
 import ProgramModal from "./ProgramModal";
 import { DEFAULT_SESSION, sessionsMatch } from "../constants/sessions";
-
+import AppText from "./AppText";
 
 export default function EventsTabs({
   events = [],
@@ -59,17 +59,17 @@ const addSession = (name) => {
   setSessions(prev => [...prev, newSession]);
 };
 
+
   return (
     <View style={styles.container}>
      
 {/* ✅ TAB HEADER */}
 <View style={styles.tabRow}>
   {[
-{ key: "events", label: "Upcoming", icon: "calendar-outline" },
-{ key: "program", label: "Programs", icon: "list-outline" },
-{ key: "preachers", label: "Preachers", icon: "person-outline" }
-
-  ].map(t => (
+  { key: "events", label: "Upcoming", icon: "calendar-outline" },
+  { key: "program", label: "Program", icon: "list-outline" },
+  { key: "preachers", label: "Preachers", icon: "person-outline" },
+].map(t => (
     <TouchableOpacity
       key={t.key}
       style={[styles.tab, activeTab === t.key && styles.activeTab]}
@@ -77,11 +77,11 @@ const addSession = (name) => {
     >
       <Ionicons
   name={t.icon}
-  size={16}
-  color={activeTab === t.key ? "#fff" : "#777"}
+  size={18}
+  color={activeTab === t.key ? "#fff" : "#667085"}
 />
 
-<Text
+<AppText
   allowFontScaling={false}
   style={[
     styles.tabText,
@@ -89,10 +89,14 @@ const addSession = (name) => {
   ]}
 >
   {t.label}
-</Text>
+</AppText>
+
     </TouchableOpacity>
   ))}
 </View>
+
+
+
 
  {/* ✅ SESSION SWITCHER WITH EDIT + DELETE */}
 {showSessionSwitcher && (
@@ -363,13 +367,47 @@ const addSession = (name) => {
 const styles = StyleSheet.create({
   container: { marginHorizontal: 14, marginTop: 12 },
 
+
 tabRow: {
   flexDirection: "row",
-  backgroundColor: "#eee",
-  borderRadius: 12,
-  padding: 4,
-  justifyContent: "space-evenly",
+  alignItems: "center",
+
+  backgroundColor: "#F0F1F3",
+  borderRadius: 10,      // ✅ full pill
+
+  padding: 6,
+
+  marginBottom: 8,
 },
+
+
+tab: {
+  flex: 1,
+
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+
+  paddingVertical: 14,
+  borderRadius: 999,
+},
+
+
+
+activeTab: {
+  backgroundColor: "#4B5663", // ✅ same style as screenshot
+
+  borderRadius: 10,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.08,
+  shadowRadius: 4,
+  elevation: 2,
+},
+
+
+
+
 
 
 tab: {
@@ -379,22 +417,36 @@ tab: {
   paddingVertical: 10,
 },
 
+
+
+
 activeTab: {
   backgroundColor: "#4B3F72",
   borderRadius: 10,
 },
 
+// Add flexShrink: 1 to the Text, and numberOfLines to prevent silent clipping
+
 tabText: {
-  fontSize: 10,
-  color: "#777",
-  fontWeight: "700",
-  textAlign: "center",
-  lineHeight: 12,
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#667085",
+  marginLeft: 6,
 },
 
 activeTabText: {
-  color: "#fff",
+  color: "#FFFFFF",
+  fontWeight: "700",
 },
+
+
+
+
+activeTabText: {
+  color: "#FFFFFF",
+  fontWeight: "700",
+},
+
 
   sessionSwitchRow: {
     flexDirection: "row",
@@ -426,5 +478,5 @@ activeTabText: {
     marginLeft: 4,
     marginTop: 10
   },
-  
+ 
 });

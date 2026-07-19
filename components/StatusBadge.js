@@ -20,4 +20,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
+  statusBadge: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 20,
+  backgroundColor: "#e8f8f0",
+  flexShrink: 0,           
+},
+statusText: {
+  fontSize: 11,
+  fontWeight: "700",
+  color: "#27ae60",
+  flexShrink: 1,           
+},
 });
