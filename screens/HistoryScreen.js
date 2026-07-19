@@ -35,7 +35,7 @@ const TABS = [
   { name: "Founders",    icon: "people-outline",       color: "#0984E3" },
   { name: "Milestones",  icon: "flag-outline",         color: "#00B894" },
   { name: "Vision",      icon: "eye-outline",          color: "#E17055" },
-  { name: "Pastors",     icon: "person-outline",       color: "#4B3F72" },
+  { name: "Agents",     icon: "person-outline",       color: "#4B3F72" },
   { name: "Gallery",     icon: "images-outline",       color: "#FDCB6E" },
 ];
 

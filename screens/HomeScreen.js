@@ -279,7 +279,7 @@ useEffect(() => {
       u2();
       u3();
       u4();
-      u5(); // ✅ don't forget to clean this one up too
+      u5(); 
     };
 
   }, [activeEntity]);
@@ -775,17 +775,14 @@ return (
 
 </Section>
   {/* ✅ SERVICE FLOW */}
-  <Section title="Service Flow">
+  <Section title="Order of Service">
     <EventsTabs
       events={upcomingEvents}
       program={program}
       preachers={preachers}
       setProgram={saveProgramToFirestore}
       onAddPreacher={(session) => {
-        // ✅ PATCH 5: EventsTabs now passes the currently-active session along,
-        // so a brand-new preacher defaults to whichever session you're viewing
-        // instead of opening blank.
-        console.log("🔥 ADD PREACHER CLICKED");
+        
         setEditingPreacher(session ? { session } : null);
         setPreacherModal(true);
       }}
@@ -800,7 +797,6 @@ return (
 
     
 
-    {/* ✅ KEEP ALL YOUR MODALS HERE (unchanged) */}
 <FlyerUploadModal
   visible={showUpload}
   onClose={() => setShowUpload(false)}
