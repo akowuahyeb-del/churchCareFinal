@@ -1,4 +1,3 @@
-mkdir -p utils && cat > utils/pinHash.js << 'EOF'
 // utils/pinHash.js
 import * as Crypto from "expo-crypto";
 
@@ -11,4 +10,3 @@ export async function hashPin(pin) {
   );
   return digest;
 }
-EOF

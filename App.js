@@ -56,6 +56,9 @@ import ConcurrentSessionsScreen from "./screens/ConcurrentSessionsScreen";
 import AttendanceSummaryScreen from "./screens/AttendanceSummaryScreen";
 import AttendanceHistoryScreen from "./screens/AttendanceHistoryScreen";
 import AttendanceSessionDetailsScreen from "./screens/AttendanceSessionDetailsScreen";
+import PinSetupScreen from "./screens/PinSetupScreen";
+import PinEntryScreen from "./screens/PinEntryScreen";
+
 
 
 
@@ -171,6 +174,8 @@ function RootStack() {
        <Stack.Screen name="AttendanceSummary"component={AttendanceSummaryScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="AttendanceHistory"component={AttendanceHistoryScreen}/>
        <Stack.Screen name="AttendanceSessionDetails"component={AttendanceSessionDetailsScreen}/>
+       <Stack.Screen name="PinSetup" component={PinSetupScreen} />
+      <Stack.Screen name="PinEntry" component={PinEntryScreen} />
 
     </Stack.Navigator>
   );

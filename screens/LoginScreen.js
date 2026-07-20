@@ -1,93 +1,76 @@
+// screens/LoginScreen.js
+//
+// Email/password login + optional PIN login button.
+// PIN button only appears if a PIN has been set on this device.
+// After successful email login, prompts to set up PIN if not already set.
+
 import React, { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ScrollView, KeyboardAvoidingView, Platform
 } from "react-native";
-
-import { Feather, AntDesign } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import AppButton from "../components/AppButton";
-
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function LoginScreen({ navigation }) {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [pinEnabled, setPinEnabled] = useState(false);
 
-useEffect(() => {
-  const checkLogin = async () => {
-    const firebaseUser = auth.currentUser;
+  useEffect(() => {
+    const checkLogin = async () => {
+      const pinFlag = await AsyncStorage.getItem("pinEnabled");
+setPinEnabled(pinFlag === "true");
+      setPinEnabled(pinFlag === "true");
 
-    // ✅ DO NOTHING if not logged in
-    // (we are already on Login screen 👍)
-    if (!firebaseUser) {
-      return;
-    }
+      const storedUser = await AsyncStorage.getItem("currentUser");
+      const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
-    const storedUser = await AsyncStorage.getItem("currentUser");
+      if (!storedUser || isLoggedIn !== "true") {
+        console.log("No stored session - staying on Login");
+        return;
+      }
 
-    if (!storedUser) {
-  // ✅ user is NOT logged in → stay on Login
-  return;
-}
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        console.log("No Firebase user - staying on Login");
+        return;
+      }
 
-    const userData = JSON.parse(storedUser);
+      const userData = JSON.parse(storedUser);
 
-    if (
-      !userData?.name?.trim() ||
-      !userData?.phone?.trim()
-    ) {
-      navigation.replace("CompleteProfile");
-      return;
-    }
+      if (!userData?.name?.trim() || !userData?.phone?.trim()) {
+        navigation.replace("CompleteProfile");
+        return;
+      }
+      if (!userData?.organizationId || !userData?.entityId) {
+        navigation.replace("CreateChurch");
+        return;
+      }
+      navigation.replace("MainTabs");
+    };
+    checkLogin();
+  }, []);
 
-    if (!userData?.organizationId || !userData?.entityId) {
-      navigation.replace("CreateChurch");
-      return;
-    }
-
-    navigation.replace("MainTabs");
-  };
-
-  checkLogin();
-}, []);
-
-
-  /* ✅ LOGIN HANDLER (FINAL FIX) */
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Enter email and password");
       return;
     }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      const firebaseUser = userCredential.user;
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = cred.user;
       const uid = firebaseUser.uid;
-
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
-
       let userData;
 
       if (!userSnap.exists()) {
-        // ✅ CREATE USER PROFILE AUTOMATICALLY
         userData = {
           uid,
           email: firebaseUser.email,
@@ -97,60 +80,52 @@ useEffect(() => {
           entityName: "",
           name: "",
           phone: "",
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         };
-
         await setDoc(userRef, userData);
-        console.log("✅ New user profile created");
-
       } else {
         userData = { ...userSnap.data(), uid };
       }
 
-      // ✅ SAVE SESSION
       await AsyncStorage.setItem("isLoggedIn", "true");
-      await AsyncStorage.setItem(
-        "currentUser",
-        JSON.stringify(userData)
-      );
+      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-      console.log("✅ User session ready:", userData);
-
-      // ✅ PROFILE INCOMPLETE
-      if (
-        !userData?.name?.trim() ||
-        !userData?.phone?.trim() ||
-        userData.phone.length < 10
-      ) {
+      if (!userData?.name?.trim() || !userData?.phone?.trim() || userData.phone.length < 10) {
         navigation.replace("CompleteProfile");
         return;
       }
-
-      // ✅ NO CHURCH
       if (!userData?.organizationId || !userData?.entityId) {
         navigation.replace("CreateChurch");
         return;
       }
 
-      // ✅ SAVE ACTIVE ENTITY
-      await AsyncStorage.setItem(
-        "activeEntity",
-        JSON.stringify({
-          organizationId: userData.organizationId,
-          entityId: userData.entityId,
-          name: userData.entityName || "Church"
-        })
-      );
+      await AsyncStorage.setItem("activeEntity", JSON.stringify({
+        organizationId: userData.organizationId,
+        entityId: userData.entityId,
+        name: userData.entityName || "Church",
+      }));
 
+      // Check if PIN is set up on THIS device (not just on the account)
+      const localPinEnabled = await AsyncStorage.getItem("pinEnabled");
+      if (localPinEnabled !== "true") {
+        Alert.alert(
+          "Set up a PIN?",
+          "Sign in faster next time with a 6-digit PIN.",
+          [
+            { text: "Not now", style: "cancel", onPress: () => navigation.replace("MainTabs") },
+            { text: "Set PIN", onPress: () => navigation.replace("PinSetup") },
+          ]
+        );
+        return;
+      }
       navigation.replace("MainTabs");
-
     } catch (error) {
-      console.log("❌ LOGIN ERROR:", error);
+      console.log("LOGIN ERROR:", error);
       Alert.alert("Login Failed", error.message);
     }
   };
 
- return (
+  return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#f7f8fb" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -160,178 +135,85 @@ useEffect(() => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-
         <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Sign in to continue</Text>
 
-      <Text style={styles.subtitle}>
-        Sign in to continue
-      </Text>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          placeholder="Enter your email"
+          value={email}
+          onChangeText={setEmail}
+          style={styles.input}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
 
-      {/* ✅ EMAIL */}
-<Text style={styles.label}>Email</Text>
-<TextInput
-  placeholder="Enter your email"
-  value={email}
-  onChangeText={setEmail}
-  style={styles.input}
-/>
+        <Text style={styles.label}>Password</Text>
+        <View style={styles.passwordBox}>
+          <TextInput
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            style={styles.passwordInput}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 6 }}>
+            <Feather name={showPassword ? "eye" : "eye-off"} size={18} color="#555" />
+          </TouchableOpacity>
+        </View>
 
-{/* ✅ PASSWORD */}
-<Text style={styles.label}>Password</Text>
-<View style={styles.passwordBox}>
-  <TextInput
-    placeholder="Enter your password"
-    value={password}
-    onChangeText={setPassword}
-    secureTextEntry={!showPassword}
-    style={styles.passwordInput}
-  />
+        <AppButton label="Login" onPress={handleLogin} fullWidth />
 
-  <TouchableOpacity
-    onPress={() => setShowPassword(!showPassword)}
-    style={{ padding: 6 }}
-  >
-    <Feather
-      name={showPassword ? "eye" : "eye-off"}
-      size={18}
-      color="#555"
-    />
-  </TouchableOpacity>
-</View>
+        {pinEnabled && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.line} />
+            </View>
+            <TouchableOpacity style={styles.pinBtn} onPress={() => navigation.navigate("PinEntry")}>
+              <Ionicons name="keypad-outline" size={18} color="#fff" />
+              <Text style={styles.pinBtnText}>Sign in with 6-digit PIN</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-      <AppButton label="Login" onPress={handleLogin} fullWidth />
-
-
-      <View style={styles.dividerRow}>
-        <View style={styles.line} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <View style={styles.line} />
-      </View>
-
-      <TouchableOpacity style={styles.socialBtn}>
-        <AntDesign name="google" size={18} color="#DB4437" />
-        <Text style={[styles.socialText, { flex: 1 }]}>Continue with Google</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.socialBtn}>
-        <Feather name="phone" size={18} color="#4B3F72" />
-        <Text style={[styles.socialText, { flex: 1 }]}>Continue with Phone</Text>
-      </TouchableOpacity>
-
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
-          <Text style={styles.register}>New Church? Register</Text>
-        </TouchableOpacity>
-      </View>
-
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
+            <Text style={styles.register}>New Church? Register</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-// ✅ STYLES
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
-    justifyContent: "center",
-    backgroundColor: "#f7f8fb"
+    flexGrow: 1, padding: 20, paddingTop: 60, paddingBottom: 40,
+    justifyContent: "center", backgroundColor: "#f7f8fb",
   },
-
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    marginBottom: 5,
-    color: "#222"
-  },
-
-  subtitle: {
-    fontSize: 13,
-    color: "#777",
-    marginBottom: 20
-  },
-
+  title: { fontSize: 22, fontWeight: "600", marginBottom: 5, color: "#222" },
+  subtitle: { fontSize: 13, color: "#777", marginBottom: 20 },
   input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    color: "#222"
+    backgroundColor: "#fff", padding: 12, borderRadius: 10, marginBottom: 12,
+    borderWidth: 1, borderColor: "#e0e0e0", color: "#222",
   },
-
   passwordBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    paddingHorizontal: 10,
-    marginBottom: 12
+    flexDirection: "row", alignItems: "center", backgroundColor: "#fff",
+    borderRadius: 10, borderWidth: 1, borderColor: "#e0e0e0",
+    paddingHorizontal: 10, marginBottom: 12,
   },
-
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 12,
-    color: "#222"
+  passwordInput: { flex: 1, paddingVertical: 12, color: "#222" },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 18 },
+  line: { flex: 1, height: 1, backgroundColor: "#ddd" },
+  dividerText: { marginHorizontal: 8, fontSize: 12, color: "#888" },
+  pinBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, backgroundColor: "#4B3F72", padding: 14, borderRadius: 12, marginBottom: 10,
   },
-
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18
-  },
-
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#ddd"
-  },
-
-  dividerText: {
-    marginHorizontal: 8,
-    fontSize: 12,
-    color: "#888"
-  },
-
-  socialBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#e0e0e0"
-  },
-
-label: {
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#555",
-  marginBottom: 4,
-  marginTop: 10
-},
-
-  socialText: {
-    marginLeft: 12,
-    fontSize: 13,
-    color: "#333"
-  },
-
-  footer: {
-    marginTop: 30,
-    alignItems: "center"
-  },
-
-  register: {
-    color: "#4B3F72",
-    fontWeight: "700",
-    fontSize: 14
-  }
-  
+  pinBtnText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  label: { fontSize: 12, fontWeight: "700", color: "#555", marginBottom: 4, marginTop: 10 },
+  footer: { marginTop: 30, alignItems: "center" },
+  register: { color: "#4B3F72", fontWeight: "700", fontSize: 14 },
 });
