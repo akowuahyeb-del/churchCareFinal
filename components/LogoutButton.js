@@ -1,46 +1,61 @@
+// components/LogoutButton.js
+//
+// ✅ Fully clears session before navigating to Login:
+//   1. Clear AsyncStorage FIRST (so LoginScreen useEffect sees no session)
+//   2. Sign out Firebase (await propagation)
+//   3. Navigate with reset (not replace) so back-nav can't return to Home
+
 import React from "react";
 import { TouchableOpacity, Text, Alert, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
 
 export default function LogoutButton() {
   const navigation = useNavigation();
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Sign Out?",
+      "You will need to sign in again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Yes, Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // ✅ 1. Clear stored session FIRST
+              await AsyncStorage.multiRemove([
+                "isLoggedIn",
+                "currentUser",
+                "activeEntity",
+                "role",
+                "userToken",
+                "userProfile"
+              ]);
 
-    const handleLogout = () => {
-  Alert.alert(
-    "Logout",
-    "Are you sure you want to logout?",
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            // ✅ clear storage
-            await AsyncStorage.removeItem("userToken");
-await AsyncStorage.removeItem("userProfile");
+              // ✅ 2. Sign out Firebase and await propagation
+              await signOut(auth);
 
-            // ✅ OPTIONAL (if using Firebase)
-            // import { getAuth, signOut } from "firebase/auth";
-            // await signOut(getAuth());
-
-            // ✅ FIX: correct reset location + correct route name
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }], // ✅ must match your navigator
-            });
-
-          } catch (error) {
-            console.log("Logout error:", error);
-          }
+              // ✅ 3. Reset navigation stack to Login (not replace)
+              //     This wipes the stack so nothing can auto-return to Home
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: "Login" }],
+                })
+              );
+            } catch (error) {
+              console.log("❌ LOGOUT ERROR:", error);
+              Alert.alert("Error", "Failed to log out");
+            }
+          },
         },
-      },
-    ]
-  );
-};
-
+      ]
+    );
+  };
 
   return (
     <TouchableOpacity style={styles.button} onPress={handleLogout}>
