@@ -88,11 +88,7 @@ export default function PinSetupScreen({ navigation }) {
         await setDoc(doc(db, "users", userData.uid), { pinHash }, { merge: true });
       }
 
-      Alert.alert(
-        "PIN Setup Debug",
-        "pinEnabled=true saved\npinHash saved (" + pinHash.length + " chars)\npinUser saved",
-        [{ text: "OK", onPress: () => navigation.replace("MainTabs") }]
-      );
+      navigation.replace("MainTabs");
     } catch (e) {
       console.log("PIN SETUP ERROR:", e);
       Alert.alert("Error", "Could not save your PIN. Please try again.");

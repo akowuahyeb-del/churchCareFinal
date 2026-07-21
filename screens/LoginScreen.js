@@ -24,14 +24,14 @@ export default function LoginScreen({ navigation }) {
 
   useEffect(() => {
     const checkLogin = async () => {
-      const pinFlag = await AsyncStorage.getItem("pinEnabled");
-setPinEnabled(pinFlag === "true");
-      setPinEnabled(pinFlag === "true");
+const pinFlag = await AsyncStorage.getItem("pinEnabled");
+const isLoggedInFlag = await AsyncStorage.getItem("isLoggedIn");
+setPinEnabled(pinFlag === "true" && isLoggedInFlag === "true");
 
-      const storedUser = await AsyncStorage.getItem("currentUser");
-      const isLoggedIn = await AsyncStorage.getItem("isLoggedIn");
 
-      if (!storedUser || isLoggedIn !== "true") {
+     const storedUser = await AsyncStorage.getItem("currentUser");
+
+if (!storedUser || isLoggedInFlag !== "true") {
         console.log("No stored session - staying on Login");
         return;
       }

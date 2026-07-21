@@ -613,6 +613,34 @@ const generateQR = async () => {
   }
 };
 
+
+const handleRemovePin = () => {
+  Alert.alert(
+    "Remove PIN?",
+    "You will need to sign in with email each time until you set up a new PIN.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove PIN",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await AsyncStorage.multiRemove([
+              "pinEnabled",
+              "pinHash",
+              "pinUser",
+              "pinUserSnapshot"
+            ]);
+            Alert.alert("PIN Removed", "PIN login has been disabled on this device.");
+          } catch (e) {
+            console.log("REMOVE PIN ERROR:", e);
+            Alert.alert("Error", "Could not remove PIN. Please try again.");
+          }
+        },
+      },
+    ]
+  );
+};
   /* ══════════════════════════ RENDER ══════════════════════════ */
   return (
     <SafeAreaView style={styles.safe}>
@@ -719,6 +747,20 @@ const generateQR = async () => {
           <ToggleRow icon="call-outline"             label="Show Phone Number"    sub="Visible to church leaders"       value={showPhone}     onChange={setShowPhone}     color="#00B894" />
           <TapRow    icon="key-outline"              label="Change Admin PIN"     sub="Update attendance lock PIN"      onPress={() => setPinModal(true)} color="#D97706" />
           <TapRow    icon="shield-checkmark-outline" label="Data & Privacy Policy"sub="How your data is used"          onPress={() => Alert.alert("Privacy Policy", "Your data is securely stored and never shared.")} color="#6C5CE7" />
+            <TapRow
+  icon="keypad-outline"
+  label="Change PIN"
+  sub="Update your 6-digit login PIN"
+  onPress={() => navigation.navigate("PinSetup")}
+  color="#4B3F72"
+/>
+<TapRow
+  icon="close-circle-outline"
+  label="Remove PIN"
+  sub="Disable PIN login on this device"
+  onPress={handleRemovePin}
+  color="#e74c3c"
+/>
         </View>
 
         {/* ── CHURCH INFORMATION ── */}
@@ -1320,7 +1362,9 @@ const generateQR = async () => {
         <View style={styles.modalOverlay}><View style={styles.modalSheet}>
           <View style={styles.handleRow}><View style={styles.handle} /></View>
           <View style={{ alignItems:"center", marginBottom:16 }}>
-            <View style={styles.aboutIcon}> <Ionicons name="business-outline" />size={36} color="#4B3F72"</View>
+            <View style={styles.aboutIcon}>
+  <Ionicons name="business-outline" size={36} color="#4B3F72" />
+</View>
             <Text style={styles.aboutTitle}>ChurchCare</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
           </View>

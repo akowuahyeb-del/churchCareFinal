@@ -1,8 +1,11 @@
 // screens/PinEntryScreen.js
 //
-// PIN login — reads hash from LOCAL AsyncStorage (no Firestore call).
-// No Firebase auth session needed at entry time.
-// Restores stored user snapshot to AsyncStorage on match.
+// PIN acts as an "app unlock" for an existing Firebase session.
+// - If Firebase is still signed in (app was closed but not logged out) → PIN unlocks the app
+// - If Firebase was signed out (explicit logout) → PIN cannot restore the session,
+//   user must sign in with email
+// This is the correct security model — PIN is a local convenience, not a full
+// authentication replacement.
 
 import React, { useEffect, useState } from "react";
 import {
@@ -11,6 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../firebase";
 import { hashPin } from "../utils/pinHash";
 
 const KEYPAD = [
@@ -52,7 +56,7 @@ export default function PinEntryScreen({ navigation }) {
     if (!pinUser?.uid) return;
     setChecking(true);
     try {
-      // ✅ Read hash from LOCAL storage — no Firestore needed
+      // ✅ Read local hash — no Firestore call
       const storedHash = await AsyncStorage.getItem("pinHash");
       if (!storedHash) {
         Alert.alert("No PIN Set", "Please sign in with email and set up a PIN.");
@@ -63,7 +67,19 @@ export default function PinEntryScreen({ navigation }) {
       const enteredHash = await hashPin(entered);
 
       if (enteredHash === storedHash) {
-        // ✅ Match — restore session from local snapshot
+        // ✅ PIN matches — now verify Firebase is still authenticated.
+        // If the user explicitly logged out, Firebase auth is null and we
+        // cannot access Firestore — so PIN alone can't restore the session.
+        if (!auth.currentUser || auth.currentUser.uid !== pinUser.uid) {
+          Alert.alert(
+            "Session Ended",
+            "Your session has expired. Please sign in with your email to continue. You can still use your PIN to unlock the app between sessions.",
+            [{ text: "OK", onPress: () => navigation.replace("Login") }]
+          );
+          return;
+        }
+
+        // ✅ Both PIN and Firebase valid — restore session state
         const snapshotRaw = await AsyncStorage.getItem("pinUserSnapshot");
         if (snapshotRaw) {
           const userData = JSON.parse(snapshotRaw);
@@ -82,7 +98,7 @@ export default function PinEntryScreen({ navigation }) {
         return;
       }
 
-      // ❌ Mismatch
+      // ❌ PIN mismatch
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
       setPin("");
