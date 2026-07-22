@@ -71,7 +71,12 @@ export default function RolesScreen() {
         return; // the listener fires again once the seed write lands
       }
 
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const list = snap.docs
+  .map(d => ({
+    id: d.id,
+    ...d.data()
+  }))
+  .filter(role => role.id !== "super_admin");
       setRoles(list);
       setLoading(false);
     });
