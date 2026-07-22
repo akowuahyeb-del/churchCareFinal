@@ -23,6 +23,7 @@ import {
 } from "firebase/firestore";
 import { getTemplate } from "../constants/organizationTemplates";
 import { PLANS, getPlan, PLAN_ORDER } from "../constants/subscriptionPlans";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -100,6 +101,33 @@ export default function SuperAdminScreen({ navigation }) {
   const [planModal, setPlanModal] = useState(false);
   const [planTarget, setPlanTarget] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState("basic");
+  useEffect(() => {
+  const verifyAccess = async () => {
+    try {
+      const stored = await AsyncStorage.getItem("currentUser");
+
+      if (!stored) {
+        navigation.goBack();
+        return;
+      }
+
+      const user = JSON.parse(stored);
+
+      if (user?.role !== "super_admin") {
+        Alert.alert(
+          "Access Denied",
+          "You do not have permission to access the Developer Console."
+        );
+
+        navigation.goBack();
+      }
+    } catch (err) {
+      navigation.goBack();
+    }
+  };
+
+  verifyAccess();
+}, []);
 
   // ─────────────────────────────────────────────────────────────────
   // LOAD ALL DATA

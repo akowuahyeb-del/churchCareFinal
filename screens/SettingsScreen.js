@@ -30,6 +30,7 @@ import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
 
 
 
+
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { storage, db } from "../firebase";
@@ -127,13 +128,28 @@ export default function SettingsScreen() {
 
   const navigation = useNavigation();
 
-  const isSuperAdmin = true;
 
-
-  // ✅ FIXED: was declared AFTER CHURCH_ID/CHURCH_NAME referenced it,
-  // throwing "Cannot access 'activeEntity' before initialization" on
-  // every render — same bug class we fixed in HomeScreen earlier.
   const [activeEntity, setActiveEntity] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+ const isSuperAdmin = currentUser?.role === "super_admin";
+
+useEffect(() => {
+  const loadUser = async () => {
+    try {
+      const stored = await AsyncStorage.getItem("currentUser");
+
+      if (stored) {
+        setCurrentUser(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.log("loadUser error:", e);
+    }
+  };
+
+  loadUser();
+}, []);
+
+
 
 const CHURCH_ID   = activeEntity?.entityId || "unknown";
 const CHURCH_NAME = activeEntity?.name || "Church";
@@ -960,7 +976,7 @@ const handleRemovePin = () => {
         
 <TapRow
   icon="swap-horizontal-outline"
-  label="TEST Transfer Request"
+  label="Transfer Request"
   sub="Open transfer request screen"
   onPress={() => navigation.navigate("TransferRequest")}
   color="#4B3F72"
