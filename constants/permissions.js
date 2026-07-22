@@ -132,15 +132,6 @@ export const findPermission = (key) =>
 // ✅ DEFAULT ROLES
 export const DEFAULT_ROLES = [
 
-  {
-    id: "super_admin",
-    label: "Super Admin",
-    description: "Full unrestricted access",
-    permissions: ALL_PERMISSION_KEYS,
-    protected: true,
-    isDefault: false,
-    active: true
-  },
 
   {
     id: "admin",
