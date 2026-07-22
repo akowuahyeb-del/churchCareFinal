@@ -1,24 +1,28 @@
 // screens/PendingScreen.js
 //
-// ✅ This screen does NOT need a "refresh" button or logout/login cycle.
-// AppNavigator's real-time org watcher means the moment the developer
-// approves the church, the user automatically moves to OnboardingScreen
-// without touching anything.
+// Shown to a church admin after submitting registration.
+// Real-time listens to organizations/{id}.status — the moment the developer
+// approves (status → "active"), navigates the user to OnboardingScreen.
+// No refresh, no logout/login required.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated
+  View, Text, StyleSheet, TouchableOpacity, Animated, Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "../firebase";
+import { CommonActions } from "@react-navigation/native";
 
-export default function PendingScreen({ route }) {
+export default function PendingScreen({ route, navigation }) {
   const org = route?.params?.org || {};
-  const pulseAnim = new Animated.Value(1);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [status, setStatus] = useState("pending");
 
+  // ✅ Pulse animation on the hourglass
   useEffect(() => {
-    // Gentle pulse on the waiting icon
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.12, duration: 900, useNativeDriver: true }),
@@ -26,6 +30,57 @@ export default function PendingScreen({ route }) {
       ])
     ).start();
   }, []);
+
+  // ✅ Real-time watcher — reacts the moment the developer flips the status
+  useEffect(() => {
+    if (!org.id) return;
+
+    const unsub = onSnapshot(
+      doc(db, "organizations", org.id),
+      (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        setStatus(data.status);
+
+        if (data.status === "active") {
+          // Navigate to Onboarding, passing the org info
+          navigation.replace("Onboarding", {
+            org: { id: org.id, name: data.name || org.name },
+          });
+        } else if (data.status === "rejected") {
+          Alert.alert(
+            "Registration Not Approved",
+            data.rejectionReason
+              ? `Reason: ${data.rejectionReason}`
+              : "Your church registration was not approved. Please contact support for more information.",
+            [{ text: "OK", onPress: () => handleSignOut() }]
+          );
+        }
+      },
+      (error) => {
+        console.log("Pending watcher error:", error);
+      }
+    );
+
+    return () => unsub();
+  }, [org.id]);
+
+  const handleSignOut = async () => {
+    try {
+      await AsyncStorage.multiRemove([
+        "isLoggedIn", "currentUser", "activeEntity", "role"
+      ]);
+      await signOut(auth);
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "Login" }],
+        })
+      );
+    } catch (e) {
+      console.log("Sign out error:", e);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -35,7 +90,7 @@ export default function PendingScreen({ route }) {
         </Animated.View>
 
         <Text style={styles.title}>Awaiting Approval</Text>
-        <Text style={styles.churchName}>{org.name}</Text>
+        {org.name && <Text style={styles.churchName}>{org.name}</Text>}
         <Text style={styles.body}>
           Your church registration has been submitted and is being reviewed by the ChurchCare team.
           This usually takes 24–48 hours.
@@ -59,7 +114,7 @@ export default function PendingScreen({ route }) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.signOutBtn} onPress={() => signOut(auth)}>
+      <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
     </View>

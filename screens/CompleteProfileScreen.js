@@ -116,10 +116,15 @@ export default function CompleteProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
 
-      {/* ✅ BACK BUTTON */}
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
+    <TouchableOpacity onPress={() => {
+  if (navigation.canGoBack()) {
+    navigation.goBack();
+  } else {
+    navigation.replace("Login");
+  }
+}}>
+  <Text style={styles.backText}>← Back</Text>
+</TouchableOpacity>
 
       <Text style={styles.title}>Complete Profile</Text>
 

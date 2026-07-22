@@ -1,8 +1,11 @@
 // screens/LoginScreen.js
 //
-// Email/password login + optional PIN login button.
-// PIN button only appears if a PIN has been set on this device.
-// After successful email login, prompts to set up PIN if not already set.
+// Routing based on org state — no CompleteProfile in the flow:
+//   - No org yet         → CreateChurch
+//   - Org pending        → PendingScreen
+//   - Org rejected       → alert
+//   - Org active, no onboarding → OnboardingScreen
+//   - Org active, done   → MainTabs
 
 import React, { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,37 +25,114 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
 
+  const routeUser = async (uid, userData) => {
+    // ✅ Super admins bypass all org/onboarding gates
+    if (userData?.role === "super_admin") {
+      // If they have an org linked, cache it so other screens can read it
+      if (userData?.organizationId && userData?.entityId) {
+        await AsyncStorage.setItem("activeEntity", JSON.stringify({
+          organizationId: userData.organizationId,
+          entityId: userData.entityId,
+          name: userData.entityName || "Church",
+        }));
+      }
+      navigation.replace("MainTabs");
+      return;
+    }
+
+    // No church submitted yet
+    if (!userData?.organizationId || !userData?.entityId) {
+      navigation.replace("CreateChurch");
+      return;
+    }
+
+    // Fetch org
+    const orgSnap = await getDoc(doc(db, "organizations", userData.organizationId));
+    const orgData = orgSnap.exists() ? orgSnap.data() : null;
+    const orgStatus = orgData?.status || "pending";
+
+    // Save active entity
+    await AsyncStorage.setItem("activeEntity", JSON.stringify({
+      organizationId: userData.organizationId,
+      entityId: userData.entityId,
+      name: userData.entityName || orgData?.name || "Church",
+    }));
+
+    // Pending
+    if (orgStatus === "pending") {
+      navigation.replace("Pending", {
+        org: { id: userData.organizationId, name: userData.entityName || orgData?.name },
+      });
+      return;
+    }
+
+    // Rejected
+    if (orgStatus === "rejected") {
+      Alert.alert(
+        "Registration Not Approved",
+        orgData?.rejectionReason
+          ? `Reason: ${orgData.rejectionReason}`
+          : "Your church registration was not approved. Please contact support."
+      );
+      return;
+    }
+
+    // Active — check onboarding completion
+    const onboardingSnap = await getDoc(
+      doc(db, "organizations", userData.organizationId, "onboarding", uid)
+    );
+    const onboardingDone = onboardingSnap.exists() && onboardingSnap.data().completed === true;
+
+    if (!onboardingDone) {
+      navigation.replace("Onboarding", {
+        org: { id: userData.organizationId, name: userData.entityName || orgData?.name },
+      });
+      return;
+    }
+
+    // Fully active — offer PIN setup if not done, then Home
+    const localPinEnabled = await AsyncStorage.getItem("pinEnabled");
+    if (localPinEnabled !== "true") {
+      Alert.alert(
+        "Set up a PIN?",
+        "Sign in faster next time with a 6-digit PIN.",
+        [
+          { text: "Not now", style: "cancel", onPress: () => navigation.replace("MainTabs") },
+          { text: "Set PIN", onPress: () => navigation.replace("PinSetup") },
+        ]
+      );
+      return;
+    }
+    navigation.replace("MainTabs");
+  };
+
+  // ─── Auto-redirect on app open if session already valid ───
   useEffect(() => {
     const checkLogin = async () => {
-const pinFlag = await AsyncStorage.getItem("pinEnabled");
-const isLoggedInFlag = await AsyncStorage.getItem("isLoggedIn");
-setPinEnabled(pinFlag === "true" && isLoggedInFlag === "true");
+      const pinFlag = await AsyncStorage.getItem("pinEnabled");
+      const isLoggedInFlag = await AsyncStorage.getItem("isLoggedIn");
+      setPinEnabled(pinFlag === "true" && isLoggedInFlag === "true");
 
-
-     const storedUser = await AsyncStorage.getItem("currentUser");
-
-if (!storedUser || isLoggedInFlag !== "true") {
+      const storedUser = await AsyncStorage.getItem("currentUser");
+      if (!storedUser || isLoggedInFlag !== "true") {
         console.log("No stored session - staying on Login");
         return;
       }
-
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) {
         console.log("No Firebase user - staying on Login");
         return;
       }
 
-      const userData = JSON.parse(storedUser);
-
-      if (!userData?.name?.trim() || !userData?.phone?.trim()) {
-        navigation.replace("CompleteProfile");
-        return;
+      // Re-fetch fresh user data (approval may have happened between sessions)
+      try {
+        const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+        const fresh = snap.exists() ? { ...snap.data(), uid: firebaseUser.uid } : JSON.parse(storedUser);
+        await AsyncStorage.setItem("currentUser", JSON.stringify(fresh));
+        await routeUser(firebaseUser.uid, fresh);
+      } catch (e) {
+        console.log("useEffect route error:", e);
       }
-      if (!userData?.organizationId || !userData?.entityId) {
-        navigation.replace("CreateChurch");
-        return;
-      }
-      navigation.replace("MainTabs");
     };
     checkLogin();
   }, []);
@@ -74,7 +154,7 @@ if (!storedUser || isLoggedInFlag !== "true") {
         userData = {
           uid,
           email: firebaseUser.email,
-          role: "member",
+          role: "admin",
           organizationId: "",
           entityId: "",
           entityName: "",
@@ -90,35 +170,7 @@ if (!storedUser || isLoggedInFlag !== "true") {
       await AsyncStorage.setItem("isLoggedIn", "true");
       await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
 
-      if (!userData?.name?.trim() || !userData?.phone?.trim() || userData.phone.length < 10) {
-        navigation.replace("CompleteProfile");
-        return;
-      }
-      if (!userData?.organizationId || !userData?.entityId) {
-        navigation.replace("CreateChurch");
-        return;
-      }
-
-      await AsyncStorage.setItem("activeEntity", JSON.stringify({
-        organizationId: userData.organizationId,
-        entityId: userData.entityId,
-        name: userData.entityName || "Church",
-      }));
-
-      // Check if PIN is set up on THIS device (not just on the account)
-      const localPinEnabled = await AsyncStorage.getItem("pinEnabled");
-      if (localPinEnabled !== "true") {
-        Alert.alert(
-          "Set up a PIN?",
-          "Sign in faster next time with a 6-digit PIN.",
-          [
-            { text: "Not now", style: "cancel", onPress: () => navigation.replace("MainTabs") },
-            { text: "Set PIN", onPress: () => navigation.replace("PinSetup") },
-          ]
-        );
-        return;
-      }
-      navigation.replace("MainTabs");
+      await routeUser(uid, userData);
     } catch (error) {
       console.log("LOGIN ERROR:", error);
       Alert.alert("Login Failed", error.message);
@@ -179,7 +231,7 @@ if (!storedUser || isLoggedInFlag !== "true") {
         )}
 
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => navigation.navigate("CreateChurch")}>
+          <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
             <Text style={styles.register}>New Church? Register</Text>
           </TouchableOpacity>
         </View>

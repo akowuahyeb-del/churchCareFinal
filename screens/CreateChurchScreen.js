@@ -49,28 +49,23 @@ export default function CreateChurchScreen() {
   return true;
 };
 
-/* 
-const user = auth.currentUser;
 
-if (!user) {
-  Alert.alert(
-    "Authentication Required",
-    "You must be signed in before registering a church."
-  );
-  return;
-} */
-
-console.log("===== SUBMIT START =====");
-console.log("Current User:", auth.currentUser);
 
 const handleSubmit = async () => {
   if (!churchName.trim() || !templateId) return;
 
+  const user = auth.currentUser;
+  if (!user) {
+    Alert.alert(
+      "Not Signed In",
+      "You must be signed in before registering a church. Please sign in and try again."
+    );
+    return;
+  }
+
   setSaving(true);
 
   try {
-    const user = auth.currentUser;
-
     // ✅ Create the organization document
     const orgRef = await addDoc(collection(db, "organizations"), {
       name: churchName.trim(),
@@ -111,17 +106,28 @@ const handleSubmit = async () => {
 console.log(
   "✅ Creating governance node",
   {
-    name: org.name,
-    levelId: level.id,
-    organizationId: org.id,
+    name: churchName.trim(),
+    levelId,
+    organizationId: orgRef.id,
   }
 );
-
 
 await setDoc(
   doc(db, "organizations", orgRef.id),
   {
     rootEntityId: entityRef.id,
+  },
+  { merge: true }
+);
+
+// ✅ Link the org + entity to the user's profile so LoginScreen's
+// routing logic knows this user already has a church in flight.
+await setDoc(
+  doc(db, "users", user.uid),
+  {
+    organizationId: orgRef.id,
+    entityId: entityRef.id,
+    entityName: churchName.trim(),
   },
   { merge: true }
 );
@@ -137,11 +143,12 @@ await setDoc(
         }
       );
 
-      Alert.alert(
-        "✅ Submitted",
-        `${churchName} has been submitted for review. You'll be notified once approved.`
-      );
-      navigation.goBack();
+     navigation.replace("Pending", {
+  org: {
+    id: orgRef.id,
+    name: churchName.trim(),
+  }
+});
 
     } catch (e) {
       console.log("❌ CreateChurch error:", e);
@@ -151,20 +158,24 @@ await setDoc(
     }
   };
 
-console.log(
-  "✅ Current User:",
-  auth.currentUser
-);
-
-
   return (
     <View style={styles.container}>
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => step > 0 ? setStep(s => s - 1) : navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
+       <TouchableOpacity
+  onPress={() => {
+    if (step > 0) {
+      setStep(s => s - 1);
+    }
+  }}
+  style={{ opacity: step > 0 ? 1 : 0 }}
+  disabled={step === 0}
+>
+  <Ionicons name="arrow-back" size={20} color="#fff" />
+</TouchableOpacity>
+
+
         <Text style={styles.headerTitle}>Register Church</Text>
         <View style={{ width: 20 }} />
       </View>

@@ -58,7 +58,8 @@ import AttendanceHistoryScreen from "./screens/AttendanceHistoryScreen";
 import AttendanceSessionDetailsScreen from "./screens/AttendanceSessionDetailsScreen";
 import PinSetupScreen from "./screens/PinSetupScreen";
 import PinEntryScreen from "./screens/PinEntryScreen";
-
+import SignupScreen from "./screens/SignupScreen";
+import PendingScreen from "./screens/PendingScreen";
 
 
 
@@ -176,6 +177,8 @@ function RootStack() {
        <Stack.Screen name="AttendanceSessionDetails"component={AttendanceSessionDetailsScreen}/>
        <Stack.Screen name="PinSetup" component={PinSetupScreen} />
       <Stack.Screen name="PinEntry" component={PinEntryScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen name="Pending" component={PendingScreen} />
 
     </Stack.Navigator>
   );
