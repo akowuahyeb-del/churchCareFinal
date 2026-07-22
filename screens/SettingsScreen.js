@@ -45,11 +45,9 @@ import { useSubscription } from "../utils/subscription";
 
 
 // ── Role config ───────────────────────────────────────────────────
-const USER_ROLE  = "admin";
-const USER_NAME  = "Kwame Mensah";
-const USER_EMAIL = "kwame@churchcare.app";
+
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
-const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
+
 
 // ✅ "Attendance Check-In" removed — there's no real, live session to
 // reference from Settings (the old version faked one with session:
@@ -132,6 +130,10 @@ export default function SettingsScreen() {
   const [activeEntity, setActiveEntity] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
  const isSuperAdmin = currentUser?.role === "super_admin";
+ const USER_ROLE  = currentUser?.role || "member";
+const USER_NAME  = currentUser?.name || "Unknown User";
+const USER_EMAIL = currentUser?.email || "";
+const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
 
 useEffect(() => {
   const loadUser = async () => {
