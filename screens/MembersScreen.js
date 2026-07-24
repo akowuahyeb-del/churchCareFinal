@@ -631,28 +631,28 @@ const lifecycleColor =
                     {item.memberCode && (
                       <Text style={styles.memberCode}>ID: {item.memberCode}</Text>
                     )}
-<View
-  style={[
-    styles.lifecycleBadge,
-    {
-      backgroundColor:
-        lifecycleColor + "22",
-    },
-  ]}
->
-  <Text
-    style={[
-      styles.lifecycleBadgeText,
-      {
-        color: lifecycleColor,
-      },
-    ]}
-  >
-    {lifecycle
-      .replace("_", " ")
-      .toUpperCase()}
-  </Text>
-</View>
+                   <View
+                 style={[
+                  styles.lifecycleBadge,
+                {
+                backgroundColor:
+                  lifecycleColor + "22",
+                 },
+                 ]}
+                >
+               <Text
+               style={[
+                 styles.lifecycleBadgeText,
+                 {
+                 color: lifecycleColor,
+                },
+                 ]}
+                 >
+                 {lifecycle
+                   .replace("_", " ")
+                    .toUpperCase()}
+                   </Text>
+                  </View>
 
 
                     {item.ministry && (
