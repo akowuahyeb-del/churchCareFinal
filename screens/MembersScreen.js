@@ -30,6 +30,23 @@ const ACTIONS = {
   delete:    { label: "Delete",    color: "#e74c3c", required: ["pastor", "admin", "elder"] },
 };
 
+const LIFECYCLE_COLORS = {
+  visitor: "#95A5A6",
+
+  interested: "#3498DB",
+
+  pending_approval: "#F39C12",
+
+  member: "#27AE60",
+
+  invited: "#8E44AD",
+
+  registered: "#6C5CE7",
+
+  active_user: "#16A085",
+};
+
+
 const generateMemberCode = (count) => {
   const year = new Date().getFullYear();
   const seq  = String(count + 1).padStart(4, "0");
@@ -582,6 +599,12 @@ const executeReinstate = async () => {
         )}
         renderItem={({ item }) => {
           const isDisciplined    = !!item.disciplinaryStatus;
+          const lifecycle =
+  item.lifecycleStatus || "member";
+
+const lifecycleColor =
+  LIFECYCLE_COLORS[lifecycle] || "#888";
+
           const pendingApprovals = Object.keys(ACTIONS).filter(a =>
             getApprovals(item.id, a).length > 0 && !isFullyApproved(item.id, a)
           );
@@ -590,15 +613,10 @@ const executeReinstate = async () => {
 
               onPress={() => navigation.navigate("MemberProfile", {
   memberId: item.id,
-  // ⚠️ TEMPORARY — same placeholder pattern already used everywhere else
-  // in this app (userRole = "admin" in AttendanceScreen, SettingsScreen,
-  // etc). Replace with the real logged-in admin's memberId once Firebase
-  // Auth → member linkage exists; MemberProfileScreen will then look up
-  // their real permissions automatically instead of needing this.
+ 
   viewerPermissions: ALL_PERMISSION_KEYS
 })} >
-              
-              
+                  
               <View style={[styles.card, isDisciplined && styles.cardDisciplined]}>
 
                 {/* ── Card header ── */}
@@ -613,6 +631,30 @@ const executeReinstate = async () => {
                     {item.memberCode && (
                       <Text style={styles.memberCode}>ID: {item.memberCode}</Text>
                     )}
+<View
+  style={[
+    styles.lifecycleBadge,
+    {
+      backgroundColor:
+        lifecycleColor + "22",
+    },
+  ]}
+>
+  <Text
+    style={[
+      styles.lifecycleBadgeText,
+      {
+        color: lifecycleColor,
+      },
+    ]}
+  >
+    {lifecycle
+      .replace("_", " ")
+      .toUpperCase()}
+  </Text>
+</View>
+
+
                     {item.ministry && (
                       <Text style={styles.memberMeta}>{item.ministry}</Text>
                     )}
@@ -1119,7 +1161,21 @@ primaryBtnText: {
   includeFontPadding: false,      
   textAlignVertical: "center",    
 },
-  
+  lifecycleBadge: {
+  alignSelf: "flex-start",
+
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+
+  borderRadius: 8,
+
+  marginTop: 4,
+},
+
+lifecycleBadgeText: {
+  fontSize: 10,
+  fontWeight: "700",
+},
 
   // Info banner
   infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10 },

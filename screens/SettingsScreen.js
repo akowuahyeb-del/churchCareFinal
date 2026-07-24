@@ -31,7 +31,11 @@ import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
 
 
 
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  getDownloadURL,
+  uploadString
+} from "firebase/storage";
 
 import { storage, db } from "../firebase";
 
@@ -39,8 +43,7 @@ import { query, where, onSnapshot } from "firebase/firestore";
 import FeatureGate from "../components/FeatureGate";
 import { FEATURES } from "../constants/subscriptionPlans";
 import { useSubscription } from "../utils/subscription";
-
-
+import * as FileSystem from "expo-file-system/legacy";
 
 
 
@@ -141,8 +144,14 @@ useEffect(() => {
       const stored = await AsyncStorage.getItem("currentUser");
 
       if (stored) {
-        setCurrentUser(JSON.parse(stored));
-      }
+  const user = JSON.parse(stored);
+
+  setCurrentUser(user);
+
+  if (user?.photo) {
+    setProfilePhoto(user.photo);
+  }
+}
     } catch (e) {
       console.log("loadUser error:", e);
     }
@@ -151,7 +160,16 @@ useEffect(() => {
   loadUser();
 }, []);
 
+useEffect(() => {
+  if (currentUser) {
+    setEditName(currentUser.name || "");
+    setEditEmail(currentUser.email || "");
 
+    if (currentUser.photo) {
+      setProfilePhoto(currentUser.photo);
+    }
+  }
+}, [currentUser]);
 
 const CHURCH_ID   = activeEntity?.entityId || "unknown";
 const CHURCH_NAME = activeEntity?.name || "Church";
@@ -184,31 +202,49 @@ const {
 
     if (result.canceled) return;
 
-    const imageUri = result.assets[0].uri;
-    const blob = await (await fetch(imageUri)).blob();
+  const imageUri = result.assets[0].uri;
 
-    if (!activeEntity) {
-      Alert.alert("No active church selected");
-      return;
-    }
+const base64 = await FileSystem.readAsStringAsync(
+  imageUri,
+  {
+    encoding: FileSystem.EncodingType.Base64,
+  }
+);
 
-    const { organizationId, entityId } = activeEntity;
+console.log("STEP 1 - Base64 created");
 
-    const storageRef = ref(storage, `church-logos/${entityId}`);
+const storageRef = ref(
+  storage,
+  `profile-photos/${currentUser.uid}`
+);
 
-    // ✅ ✅ RN SAFE UPLOAD
-    const uploadTask = uploadBytesResumable(storageRef, blob);
+console.log("STEP 2 - Storage ref created");
+console.log("FIREBASE STORAGE:", storage?.app?.name);
+console.log("USER UID:", currentUser?.uid);
+console.log("BASE64 TYPE:", typeof base64);
+console.log("FIREBASE STORAGE:", storage);
+console.log("USER UID:", currentUser?.uid);
+console.log("BASE64 TYPE:", typeof base64);
+console.log("BASE64 SAMPLE:", base64.substring(0, 50));
 
-    await new Promise((resolve, reject) => {
-      uploadTask.on(
-        "state_changed",
-        null,
-        (error) => reject(error),
-        () => resolve()
-      );
-    });
 
-    const downloadURL = await getDownloadURL(storageRef);
+
+console.log("STORAGE OBJECT:", storage);
+
+await uploadString(
+  storageRef,
+  base64,
+  "base64",
+  {
+    contentType: "image/jpeg",
+  }
+);
+
+console.log("STEP 3 - Upload complete");
+
+const downloadURL = await getDownloadURL(storageRef);
+
+console.log("STEP 4 - URL obtained", downloadURL);
 
     await updateDoc(
       doc(db, "organizations", organizationId, "entities", entityId),
@@ -375,6 +411,84 @@ useEffect(() => {
 
   const roleBadgeColor = { admin:"#4B3F72", pastor:"#0984E3", elder:"#00B894", deacon:"#FDCB6E", member:"#aaa" }[USER_ROLE] || "#aaa";
 
+
+
+// Shared upload logic used by both gallery and camera
+const uploadProfilePhoto = async (imageUri) => {
+  setUploadingPhoto(true);
+
+  try {
+    console.log("IMAGE URI:", imageUri);
+
+    const base64 = await FileSystem.readAsStringAsync(
+      imageUri,
+      {
+        encoding: FileSystem.EncodingType.Base64,
+      }
+    );
+
+    console.log("BASE64 LENGTH:", base64?.length);
+
+   console.log("STEP 1 - Base64 created");
+
+const storageRef = ref(
+  storage,
+  `profile-photos/${currentUser.uid}`
+);
+
+console.log("STEP 2 - Storage ref created");
+
+await uploadString(
+  storageRef,
+  base64,
+  "base64",
+  {
+    contentType: "image/jpeg",
+  }
+);
+
+console.log("STEP 3 - Upload complete");
+
+const downloadURL = await getDownloadURL(storageRef);
+
+console.log("STEP 4 - URL obtained", downloadURL);
+
+    await updateDoc(
+      doc(db, "users", currentUser.uid),
+      { photo: downloadURL }
+    );
+
+    const updatedUser = {
+      ...currentUser,
+      photo: downloadURL,
+    };
+
+    setCurrentUser(updatedUser);
+
+    await AsyncStorage.setItem(
+      "currentUser",
+      JSON.stringify(updatedUser)
+    );
+
+    setProfilePhoto(downloadURL);
+
+  } catch (e) {
+    console.log("PROFILE PHOTO ERROR RAW:", e);
+    console.log(
+      "PROFILE PHOTO ERROR JSON:",
+      JSON.stringify(e, null, 2)
+    );
+
+    Alert.alert(
+      "Upload Failed",
+      e?.message || String(e)
+    );
+  } finally {
+    setUploadingPhoto(false);
+  }
+};
+
+
   // ── Profile photo upload ──────────────────────────────────────
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -383,13 +497,14 @@ useEffect(() => {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [1, 1], quality: 0.8
     });
-    if (!result.canceled) {
-      setUploadingPhoto(true);
-      // Replace with actual Firebase Storage upload in production
-      await new Promise(r => setTimeout(r, 800));
-      setProfilePhoto(result.assets[0].uri);
-      setUploadingPhoto(false);
-    }
+    
+    if (result.canceled) return;
+
+await uploadProfilePhoto(
+  result.assets[0].uri
+);
+
+
   };
 
   const takeProfilePhoto = async () => {
@@ -851,7 +966,7 @@ const handleRemovePin = () => {
   onPress={() => navigation.navigate("OrganisationManage")}
   color="#4B3F72"
 />
-// Under Attendance section in SettingsScreen:
+
 <TapRow icon="people-outline"       label="Group Attendance"
   sub="Record attendance for choirs, teams & groups"
   onPress={() => navigation.navigate("GroupAttendance")} color="#7C3AED" />

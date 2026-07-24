@@ -11,6 +11,10 @@ import AppHeader from "../components/AppHeader";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect } from "react";
 import { useSubscription } from "../utils/subscription";
+import {
+  MEMBER_LIFECYCLE,
+  MEMBER_SOURCES,
+} from "../constants/memberLifecycle";
 
 export default function AddMemberScreen({ navigation, route }) {
 
@@ -149,7 +153,7 @@ const memberCode = `${denominationCode}-${churchCode}-${mainCode}-${uniqueSuffix
 
 console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 
-   await addDoc(
+  await addDoc(
   collection(
     db,
     "organizations",
@@ -160,10 +164,45 @@ console.log("🆔 GENERATED MEMBER CODE:", memberCode);
   ),
   {
     ...member,
-    memberCode,   // ✅ keep this
+
+    memberCode,
+
     organizationId,
     entityId,
-    createdAt: new Date().toISOString(),
+
+    lifecycleStatus:
+  MEMBER_LIFECYCLE.MEMBER,
+
+    source:
+  MEMBER_SOURCES.MANUAL,
+
+    lastStageChangeAt:
+      new Date().toISOString(),
+
+    lastChangedByUid:
+      null,
+
+    statusHistory: [
+      {
+        status:
+  MEMBER_LIFECYCLE.MEMBER,
+
+        changedAt:
+          new Date().toISOString(),
+
+        changedByUid:
+          null,
+
+        note:
+          "Manually created"
+      }
+    ],
+
+    createdAt:
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString(),
   }
 );
 

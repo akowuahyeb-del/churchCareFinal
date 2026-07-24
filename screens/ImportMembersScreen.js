@@ -12,6 +12,10 @@ import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
+import {
+  MEMBER_LIFECYCLE,
+  MEMBER_SOURCES,
+} from "../constants/memberLifecycle";
 
 export default function ImportMembersScreen({ navigation, route }) {
 
@@ -63,21 +67,30 @@ export default function ImportMembersScreen({ navigation, route }) {
 
   // ✅ UPLOAD TO FIRESTORE
   const uploadMembers = async () => {
-    if (!entityId || !organizationId) {
-      Alert.alert("Error", "No active church selected");
-      return;
-    }
+  if (!entityId || !organizationId) {
+    Alert.alert("Error", "No active church selected");
+    return;
+  }
 
-    if (!rows.length) {
-      Alert.alert("No data", "Upload a file first");
-      return;
-    }
+  if (!rows.length) {
+    Alert.alert("No data", "Upload a file first");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      for (let row of rows) {
-        await addDoc(collection(db, "members"), {
+  try {
+    for (let row of rows) {
+      await addDoc(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "members"
+        ),
+        {
           name: row.name || "",
           phone: row.phone || "",
           ministry: row.ministry || "",
@@ -85,20 +98,60 @@ export default function ImportMembersScreen({ navigation, route }) {
 
           entityId,
           organizationId,
-          createdAt: new Date().toISOString()
-        });
-      }
 
-      Alert.alert("✅ Success", "Members imported successfully");
-      navigation.goBack();
+          lifecycleStatus:
+            MEMBER_LIFECYCLE.MEMBER,
 
-    } catch (e) {
-      Alert.alert("Error", e.message);
+          source:
+            MEMBER_SOURCES.BULK_UPLOAD,
 
-    } finally {
-      setLoading(false);
+          lastStageChangeAt:
+            new Date().toISOString(),
+
+          lastChangedByUid:
+            null,
+
+          statusHistory: [
+            {
+              status:
+                MEMBER_LIFECYCLE.MEMBER,
+
+              changedAt:
+                new Date().toISOString(),
+
+              changedByUid:
+                null,
+
+              note:
+                "Imported via CSV"
+            }
+          ],
+
+          createdAt:
+            new Date().toISOString(),
+
+          updatedAt:
+            new Date().toISOString()
+        }
+      );
     }
-  };
+
+    Alert.alert(
+      "✅ Success",
+      "Members imported successfully"
+    );
+
+    navigation.goBack();
+
+  } catch (e) {
+    Alert.alert(
+      "Error",
+      e.message
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <View style={styles.container}>

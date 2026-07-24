@@ -44,6 +44,11 @@ try {
 
 
 
-const storage = getStorage(app);
+const storage = getStorage(
+  app,
+  `gs://${firebaseConfig.storageBucket}`
+);
 
-export { db, storage, auth };
+
+export { app, db, storage, auth };
+
