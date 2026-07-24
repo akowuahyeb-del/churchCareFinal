@@ -88,8 +88,12 @@ export default function DuplicateReviewScreen({ navigation, route }) {
                   <Text style={styles.colLabel}>Existing match</Text>
                   <Text style={styles.name}>{best.name}</Text>
                   <Text style={styles.meta}>
-                    {best.phone || "—"} · {(best.lifecycleStatus || "member").replace("_", " ")}
-                  </Text>
+  {best.phone || "—"} · {(best.lifecycleStatus || "member").replace("_", " ")}
+</Text>
+
+<Text style={styles.matchReason}>
+  Matched on: {(best.matchedOn || "unknown").toUpperCase()}
+</Text>
                 </View>
               </View>
 
@@ -141,4 +145,10 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#fff", fontSize: 11, fontWeight: "700", textAlign: "center" },
   resolvedTag: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 },
   resolvedText: { fontSize: 12, color: "#00B894", fontWeight: "600" },
+  matchReason: {
+  fontSize: 11,
+  color: "#0984E3",
+  fontWeight: "700",
+  marginTop: 3,
+},
 });

@@ -10,12 +10,7 @@ import {
 
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
-import {
-  MEMBER_LIFECYCLE,
-  MEMBER_SOURCES,
-} from "../constants/memberLifecycle";
+import { bulkAddMembers } from "../utils/memberIntake";
 
 export default function ImportMembersScreen({ navigation, route }) {
 
@@ -66,7 +61,7 @@ export default function ImportMembersScreen({ navigation, route }) {
   };
 
   // ✅ UPLOAD TO FIRESTORE
-  const uploadMembers = async () => {
+ const uploadMembers = async () => {
   if (!entityId || !organizationId) {
     Alert.alert("Error", "No active church selected");
     return;
@@ -80,72 +75,36 @@ export default function ImportMembersScreen({ navigation, route }) {
   setLoading(true);
 
   try {
-    for (let row of rows) {
-      await addDoc(
-        collection(
-          db,
-          "organizations",
-          organizationId,
-          "entities",
-          entityId,
-          "members"
-        ),
-        {
-          name: row.name || "",
-          phone: row.phone || "",
-          ministry: row.ministry || "",
-          status: row.status || "Regular",
+    const result = await bulkAddMembers({
+      organizationId,
+      entityId,
+      rows,
+    });
 
-          entityId,
-          organizationId,
+    if (result.duplicates.length > 0) {
+      navigation.navigate("DuplicateReview", {
+        organizationId,
+        entityId,
+        duplicates: result.duplicates,
+      });
 
-          lifecycleStatus:
-            MEMBER_LIFECYCLE.MEMBER,
-
-          source:
-            MEMBER_SOURCES.BULK_UPLOAD,
-
-          lastStageChangeAt:
-            new Date().toISOString(),
-
-          lastChangedByUid:
-            null,
-
-          statusHistory: [
-            {
-              status:
-                MEMBER_LIFECYCLE.MEMBER,
-
-              changedAt:
-                new Date().toISOString(),
-
-              changedByUid:
-                null,
-
-              note:
-                "Imported via CSV"
-            }
-          ],
-
-          createdAt:
-            new Date().toISOString(),
-
-          updatedAt:
-            new Date().toISOString()
-        }
-      );
+      return;
     }
 
     Alert.alert(
-      "✅ Success",
-      "Members imported successfully"
+      "Import complete",
+      `${result.created.length} members added`,
+      [
+        {
+          text: "OK",
+          onPress: () => navigation.goBack(),
+        },
+      ]
     );
-
-    navigation.goBack();
 
   } catch (e) {
     Alert.alert(
-      "Error",
+      "Import failed",
       e.message
     );
   } finally {
