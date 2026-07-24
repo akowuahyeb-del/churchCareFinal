@@ -33,10 +33,19 @@ export default function QRRegistrationScreen({
 
   const handleRegister = async () => {
   try {
-    if (!form.name || !form.phone) {
+
+    if (!form.name?.trim()) {
       Alert.alert(
         "Required",
-        "Name and phone are required"
+        "Please enter your name"
+      );
+      return;
+    }
+
+    if (!form.phone?.trim()) {
+      Alert.alert(
+        "Required",
+        "Please enter your phone number"
       );
       return;
     }
@@ -49,8 +58,8 @@ export default function QRRegistrationScreen({
 
     if (!organizationId || !entityId) {
       Alert.alert(
-        "Invalid QR",
-        "Church information was not found."
+        "Invalid QR Code",
+        "Church information could not be found."
       );
       return;
     }
@@ -59,9 +68,9 @@ export default function QRRegistrationScreen({
       organizationId,
       entityId,
 
-      name: form.name,
-      phone: form.phone,
-      email: form.email,
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      email: form.email?.trim() || "",
 
       source: "qr_registration",
 
@@ -73,26 +82,43 @@ export default function QRRegistrationScreen({
       !result.created &&
       result.duplicate
     ) {
+
+      const match =
+        result.matches?.[0];
+
       Alert.alert(
         "Already Registered",
-        "A member or visitor with this phone number already exists."
+        match?.name
+          ? `${match.name} already exists in the church records.`
+          : "A member or visitor with this phone number already exists."
       );
+
       return;
     }
 
     Alert.alert(
-      "Registration Complete",
-      "Thank you for registering. A church administrator will contact you."
+      "Registration Successful",
+      "Thank you for registering. A church administrator will contact you shortly.",
+      [
+        {
+          text: "OK",
+          onPress: () =>
+            navigation.goBack(),
+        },
+      ]
     );
 
-    navigation.goBack();
-
   } catch (e) {
-    console.log("QR REGISTRATION ERROR:", e);
+
+    console.log(
+      "QR REGISTRATION ERROR:",
+      e
+    );
 
     Alert.alert(
       "Registration Failed",
-      e.message || "Something went wrong."
+      e?.message ||
+        "Something went wrong. Please try again."
     );
   }
 };

@@ -115,6 +115,8 @@ const [notifications, setNotifications] = useState([]);
   const [editingProgram,      setEditingProgram]      = useState(null);
 
   const hasRole = (role) => userRoles.includes(role);
+  const [permission, requestPermission] =
+  useCameraPermissions();
 
 useEffect(() => {
   const entityFromQR = route?.params?.entity;
@@ -131,6 +133,11 @@ useEffect(() => {
     console.log("🎯 preacherModal:", preacherModal);
   }, [preacherModal]);
 
+  useEffect(() => {
+  if (!permission?.granted) {
+    requestPermission();
+  }
+}, [permission]);
 
   useEffect(() => {
     const loadEntities = async () => {
@@ -883,19 +890,51 @@ return (
 
       <Text style={styles.modalTitle}>Scan QR Code</Text>
 
-      <View style={{ height: 250, overflow: "hidden", borderRadius: 12 }}>
-  <CameraView
+      <View
+  style={{
+    height: 250,
+    overflow: "hidden",
+    borderRadius: 12,
+  }}
+>
+  {!permission ? (
+    <Text>Loading camera...</Text>
+  ) : !permission.granted ? (
+    <TouchableOpacity
+      style={styles.saveBtn}
+      onPress={requestPermission}
+    >
+      <Text style={styles.saveBtnText}>
+        Grant Camera Permission
+      </Text>
+    </TouchableOpacity>
+  ) : (
+    <CameraView
+      barcodeScannerSettings={{
+        barcodeTypes: ["qr"],
+      }}
+      onBarcodeScanned={
+        scanned
+          ? undefined
+          : ({ data }) => {
+              setScanned(true);
 
-    onBarCodeScanned={scanned ? undefined : ({ data }) => {
-      setScanned(true);
+              console.log(
+                "📸 SCANNED:",
+                data
+              );
 
-      console.log("📸 SCANNED:", data);
+              handleQRCode(
+                navigation,
+                data
+              );
 
-      handleQRCode(navigation, data);
-      setQrModal(false);
-    }}
-    style={{ flex: 1 }}
-  />
+              setQrModal(false);
+            }
+      }
+      style={{ flex: 1 }}
+    />
+  )}
 </View>
 
       <TouchableOpacity
