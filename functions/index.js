@@ -3,6 +3,7 @@ admin.initializeApp();
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore } = require("firebase-admin/firestore");
+const onboarding = require("./onboarding");
 
 exports.generateFinanceInsight = onCall(
   { timeoutSeconds: 30 },
@@ -70,3 +71,11 @@ exports.generateFinanceInsight = onCall(
     };
   }
 );
+exports.checkDuplicateMember =
+  onboarding.checkDuplicateMember;
+
+exports.createMemberSafe =
+  onboarding.createMemberSafe;
+
+exports.submitVisitorIntake =
+  onboarding.submitVisitorIntake;
