@@ -5,8 +5,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect } from "react";
@@ -15,6 +13,8 @@ import {
   MEMBER_LIFECYCLE,
   MEMBER_SOURCES,
 } from "../constants/memberLifecycle";
+import { addMemberManually } from "../utils/memberIntake";
+import { db } from "../firebase";
 
 export default function AddMemberScreen({ navigation, route }) {
 
@@ -57,12 +57,15 @@ export default function AddMemberScreen({ navigation, route }) {
   const [statusList, setStatusList] = useState(["Regular", "Visiting", "Inactive"]);
   const [statusModal, setStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
+  
 
   /* ── communicant flow ── */
   const [commStatusModal, setCommStatusModal]   = useState(false);
   const [commInvalidModal, setCommInvalidModal] = useState(false);
   const [commInvalidDate, setCommInvalidDate]   = useState(new Date());
   const [showDatePicker, setShowDatePicker]     = useState(false);
+  const [duplicateModal, setDuplicateModal] = useState(false);
+const [duplicateMatch, setDuplicateMatch] = useState(null);
 
 const goNext = () => {
   if (!member.name || !member.phone) {
@@ -152,61 +155,31 @@ const uniqueSuffix = String(Math.floor(10 + Math.random() * 90)).padStart(2, "0"
 const memberCode = `${denominationCode}-${churchCode}-${mainCode}-${uniqueSuffix}`;
 
 console.log("🆔 GENERATED MEMBER CODE:", memberCode);
+console.log("🔥 BEFORE addMemberManually");
+const result = await addMemberManually({
+  organizationId,
+  entityId,
 
-  await addDoc(
-  collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members"
-  ),
-  {
-    ...member,
+  ...member,
 
-    memberCode,
+  memberCode,
 
-    organizationId,
-    entityId,
+  source: MEMBER_SOURCES.MANUAL,
+  lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
+});
 
-    lifecycleStatus:
-  MEMBER_LIFECYCLE.MEMBER,
+if (!result.created && result.duplicate) {
+  const match = result.matches?.[0];
 
-    source:
-  MEMBER_SOURCES.MANUAL,
-
-    lastStageChangeAt:
-      new Date().toISOString(),
-
-    lastChangedByUid:
-      null,
-
-    statusHistory: [
-      {
-        status:
-  MEMBER_LIFECYCLE.MEMBER,
-
-        changedAt:
-          new Date().toISOString(),
-
-        changedByUid:
-          null,
-
-        note:
-          "Manually created"
-      }
-    ],
-
-    createdAt:
-      new Date().toISOString(),
-
-    updatedAt:
-      new Date().toISOString(),
-  }
-);
+  setDuplicateMatch(match);
 
 
+  setDuplicateModal(true);
+
+  return;
+}
+
+console.log("🔥 AFTER addMemberManually", result);
     console.log("✅ SAVE SUCCESS");
 
     Alert.alert(
@@ -678,6 +651,80 @@ useEffect(() => {
         </View>
       </Modal>
 
+      <Modal
+
+  visible={duplicateModal}
+  transparent
+  animationType="fade"
+>
+ <View style={styles.modalWrap}>
+  <View style={styles.modalBox}>
+
+    <Text style={styles.modalTitle}>
+      Possible Duplicate
+    </Text>
+
+    <Text style={styles.duplicateText}>
+      A member with matching details already exists.
+    </Text>
+
+    {duplicateMatch && (
+      <>
+        <Text style={styles.duplicateName}>
+          {duplicateMatch.name}
+        </Text>
+
+        <Text style={styles.duplicateMeta}>
+          Phone: {duplicateMatch.phone}
+        </Text>
+
+        <Text style={styles.duplicateMeta}>
+          Matched on: {(duplicateMatch.matchedOn || "unknown").toUpperCase()}
+        </Text>
+      </>
+    )}
+
+    <View style={{ gap: 10, marginTop: 16 }}>
+
+  <TouchableOpacity
+    style={[
+      styles.actionBtn,
+      { backgroundColor: "#4B3F72" }
+    ]}
+    onPress={() => {
+      setDuplicateModal(false);
+
+      navigation.navigate("MemberProfile", {
+        memberId: duplicateMatch?.id,
+        organizationId,
+        entityId,
+      });
+    }}
+  >
+    <Text style={styles.white}>
+      View Existing Member
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.actionBtn,
+      { backgroundColor: "#B2BEC3" }
+    ]}
+    onPress={() => {
+      setDuplicateModal(false);
+    }}
+  >
+    <Text style={styles.white}>
+      Close
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+  </View>
+</View>
+</Modal>
     </SafeAreaView>
   );
 }
@@ -789,4 +836,22 @@ const styles = StyleSheet.create({
   },
   infoText: { fontSize: 12, color: "#4B3F72", flex: 1 },
   changeBtn: { fontSize: 12, fontWeight: "800", color: "#4B3F72" },
+  duplicateText: {
+  textAlign: "center",
+  color: "#666",
+  marginBottom: 12,
+},
+
+duplicateName: {
+  fontSize: 18,
+  fontWeight: "700",
+  textAlign: "center",
+  marginBottom: 8,
+},
+
+duplicateMeta: {
+  textAlign: "center",
+  color: "#444",
+  marginBottom: 6,
+},
 });
