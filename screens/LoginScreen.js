@@ -25,86 +25,195 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
 
-  const routeUser = async (uid, userData) => {
-    // ✅ Super admins bypass all org/onboarding gates
-    if (userData?.role === "super_admin") {
-      // If they have an org linked, cache it so other screens can read it
-      if (userData?.organizationId && userData?.entityId) {
-        await AsyncStorage.setItem("activeEntity", JSON.stringify({
+ const routeUser = async (uid, userData) => {
+
+  console.log("ROUTE 0 - routeUser start");
+  console.log("ROUTE 0A - USER:", userData);
+
+  // ✅ Super admins bypass all org/onboarding gates
+  if (userData?.role === "super_admin") {
+
+    console.log("ROUTE SA - Super Admin");
+
+    if (userData?.organizationId && userData?.entityId) {
+      console.log("ROUTE SA - Saving activeEntity");
+
+      await AsyncStorage.setItem(
+        "activeEntity",
+        JSON.stringify({
           organizationId: userData.organizationId,
           entityId: userData.entityId,
           name: userData.entityName || "Church",
-        }));
-      }
-      navigation.replace("MainTabs");
-      return;
+        })
+      );
     }
 
-    // No church submitted yet
-    if (!userData?.organizationId || !userData?.entityId) {
-      navigation.replace("CreateChurch");
-      return;
-    }
+    console.log("ROUTE SA - Navigating MainTabs");
 
-    // Fetch org
-    const orgSnap = await getDoc(doc(db, "organizations", userData.organizationId));
-    const orgData = orgSnap.exists() ? orgSnap.data() : null;
-    const orgStatus = orgData?.status || "pending";
+    navigation.replace("MainTabs");
+    return;
+  }
 
-    // Save active entity
-    await AsyncStorage.setItem("activeEntity", JSON.stringify({
+  console.log("ROUTE 1 - Admin path");
+  console.log("ROUTE 1A - ROLE:", userData?.role);
+  console.log("ROUTE 1B - ORG:", userData?.organizationId);
+  console.log("ROUTE 1C - ENTITY:", userData?.entityId);
+
+  // No church submitted yet
+  if (!userData?.organizationId || !userData?.entityId) {
+    console.log("ROUTE 2 - No church, CreateChurch");
+
+    navigation.replace("CreateChurch");
+    return;
+  }
+
+  console.log("ROUTE 3 - Before org getDoc");
+
+  const orgSnap = await getDoc(
+    doc(
+      db,
+      "organizations",
+      userData.organizationId
+    )
+  );
+
+  console.log("ROUTE 4 - Org getDoc success");
+
+  const orgData = orgSnap.exists()
+    ? orgSnap.data()
+    : null;
+
+  console.log("ROUTE 4A - ORG DATA:", orgData);
+
+  const orgStatus =
+    orgData?.status || "pending";
+
+  console.log("ROUTE 5 - ORG STATUS:", orgStatus);
+
+  await AsyncStorage.setItem(
+    "activeEntity",
+    JSON.stringify({
       organizationId: userData.organizationId,
       entityId: userData.entityId,
-      name: userData.entityName || orgData?.name || "Church",
-    }));
+      name:
+        userData.entityName ||
+        orgData?.name ||
+        "Church",
+    })
+  );
 
-    // Pending
-    if (orgStatus === "pending") {
-      navigation.replace("Pending", {
-        org: { id: userData.organizationId, name: userData.entityName || orgData?.name },
-      });
-      return;
-    }
+  console.log("ROUTE 6 - activeEntity saved");
 
-    // Rejected
-    if (orgStatus === "rejected") {
-      Alert.alert(
-        "Registration Not Approved",
-        orgData?.rejectionReason
-          ? `Reason: ${orgData.rejectionReason}`
-          : "Your church registration was not approved. Please contact support."
-      );
-      return;
-    }
+  if (orgStatus === "pending") {
 
-    // Active — check onboarding completion
-    const onboardingSnap = await getDoc(
-      doc(db, "organizations", userData.organizationId, "onboarding", uid)
+    console.log("ROUTE 7 - Pending screen");
+
+    navigation.replace("Pending", {
+      org: {
+        id: userData.organizationId,
+        name:
+          userData.entityName ||
+          orgData?.name,
+      },
+    });
+
+    return;
+  }
+
+  if (orgStatus === "rejected") {
+
+    console.log("ROUTE 8 - Rejected");
+
+    Alert.alert(
+      "Registration Not Approved",
+      orgData?.rejectionReason
+        ? `Reason: ${orgData.rejectionReason}`
+        : "Your church registration was not approved."
     );
-    const onboardingDone = onboardingSnap.exists() && onboardingSnap.data().completed === true;
 
-    if (!onboardingDone) {
-      navigation.replace("Onboarding", {
-        org: { id: userData.organizationId, name: userData.entityName || orgData?.name },
-      });
-      return;
-    }
+    return;
+  }
 
-    // Fully active — offer PIN setup if not done, then Home
-    const localPinEnabled = await AsyncStorage.getItem("pinEnabled");
-    if (localPinEnabled !== "true") {
-      Alert.alert(
-        "Set up a PIN?",
-        "Sign in faster next time with a 6-digit PIN.",
-        [
-          { text: "Not now", style: "cancel", onPress: () => navigation.replace("MainTabs") },
-          { text: "Set PIN", onPress: () => navigation.replace("PinSetup") },
-        ]
-      );
-      return;
-    }
+  console.log("ROUTE 9 - Before onboarding getDoc");
+
+  const onboardingSnap = await getDoc(
+    doc(
+      db,
+      "organizations",
+      userData.organizationId,
+      "onboarding",
+      uid
+    )
+  );
+
+  console.log("ROUTE 10 - Onboarding getDoc success");
+
+  const onboardingDone =
+    onboardingSnap.exists() &&
+    onboardingSnap.data().completed === true;
+
+  console.log(
+    "ROUTE 11 - Onboarding Done:",
+    onboardingDone
+  );
+
+  if (!onboardingDone) {
+
+    console.log("ROUTE 12 - Navigating Onboarding");
+
+    navigation.replace("Onboarding", {
+      org: {
+        id: userData.organizationId,
+        name:
+          userData.entityName ||
+          orgData?.name,
+      },
+    });
+
+    return;
+  }
+
+  console.log("ROUTE 13 - Checking PIN");
+
+  const localPinEnabled =
+    await AsyncStorage.getItem("pinEnabled");
+
+  console.log(
+    "ROUTE 14 - PIN Enabled:",
+    localPinEnabled
+  );
+
+ if (localPinEnabled !== "true") {
+
+  // Web does not support the PIN workflow properly
+  if (Platform.OS === "web") {
     navigation.replace("MainTabs");
-  };
+    return;
+  }
+
+  Alert.alert(
+    "Set up a PIN?",
+    "Sign in faster next time with a 6-digit PIN.",
+    [
+      {
+        text: "Not now",
+        style: "cancel",
+        onPress: () => navigation.replace("MainTabs"),
+      },
+      {
+        text: "Set PIN",
+        onPress: () => navigation.replace("PinSetup"),
+      },
+    ]
+  );
+
+  return;
+}
+
+navigation.replace("MainTabs");
+
+};
+
 
   // ─── Auto-redirect on app open if session already valid ───
   useEffect(() => {
@@ -137,45 +246,99 @@ export default function LoginScreen({ navigation }) {
     checkLogin();
   }, []);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Enter email and password");
-      return;
+ const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert("Error", "Enter email and password");
+    return;
+  }
+
+  try {
+
+    console.log("STEP 1 - Before Firebase Login");
+
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+
+    console.log("STEP 2 - Firebase Auth Success");
+
+    const firebaseUser = cred.user;
+    const uid = firebaseUser.uid;
+
+    console.log("STEP 3 - UID:", uid);
+
+    const userRef = doc(db, "users", uid);
+
+    console.log("STEP 4 - Before getDoc");
+
+    const userSnap = await getDoc(userRef);
+
+    console.log("STEP 5 - getDoc Success");
+
+    let userData;
+
+    if (!userSnap.exists()) {
+
+      console.log("STEP 6 - User document missing, creating");
+
+      userData = {
+        uid,
+        email: firebaseUser.email,
+        role: "admin",
+        organizationId: "",
+        entityId: "",
+        entityName: "",
+        name: "",
+        phone: "",
+        createdAt: new Date().toISOString(),
+      };
+
+      await setDoc(userRef, userData);
+
+      console.log("STEP 7 - User document created");
+
+    } else {
+
+      console.log("STEP 6 - User document found");
+
+      userData = {
+        ...userSnap.data(),
+        uid,
+      };
     }
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = cred.user;
-      const uid = firebaseUser.uid;
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      let userData;
 
-      if (!userSnap.exists()) {
-        userData = {
-          uid,
-          email: firebaseUser.email,
-          role: "admin",
-          organizationId: "",
-          entityId: "",
-          entityName: "",
-          name: "",
-          phone: "",
-          createdAt: new Date().toISOString(),
-        };
-        await setDoc(userRef, userData);
-      } else {
-        userData = { ...userSnap.data(), uid };
-      }
+    console.log("STEP 8 - Saving session");
 
-      await AsyncStorage.setItem("isLoggedIn", "true");
-      await AsyncStorage.setItem("currentUser", JSON.stringify(userData));
+    await AsyncStorage.setItem(
+      "isLoggedIn",
+      "true"
+    );
 
-      await routeUser(uid, userData);
-    } catch (error) {
-      console.log("LOGIN ERROR:", error);
-      Alert.alert("Login Failed", error.message);
-    }
-  };
+    await AsyncStorage.setItem(
+      "currentUser",
+      JSON.stringify(userData)
+    );
+
+    console.log("STEP 9 - Calling routeUser");
+
+    await routeUser(uid, userData);
+
+    console.log("STEP 10 - routeUser completed");
+
+  } catch (error) {
+
+    console.log("❌ LOGIN ERROR FULL:", error);
+    console.log("❌ LOGIN ERROR CODE:", error.code);
+    console.log("❌ LOGIN ERROR MESSAGE:", error.message);
+
+    Alert.alert(
+      "Login Failed",
+      error.message
+    );
+  }
+};
 
   return (
     <KeyboardAvoidingView
