@@ -45,18 +45,24 @@ export async function checkDuplicateMember({
   );
 
   if (phone) {
-    const snap = await getDocs(
-      query(col, where("phone", "==", phone))
-    );
+  console.log("🔍 DUPLICATE CHECK PHONE:", phone);
 
-    snap.forEach((d) => {
-      matches.set(d.id, {
-        id: d.id,
-        ...d.data(),
-        matchedOn: "phone",
-      });
+  const snap = await getDocs(
+    query(col, where("phone", "==", phone))
+  );
+
+  console.log("🔍 PHONE MATCH COUNT:", snap.size);
+
+  snap.forEach((d) => {
+    console.log("🔍 MATCH FOUND:", d.id, d.data());
+
+    matches.set(d.id, {
+      id: d.id,
+      ...d.data(),
+      matchedOn: "phone",
     });
-  }
+  });
+}
 
   if (email) {
     const snap = await getDocs(
@@ -89,6 +95,7 @@ export async function checkDuplicateMember({
 /* -------------------------------------------------- */
 
 export async function addMemberManually({
+  
   organizationId,
   entityId,
   forceCreate = false,
@@ -102,7 +109,6 @@ export async function addMemberManually({
         phone: memberData.phone,
         email: memberData.email,
       });
-
     if (matches.length > 0) {
       return {
         created: false,
@@ -111,7 +117,7 @@ export async function addMemberManually({
       };
     }
   }
-
+console.log("🔥 RESULT:", result);
   const ref = await addDoc(
     membersCollection(
       organizationId,

@@ -63,7 +63,7 @@ export default function MemberProfileScreen({ route, navigation }) {
  
   const memberId = route?.params?.memberId;
   const viewerUid =
-  route?.params?.viewerUid || viewerMemberId || null;
+  route?.params?.viewerUid || null;
 
 const viewerName =
   route?.params?.viewerName || "Staff";
