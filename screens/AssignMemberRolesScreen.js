@@ -64,33 +64,30 @@ export default function AssignMemberRolesScreen({ route }) {
 
   // ✅ Show every active role, PLUS any inactive role this member already
   // happens to hold — visible so it can be removed, but not re-addable.
-  const assignableRoles = roles.filter(
-    r => r.active !== false || selectedRoleIds.includes(r.id)
-  );
+ const assignableRoles = roles.filter(
+  r =>
+    r.id !== "super_admin" &&
+    (r.active !== false || selectedRoleIds.includes(r.id))
+);
 
-  const toggleRole = (role) => {
-    const alreadySelected = selectedRoleIds.includes(role.id);
-
-    if (!alreadySelected && role.id === "super_admin") {
-      Alert.alert(
-        "Grant Super Admin?",
-        "This gives full unrestricted access, including the ability to manage other admins' roles. Are you sure?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Grant",
-            style: "destructive",
-            onPress: () => setSelectedRoleIds(prev => [...prev, role.id])
-          }
-        ]
-      );
-      return;
-    }
-
-    setSelectedRoleIds(prev =>
-      alreadySelected ? prev.filter(id => id !== role.id) : [...prev, role.id]
+ const toggleRole = (role) => {
+  // 🚫 Super Admin is not assignable from this screen
+  if (role.id === "super_admin") {
+    Alert.alert(
+      "Restricted Role",
+      "Super Admin cannot be assigned from this screen."
     );
-  };
+    return;
+  }
+
+  const alreadySelected = selectedRoleIds.includes(role.id);
+
+  setSelectedRoleIds(prev =>
+    alreadySelected
+      ? prev.filter(id => id !== role.id)
+      : [...prev, role.id]
+  );
+};
 
   const handleSave = async () => {
     if (!organizationId || !entityId || !user?.id) {
@@ -99,9 +96,22 @@ export default function AssignMemberRolesScreen({ route }) {
     }
 
     setSaving(true);
+
+    if (selectedRoleIds.includes("super_admin")) {
+  Alert.alert(
+    "Restricted Role",
+    "Super Admin cannot be assigned from this screen."
+  );
+  setSaving(false);
+  return;
+}
     try {
-     const selectedRoleObjects = roles.filter(r =>
-  selectedRoleIds.includes(r.id)
+   const safeRoleIds = selectedRoleIds.filter(
+  id => id !== "super_admin"
+);
+
+const selectedRoleObjects = roles.filter(r =>
+  safeRoleIds.includes(r.id)
 );
 
 const effectivePermissions = mergePermissions(selectedRoleObjects);
@@ -150,16 +160,21 @@ Upgrade your plan to assign additional administrative roles.`,
   setSaving(false);
   return;
 }
-      // ⚠️ Assumes members live at
-      // organizations/{organizationId}/entities/{entityId}/members/{memberId}.
-      // Adjust this path if your Members screen stores them somewhere else.
       await updateDoc(
-        doc(db, "organizations", organizationId, "entities", entityId, "members", user.id),
-        {
-          roles: selectedRoleIds,
-          permissions: effectivePermissions // ✅ denormalized union, cheap to check elsewhere
-        }
-      );
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    user.id
+  ),
+  {
+    roles: safeRoleIds,
+    permissions: effectivePermissions
+  }
+);
 
       Alert.alert("✅ Saved", `Roles updated for ${user.name || "this member"}.`);
       navigation.goBack();

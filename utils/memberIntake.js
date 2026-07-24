@@ -117,7 +117,6 @@ export async function addMemberManually({
       };
     }
   }
-console.log("🔥 RESULT:", result);
   const ref = await addDoc(
     membersCollection(
       organizationId,
@@ -323,4 +322,32 @@ export async function mergeIntoExistingMember({
     merged: true,
     id: existingMemberId,
   };
+}
+/* -------------------------------------------------- */
+/* Lifecycle Updates                                  */
+/* -------------------------------------------------- */
+
+export async function updateMemberLifecycle({
+  organizationId,
+  entityId,
+  memberId,
+  lifecycleStatus,
+}) {
+  const ref = doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    memberId
+  );
+
+  await updateDoc(ref, {
+    lifecycleStatus,
+    lastStageChangeAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return true;
 }
