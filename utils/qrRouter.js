@@ -164,10 +164,11 @@ export async function handleQRCode(navigation, data) {
         break;
 
       case "register":
-        navigation.navigate("AddMember", {
-          entityId: params.entity,
-        });
-        break;
+  navigation.navigate("QRRegistration", {
+    org: params.org,
+    entity: params.entity,
+  });
+  break;
 
       case "event":
         navigation.navigate("Events", {  // ⚠️ confirm this matches your navigator's registered route name

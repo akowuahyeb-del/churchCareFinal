@@ -61,6 +61,8 @@ import PinEntryScreen from "./screens/PinEntryScreen";
 import SignupScreen from "./screens/SignupScreen";
 import PendingScreen from "./screens/PendingScreen";
 import DuplicateReviewScreen from "./screens/DuplicateReviewScreen";
+import QRRegistrationScreen from "./screens/QRRegistrationScreen";
+
 
 
 
@@ -181,6 +183,8 @@ function RootStack() {
       <Stack.Screen name="Signup" component={SignupScreen} />
       <Stack.Screen name="Pending" component={PendingScreen} />
       <Stack.Screen name="DuplicateReview"component={DuplicateReviewScreen}/>
+      <Stack.Screen name="QRRegistration"component={QRRegistrationScreen}/>
+
 
     </Stack.Navigator>
   );
