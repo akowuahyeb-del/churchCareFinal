@@ -723,7 +723,7 @@ return (
 )}
 
 
-  <Section title="Overview">
+ <Section title="Overview">
   <View style={styles.statsRow}>
     <StatCard
       label="Members"
@@ -735,8 +735,19 @@ return (
       value={`${overview?.avgRate ?? 0}%`}
     />
   </View>
-</Section>
 
+  <View style={styles.statsRow}>
+    <StatCard
+      label="Invited"
+      value={String(overview?.invitedCount ?? 0)}
+    />
+
+    <StatCard
+      label="Active Users"
+      value={String(overview?.activeUserCount ?? 0)}
+    />
+  </View>
+</Section>
 
 {/* ✅ QUICK ACTIONS */}
 {/* ✅ QUICK ACTIONS */}
