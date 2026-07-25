@@ -43,6 +43,7 @@ import {
 
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AppText from "../components/AppText";
+import { getAttendanceSummary } from "../utils/attendanceSummaryService";
 
 const { width: W } = Dimensions.get("window");
 
@@ -113,6 +114,7 @@ const [notifications, setNotifications] = useState([]);
   /* ── programme ── */
   const [programModalVisible, setProgramModalVisible] = useState(false);
   const [editingProgram,      setEditingProgram]      = useState(null);
+  const [overview, setOverview] = useState(null);
 
   const hasRole = (role) => userRoles.includes(role);
   const [permission, requestPermission] =
@@ -193,6 +195,29 @@ useEffect(() => {
 }, []);
 
 
+ useEffect(() => {
+  const loadOverview = async () => {
+    if (!activeEntity) return;
+
+    try {
+      const data = await getAttendanceSummary(
+        activeEntity.organizationId,
+        activeEntity.entityId,
+        "4w"
+      );
+
+      setOverview(data);
+
+      console.log("✅ Overview:", data);
+    } catch (e) {
+      console.log("❌ Overview error:", e);
+    }
+  };
+
+  loadOverview();
+}, [activeEntity]);
+
+
 useEffect(() => {
   const uid = auth.currentUser?.uid;
 
@@ -208,6 +233,7 @@ useEffect(() => {
     orderBy("createdAt", "desc")
   );
 
+ 
   const unsubscribe = onSnapshot(q, snap => {
     const items = snap.docs.map(d => ({
       id: d.id,
@@ -697,13 +723,19 @@ return (
 )}
 
 
-  {/* ✅ STATS */}
   <Section title="Overview">
-    <View style={styles.statsRow}>
-      <StatCard label="Members" value="245" />
-      <StatCard label="Attendance" value="180" />
-    </View>
-  </Section>
+  <View style={styles.statsRow}>
+    <StatCard
+      label="Members"
+      value={String(overview?.membersCount ?? 0)}
+    />
+
+    <StatCard
+      label="Attendance"
+      value={`${overview?.avgRate ?? 0}%`}
+    />
+  </View>
+</Section>
 
 
 {/* ✅ QUICK ACTIONS */}

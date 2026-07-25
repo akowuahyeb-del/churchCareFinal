@@ -13,7 +13,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
   SafeAreaView, StatusBar, ActivityIndicator, Share
 } from "react-native";
-import * as Clipboard from "expo-clipboard";
+
 import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import AppHeader from "../components/AppHeader";
@@ -87,20 +87,10 @@ setInvite(data);
     }
   };
 
-  const handleCopyCode = async () => {
-  if (!invite?.memberCode) {
-    Alert.alert(
-      "No Member ID",
-      "This member does not yet have a Member ID."
-    );
-    return;
-  }
-
-  await Clipboard.setStringAsync(invite.memberCode);
-
+ const handleCopyCode = async () => {
   Alert.alert(
-    "Copied",
-    "Member ID copied to clipboard."
+    "Member ID",
+    invite?.memberCode || "No Member ID available"
   );
 };
 
