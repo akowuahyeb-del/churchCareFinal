@@ -731,9 +731,11 @@ return (
     />
 
     <StatCard
-      label="Attendance"
-      value={`${overview?.avgRate ?? 0}%`}
-    />
+  label="Attendance"
+  value={`${overview?.avgRate ?? 0}%`}
+  subtitle={`${overview?.avgPresent ?? 0} avg present`}
+/>
+
   </View>
 
   <View style={styles.statsRow}>
