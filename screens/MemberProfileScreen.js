@@ -17,6 +17,9 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import QRCodeDisplay from "../components/QRCodeDisplay";
 import { hasPermission, ALL_PERMISSION_KEYS } from "../constants/permissions";
+import {
+  updateMemberLifecycle,
+} from "../utils/memberIntake";
 
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
@@ -41,7 +44,11 @@ const ACTION_CONFIG = {
   },
 };
 
+
 const SERIOUS_ACTIONS = ["expel", "investigation"];
+
+
+
 
 
 // Profile fields — match MembersScreen.js's DEFAULT_MEMBER shape exactly.
@@ -162,7 +169,11 @@ const viewerName =
     try {
       const snap = await getDoc(memberRef());
       if (snap.exists()) {
-        setMember({ id: snap.id, ...snap.data() });
+        setMember({
+  id: snap.id,
+  lifecycleStatus: "member",
+  ...snap.data(),
+});
       } else {
         Alert.alert("Not Found", "This member record could not be found.");
       }
@@ -282,6 +293,29 @@ console.log(
     entityId,
   }
 );
+
+const handleInviteMember = async () => {
+  try {
+    await updateMemberLifecycle({
+      organizationId,
+      entityId,
+      memberId: member.id,
+      lifecycleStatus: "invited",
+    });
+
+    Alert.alert(
+      "Invitation Created",
+      `${member.name} has been marked as invited.`
+    );
+
+    loadMember?.();
+  } catch (e) {
+    Alert.alert("Error", e.message);
+  }
+};
+
+
+
   useEffect(() => {
     if (!memberId || !organizationId || !entityId) return;
     loadMember();
@@ -717,6 +751,13 @@ const getElderThreshold = (action) => {
               const canEditField = canManageMembers || (isSelf && selfEditable);
               const canRequestField = isSelf && !selfEditable && !canManageMembers;
 
+console.log("INVITE DEBUG", {
+  lifecycleStatus: member?.lifecycleStatus,
+  canManageMembers,
+  isDeceased,
+  permissions: viewerPermissions,
+});
+
               return (
                 <View key={key} style={styles.infoRow}>
                   <View style={{ flex: 1 }}>
@@ -839,6 +880,29 @@ const getElderThreshold = (action) => {
 
             {canManageMembers && !isDeceased && (
               <>
+              {(!member?.lifecycleStatus ||
+  member?.lifecycleStatus === "member") && (
+  <TouchableOpacity
+    style={[
+      styles.actionExecBtn,
+      {
+        backgroundColor: "#0984E3",
+        marginBottom: 10,
+      },
+    ]}
+    onPress={handleInviteMember}
+  >
+    <Ionicons
+      name="send-outline"
+      size={14}
+      color="#fff"
+      style={{ marginRight: 4 }}
+    />
+    <Text style={styles.white}>
+      Invite Member
+    </Text>
+  </TouchableOpacity>
+)}
                 {isDisciplined && (
                   <TouchableOpacity style={[styles.actionExecBtn, { backgroundColor: "#27ae60", marginBottom: 10 }]} onPress={reinstate}>
                     <Ionicons name="refresh" size={14} color="#fff" style={{ marginRight: 4 }} />
