@@ -1,353 +1,172 @@
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+// utils/memberIntake.js
+//
+// Client-side wrapper around the onboarding Cloud Functions. Use this instead
+// of writing directly to the members collection, so every intake path
+// (manual add, bulk upload, QR self-serve) gets duplicate checking and
+// consistent lifecycle status for free.
 
-import { db } from "../firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { app, db } from "../firebase"; // adjust if your firebase.js exports the app under a different name
 
-/* -------------------------------------------------- */
-/* Helpers                                            */
-/* -------------------------------------------------- */
+const functions = getFunctions(app);
 
-function membersCollection(organizationId, entityId) {
-  return collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members"
-  );
-}
+const _createMemberSafe = httpsCallable(functions, "createMemberSafe");
+const _checkDuplicateMember = httpsCallable(functions, "checkDuplicateMember");
+const _submitVisitorIntake = httpsCallable(functions, "submitVisitorIntake");
+const _inviteMember = httpsCallable(functions, "inviteMember");
+const _markActiveUser = httpsCallable(functions, "markActiveUser");
+const _getFunnelStats = httpsCallable(functions, "getFunnelStats");
 
-/* -------------------------------------------------- */
-/* Duplicate Check                                    */
-/* -------------------------------------------------- */
-
-export async function checkDuplicateMember({
-  organizationId,
-  entityId,
-  phone,
-  email,
-}) {
-  const matches = new Map();
-
-  const col = membersCollection(
-    organizationId,
-    entityId
-  );
-
-  if (phone) {
-  console.log("🔍 DUPLICATE CHECK PHONE:", phone);
-
-  const snap = await getDocs(
-    query(col, where("phone", "==", phone))
-  );
-
-  console.log("🔍 PHONE MATCH COUNT:", snap.size);
-
-  snap.forEach((d) => {
-    console.log("🔍 MATCH FOUND:", d.id, d.data());
-
-    matches.set(d.id, {
-      id: d.id,
-      ...d.data(),
-      matchedOn: "phone",
-    });
+// ── Manual add (from an admin screen) ──────────────────────────────
+// Returns { created: true, id } or { created: false, duplicate: true, matches }
+// so the UI can show a "this looks like an existing person" prompt.
+export async function addMemberManually({ organizationId, entityId, name, phone, email, forceCreate = false }) {
+  const res = await _createMemberSafe({
+    organizationId, entityId, name, phone, email,
+    source: "manual",
+    lifecycleStatus: "member",
+    forceCreate,
   });
+  return res.data;
 }
 
-  if (email) {
-    const snap = await getDocs(
-      query(
-        col,
-        where(
-          "email",
-          "==",
-          email.toLowerCase().trim()
-        )
-      )
-    );
-
-    snap.forEach((d) => {
-      if (!matches.has(d.id)) {
-        matches.set(d.id, {
-          id: d.id,
-          ...d.data(),
-          matchedOn: "email",
-        });
-      }
-    });
-  }
-
-  return Array.from(matches.values());
-}
-
-/* -------------------------------------------------- */
-/* Manual Add                                         */
-/* -------------------------------------------------- */
-
-export async function addMemberManually({
-  
-  organizationId,
-  entityId,
-  forceCreate = false,
-  ...memberData
-}) {
-  if (!forceCreate) {
-    const matches =
-      await checkDuplicateMember({
-        organizationId,
-        entityId,
-        phone: memberData.phone,
-        email: memberData.email,
-      });
-    if (matches.length > 0) {
-      return {
-        created: false,
-        duplicate: true,
-        matches,
-      };
-    }
-  }
-  const ref = await addDoc(
-    membersCollection(
-      organizationId,
-      entityId
-    ),
-    {
-      ...memberData,
-
-      lifecycleStatus:
-        memberData.lifecycleStatus ||
-        "member",
-
-      source:
-        memberData.source || "manual",
-
-      duplicateOf: null,
-
-      createdAt:
-        serverTimestamp(),
-
-      updatedAt:
-        serverTimestamp(),
-
-      lastStageChangeAt:
-        serverTimestamp(),
-    }
-  );
-
-  return {
-    created: true,
-    id: ref.id,
-  };
-}
-
-/* -------------------------------------------------- */
-/* Bulk Upload                                        */
-/* -------------------------------------------------- */
-
-export async function bulkAddMembers({
-  organizationId,
-  entityId,
-  rows,
-}) {
-  const results = {
-    created: [],
-    duplicates: [],
-    failed: [],
-  };
+// ── Bulk upload ─────────────────────────────────────────────────────
+// rows: [{ name, phone, email }, ...]
+// Returns a summary so the UI can show "12 added, 3 flagged as duplicates".
+export async function bulkAddMembers({ organizationId, entityId, rows }) {
+  const results = { created: [], duplicates: [], failed: [] };
 
   for (const row of rows) {
     try {
-      const duplicateMatches =
-        await checkDuplicateMember({
-          organizationId,
-          entityId,
-          phone: row.phone,
-          email: row.email,
-        });
-
-      if (duplicateMatches.length > 0) {
-        results.duplicates.push({
-          row,
-          matches: duplicateMatches,
-        });
-
-        continue;
+      const res = await _createMemberSafe({
+        organizationId, entityId,
+        ...row, // ministry, status, address, etc. — whatever columns the CSV had
+        name: row.name, phone: row.phone, email: row.email,
+        source: "bulk_upload",
+        lifecycleStatus: "member",
+      });
+      if (res.data.created) {
+        results.created.push({ row, id: res.data.id });
+      } else {
+        results.duplicates.push({ row, matches: res.data.matches });
       }
-
-      const docRef = await addDoc(
-        membersCollection(
-          organizationId,
-          entityId
-        ),
-        {
-          ...row,
-
-          lifecycleStatus:
-            "member",
-
-          source:
-            "bulk_upload",
-
-          duplicateOf: null,
-
-          createdAt:
-            serverTimestamp(),
-
-          updatedAt:
-            serverTimestamp(),
-
-          lastStageChangeAt:
-            serverTimestamp(),
-        }
-      );
-
-      results.created.push({
-        row,
-        id: docRef.id,
-      });
-
     } catch (e) {
-      results.failed.push({
-        row,
-        error: e.message,
-      });
+      results.failed.push({ row, error: e.message });
     }
   }
 
   return results;
 }
 
-/* -------------------------------------------------- */
-/* Force Create                                       */
-/* -------------------------------------------------- */
-
-export async function forceCreateMember({
-  organizationId,
-  entityId,
-  row,
-  source = "bulk_upload",
-}) {
-  const ref = await addDoc(
-    membersCollection(
-      organizationId,
-      entityId
-    ),
-    {
-      ...row,
-
-      lifecycleStatus:
-        "member",
-
-      source,
-
-      duplicateOf: null,
-
-      createdAt:
-        serverTimestamp(),
-
-      updatedAt:
-        serverTimestamp(),
-
-      lastStageChangeAt:
-        serverTimestamp(),
-    }
-  );
-
-  return {
-    created: true,
-    id: ref.id,
-  };
+// ── QR self-serve (visitor check-in / "I'm interested" form) ────────
+// Safe to call from an unauthenticated screen — the Cloud Function itself
+// is public (submitVisitorIntake), no admin session required.
+export async function submitVisitorForm({ organizationId, entityId, name, phone, email, source }) {
+  const res = await _submitVisitorIntake({ organizationId, entityId, name, phone, email, source });
+  return res.data;
 }
 
-/* -------------------------------------------------- */
-/* Merge Existing                                     */
-/* -------------------------------------------------- */
+// ── Duplicate check on demand (e.g. live-check as an admin types) ───
+export async function checkDuplicateMember({ organizationId, entityId, phone, email, name }) {
+  const res = await _checkDuplicateMember({ organizationId, entityId, phone, email, name });
+  return res.data.matches;
+}
 
-export async function mergeIntoExistingMember({
-  organizationId,
-  entityId,
-  existingMemberId,
-  row,
-}) {
-  const ref = doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members",
-    existingMemberId
-  );
+// ── Send an invite (Member → Invited) ────────────────────────────────
+export async function inviteMember({ organizationId, entityId, memberId, channel }) {
+  const res = await _inviteMember({ organizationId, entityId, memberId, channel });
+  return res.data;
+}
 
+// ── WhatsApp / QR / manual-code invite ───────────────────────────────
+// Prepares the invite server-side (token + status), returns everything
+// needed to actually deliver it. Delivery itself happens client-side —
+// either by opening WhatsApp with a pre-filled message, or by showing
+// the QR/memberCode for the admin to share in person.
+const _generateMemberInvite = httpsCallable(functions, "generateMemberInvite");
+export async function generateMemberInvite({ organizationId, entityId, memberId, channel = "whatsapp" }) {
+  const res = await _generateMemberInvite({ organizationId, entityId, memberId, channel });
+  return res.data;
+}
+
+// Opens the device's WhatsApp app with a pre-filled invite message.
+// No WhatsApp Business API / approval needed — this is just a wa.me deep link.
+export async function shareInviteViaWhatsApp({ phone, memberName, memberCode, inviteLink, churchName }) {
+  const { Linking } = await import("react-native");
+  const message =
+    `Hi ${memberName}! ${churchName || "Your church"} has invited you to ChurchCare.\n\n` +
+    `Download the app and enter your Member ID to finish setting up your account:\n` +
+    `${memberCode}\n\n` +
+    `Or tap this link: ${inviteLink}`;
+
+  const digits = (phone || "").replace(/\D/g, "");
+  const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  const supported = await Linking.canOpenURL(url);
+  if (!supported) throw new Error("WhatsApp isn't available on this device");
+  await Linking.openURL(url);
+}
+
+// ── Claim an existing Member record by Member ID (QR scan or manual entry) ──
+const _verifyMemberCode = httpsCallable(functions, "verifyMemberCode");
+export async function verifyMemberCode({ memberCode, phone }) {
+  const res = await _verifyMemberCode({ memberCode, phone });
+  return res.data;
+}
+
+const _completeMemberClaim = httpsCallable(functions, "completeMemberClaim");
+export async function completeMemberClaim({ claimToken }) {
+  const res = await _completeMemberClaim({ claimToken });
+  return res.data;
+}
+
+// ── Call right after a successful login (email or PIN unlock) ───────
+// Safe to call every login — it's a no-op once the member is already active_user.
+export async function markActiveUser({ organizationId, entityId, memberId }) {
+  if (!organizationId || !entityId || !memberId) return;
+  try {
+    await _markActiveUser({ organizationId, entityId, memberId });
+  } catch (e) {
+    console.log("markActiveUser error (non-fatal):", e);
+  }
+}
+
+// ── Duplicate resolution (used by the review screen) ────────────────
+
+// Create anyway, bypassing the dedupe check — admin has reviewed and
+// confirmed this really is a separate person.
+export async function forceCreateMember({ organizationId, entityId, row, source = "bulk_upload" }) {
+  const res = await _createMemberSafe({
+    organizationId, entityId,
+    ...row,
+    name: row.name, phone: row.phone, email: row.email,
+    source, lifecycleStatus: "member",
+    forceCreate: true,
+  });
+  return res.data;
+}
+
+// Merge: don't create a new record, just fill in any gaps on the existing
+// matched member with data from the incoming row, and bump updatedAt so
+// it shows as a recent touchpoint.
+export async function mergeIntoExistingMember({ organizationId, entityId, existingMemberId, row }) {
+  const ref = doc(db, "organizations", organizationId, "entities", entityId, "members", existingMemberId);
   const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Existing member not found");
+  const existing = snap.data();
 
-  if (!snap.exists()) {
-    throw new Error(
-      "Existing member not found"
-    );
+  // Only fill in fields the existing record doesn't already have — never
+  // overwrite something an admin already entered.
+  const fill = {};
+  for (const key of Object.keys(row)) {
+    if (row[key] && !existing[key]) fill[key] = row[key];
   }
 
-  const existing =
-    snap.data();
-
-  const fill = {};
-
-  Object.keys(row).forEach((key) => {
-    if (
-      row[key] &&
-      !existing[key]
-    ) {
-      fill[key] = row[key];
-    }
-  });
-
-  await updateDoc(ref, {
-    ...fill,
-    updatedAt:
-      serverTimestamp(),
-  });
-
-  return {
-    merged: true,
-    id: existingMemberId,
-  };
+  await updateDoc(ref, { ...fill, updatedAt: serverTimestamp() });
+  return { merged: true, id: existingMemberId };
 }
-/* -------------------------------------------------- */
-/* Lifecycle Updates                                  */
-/* -------------------------------------------------- */
 
-export async function updateMemberLifecycle({
-  organizationId,
-  entityId,
-  memberId,
-  lifecycleStatus,
-}) {
-  const ref = doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members",
-    memberId
-  );
-
-  await updateDoc(ref, {
-    lifecycleStatus,
-    lastStageChangeAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  return true;
+export async function getFunnelStats({ organizationId, entityId }) {
+  const res = await _getFunnelStats({ organizationId, entityId });
+  return res.data;
 }

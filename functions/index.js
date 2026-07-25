@@ -79,3 +79,23 @@ exports.createMemberSafe =
 
 exports.submitVisitorIntake =
   onboarding.submitVisitorIntake;
+  exports.generateMemberInvite =
+  onboarding.generateMemberInvite;
+
+exports.verifyMemberCode =
+  onboarding.verifyMemberCode;
+
+exports.completeMemberClaim =
+  onboarding.completeMemberClaim;
+
+exports.markActiveUser =
+  onboarding.markActiveUser;
+
+exports.getFunnelStats =
+  onboarding.getFunnelStats;
+
+exports.onMemberStatusChange =
+  onboarding.onMemberStatusChange;
+
+exports.stageWatcherJob =
+  onboarding.stageWatcherJob;

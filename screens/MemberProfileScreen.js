@@ -295,25 +295,13 @@ console.log(
 );
 
 const handleInviteMember = async () => {
-  try {
-    await updateMemberLifecycle({
-      organizationId,
-      entityId,
-      memberId: member.id,
-      lifecycleStatus: "invited",
-    });
-
-    Alert.alert(
-      "Invitation Created",
-      `${member.name} has been marked as invited.`
-    );
-
-    loadMember?.();
-  } catch (e) {
-    Alert.alert("Error", e.message);
-  }
+  navigation.navigate("InviteMember", {
+    organizationId,
+    entityId,
+    memberId: member.id,
+  });
 };
-
+    
 
 
   useEffect(() => {

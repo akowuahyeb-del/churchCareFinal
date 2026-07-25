@@ -62,6 +62,8 @@ import SignupScreen from "./screens/SignupScreen";
 import PendingScreen from "./screens/PendingScreen";
 import DuplicateReviewScreen from "./screens/DuplicateReviewScreen";
 import QRRegistrationScreen from "./screens/QRRegistrationScreen";
+import InviteMemberScreen from "./screens/InviteMemberScreen";
+import ClaimAccountScreen from "./screens/ClaimAccountScreen";
 
 
 
@@ -184,7 +186,8 @@ function RootStack() {
       <Stack.Screen name="Pending" component={PendingScreen} />
       <Stack.Screen name="DuplicateReview"component={DuplicateReviewScreen}/>
       <Stack.Screen name="QRRegistration"component={QRRegistrationScreen}/>
-
+      <Stack.Screen name="InviteMember"component={InviteMemberScreen}options={{ headerShown: false }}/>
+      <Stack.Screen name="ClaimAccount"component={ClaimAccountScreen}options={{ headerShown: false }}/>
 
     </Stack.Navigator>
   );
