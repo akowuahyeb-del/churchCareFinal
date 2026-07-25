@@ -77,6 +77,16 @@ const peakPresent =
       m => m.lifecycleStatus === "invited"
     ).length;
 
+    console.log(
+  "INVITED MEMBERS",
+  members
+    .filter(m => m.lifecycleStatus === "invited")
+    .map(m => ({
+      name: m.name,
+      lifecycle: m.lifecycleStatus,
+    }))
+);
+
     const registeredCount = members.filter(
       m => m.lifecycleStatus === "registered"
     ).length;

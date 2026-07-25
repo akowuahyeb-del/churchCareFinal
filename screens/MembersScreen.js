@@ -165,6 +165,8 @@ export default function MembersScreen({ navigation }) {
   const [listModal, setListModal] = useState({ visible: false, type: null, input: "", index: null });
   const { membersLimit } = useSubscription(organizationId,entityId);
   const [transferHistory, setTransferHistory] = useState([]);
+  const [filterLifecycle, setFilterLifecycle] = useState("All");
+
 
 const toggleActions = () => {
   setShowActions(prev => {
@@ -231,6 +233,8 @@ const loadMembers = useCallback(async () => {
     }));
 
     console.log("✅ MEMBERS FOUND:", data.length);
+   
+
 
     setMembers(data);
 
@@ -476,8 +480,17 @@ const executeReinstate = async () => {
     const matchCommun   = filterCommun   === "All"
       || (filterCommun === "yes" && m.communicant === "yes")
       || (filterCommun === "no"  && m.communicant === "no");
-    return matchSearch && matchMinistry && matchStatus && matchCommun;
-  });
+      const matchLifecycle =
+  filterLifecycle === "All" ||
+  (m.lifecycleStatus || "member") === filterLifecycle;
+   return (
+  matchSearch &&
+  matchMinistry &&
+  matchStatus &&
+  matchCommun &&
+  matchLifecycle
+);
+});
 
   /* ── List modal helpers ── */
   const openListModal = (type, index = null, list = []) => {
@@ -519,9 +532,9 @@ const executeReinstate = async () => {
   },
 
   {
-    icon: "filter-outline",
-    onPress: () => console.log("Filter pressed"),
-  }
+  icon: "filter-outline",
+  onPress: () => setShowFilters(prev => !prev),
+}
 ]}
 
       />
@@ -552,6 +565,25 @@ const executeReinstate = async () => {
             { label: "Status",      list: ["All", ...statusList],              value: filterStatus,   setter: setFilterStatus   },
             { label: "Communicant", list: ["All", "yes", "no"],                value: filterCommun,   setter: setFilterCommun,
               display: (v) => v === "All" ? "All" : v === "yes" ? "Communicant" : "Non-communicant" },
+              {
+  label: "Lifecycle",
+  list: [
+    "All",
+    "visitor",
+    "interested",
+    "pending_approval",
+    "member",
+    "invited",
+    "registered",
+    "active_user",
+  ],
+  value: filterLifecycle,
+  setter: setFilterLifecycle,
+  display: (v) =>
+    v === "All"
+      ? "All"
+      : v.replace("_", " ").toUpperCase(),
+},
           ].map(f => (
             <View key={f.label} style={{ marginBottom: 8 }}>
               <Text style={styles.filterLabel}>{f.label}</Text>
