@@ -60,6 +60,15 @@ const formatLifecycle = (value) => {
   return labels[value] || value;
 };
 
+const formatLifecycleCompact = (value) => {
+  const labels = {
+    member: "Mem",
+    interested: "Int",
+  };
+
+  return labels[value] || formatLifecycle(value);
+};
+
 const generateMemberCode = (count) => {
   const year = new Date().getFullYear();
   const seq  = String(count + 1).padStart(4, "0");
@@ -521,6 +530,14 @@ const executeReinstate = async () => {
 );
 });
 
+const getLifecycleCount = (status) => {
+  if (status === "All") return members.length;
+
+  return members.filter(
+    (m) => (m.lifecycleStatus || "member") === status
+  ).length;
+};
+
   /* ── List modal helpers ── */
   const openListModal = (type, index = null, list = []) => {
     setListModal({ visible: true, type, input: index != null ? (list[index] || "") : "", index });
@@ -599,11 +616,10 @@ const executeReinstate = async () => {
   list: visibleLifecycles,
   value: filterLifecycle,
   setter: setFilterLifecycle,
- display: (v) => {
-  if (v === "All") return "All";
+  display: (v) => {
   if (v === "__more__") return "More ▼";
 
-  return formatLifecycle(v);
+  return `${formatLifecycleCompact(v)} (${getLifecycleCount(v)})`;
 },
 },
 
@@ -861,45 +877,64 @@ const lifecycleColor =
         More Lifecycle Filters
       </Text>
 
-      {hiddenLifecycles.map(item => (
-        <TouchableOpacity
-          key={item}
-          style={[
-            styles.primaryBtn,
-            {
-              marginTop: 8,
-              backgroundColor:
-                filterLifecycle === item
-                  ? "#4B3F72"
-                  : "#888",
-            },
-          ]}
-          onPress={() => {
-            setFilterLifecycle(item);
-            setShowLifecycleMenu(false);
-          }}
-        >
-          <Text style={styles.primaryBtnText}>
-            {formatLifecycle(item)}
+     {hiddenLifecycles.map(item => (
+  <TouchableOpacity
+    key={item}
+    style={[
+      styles.primaryBtn,
+      {
+        marginTop: 8,
+        backgroundColor: LIFECYCLE_COLORS[item] || "#888",
 
-          </Text>
-        </TouchableOpacity>
-      ))}
+        borderWidth: filterLifecycle === item ? 2 : 0,
+        borderColor: "#fff",
 
-      <TouchableOpacity
-        style={[
-          styles.primaryBtn,
-          {
-            backgroundColor: "#999",
-            marginTop: 12,
-          },
-        ]}
-        onPress={() => setShowLifecycleMenu(false)}
-      >
-        <Text style={styles.primaryBtnText}>
-          Close
-        </Text>
-      </TouchableOpacity>
+        opacity: filterLifecycle === item ? 1 : 0.92,
+      },
+    ]}
+    onPress={() => {
+      setFilterLifecycle(item);
+      setShowLifecycleMenu(false);
+    }}
+  >
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+      }}
+    >
+      {/* Colour indicator */}
+      <View
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: "#fff",
+          marginRight: 10,
+        }}
+      />
+
+      <Text style={styles.primaryBtnText}>
+        {`${formatLifecycle(item)} (${getLifecycleCount(item)})`}
+      </Text>
+    </View>
+  </TouchableOpacity>
+))}
+
+<TouchableOpacity
+  style={[
+    styles.primaryBtn,
+    {
+      backgroundColor: "#999",
+      marginTop: 12,
+    },
+  ]}
+  onPress={() => setShowLifecycleMenu(false)}
+>
+  <Text style={styles.primaryBtnText}>
+    Close
+  </Text>
+</TouchableOpacity>
 
     </View>
   </View>
