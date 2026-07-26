@@ -46,6 +46,19 @@ const LIFECYCLE_COLORS = {
   active_user: "#16A085",
 };
 
+const formatLifecycle = (value) => {
+  const labels = {
+    visitor: "Visitor",
+    interested: "Interested",
+    pending_approval: "Pending Approval",
+    member: "Member",
+    invited: "Invited",
+    registered: "Registered",
+    active_user: "Active User",
+  };
+
+  return labels[value] || value;
+};
 
 const generateMemberCode = (count) => {
   const year = new Date().getFullYear();
@@ -586,12 +599,12 @@ const executeReinstate = async () => {
   list: visibleLifecycles,
   value: filterLifecycle,
   setter: setFilterLifecycle,
-  display: (v) => {
-    if (v === "All") return "All";
-    if (v === "__more__") return "More ▼";
+ display: (v) => {
+  if (v === "All") return "All";
+  if (v === "__more__") return "More ▼";
 
-    return v.replace("_", " ").toUpperCase();
-  },
+  return formatLifecycle(v);
+},
 },
 
 
@@ -707,9 +720,7 @@ const lifecycleColor =
                 },
                  ]}
                  >
-                 {lifecycle
-                   .replace("_", " ")
-                    .toUpperCase()}
+                {formatLifecycle(lifecycle)}
                    </Text>
                   </View>
 
@@ -869,9 +880,8 @@ const lifecycleColor =
           }}
         >
           <Text style={styles.primaryBtnText}>
-            {item
-              .replace(/_/g, " ")
-              .toUpperCase()}
+            {formatLifecycle(item)}
+
           </Text>
         </TouchableOpacity>
       ))}
