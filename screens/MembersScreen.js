@@ -60,14 +60,17 @@ const formatLifecycle = (value) => {
   return labels[value] || value;
 };
 
+
 const formatLifecycleCompact = (value) => {
   const labels = {
-    member: "Mem",
     interested: "Int",
+    member: "Mem",
   };
 
   return labels[value] || formatLifecycle(value);
 };
+
+
 
 const generateMemberCode = (count) => {
   const year = new Date().getFullYear();
