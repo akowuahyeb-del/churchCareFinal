@@ -166,6 +166,21 @@ export default function MembersScreen({ navigation }) {
   const { membersLimit } = useSubscription(organizationId,entityId);
   const [transferHistory, setTransferHistory] = useState([]);
   const [filterLifecycle, setFilterLifecycle] = useState("All");
+  const [showLifecycleMenu, setShowLifecycleMenu] = useState(false);
+
+const visibleLifecycles = [
+  "All",
+  "visitor",
+  "interested",
+  "member",
+];
+
+const hiddenLifecycles = [
+  "pending_approval",
+  "invited",
+  "registered",
+  "active_user",
+];
 
 
 const toggleActions = () => {
@@ -565,18 +580,9 @@ const executeReinstate = async () => {
             { label: "Status",      list: ["All", ...statusList],              value: filterStatus,   setter: setFilterStatus   },
             { label: "Communicant", list: ["All", "yes", "no"],                value: filterCommun,   setter: setFilterCommun,
               display: (v) => v === "All" ? "All" : v === "yes" ? "Communicant" : "Non-communicant" },
-              {
+{
   label: "Lifecycle",
-  list: [
-    "All",
-    "visitor",
-    "interested",
-    "pending_approval",
-    "member",
-    "invited",
-    "registered",
-    "active_user",
-  ],
+  list: visibleLifecycles,
   value: filterLifecycle,
   setter: setFilterLifecycle,
   display: (v) =>
@@ -584,6 +590,8 @@ const executeReinstate = async () => {
       ? "All"
       : v.replace("_", " ").toUpperCase(),
 },
+
+
           ].map(f => (
             <View key={f.label} style={{ marginBottom: 8 }}>
               <Text style={styles.filterLabel}>{f.label}</Text>
