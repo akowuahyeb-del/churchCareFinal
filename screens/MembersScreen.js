@@ -173,6 +173,7 @@ const visibleLifecycles = [
   "visitor",
   "interested",
   "member",
+  "__more__",
 ];
 
 const hiddenLifecycles = [
@@ -585,10 +586,12 @@ const executeReinstate = async () => {
   list: visibleLifecycles,
   value: filterLifecycle,
   setter: setFilterLifecycle,
-  display: (v) =>
-    v === "All"
-      ? "All"
-      : v.replace("_", " ").toUpperCase(),
+  display: (v) => {
+    if (v === "All") return "All";
+    if (v === "__more__") return "More ▼";
+
+    return v.replace("_", " ").toUpperCase();
+  },
 },
 
 
@@ -597,9 +600,25 @@ const executeReinstate = async () => {
               <Text style={styles.filterLabel}>{f.label}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {f.list.map(item => (
-                  <TouchableOpacity key={item}
-                    style={[styles.filterChip, f.value === item && styles.filterChipActive]}
-                    onPress={() => f.setter(item)}>
+                 <TouchableOpacity
+  key={item}
+  style={[
+    styles.filterChip,
+    f.value === item && styles.filterChipActive
+  ]}
+  onPress={() => {
+    if (
+      f.label === "Lifecycle" &&
+      item === "__more__"
+    ) {
+      setShowLifecycleMenu(true);
+      return;
+    }
+
+    f.setter(item);
+  }}
+>
+
                     <Text style={[styles.filterChipText, f.value === item && { color: "#fff" }]}>
                       {f.display ? f.display(item) : item}
                     </Text>
@@ -818,6 +837,63 @@ const lifecycleColor =
           );
         }}
       />
+{/* ══ LIFECYCLE MORE MENU ══ */}
+<Modal
+  visible={showLifecycleMenu}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.centeredOverlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        More Lifecycle Filters
+      </Text>
+
+      {hiddenLifecycles.map(item => (
+        <TouchableOpacity
+          key={item}
+          style={[
+            styles.primaryBtn,
+            {
+              marginTop: 8,
+              backgroundColor:
+                filterLifecycle === item
+                  ? "#4B3F72"
+                  : "#888",
+            },
+          ]}
+          onPress={() => {
+            setFilterLifecycle(item);
+            setShowLifecycleMenu(false);
+          }}
+        >
+          <Text style={styles.primaryBtnText}>
+            {item
+              .replace(/_/g, " ")
+              .toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity
+        style={[
+          styles.primaryBtn,
+          {
+            backgroundColor: "#999",
+            marginTop: 12,
+          },
+        ]}
+        onPress={() => setShowLifecycleMenu(false)}
+      >
+        <Text style={styles.primaryBtnText}>
+          Close
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
 
 
       {/* ══ QR ENLARGED MODAL ══ */}
