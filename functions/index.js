@@ -82,6 +82,10 @@ exports.submitVisitorIntake =
   exports.generateMemberInvite =
   onboarding.generateMemberInvite;
 
+exports.inviteMember =
+  onboarding.inviteMember;
+
+
 exports.verifyMemberCode =
   onboarding.verifyMemberCode;
 

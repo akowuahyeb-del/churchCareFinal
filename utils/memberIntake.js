@@ -21,13 +21,13 @@ const _getFunnelStats = httpsCallable(functions, "getFunnelStats");
 // ── Manual add (from an admin screen) ──────────────────────────────
 // Returns { created: true, id } or { created: false, duplicate: true, matches }
 // so the UI can show a "this looks like an existing person" prompt.
-export async function addMemberManually({ organizationId, entityId, name, phone, email, forceCreate = false }) {
+export async function addMemberManually(payload) {
   const res = await _createMemberSafe({
-    organizationId, entityId, name, phone, email,
+    ...payload,
     source: "manual",
     lifecycleStatus: "member",
-    forceCreate,
   });
+
   return res.data;
 }
 

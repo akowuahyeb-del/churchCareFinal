@@ -28,6 +28,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { addDoc } from "firebase/firestore";
 import ChurchLogo from "../components/ChurchLogo";
 
+
 /* ── firebase ── */
 import { db, storage, auth } from "../firebase";
 import {
@@ -40,12 +41,18 @@ import {
   query,
   orderBy
 } from "firebase/firestore";
-
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "firebase/storage";
 import AppText from "../components/AppText";
 import { getAttendanceSummary } from "../utils/attendanceSummaryService";
 
+
+
 const { width: W } = Dimensions.get("window");
+
 
 // ── helpers ───────────────────────────────────────────────────────
 const fmtDT = (iso) => {
@@ -386,21 +393,23 @@ const savePastorMessage = async (title, message, expiry) => {
   }
 };
 
-
 const handleUpload = async () => {
   try {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1
+      quality: 1,
     });
 
     if (result.canceled) return;
 
     const imageUri = result.assets[0].uri;
 
-    const blob = await (await fetch(imageUri)).blob();
+    const blob = await (
+      await fetch(imageUri)
+    ).blob();
 
     const data = await AsyncStorage.getItem("activeEntity");
+
     if (!data) {
       Alert.alert("Error", "No active church selected");
       return;
@@ -408,50 +417,91 @@ const handleUpload = async () => {
 
     const { organizationId, entityId } = JSON.parse(data);
 
-    const storageRef = ref(storage, `carousel/${Date.now()}`);
-    const uploadRes = await uploadBytes(storageRef, blob);
+    const storageRef = ref(
+      storage,
+      `carousel/${Date.now()}.jpg`
+    );
 
-    const downloadURL = await getDownloadURL(uploadRes.ref);
+    await uploadBytes(
+      storageRef,
+      blob
+    );
 
-    // ✅ THIS drives your carousel
+    const downloadURL =
+      await getDownloadURL(storageRef);
+
     await addDoc(
-      collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "carousel"
+      ),
       {
         imageUrl: downloadURL,
-        createdAt: new Date()
+        createdAt: new Date(),
       }
     );
 
     Alert.alert("✅ Uploaded to carousel");
 
   } catch (err) {
-    console.log(err);
-    Alert.alert("Upload failed");
+    console.log(
+      "❌ Flyer upload error:",
+      err
+    );
+
+    Alert.alert(
+      "Upload failed",
+      err?.message || JSON.stringify(err)
+    );
   }
 };
 
 const uploadChurchLogo = async () => {
   try {
+    console.log("🚀 START LOGO UPLOAD");
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
     });
 
     if (result.canceled) return;
 
-    const imageUri = result.assets[0].uri;
+    console.log("✅ IMAGE PICKED");
 
-    const blob = await (await fetch(imageUri)).blob();
+    const blob = await (
+      await fetch(result.assets[0].uri)
+    ).blob();
+
+    console.log("✅ BLOB CREATED", blob.size);
 
     const { organizationId, entityId } = activeEntity;
 
-    const storageRef = ref(storage, `church-logos/${entityId}`);
+    const storageRef = ref(
+      storage,
+      `church-logos/${entityId}.jpg`
+    );
 
-    await uploadBytes(storageRef, blob);
+    console.log("✅ STORAGE REF CREATED");
 
-    const downloadURL = await getDownloadURL(storageRef);
+    await uploadBytes(
+      storageRef,
+      blob
+    );
 
-    // ✅ SAVE TO FIRESTORE
+    console.log("✅ UPLOAD COMPLETE");
+
+    const downloadURL =
+      await getDownloadURL(storageRef);
+
+    console.log("✅ GOT DOWNLOAD URL");
+
     await updateDoc(
       doc(
         db,
@@ -465,46 +515,57 @@ const uploadChurchLogo = async () => {
       }
     );
 
-    // ✅ UPDATE UI
-    const updated = { ...activeEntity, logo: downloadURL };
+    console.log("✅ FIRESTORE UPDATED");
+
+    const updated = {
+      ...activeEntity,
+      logo: downloadURL,
+    };
+
     setActiveEntity(updated);
 
-    // ✅ persist locally
-    await AsyncStorage.setItem("activeEntity", JSON.stringify(updated));
+    await AsyncStorage.setItem(
+      "activeEntity",
+      JSON.stringify(updated)
+    );
 
-    console.log("✅ Logo uploaded:", downloadURL);
+    Alert.alert(
+      "Success",
+      "Church logo uploaded successfully"
+    );
 
   } catch (e) {
-    console.log("❌ Upload error:", e);
-    Alert.alert("Upload failed");
+    console.log("❌ LOGO STEP FAILED:", e);
+
+    Alert.alert(
+      "Upload failed",
+      e?.message || JSON.stringify(e)
+    );
   }
 };
 
 
-// ✅ PATCH 4 — FIXED: this used to drop id, preacherId, and session entirely,
-// which is exactly why saved program items lost their preacher link and
-// disappeared from session filtering after a reload.
+
+
 const saveProgramToFirestore = async (updatedProgram) => {
   try {
     if (!activeEntity) return;
 
     const { organizationId, entityId } = activeEntity;
 
-    // ✅ If a function is passed, resolve it first
     const resolvedProgram =
       typeof updatedProgram === "function"
         ? updatedProgram(program)
         : updatedProgram;
 
-    // ✅ Clean every item, but keep the fields the link depends on
     const cleanProgram = resolvedProgram.map(item => ({
       id: item.id || Date.now().toString(),
       title: item.title || "",
       time: item.time || "",
       date: item.date || null,
       notes: item.notes || "",
-      preacherId: item.preacherId || null, // ✅ the actual link to a preacher
-      session: item.session || null,       // ✅ {id, name} — used to filter by session
+      preacherId: item.preacherId || null,
+      session: item.session || null,
     }));
 
     await setDoc(
@@ -523,12 +584,19 @@ const saveProgramToFirestore = async (updatedProgram) => {
 
     setProgram(cleanProgram);
 
-    console.log("✅ Program saved clean:", cleanProgram);
+    console.log(
+      "✅ Program saved clean:",
+      cleanProgram
+    );
 
   } catch (e) {
-    Alert.alert("Save failed", e.message);
+    Alert.alert(
+      "Save failed",
+      e.message
+    );
   }
 };
+
 
 // ✅ PATCH 4 (NEW) — preachers now actually persist to Firestore instead of
 // living only in memory and disappearing on reload.
@@ -577,10 +645,27 @@ const savePreachersToFirestore = async (updatedPreachers) => {
   }
 };
 
-{/* ✅ PATCH 2: the duplicate, dead <PreacherModal> block that used to sit here —
-   as a bare JSX expression statement before `return (...)`, so it never
-   rendered anything — has been removed. The real one lives inside the JSX
-   tree below, and its onSave is wired to savePreachersToFirestore there. */}
+const handleSelectChurch = async (entity) => {
+  try {
+    setActiveEntity(entity);
+
+    await AsyncStorage.setItem(
+      "activeEntity",
+      JSON.stringify(entity)
+    );
+
+    console.log(
+      "✅ Active church changed:",
+      entity.name
+    );
+  } catch (e) {
+    console.log(
+      "❌ Church switch error:",
+      e
+    );
+  }
+};
+
 
 /* ══════════════════════════════════ RENDER ══════════════════════ */
 return (

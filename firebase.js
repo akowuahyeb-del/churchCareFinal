@@ -17,7 +17,7 @@ const firebaseConfig = {
   projectId: "churchcarefinal",
 
   // ✅ ✅ FIXED HERE
-  storageBucket: "churchcarefinal.appspot.com",
+storageBucket: "churchcarefinal.firebasestorage.app",
 
   messagingSenderId: "120675440611",
   appId: "1:120675440611:web:af20b8b2a976d71559f2d6"
@@ -44,10 +44,7 @@ try {
 
 
 
-const storage = getStorage(
-  app,
-  `gs://${firebaseConfig.storageBucket}`
-);
+const storage = getStorage(app);
 
 
 export { app, db, storage, auth };

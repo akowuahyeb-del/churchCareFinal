@@ -299,6 +299,10 @@ const handleInviteMember = async () => {
     organizationId,
     entityId,
     memberId: member.id,
+
+    memberName: member.name,
+    phone: member.phone,
+    memberCode: member.memberCode,
   });
 };
     

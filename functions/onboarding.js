@@ -227,6 +227,70 @@ exports.inviteMember = onCall(async (request) => {
   return { invited: true, channel: chosenChannel, sent: result.sent };
 });
 
+
+// ─────────────────────────────────────────────────────────────────
+// GENERATE INVITE
+// Prepares invite data for WhatsApp / QR / manual sharing.
+// Does NOT change lifecycle status.
+// ─────────────────────────────────────────────────────────────────
+
+exports.generateMemberInvite = onCall(async (request) => {
+  const { organizationId, entityId, memberId, channel } = request.data || {};
+
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required");
+  }
+
+  if (!organizationId || !entityId || !memberId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Missing organizationId/entityId/memberId"
+    );
+  }
+
+  const ref = MEMBERS_PATH(organizationId, entityId).doc(memberId);
+
+  const snap = await ref.get();
+
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Member not found");
+  }
+
+  const member = snap.data();
+
+  // Reuse existing token if present
+  let inviteToken = member.inviteToken;
+
+  if (!inviteToken) {
+    inviteToken = db.collection("_").doc().id;
+  }
+
+  const inviteLink =
+    `https://churchcare.app/join?token=${inviteToken}`;
+
+  const now = FieldValue.serverTimestamp();
+
+  await ref.update({
+    inviteToken,
+    inviteChannel:
+      channel ||
+      member.inviteChannel ||
+      null,
+    inviteSentAt: now,
+    updatedAt: now,
+    lastChangedByUid: request.auth.uid,
+  });
+
+  return {
+    memberId,
+    memberName: member.name || "",
+    memberPhone: member.phone || null,
+    memberCode: member.memberCode || null,
+    inviteToken,
+    inviteLink,
+  };
+});
+
 // ─────────────────────────────────────────────────────────────────
 // 3. STATUS HISTORY LOGGER — trigger, not a manual client call.
 // Client just writes `lifecycleStatus` + `lastChangedByUid`; this appends

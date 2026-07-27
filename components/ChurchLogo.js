@@ -8,7 +8,10 @@ export default function ChurchLogo({
   size = 42
 }) {
   return (
-    <TouchableOpacity onPress={null} style={styles.container}>
+    <TouchableOpacity
+  onPress={onPress}
+  style={styles.container}
+>
 
       {entity?.logo ? (
         <Image
