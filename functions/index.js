@@ -4,6 +4,7 @@ admin.initializeApp();
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore } = require("firebase-admin/firestore");
 const onboarding = require("./onboarding");
+const orgApproval =require("./orgApproval");
 
 exports.generateFinanceInsight = onCall(
   { timeoutSeconds: 30 },
@@ -46,6 +47,9 @@ exports.generateFinanceInsight = onCall(
       console.log("✅ Returning cached insight");
       return { insight: existing.data().insight, cached: true };
     }
+
+
+
 
     // ✅ MOCK AI (temporary)
     const text = `
@@ -103,3 +107,8 @@ exports.onMemberStatusChange =
 
 exports.stageWatcherJob =
   onboarding.stageWatcherJob;
+  exports.approveOrganization =
+  orgApproval.approveOrganization;
+
+exports.rejectOrganization =
+  orgApproval.rejectOrganization;
