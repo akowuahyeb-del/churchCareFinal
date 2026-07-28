@@ -34,7 +34,7 @@ import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
 import {
   ref,
   getDownloadURL,
-  uploadString
+  uploadBytes
 } from "firebase/storage";
 
 import { storage, db } from "../firebase";
@@ -43,7 +43,7 @@ import { query, where, onSnapshot } from "firebase/firestore";
 import FeatureGate from "../components/FeatureGate";
 import { FEATURES } from "../constants/subscriptionPlans";
 import { useSubscription } from "../utils/subscription";
-import * as FileSystem from "expo-file-system/legacy";
+
 
 
 
@@ -193,7 +193,7 @@ const {
   
 
 
- const uploadChurchLogo = async () => {
+const uploadChurchLogo = async () => {
   try {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -202,53 +202,34 @@ const {
 
     if (result.canceled) return;
 
-  const imageUri = result.assets[0].uri;
+    const blob = await (
+      await fetch(result.assets[0].uri)
+    ).blob();
 
-const base64 = await FileSystem.readAsStringAsync(
-  imageUri,
-  {
-    encoding: FileSystem.EncodingType.Base64,
-  }
-);
+    const storageRef = ref(
+      storage,
+      `church-logos/${entityId}.jpg`
+    );
 
-console.log("STEP 1 - Base64 created");
+    await uploadBytes(
+      storageRef,
+      blob
+    );
 
-const storageRef = ref(
-  storage,
-  `profile-photos/${currentUser.uid}`
-);
-
-console.log("STEP 2 - Storage ref created");
-console.log("FIREBASE STORAGE:", storage?.app?.name);
-console.log("USER UID:", currentUser?.uid);
-console.log("BASE64 TYPE:", typeof base64);
-console.log("FIREBASE STORAGE:", storage);
-console.log("USER UID:", currentUser?.uid);
-console.log("BASE64 TYPE:", typeof base64);
-console.log("BASE64 SAMPLE:", base64.substring(0, 50));
-
-
-
-console.log("STORAGE OBJECT:", storage);
-
-await uploadString(
-  storageRef,
-  base64,
-  "base64",
-  {
-    contentType: "image/jpeg",
-  }
-);
-
-console.log("STEP 3 - Upload complete");
-
-const downloadURL = await getDownloadURL(storageRef);
-
-console.log("STEP 4 - URL obtained", downloadURL);
+    const downloadURL =
+      await getDownloadURL(storageRef);
 
     await updateDoc(
-      doc(db, "organizations", organizationId, "entities", entityId),
-      { logo: downloadURL }
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId
+      ),
+      {
+        logo: downloadURL,
+      }
     );
 
     const updatedEntity = {
@@ -263,11 +244,21 @@ console.log("STEP 4 - URL obtained", downloadURL);
       JSON.stringify(updatedEntity)
     );
 
-    Alert.alert("✅ Success", "Logo updated successfully");
+    Alert.alert(
+      "✅ Success",
+      "Logo updated successfully"
+    );
 
   } catch (e) {
-    console.log("❌ Upload error:", e);
-    Alert.alert("Upload failed");
+    console.log(
+      "❌ Logo Upload Error:",
+      e
+    );
+
+    Alert.alert(
+      "Upload failed",
+      e?.message || String(e)
+    );
   }
 };
 
@@ -413,49 +404,49 @@ useEffect(() => {
 
 
 
-// Shared upload logic used by both gallery and camera
 const uploadProfilePhoto = async (imageUri) => {
   setUploadingPhoto(true);
 
   try {
     console.log("IMAGE URI:", imageUri);
 
-    const base64 = await FileSystem.readAsStringAsync(
-      imageUri,
-      {
-        encoding: FileSystem.EncodingType.Base64,
-      }
+    const blob = await (
+      await fetch(imageUri)
+    ).blob();
+
+    console.log("✅ BLOB CREATED");
+
+    const storageRef = ref(
+      storage,
+      `profile-photos/${currentUser.uid}.jpg`
     );
 
-    console.log("BASE64 LENGTH:", base64?.length);
+    console.log("✅ STORAGE REF CREATED");
 
-   console.log("STEP 1 - Base64 created");
+    await uploadBytes(
+      storageRef,
+      blob
+    );
 
-const storageRef = ref(
-  storage,
-  `profile-photos/${currentUser.uid}`
-);
+    console.log("✅ UPLOAD COMPLETE");
 
-console.log("STEP 2 - Storage ref created");
+    const downloadURL =
+      await getDownloadURL(storageRef);
 
-await uploadString(
-  storageRef,
-  base64,
-  "base64",
-  {
-    contentType: "image/jpeg",
-  }
-);
-
-console.log("STEP 3 - Upload complete");
-
-const downloadURL = await getDownloadURL(storageRef);
-
-console.log("STEP 4 - URL obtained", downloadURL);
+    console.log(
+      "✅ DOWNLOAD URL:",
+      downloadURL
+    );
 
     await updateDoc(
-      doc(db, "users", currentUser.uid),
-      { photo: downloadURL }
+      doc(
+        db,
+        "users",
+        currentUser.uid
+      ),
+      {
+        photo: downloadURL,
+      }
     );
 
     const updatedUser = {
@@ -472,11 +463,15 @@ console.log("STEP 4 - URL obtained", downloadURL);
 
     setProfilePhoto(downloadURL);
 
+    Alert.alert(
+      "Success",
+      "Profile photo updated"
+    );
+
   } catch (e) {
-    console.log("PROFILE PHOTO ERROR RAW:", e);
     console.log(
-      "PROFILE PHOTO ERROR JSON:",
-      JSON.stringify(e, null, 2)
+      "❌ PROFILE PHOTO ERROR:",
+      e
     );
 
     Alert.alert(
