@@ -173,6 +173,42 @@ useEffect(() => {
 
     loadEntities();
   }, []);
+
+useEffect(() => {
+  const unsubscribe = navigation.addListener(
+    "focus",
+    async () => {
+      try {
+        const storedActive =
+          await AsyncStorage.getItem(
+            "activeEntity"
+          );
+
+        if (storedActive) {
+          const parsed =
+            JSON.parse(storedActive);
+
+          console.log(
+            "✅ REFRESHED ACTIVE ENTITY:",
+            parsed
+          );
+
+          setActiveEntity(parsed);
+        }
+
+      } catch (e) {
+        console.log(
+          "❌ Refresh entity error:",
+          e
+        );
+      }
+    }
+  );
+
+  return unsubscribe;
+}, [navigation]);
+
+
 useEffect(() => {
   const loadRoles = async () => {
     try {
@@ -528,6 +564,27 @@ const uploadChurchLogo = async () => {
       "activeEntity",
       JSON.stringify(updated)
     );
+    const entitiesRaw =
+  await AsyncStorage.getItem("userEntities");
+
+if (entitiesRaw) {
+  const entities = JSON.parse(entitiesRaw);
+
+  const updatedEntities = entities.map(e =>
+    e.entityId === entityId
+      ? {
+          ...e,
+          logo: downloadURL,
+        }
+      : e
+  );
+
+  await AsyncStorage.setItem(
+    "userEntities",
+    JSON.stringify(updatedEntities)
+  );
+}
+
 
     Alert.alert(
       "Success",
@@ -691,50 +748,44 @@ return (
         },
       ]}
     />
-    <ChurchLogo
-  entity={activeEntity}
-  onPress={uploadChurchLogo}
-/>
+
 
     {/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
     <View style={styles.entityBar}>
   <TouchableOpacity
     onPress={() => setChurchModalVisible(true)}
     style={styles.entityBtn}
-  >
-    <Ionicons name="business-outline" size={16} color="#4B3F72" />
-
-    {/* ✅ NAME + STATUS */}
-
-{activeEntity?.logo ? (
+  >{activeEntity?.logo?.trim() ? (
   <Image
     source={{ uri: activeEntity.logo }}
     style={{
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       marginRight: 10,
     }}
+    resizeMode="cover"
   />
 ) : (
   <View
     style={{
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      marginRight: 10,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: "#4B3F72",
       justifyContent: "center",
       alignItems: "center",
+      marginRight: 10,
     }}
   >
     <Ionicons
       name="business-outline"
-      size={16}
+      size={20}
       color="#fff"
     />
   </View>
 )}
+
 
     <View style={styles.entityTextRow}>
 
