@@ -50,8 +50,31 @@ exports.rejectOrganization =
       );
     }
 
-    return {
-      success: true,
-      organizationId,
-    };
+    const orgRef = db
+  .collection("organizations")
+  .doc(organizationId);
+
+const orgSnap = await orgRef.get();
+
+if (!orgSnap.exists) {
+  throw new HttpsError(
+    "not-found",
+    "Organization not found"
+  );
+}
+
+const org = {
+  id: orgSnap.id,
+  ...orgSnap.data(),
+};
+
+return {
+  success: true,
+
+  organizationId,
+
+  organizationName: org.name,
+
+  currentStatus: org.status,
+};
   });
