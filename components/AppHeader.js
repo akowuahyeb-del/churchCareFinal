@@ -9,6 +9,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "react-native";
+import Logo from "../assets/churchcare-logo.svg";
+
 
 export default function AppHeader({
   title,
@@ -48,31 +50,32 @@ export default function AppHeader({
        <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
 
   {/* ✅ LOGO */}
-  {entity?.logo ? (
-    <Image source={{ uri: entity.logo }} style={styles.logo} />
-  ) : (
-    <View style={styles.logoPlaceholder}>
-      <Ionicons name="business-outline" size={13} color="#f6f5fa" />
-    </View>
-  )}
+ 
 
-  {/* ✅ TEXT */}
+
   <View
   style={{
-    marginLeft: 20,
+    marginLeft: -30,
     flex: 1,
   }}
 >
+  <Logo
+    width={220}
+    height={60}
+  />
+
+  {subtitle ? (
     <Text
-  style={styles.title}
-  numberOfLines={1}
->
-  {title}
-</Text>
-    {subtitle ? (
-      <Text style={styles.subtitle}>{subtitle}</Text>
-    ) : null}
-  </View>
+      style={[
+        styles.subtitle,
+        { marginLeft: 10 }
+      ]}
+    >
+      {subtitle}
+    </Text>
+  ) : null}
+</View>
+
 
 </View>
 

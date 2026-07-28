@@ -705,6 +705,37 @@ return (
     <Ionicons name="business-outline" size={16} color="#4B3F72" />
 
     {/* ✅ NAME + STATUS */}
+
+{activeEntity?.logo ? (
+  <Image
+    source={{ uri: activeEntity.logo }}
+    style={{
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 10,
+    }}
+  />
+) : (
+  <View
+    style={{
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 10,
+      backgroundColor: "#4B3F72",
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <Ionicons
+      name="business-outline"
+      size={16}
+      color="#fff"
+    />
+  </View>
+)}
+
     <View style={styles.entityTextRow}>
 
   <Text style={styles.entityText}>

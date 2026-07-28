@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="220" viewBox="0 0 700 220">
+  <title>ChurchCare logo</title>
+  <desc>Abstract four-loop interwoven community symbol with ChurchCare wordmark</desc>
+
+  <g transform="translate(110,110)">
+    <circle cx="0" cy="-42" r="40" fill="none" stroke="#4B3F72" stroke-width="19"/>
+    <circle cx="42" cy="0" r="40" fill="none" stroke="#FFFFFF" stroke-width="19"/>
+    <circle cx="0" cy="42" r="40" fill="none" stroke="#4B3F72" stroke-width="19"/>
+    <circle cx="-42" cy="0" r="40" fill="none" stroke="#FFFFFF" stroke-width="19"/>
+
+    <circle cx="0" cy="-42" r="40" fill="none" stroke="#4B3F72" stroke-width="19"
+      stroke-dasharray="188.5 251.3" stroke-dashoffset="-40" stroke-linecap="round"/>
+    <circle cx="42" cy="0" r="40" fill="none" stroke="#FFFFFF" stroke-width="19"
+      stroke-dasharray="188.5 251.3" stroke-dashoffset="22" stroke-linecap="round"/>
+    <circle cx="0" cy="42" r="40" fill="none" stroke="#4B3F72" stroke-width="19"
+      stroke-dasharray="188.5 251.3" stroke-dashoffset="84" stroke-linecap="round"/>
+    <circle cx="-42" cy="0" r="40" fill="none" stroke="#FFFFFF" stroke-width="19"
+      stroke-dasharray="188.5 251.3" stroke-dashoffset="146" stroke-linecap="round"/>
+
+    <circle cx="0" cy="0" r="9" fill="#4B3F72"/>
+  </g>
+
+  <text x="230" y="102" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="700" fill="#FFFFFF" letter-spacing="0.5">ChurchCare<tspan fill="#4B3F72">Care</tspan></text>
+ 
+</svg>
