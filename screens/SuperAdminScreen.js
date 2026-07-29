@@ -24,7 +24,10 @@ import {
 import { getTemplate } from "../constants/organizationTemplates";
 import { PLANS, getPlan, PLAN_ORDER } from "../constants/subscriptionPlans";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import {
+  getFunctions,
+  httpsCallable,
+} from "firebase/functions";
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────
@@ -71,6 +74,13 @@ export default function SuperAdminScreen({ navigation }) {
   const [filteredOrgs, setFilteredOrgs] = useState([]);
   const [orgFilter, setOrgFilter] = useState("all");
   const [orgSearch, setOrgSearch] = useState("");
+  const functions = getFunctions();
+
+const approveOrganization =
+  httpsCallable(
+    functions,
+    "approveOrganization"
+  );
 
   // ── LIVE ACTIVITY ──
   const [liveActivity, setLiveActivity] = useState([]);
@@ -344,95 +354,44 @@ const loadGovernanceNodes = async () => {
   // APPROVE CHURCH — same logic as ApprovalScreen, centralized here
   // ─────────────────────────────────────────────────────────────────
   const approveChurch = async (org) => {
-    setProcessingOrgId(org.id);
-    try {
-      const template = getTemplate(org.templateId || "presbyterian");
+  setProcessingOrgId(org.id);
 
-      await updateDoc(doc(db, "organizations", org.id), {
-        status: "active",
-        approvedAt: new Date().toISOString(),
+  try {
+    const result =
+      await approveOrganization({
+        organizationId: org.id,
       });
 
-      const entitiesSnap = await getDocs(collection(db, "organizations", org.id, "entities"));
-      if (!entitiesSnap.empty) {
-        const entityDoc = entitiesSnap.docs[0];
-        const entityId = entityDoc.id;
+    console.log(
+      "✅ approval result",
+      result.data
+    );
 
-        await updateDoc(doc(db, "organizations", org.id, "entities", entityId), {
-          status: "active",
-          approvedAt: new Date().toISOString(),
-        });
+    setApprovalModal(false);
 
-        // Seed hierarchy nodes
-        const nodesRef = collection(db, "organizations", org.id, "nodes");
-        const existingNodes = await getDocs(nodesRef);
+    await loadOrganizations();
 
-        if (existingNodes.empty) {
-          const batch1 = writeBatch(db);
-          const nodeRefs = [];
+    Alert.alert(
+      "✅ Approved",
+      `${org.name} is now active.`
+    );
 
-          template.levels.forEach((level, i) => {
-            const isBottom = i === template.levels.length - 1;
-            const nRef = doc(nodesRef);
-            nodeRefs.push({ ref: nRef, rank: level.rank });
-            batch1.set(nRef, {
-              name: isBottom ? org.name : `${org.denomination || org.name} ${level.label}`,
-              levelId: level.id,
-              parentNodeId: null,
-              entityId: isBottom ? entityId : null,
-              organizationId: org.id,
-              status: "active",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          });
-          await batch1.commit();
+  } catch (e) {
 
-          const batch2 = writeBatch(db);
-          for (let i = 1; i < nodeRefs.length; i++) {
-            batch2.update(nodeRefs[i].ref, { parentNodeId: nodeRefs[i - 1].ref.id });
-          }
-          await batch2.commit();
-        }
+    console.log(
+      "❌ approveChurch:",
+      e
+    );
 
-        await setDoc(doc(db, "organizations", org.id, "settings", "structure"), {
-          templateId: org.templateId || "presbyterian",
-          status: "active",
-          organizationId: org.id,
-          entityId,
-          activatedAt: new Date().toISOString(),
-        }, { merge: true });
+    Alert.alert(
+      "Approval failed",
+      e.message
+    );
 
-        // Seed free trial subscription
-        const trialEnds = new Date();
-        trialEnds.setDate(trialEnds.getDate() + 14);
-        await setDoc(doc(db, "organizations", org.id, "billing", "subscription"), {
-          planId: "pro",
-          status: "trialing",
-          trialEndsAt: trialEnds.toISOString(),
-          currentPeriodEnd: trialEnds.toISOString(),
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      // Log platform activity
-      await logActivity({
-        type: "org_approved",
-        orgId: org.id,
-        orgName: org.name,
-        message: `${org.name} approved and activated`,
-      });
-
-      setApprovalModal(false);
-      await loadOrganizations();
-      Alert.alert("✅ Approved", `${org.name} is now active with a 14-day Pro trial.`);
-    } catch (e) {
-      console.log("❌ approveChurch:", e);
-      Alert.alert("Error", "Approval failed: " + e.message);
-    } finally {
-      setProcessingOrgId(null);
-    }
-  };
+  } finally {
+    setProcessingOrgId(null);
+  }
+};
 
   const rejectChurch = async (org) => {
     if (!rejectReason.trim()) {

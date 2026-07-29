@@ -12,6 +12,10 @@ import {
   query, where, writeBatch, getDoc
 } from "firebase/firestore";
 import { getTemplate, getLevelById } from "../constants/organizationTemplates";
+import {
+  getFunctions,
+  httpsCallable,
+} from "firebase/functions";
 
 export default function ChurchApprovalScreen() {
   const navigation = useNavigation();
@@ -176,265 +180,51 @@ const validateRegistration = async (org) => {
   // When a church is approved, the templateId stored at creation time
   // is read and used to auto-seed the full hierarchy — no manual
   // "Seed Structure" step needed by the admin.
- const approveChurch = async (org) => {
+const functions = getFunctions();
+const approveOrganization =
+  httpsCallable(
+    functions,
+    "approveOrganization"
+  );
+
+const approveChurch = async (org) => {
   setProcessing(org.id);
 
   try {
-    await validateRegistration(org);
-      // 1. Activate the organization
-      await updateDoc(doc(db, "organizations", org.id), {
-        status: "active",
-        approvedAt: new Date().toISOString(),
+
+    const result =
+      await approveOrganization({
+        organizationId: org.id,
       });
 
-      // 2. Find and activate the entity
-      const entitiesSnap = await getDocs(
-        collection(db, "organizations", org.id, "entities")
-      );
-      const entityDoc = entitiesSnap.docs[0];
-      if (!entityDoc) throw new Error("No entity found");
-
-      const entityId = entityDoc.id;
-      await updateDoc(
-        doc(db, "organizations", org.id, "entities", entityId),
-        { status: "active", approvedAt: new Date().toISOString() }
-      );
-
-      // 3. ✅ AUTO-SEED HIERARCHY — reads templateId from the org doc
-      // (set at CreateChurch Step 2). This replaces the manual
-      // "Seed Sample Structure" button in OrganisationSetupScreen.
-      const templateId = org.templateId || "presbyterian";
-      const template = getTemplate(templateId);
-
-      // Activate the structure settings doc
-     await setDoc(
-  doc(db, "organizations", org.id, "settings", "structure"),
-  {
-    templateId,
-    status: "active",
-    organizationId: org.id,
-    entityId,
-    activatedAt: new Date().toISOString(),
-  },
-  { merge: true }
-);
-
-const level = template.levels.find(
-  l => l.id === org.levelId
-);
-
-if (!level) {
-  throw new Error(
-    `Unknown registration level: ${org.levelId}`
-  );
-}
-
-const nodeRef = doc(
-  collection(
-    db,
-    "governanceNodes"
-  )
-);
-
-await setDoc(nodeRef, {
-  name: org.name,
-
-  levelId: level.id,
-
-  organizationId: org.id,
-
-  entityId:
-    level.id === "congregation"
-      ? entityId
-      : null,
-
-  parentNodeId: null,
-
-  pendingLink: level.id !== "national",
-
-  isLocked: level.id === "national",
-
-  templateId: org.templateId,
-
-  status: "active",
-
-  createdAt: new Date().toISOString(),
-
-  updatedAt: new Date().toISOString(),
-});
-
-// Save governance node reference on the organisation
-await updateDoc(
-  doc(db, "organizations", org.id),
-  {
-    governanceNodeId: nodeRef.id,
-  }
-);
-
-
-if (level.id === "presbytery") {
-  const nationalSnap = await getDocs(
-    query(
-      collection(db, "governanceNodes"),
-      where("templateId", "==", org.templateId),
-      where(
-  "levelId",
-  "==",
-  "national_assembly"
-),
-      where("status", "==", "active")
-    )
-  );
-
-  if (!nationalSnap.empty) {
-    const nationalNode = nationalSnap.docs[0];
-
-    await updateDoc(nodeRef, {
-      parentNodeId: nationalNode.id,
-      pendingLink: false,
-      linkedAt: new Date().toISOString(),
-    });
-  }
-}
-
-
-if (level.id === "district") {
-  const presbyterySnap = await getDocs(
-  query(
-    collection(db, "governanceNodes"),
-    where("templateId", "==", org.templateId),
-    where("levelId", "==", "presbytery"),
-    where("status", "==", "active")
-  )
-);
-
-  const suggestedParents = presbyterySnap.docs.map(doc => ({
-    nodeId: doc.id,
-    name: doc.data().name,
-  }));
-
-  await updateDoc(nodeRef, {
-    suggestedParents,
-  });
-}
-
-
-if (level.id === "congregation") {
- const districtSnap = await getDocs(
-  query(
-    collection(db, "governanceNodes"),
-    where("templateId", "==", org.templateId),
-    where("levelId", "==", "district"),
-    where("status", "==", "active")
-  )
-);
-
-  const suggestedParents = districtSnap.docs.map(d => ({
-    nodeId: d.id,
-    name: d.data().name,
-    levelId: d.data().levelId,
-  }));
-
-  await updateDoc(nodeRef, {
-    suggestedParents,
-  });
-}
-
-// ✅ Notify applicant
-if (org.submittedByUid) {
-  await setDoc(
-    doc(
-      collection(
-        db,
-        "users",
-        org.submittedByUid,
-        "notifications"
-      )
-    ),
-    {
-      type: "church_approved",
-
-      title: "Registration Approved",
-
-      message: `${org.name} has been approved and activated.`,
-
-      organizationId: org.id,
-
-      read: false,
-
-      createdAt: new Date().toISOString(),
-    }
-  );
-}
-
-// ✅ Notify applicant of approval
-if (org.submittedByUid) {
-  await setDoc(
-    doc(
-      collection(
-        db,
-        "users",
-        org.submittedByUid,
-        "notifications"
-      )
-    ),
-    {
-      type: "church_approved",
-      title: "Church Registration Approved",
-      message: `${org.name} has been approved and activated.`,
-
-      organizationId: org.id,
-      governanceNodeId: nodeRef.id,
-
-      read: false,
-
-      createdAt: new Date().toISOString(),
-    }
-  );
-}
-
-      await loadPending();
-      Alert.alert(
-  "✅ Approved",
-  `${org.name} is now active. A ${level.label} governance node has been created successfully.`
-);
-
-    } catch (e) {
-      console.log("❌ approveChurch error:", e);
-      Alert.alert(
-  "Validation Failed",
-  e.message,
-  [{ text: "OK" }]
-);
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  const rejectChurch = (org) => {
-    Alert.alert(
-      `Reject "${org.name}"?`,
-      "This will mark the registration as rejected. The submitter will need to reapply.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reject",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await updateDoc(doc(db, "organizations", org.id), {
-                status: "rejected",
-                rejectedAt: new Date().toISOString(),
-              });
-              await loadPending();
-            } catch (e) {
-              Alert.alert("Error", "Could not reject.");
-            }
-          }
-        }
-      ]
+    console.log(
+      "✅ approveOrganization:",
+      result.data
     );
-  };
+
+    await loadPending();
+
+    Alert.alert(
+      "✅ Approved",
+      `${org.name} is now active.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ approveChurch error:",
+      e
+    );
+
+    Alert.alert(
+      "Approval Failed",
+      e.message
+    );
+
+  } finally {
+    setProcessing(null);
+  }
+};
 
   return (
     <View style={styles.container}>
