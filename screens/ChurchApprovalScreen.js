@@ -57,7 +57,7 @@ const validateRegistration = async (org) => {
   }
 
   switch (levelId) {
-    case "national": {
+    case "national_assembly": {
   const existingNational = await getDocs(
     query(
       collection(db, "governanceNodes"),
@@ -277,7 +277,11 @@ if (level.id === "presbytery") {
     query(
       collection(db, "governanceNodes"),
       where("templateId", "==", org.templateId),
-      where("levelId", "==", "national"),
+      where(
+  "levelId",
+  "==",
+  "national_assembly"
+),
       where("status", "==", "active")
     )
   );
