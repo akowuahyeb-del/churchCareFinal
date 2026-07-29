@@ -16,6 +16,148 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+
+async function validateRegistration(org) {
+
+  const {
+    templateId,
+    levelId,
+    name,
+    location,
+    denomination,
+  } = org;
+
+  if (!templateId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Missing governance template"
+    );
+  }
+
+  if (!levelId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Missing registration level"
+    );
+  }
+
+  if (!name?.trim()) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Organisation name is required"
+    );
+  }
+
+  const governanceRef =
+    db.collection("governanceNodes");
+
+  switch (levelId) {
+
+    case "national_assembly": {
+
+      const existing = await governanceRef
+        .where("status", "==", "active")
+        .where("templateId", "==", templateId)
+        .where("levelId", "==", "national_assembly")
+        .get();
+
+      if (!existing.empty) {
+        throw new HttpsError(
+          "already-exists",
+          `A national body for ${denomination} already exists`
+        );
+      }
+
+      break;
+    }
+
+    case "presbytery": {
+
+      const existing = await governanceRef
+        .where("status", "==", "active")
+        .where("templateId", "==", templateId)
+        .where("levelId", "==", "presbytery")
+        .get();
+
+      const duplicate =
+        existing.docs.find(d =>
+          d.data().name?.trim().toLowerCase() ===
+          name?.trim().toLowerCase()
+        );
+
+      if (duplicate) {
+        throw new HttpsError(
+          "already-exists",
+          `Presbytery "${name}" already exists`
+        );
+      }
+
+      break;
+    }
+
+    case "district": {
+
+      const existing = await governanceRef
+        .where("status", "==", "active")
+        .where("templateId", "==", templateId)
+        .where("levelId", "==", "district")
+        .get();
+
+      const duplicate =
+        existing.docs.find(d =>
+          d.data().name?.trim().toLowerCase() ===
+          name?.trim().toLowerCase()
+        );
+
+      if (duplicate) {
+        throw new HttpsError(
+          "already-exists",
+          `District "${name}" already exists`
+        );
+      }
+
+      break;
+    }
+
+    case "congregation":
+    case "society":
+    case "local_assembly":
+    case "local_church": {
+
+      const existing = await governanceRef
+        .where("status", "==", "active")
+        .where("templateId", "==", templateId)
+        .where("levelId", "==", levelId)
+        .get();
+
+      const duplicate =
+        existing.docs.find(d => {
+
+          const data = d.data();
+
+          return (
+            data.name?.trim().toLowerCase() ===
+              name?.trim().toLowerCase() &&
+            data.location?.trim().toLowerCase() ===
+              location?.trim().toLowerCase()
+          );
+        });
+
+      if (duplicate) {
+        throw new HttpsError(
+          "already-exists",
+          `${name} already exists in ${location}`
+        );
+      }
+
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
 exports.approveOrganization =
   onCall(async (request) => {
 
@@ -46,21 +188,28 @@ exports.approveOrganization =
       );
     }
 
-    const org = {
-      id: orgSnap.id,
-      ...orgSnap.data(),
-    };
+   const org = {
+  id: orgSnap.id,
+  ...orgSnap.data(),
+};
 
-    // --------------------------------------------------
-    // Validate Status
-    // --------------------------------------------------
+// --------------------------------------------------
+// Validate Status
+// --------------------------------------------------
 
-    if (org.status !== "pending") {
-      throw new HttpsError(
-        "failed-precondition",
-        `Organization is not pending (current status: ${org.status})`
-      );
-    }
+if (org.status !== "pending") {
+  throw new HttpsError(
+    "failed-precondition",
+    `Organization is not pending (current status: ${org.status})`
+  );
+}
+
+// --------------------------------------------------
+// Validate Registration
+// --------------------------------------------------
+
+await validateRegistration(org);
+
 
     // --------------------------------------------------
     // Load Primary Entity
