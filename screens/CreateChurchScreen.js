@@ -17,14 +17,21 @@ export default function CreateChurchScreen() {
   const navigation = useNavigation();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [churchName, setChurchName] = useState("");
+const [denomination, setDenomination] = useState("");
+const [location, setLocation] = useState("");
 
-  // Step 1 — Identity
-  const [churchName,    setChurchName]    = useState("");
-  const [denomination,  setDenomination]  = useState("");
-  const [location,      setLocation]      = useState("");
-  const [contactName,   setContactName]   = useState("");
-  const [contactPhone,  setContactPhone]  = useState("");
-  const [contactEmail,  setContactEmail]  = useState("");
+ const [contactName, setContactName] = useState("");
+const [contactPhone, setContactPhone] = useState("");
+const [contactEmail, setContactEmail] = useState("");
+
+// Church Administrator
+const [adminName, setAdminName] = useState("");
+const [adminPhone, setAdminPhone] = useState("");
+const [adminEmail, setAdminEmail] = useState("");
+
+const [errors, setErrors] = useState({});
+
 
   // Step 2 — Governance (the merge point)
   const [templateId, setTemplateId] = useState("presbyterian");
@@ -37,11 +44,19 @@ export default function CreateChurchScreen() {
 
   const canNext = () => {
   if (step === 0)
-    return (
-      churchName.trim() &&
-      denomination.trim() &&
-      location.trim()
-    );
+  return (
+    churchName.trim() &&
+    denomination.trim() &&
+    location.trim() &&
+
+    adminName.trim() &&
+    isValidPhone(adminPhone) &&
+    isValidEmail(adminEmail) &&
+
+    contactName.trim() &&
+    isValidPhone(contactPhone) &&
+    isValidEmail(contactEmail)
+  );
 
   if (step === 1)
     return !!templateId && !!levelId;
@@ -49,9 +64,64 @@ export default function CreateChurchScreen() {
   return true;
 };
 
+const isValidEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const isValidPhone = (phone) => {
+  const cleaned = phone.trim();
+  return /^\+[1-9]\d{7,14}$/.test(cleaned);
+};
+
+const normalizePhone = (phone) => {
+  return phone.trim();
+};
+
+const validateForm = () => {
+  const newErrors = {};
+
+  if (!adminName.trim()) {
+    newErrors.adminName =
+      "Administrator name is required";
+  }
+
+  if (!isValidPhone(adminPhone)) {
+    newErrors.adminPhone =
+      "Use international format (e.g. +233241234567)";
+  }
+
+  if (!isValidEmail(adminEmail)) {
+    newErrors.adminEmail =
+      "Enter a valid email address";
+  }
+
+  if (!contactName.trim()) {
+    newErrors.contactName =
+      "Contact person name is required";
+  }
+
+  if (!isValidPhone(contactPhone)) {
+    newErrors.contactPhone =
+      "Use international format (e.g. +233241234567)";
+  }
+
+  if (!isValidEmail(contactEmail)) {
+    newErrors.contactEmail =
+      "Enter a valid email address";
+  }
+
+  setErrors(newErrors);
+
+  return Object.keys(newErrors).length === 0;
+};
+
 
 
 const handleSubmit = async () => {
+
+  if (!validateForm()) {
+  return;
+}
   if (!churchName.trim() || !templateId) return;
 
   const user = auth.currentUser;
@@ -72,8 +142,11 @@ const handleSubmit = async () => {
       denomination: denomination.trim(),
       location: location.trim(),
       contactName: contactName.trim(),
-      contactPhone: contactPhone.trim(),
+      contactPhone: normalizePhone(contactPhone),
       contactEmail: contactEmail.trim(),
+      adminName: adminName.trim(),
+      adminPhone: normalizePhone(adminPhone),
+      adminEmail: adminEmail.trim(),
 
       // ✅ Applicant information
       submittedByUid: user?.uid || null,
@@ -217,19 +290,223 @@ await setDoc(
             <TextInput style={styles.input} value={location} onChangeText={setLocation}
               placeholder="e.g. Tema, Greater Accra" />
 
-            <Text style={styles.sectionDivider}>Contact Person</Text>
+           <Text style={styles.sectionDivider}>
+  Church Administrator
+</Text>
 
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput style={styles.input} value={contactName} onChangeText={setContactName}
-              placeholder="Administrator's name" />
+<Text style={styles.label}>
+  Full Name *
+</Text>
 
-            <Text style={styles.label}>Phone</Text>
-            <TextInput style={styles.input} value={contactPhone} onChangeText={setContactPhone}
-              placeholder="e.g. 0241234567" keyboardType="phone-pad" />
 
-            <Text style={styles.label}>Email</Text>
-            <TextInput style={styles.input} value={contactEmail} onChangeText={setContactEmail}
-              placeholder="admin@church.org" keyboardType="email-address" autoCapitalize="none" />
+<TextInput
+  style={[
+    styles.input,
+    errors.adminName && styles.inputError
+  ]}
+  value={adminName}
+  onChangeText={(text) => {
+    setAdminName(text);
+
+    if (errors.adminName) {
+      setErrors(prev => ({
+        ...prev,
+        adminName: null,
+      }));
+    }
+  }}
+  placeholder="Administrator full name"
+  autoCapitalize="words"
+/>
+
+{errors.adminName && (
+  <Text style={styles.errorText}>
+    {errors.adminName}
+  </Text>
+)}
+
+<Text style={styles.label}>
+  Phone *
+</Text>
+
+<TextInput
+  style={[
+    styles.input,
+    errors.adminPhone && styles.inputError
+  ]}
+  value={adminPhone}
+  onChangeText={(text) => {
+    setAdminPhone(text);
+
+    if (errors.adminPhone) {
+      setErrors(prev => ({
+        ...prev,
+        adminPhone: null,
+      }));
+    }
+  }}
+  placeholder="+233241234567"
+  keyboardType="phone-pad"
+  autoComplete="tel"
+/>
+
+<Text
+  style={{
+    fontSize: 11,
+    color: "#888",
+    marginTop: -2,
+    marginBottom: 4,
+  }}
+>
+  Include country code. Example: +233241234567
+</Text>
+
+{errors.adminPhone && (
+  <Text style={styles.errorText}>
+    {errors.adminPhone}
+  </Text>
+)}
+
+<Text style={styles.label}>
+  Email *
+</Text>
+
+
+<TextInput
+  style={[
+    styles.input,
+    errors.adminEmail && styles.inputError
+  ]}
+  value={adminEmail}
+  onChangeText={(text) => {
+    setAdminEmail(text);
+
+    if (errors.adminEmail) {
+      setErrors(prev => ({
+        ...prev,
+        adminEmail: null,
+      }));
+    }
+  }}
+  placeholder="admin@church.org"
+  keyboardType="email-address"
+  autoCapitalize="none"
+  autoComplete="email"
+/>
+
+{errors.adminEmail && (
+  <Text style={styles.errorText}>
+    {errors.adminEmail}
+  </Text>
+)}
+
+<Text style={styles.sectionDivider}>
+  Primary Contact Person
+</Text>
+
+            <Text style={styles.label}>
+  Full Name *
+</Text>
+
+<TextInput
+  style={[
+    styles.input,
+    errors.contactName && styles.inputError
+  ]}
+  value={contactName}
+  onChangeText={(text) => {
+    setContactName(text);
+
+    if (errors.contactName) {
+      setErrors(prev => ({
+        ...prev,
+        contactName: null,
+      }));
+    }
+  }}
+  placeholder="Primary contact full name"
+  autoCapitalize="words"
+/>
+
+{errors.contactName && (
+  <Text style={styles.errorText}>
+    {errors.contactName}
+  </Text>
+)}
+<Text style={styles.label}>
+  Phone *
+</Text>
+
+<TextInput
+  style={[
+    styles.input,
+    errors.contactPhone && styles.inputError
+  ]}
+  value={contactPhone}
+  onChangeText={(text) => {
+    setContactPhone(text);
+
+    if (errors.contactPhone) {
+      setErrors(prev => ({
+        ...prev,
+        contactPhone: null,
+      }));
+    }
+  }}
+  placeholder="+233241234567"
+  keyboardType="phone-pad"
+  autoComplete="tel"
+/>
+
+<Text
+  style={{
+    fontSize: 11,
+    color: "#888",
+    marginTop: -2,
+    marginBottom: 4,
+  }}
+>
+  Include country code. Example: +233241234567
+</Text>
+
+{errors.contactPhone && (
+  <Text style={styles.errorText}>
+    {errors.contactPhone}
+  </Text>
+)}
+
+<Text style={styles.label}>
+  Email *
+</Text>
+
+<TextInput
+  style={[
+    styles.input,
+    errors.contactEmail && styles.inputError
+  ]}
+  value={contactEmail}
+  onChangeText={(text) => {
+    setContactEmail(text);
+
+    if (errors.contactEmail) {
+      setErrors(prev => ({
+        ...prev,
+        contactEmail: null,
+      }));
+    }
+  }}
+  placeholder="contact@church.org"
+  keyboardType="email-address"
+  autoCapitalize="none"
+  autoComplete="email"
+/>
+
+{errors.contactEmail && (
+  <Text style={styles.errorText}>
+    {errors.contactEmail}
+  </Text>
+)}
+
           </View>
         )}
 
@@ -351,7 +628,21 @@ await setDoc(
               <SummaryRow label="Church Name" value={churchName} />
               <SummaryRow label="Denomination" value={denomination} />
               <SummaryRow label="Location" value={location} />
-              <SummaryRow label="Contact" value={contactName || "—"} />
+              
+
+
+
+<SummaryRow
+  label="Administrator"
+  value={adminName || "—"}
+/>
+
+<SummaryRow
+  label="Primary Contact"
+  value={contactName || "—"}
+/>
+
+    
               <SummaryRow
                 label="Governance"
                 value={getTemplate(templateId).name}
@@ -472,4 +763,14 @@ const styles = StyleSheet.create({
   bottomBar: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#fff", padding: 16, borderTopWidth: 1, borderTopColor: "#eee" },
   nextBtn: { backgroundColor: "#4B3F72", borderRadius: 12, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   nextBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  inputError: {
+  borderColor: "#e74c3c",
+  borderWidth: 1.5,
+},
+
+errorText: {
+  color: "#e74c3c",
+  fontSize: 11,
+  marginBottom: 8,
+},
 });

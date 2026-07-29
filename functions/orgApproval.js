@@ -286,32 +286,57 @@ await validateRegistration(org);
       .collection("governanceNodes")
       .doc();
 
-    await governanceNodeRef.set({
-      name: org.name,
+   await governanceNodeRef.set({
+  name: org.name,
 
-      levelId: org.levelId,
+  location: org.location || null,
 
-      organizationId,
+  levelId: org.levelId,
 
-      entityId,
+  organizationId,
 
-      parentNodeId: null,
+  entityId,
 
-      templateId,
+  parentNodeId: null,
 
-      status: "active",
+  templateId,
 
-      pendingLink: true,
+  status: "active",
 
-      createdAt: now,
-      updatedAt: now,
-    });
+  pendingLink: true,
+
+  createdAt: now,
+  updatedAt: now,
+});
 
     await orgRef.update({
       governanceNodeId:
         governanceNodeRef.id,
     });
 
+    // --------------------------------------------------
+// Parent Linking
+// --------------------------------------------------
+
+if (org.levelId === "presbytery") {
+
+  const parentSnap = await db
+    .collection("governanceNodes")
+    .where("templateId", "==", templateId)
+    .where("levelId", "==", "national_assembly")
+    .where("status", "==", "active")
+    .get();
+
+  if (!parentSnap.empty) {
+
+    await governanceNodeRef.update({
+      parentNodeId:
+        parentSnap.docs[0].id,
+
+      pendingLink: false,
+    });
+  }
+}
 
     // --------------------------------------------------
     // TEMPORARY RETURN
