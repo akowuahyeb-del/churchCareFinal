@@ -1,5 +1,3 @@
-// functions/orgApproval.js
-
 const { onCall, HttpsError } =
   require("firebase-functions/v2/https");
 
@@ -31,9 +29,229 @@ exports.approveOrganization =
       );
     }
 
+    // --------------------------------------------------
+    // Load Organization
+    // --------------------------------------------------
+
+    const orgRef = db
+      .collection("organizations")
+      .doc(organizationId);
+
+    const orgSnap = await orgRef.get();
+
+    if (!orgSnap.exists) {
+      throw new HttpsError(
+        "not-found",
+        "Organization not found"
+      );
+    }
+
+    const org = {
+      id: orgSnap.id,
+      ...orgSnap.data(),
+    };
+
+    // --------------------------------------------------
+    // Validate Status
+    // --------------------------------------------------
+
+    if (org.status !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Organization is not pending (current status: ${org.status})`
+      );
+    }
+
+    // --------------------------------------------------
+    // Load Primary Entity
+    // --------------------------------------------------
+
+    const entitiesSnap = await db
+      .collection("organizations")
+      .doc(organizationId)
+      .collection("entities")
+      .get();
+
+    const entityDoc =
+      entitiesSnap.docs[0];
+
+    if (!entityDoc) {
+      throw new HttpsError(
+        "failed-precondition",
+        "No entity found for this organization"
+      );
+    }
+
+    const entityId =
+      entityDoc.id;
+
+    // --------------------------------------------------
+    // Activate Organization
+    // --------------------------------------------------
+
+    const now =
+      new Date().toISOString();
+
+    await orgRef.update({
+      status: "active",
+      approvedAt: now,
+    });
+
+    // --------------------------------------------------
+    // Activate Entity
+    // --------------------------------------------------
+
+    await entityDoc.ref.update({
+      status: "active",
+      approvedAt: now,
+    });
+
+    // --------------------------------------------------
+    // Structure Settings
+    // --------------------------------------------------
+
+    const templateId =
+      org.templateId || "presbyterian";
+
+    await db
+      .collection("organizations")
+      .doc(organizationId)
+      .collection("settings")
+      .doc("structure")
+      .set(
+        {
+          templateId,
+          status: "active",
+          organizationId,
+          entityId,
+          activatedAt: now,
+        },
+        { merge: true }
+      );
+
+    // --------------------------------------------------
+    // Governance Node
+    // --------------------------------------------------
+
+    const governanceNodeRef = db
+      .collection("governanceNodes")
+      .doc();
+
+    await governanceNodeRef.set({
+      name: org.name,
+
+      levelId: org.levelId,
+
+      organizationId,
+
+      entityId,
+
+      parentNodeId: null,
+
+      templateId,
+
+      status: "active",
+
+      pendingLink: true,
+
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await orgRef.update({
+      governanceNodeId:
+        governanceNodeRef.id,
+    });
+
+// --------------------------------------------------
+// Seed Organization Hierarchy Nodes
+// (ported from SuperAdminScreen)
+// --------------------------------------------------
+
+const template = getTemplate(templateId);
+
+const nodesRef = db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("nodes");
+
+const existingNodes = await nodesRef.get();
+
+if (existingNodes.empty) {
+
+  const batch1 = db.batch();
+
+  const nodeRefs = [];
+
+  template.levels.forEach((level, index) => {
+
+    const isBottom =
+      index === template.levels.length - 1;
+
+    const nodeRef = nodesRef.doc();
+
+    nodeRefs.push({
+      ref: nodeRef,
+      rank: level.rank,
+    });
+
+    batch1.set(nodeRef, {
+      name: isBottom
+        ? org.name
+        : `${org.denomination || org.name} ${level.label}`,
+
+      levelId: level.id,
+
+      parentNodeId: null,
+
+      entityId:
+        isBottom
+          ? entityId
+          : null,
+
+      organizationId,
+
+      status: "active",
+
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  await batch1.commit();
+
+  const batch2 = db.batch();
+
+  for (let i = 1; i < nodeRefs.length; i++) {
+    batch2.update(
+      nodeRefs[i].ref,
+      {
+        parentNodeId:
+          nodeRefs[i - 1].ref.id,
+      }
+    );
+  }
+
+  await batch2.commit();
+}
+
+    // --------------------------------------------------
+    // TEMPORARY RETURN
+    // --------------------------------------------------
+
     return {
       success: true,
+
       organizationId,
+
+      entityId,
+
+      governanceNodeId:
+        governanceNodeRef.id,
+
+      templateId,
+
+      approvedAt: now,
     };
   });
 
@@ -50,31 +268,9 @@ exports.rejectOrganization =
       );
     }
 
-    const orgRef = db
-  .collection("organizations")
-  .doc(organizationId);
-
-const orgSnap = await orgRef.get();
-
-if (!orgSnap.exists) {
-  throw new HttpsError(
-    "not-found",
-    "Organization not found"
-  );
-}
-
-const org = {
-  id: orgSnap.id,
-  ...orgSnap.data(),
-};
-
-return {
-  success: true,
-
-  organizationId,
-
-  organizationName: org.name,
-
-  currentStatus: org.status,
-};
+    return {
+      success: true,
+      organizationId,
+    };
   });
+  
