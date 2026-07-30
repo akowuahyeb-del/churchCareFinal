@@ -120,12 +120,12 @@ async function validateRegistration(org) {
 
   switch (levelId) {
 
-    case "national_assembly": {
+    case "general_assembly": {
 
       const existing = await governanceRef
         .where("status", "==", "active")
         .where("templateId", "==", templateId)
-        .where("levelId", "==", "national_assembly")
+        .where("levelId", "==", "general_assembly")
         .get();
 
       if (!existing.empty) {
@@ -401,7 +401,7 @@ if (org.levelId === "presbytery") {
   const parentSnap = await db
     .collection("governanceNodes")
     .where("templateId", "==", templateId)
-    .where("levelId", "==", "national_assembly")
+    .where("levelId", "==", "general_assembly")
     .where("status", "==", "active")
     .get();
 
