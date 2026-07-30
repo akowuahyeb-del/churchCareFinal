@@ -7,10 +7,10 @@
 // one-field update, not a code change.
 
 export const HIERARCHY_LEVELS = {
-  NATIONAL_ASSEMBLY: "national_assembly",
-  PRESBYTERY:        "presbytery",
-  DISTRICT:          "district",
-  CONGREGATION:      "congregation",
+  GENERAL_ASSEMBLY: "general_assembly",
+  PRESBYTERY: "presbytery",
+  DISTRICT: "district",
+  CONGREGATION: "congregation",
 };
 
 export const ORGANIZATION_TEMPLATES = {
@@ -19,12 +19,12 @@ export const ORGANIZATION_TEMPLATES = {
     code: "PCG",
     requiresCustomCode: false,
     name: "Presbyterian Church of Ghana",
-    description: "Four-tier governance: National Assembly → Presbytery → District → Congregation",
+    description: "Four-tier governance: General Assembly → Presbytery → District → Congregation",
     levels: [
       {
-        id: HIERARCHY_LEVELS.NATIONAL_ASSEMBLY,
-        label: "National Assembly",
-        plural: "National Assemblies",
+       id: HIERARCHY_LEVELS.GENERAL_ASSEMBLY,
+       label: "General Assembly",
+       plural: "General Assemblies",
         icon: "globe-outline",
         color: "#4B3F72",
         rank: 1, // 1 = top, 4 = bottom
