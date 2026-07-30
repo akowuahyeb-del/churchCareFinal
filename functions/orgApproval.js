@@ -16,6 +16,78 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+const TEMPLATE_STRUCTURE = {
+  presbyterian: {
+    1: "general_assembly",
+    2: "presbytery",
+    3: "district",
+    4: "congregation",
+  },
+
+  methodist: {
+    1: "conference",
+    2: "synod",
+    3: "circuit",
+    4: "society",
+  },
+
+  assemblies_of_god: {
+    1: "national_executive",
+    2: "region",
+    3: "district",
+    4: "local_assembly",
+  },
+
+  cop: {
+    1: "national_headquarters",
+    2: "area",
+    3: "district",
+    4: "local_assembly",
+  },
+
+  cac: {
+    1: "headquarters",
+    2: "area",
+    3: "district",
+    4: "assembly",
+  },
+
+  sda: {
+    1: "union_conference",
+    2: "conference_mission",
+    3: "district",
+    4: "local_church",
+  },
+
+  independent: {
+    1: "head_office",
+    2: "region",
+    3: "branch",
+    4: "local_church",
+  },
+};
+
+function getHierarchyRank(
+  templateId,
+  levelId
+) {
+  const structure =
+    TEMPLATE_STRUCTURE[templateId];
+
+  if (!structure) {
+    return null;
+  }
+
+  for (const [rank, id] of Object.entries(structure)) {
+    if (id === levelId) {
+      return Number(rank);
+    }
+  }
+
+  return null;
+}
+
+
 const LEVEL_CODES = {
   general_assembly: "GA",
   presbytery: "PRE",
@@ -123,112 +195,100 @@ async function validateRegistration(org) {
 
   const governanceRef =
     db.collection("governanceNodes");
+    const rank =
+  getHierarchyRank(
+    templateId,
+    levelId
+  );
 
-  switch (levelId) {
 
-    case "general_assembly": {
+ // --------------------------------------------------
+// Rank 1 (Top Level)
+// One top-level node per denomination
+// --------------------------------------------------
 
-      const existing = await governanceRef
-        .where("status", "==", "active")
-        .where("templateId", "==", templateId)
-        .where("levelId", "==", "general_assembly")
-        .get();
+if (rank === 1) {
 
-      if (!existing.empty) {
-        throw new HttpsError(
-          "already-exists",
-          `A national body for ${denomination} already exists`
-        );
-      }
+  const existing = await governanceRef
+    .where("status", "==", "active")
+    .where("templateId", "==", templateId)
+    .where("levelId", "==", levelId)
+    .get();
 
-      break;
-    }
-
-    case "presbytery": {
-
-      const existing = await governanceRef
-        .where("status", "==", "active")
-        .where("templateId", "==", templateId)
-        .where("levelId", "==", "presbytery")
-        .get();
-
-      const duplicate =
-        existing.docs.find(d =>
-          d.data().name?.trim().toLowerCase() ===
-          name?.trim().toLowerCase()
-        );
-
-      if (duplicate) {
-        throw new HttpsError(
-          "already-exists",
-          `Presbytery "${name}" already exists`
-        );
-      }
-
-      break;
-    }
-
-    case "district": {
-
-      const existing = await governanceRef
-        .where("status", "==", "active")
-        .where("templateId", "==", templateId)
-        .where("levelId", "==", "district")
-        .get();
-
-      const duplicate =
-        existing.docs.find(d =>
-          d.data().name?.trim().toLowerCase() ===
-          name?.trim().toLowerCase()
-        );
-
-      if (duplicate) {
-        throw new HttpsError(
-          "already-exists",
-          `District "${name}" already exists`
-        );
-      }
-
-      break;
-    }
-
-    case "congregation":
-    case "society":
-    case "local_assembly":
-    case "local_church": {
-
-      const existing = await governanceRef
-        .where("status", "==", "active")
-        .where("templateId", "==", templateId)
-        .where("levelId", "==", levelId)
-        .get();
-
-      const duplicate =
-        existing.docs.find(d => {
-
-          const data = d.data();
-
-          return (
-            data.name?.trim().toLowerCase() ===
-              name?.trim().toLowerCase() &&
-            data.location?.trim().toLowerCase() ===
-              location?.trim().toLowerCase()
-          );
-        });
-
-      if (duplicate) {
-        throw new HttpsError(
-          "already-exists",
-          `${name} already exists in ${location}`
-        );
-      }
-
-      break;
-    }
-
-    default:
-      break;
+  if (!existing.empty) {
+    throw new HttpsError(
+      "already-exists",
+      `Top-level organization already exists`
+    );
   }
+
+  return;
+}
+
+// --------------------------------------------------
+// Rank 2 & Rank 3
+// Name must be unique within denomination
+// --------------------------------------------------
+
+if (rank === 2 || rank === 3) {
+
+  const existing = await governanceRef
+    .where("status", "==", "active")
+    .where("templateId", "==", templateId)
+    .where("levelId", "==", levelId)
+    .get();
+
+  const duplicate =
+    existing.docs.find((d) =>
+      d.data().name?.trim().toLowerCase() ===
+      name?.trim().toLowerCase()
+    );
+
+  if (duplicate) {
+    throw new HttpsError(
+      "already-exists",
+      `${name} already exists`
+    );
+  }
+
+  return;
+}
+
+// --------------------------------------------------
+// Rank 4 (Local Unit)
+// Name + Location must be unique
+// --------------------------------------------------
+
+if (rank === 4) {
+
+  const existing = await governanceRef
+    .where("status", "==", "active")
+    .where("templateId", "==", templateId)
+    .where("levelId", "==", levelId)
+    .get();
+
+  const duplicate =
+    existing.docs.find((d) => {
+
+      const data = d.data();
+
+      return (
+        data.name?.trim().toLowerCase() ===
+          name?.trim().toLowerCase() &&
+        data.location?.trim().toLowerCase() ===
+          location?.trim().toLowerCase()
+      );
+    });
+
+  if (duplicate) {
+    throw new HttpsError(
+      "already-exists",
+      `${name} already exists in ${location}`
+    );
+  }
+
+  return;
+}
 }
 
 exports.approveOrganization =
