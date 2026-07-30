@@ -29,6 +29,8 @@ const LEVEL_CODES = {
 area: "AREA",
 region: "REG",
 branch: "BR",
+headquarters: "HQ",
+assembly: "ASM",
 };
 
 const TEMPLATE_CODES = {
@@ -36,6 +38,7 @@ const TEMPLATE_CODES = {
   methodist: "MCG",
   assemblies_of_god: "AOG",
   cop: "COP",
+  cac: "CAC",
 };
 
 async function generateOrganizationCode(

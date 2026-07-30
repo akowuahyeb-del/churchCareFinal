@@ -173,6 +173,84 @@ cop: {
 },
 
 
+cac: {
+  id: "cac",
+
+  code: "CAC",
+
+  requiresCustomCode: false,
+
+  name: "Christ Apostolic Church International",
+
+  description:
+    "Headquarters → Area → District → Assembly",
+
+  levels: [
+    {
+      id: "headquarters",
+      label: "Headquarters",
+      plural: "Headquarters",
+      icon: "globe-outline",
+      color: "#4B3F72",
+      rank: 1,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+        "roles",
+      ],
+    },
+
+    {
+      id: "area",
+      label: "Area",
+      plural: "Areas",
+      icon: "business-outline",
+      color: "#0984E3",
+      rank: 2,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+      ],
+    },
+
+    {
+      id: "district",
+      label: "District",
+      plural: "Districts",
+      icon: "map-outline",
+      color: "#00B894",
+      rank: 3,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+
+    {
+      id: "assembly",
+      label: "Assembly",
+      plural: "Assemblies",
+      icon: "home-outline",
+      color: "#E17055",
+      rank: 4,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+  ],
+},
+
 
 independent: {
   id: "independent",
