@@ -31,6 +31,8 @@ region: "REG",
 branch: "BR",
 headquarters: "HQ",
 assembly: "ASM",
+union_conference: "UC",
+conference_mission: "CM",
 };
 
 const TEMPLATE_CODES = {
@@ -39,6 +41,7 @@ const TEMPLATE_CODES = {
   assemblies_of_god: "AOG",
   cop: "COP",
   cac: "CAC",
+  sda: "SDA",
 };
 
 async function generateOrganizationCode(

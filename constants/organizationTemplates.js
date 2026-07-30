@@ -251,6 +251,83 @@ cac: {
   ],
 },
 
+sda: {
+  id: "sda",
+
+  code: "SDA",
+
+  requiresCustomCode: false,
+
+  name: "Seventh-day Adventist Church",
+
+  description:
+    "Union Conference → Conference/Mission → District → Local Church",
+
+  levels: [
+    {
+      id: "union_conference",
+      label: "Union Conference",
+      plural: "Union Conferences",
+      icon: "globe-outline",
+      color: "#4B3F72",
+      rank: 1,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+        "roles",
+      ],
+    },
+
+    {
+      id: "conference_mission",
+      label: "Conference / Mission",
+      plural: "Conferences / Missions",
+      icon: "business-outline",
+      color: "#0984E3",
+      rank: 2,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+      ],
+    },
+
+    {
+      id: "district",
+      label: "District",
+      plural: "Districts",
+      icon: "map-outline",
+      color: "#00B894",
+      rank: 3,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+
+    {
+      id: "local_church",
+      label: "Local Church",
+      plural: "Local Churches",
+      icon: "home-outline",
+      color: "#E17055",
+      rank: 4,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+  ],
+},
 
 independent: {
   id: "independent",
