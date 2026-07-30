@@ -87,6 +87,30 @@ function getHierarchyRank(
   return null;
 }
 
+function getParentLevelId(
+  templateId,
+  levelId
+) {
+  const structure =
+    TEMPLATE_STRUCTURE[templateId];
+
+  if (!structure) {
+    return null;
+  }
+
+  const rank =
+    getHierarchyRank(
+      templateId,
+      levelId
+    );
+
+  if (!rank || rank === 1) {
+    return null;
+  }
+
+  return structure[rank - 1];
+}
+
 
 const LEVEL_CODES = {
   general_assembly: "GA",
@@ -462,12 +486,18 @@ await orgRef.update({
 // Parent Linking
 // --------------------------------------------------
 
-if (org.levelId === "presbytery") {
+const parentLevelId =
+  getParentLevelId(
+    templateId,
+    org.levelId
+  );
+
+if (parentLevelId) {
 
   const parentSnap = await db
     .collection("governanceNodes")
     .where("templateId", "==", templateId)
-    .where("levelId", "==", "general_assembly")
+    .where("levelId", "==", parentLevelId)
     .where("status", "==", "active")
     .get();
 
@@ -481,6 +511,7 @@ if (org.levelId === "presbytery") {
     });
   }
 }
+
 
     // --------------------------------------------------
     // TEMPORARY RETURN
