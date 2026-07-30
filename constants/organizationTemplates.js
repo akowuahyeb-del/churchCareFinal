@@ -16,6 +16,8 @@ export const HIERARCHY_LEVELS = {
 export const ORGANIZATION_TEMPLATES = {
   presbyterian: {
     id: "presbyterian",
+    code: "PCG",
+    requiresCustomCode: false,
     name: "Presbyterian Church of Ghana",
     description: "Four-tier governance: National Assembly → Presbytery → District → Congregation",
     levels: [
@@ -66,6 +68,8 @@ export const ORGANIZATION_TEMPLATES = {
 
   methodist: {
     id: "methodist",
+    code: "MCG",
+    requiresCustomCode: false,
     name: "Methodist Church Ghana",
     description: "Conference → Synod → Circuit → Society",
     levels: [
@@ -78,6 +82,8 @@ export const ORGANIZATION_TEMPLATES = {
 
   assemblies_of_god: {
     id: "assemblies_of_god",
+    code: "AOG",
+    requiresCustomCode: false,
     name: "Assemblies of God Ghana",
     description: "National Executive → Region → District → Local Assembly",
     levels: [
@@ -87,8 +93,94 @@ export const ORGANIZATION_TEMPLATES = {
       { id: "local_assembly",     label: "Local Assembly",     plural: "Local Assemblies",   icon: "home-outline",     color: "#E17055", rank: 4, visibility: ["members","attendance","finance","events"] },
     ],
   },
+
+cop: {
+  id: "cop",
+
+  code: "COP",
+
+  requiresCustomCode: false,
+
+  name: "The Church of Pentecost",
+
+  description:
+    "National Headquarters → Area → District → Local Assembly",
+
+  levels: [
+    {
+      id: "national_headquarters",
+      label: "National Headquarters",
+      plural: "National Headquarters",
+      icon: "globe-outline",
+      color: "#4B3F72",
+      rank: 1,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+        "roles",
+      ],
+    },
+
+    {
+      id: "area",
+      label: "Area",
+      plural: "Areas",
+      icon: "business-outline",
+      color: "#0984E3",
+      rank: 2,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+        "reports",
+      ],
+    },
+
+    {
+      id: "district",
+      label: "District",
+      plural: "Districts",
+      icon: "map-outline",
+      color: "#00B894",
+      rank: 3,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+
+    {
+      id: "local_assembly",
+      label: "Local Assembly",
+      plural: "Local Assemblies",
+      icon: "home-outline",
+      color: "#E17055",
+      rank: 4,
+      visibility: [
+        "members",
+        "attendance",
+        "finance",
+        "events",
+      ],
+    },
+  ],
+},
+
+
+
 independent: {
   id: "independent",
+
+  code: null,
+
+  requiresCustomCode: true,
+
   name: "Independent Church",
   description:
     "Flexible structure for independent churches with headquarters, regions, branches, and local churches.",
