@@ -16,6 +16,73 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+const LEVEL_CODES = {
+  general_assembly: "GA",
+  presbytery: "PRE",
+  district: "DIS",
+  circuit: "CIR",
+  congregation: "CON",
+  society: "SOC",
+  local_assembly: "LA",
+  local_church: "LC",
+  national_headquarters: "NH",
+area: "AREA",
+region: "REG",
+branch: "BR",
+};
+
+const TEMPLATE_CODES = {
+  presbyterian: "PCG",
+  methodist: "MCG",
+  assemblies_of_god: "AOG",
+  cop: "COP",
+};
+
+async function generateOrganizationCode(
+  templateId,
+  levelId
+) {
+  const levelCode =
+    LEVEL_CODES[levelId] || "ORG";
+
+ const templateCode =
+  TEMPLATE_CODES[templateId] ||
+  "ORG";
+
+  const counterRef =
+    db.collection("counters")
+      .doc(`${templateId}_${levelId}`);
+
+  const nextValue =
+    await db.runTransaction(
+      async (tx) => {
+
+        const snap =
+          await tx.get(counterRef);
+
+        let current = 0;
+
+        if (snap.exists) {
+          current =
+            snap.data().current || 0;
+        }
+
+        current++;
+
+        tx.set(
+          counterRef,
+          { current },
+          { merge: true }
+        );
+
+        return current;
+      }
+    );
+
+  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4,"0")}`;
+}
+
+
 
 async function validateRegistration(org) {
 
@@ -241,10 +308,21 @@ await validateRegistration(org);
     const now =
       new Date().toISOString();
 
-    await orgRef.update({
-      status: "active",
-      approvedAt: now,
-    });
+       const templateId =
+      org.templateId || "presbyterian";
+
+
+const organizationCode =
+  await generateOrganizationCode(
+    templateId,
+    org.levelId
+  );
+
+await orgRef.update({
+  status: "active",
+  approvedAt: now,
+  organizationCode,
+});
 
     // --------------------------------------------------
     // Activate Entity
@@ -258,9 +336,7 @@ await validateRegistration(org);
     // --------------------------------------------------
     // Structure Settings
     // --------------------------------------------------
-
-    const templateId =
-      org.templateId || "presbyterian";
+   
 
     await db
       .collection("organizations")
@@ -286,10 +362,12 @@ await validateRegistration(org);
       .collection("governanceNodes")
       .doc();
 
-   await governanceNodeRef.set({
+  await governanceNodeRef.set({
   name: org.name,
 
   location: org.location || null,
+
+  organizationCode,
 
   levelId: org.levelId,
 
@@ -343,19 +421,21 @@ if (org.levelId === "presbytery") {
     // --------------------------------------------------
 
     return {
-      success: true,
+  success: true,
 
-      organizationId,
+  organizationId,
 
-      entityId,
+  entityId,
 
-      governanceNodeId:
-        governanceNodeRef.id,
+  governanceNodeId:
+    governanceNodeRef.id,
 
-      templateId,
+  organizationCode,
 
-      approvedAt: now,
-    };
+  templateId,
+
+  approvedAt: now,
+};
   });
 
 exports.rejectOrganization =
@@ -371,9 +451,9 @@ exports.rejectOrganization =
       );
     }
 
-    return {
-      success: true,
-      organizationId,
-    };
+  return {
+  success: true,
+  organizationId,
+};
   });
   
