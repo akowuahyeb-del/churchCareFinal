@@ -142,13 +142,15 @@ const TEMPLATE_CODES = {
 
 async function generateOrganizationCode(
   templateId,
-  levelId
+  levelId,
+  organizationAbbreviation = null
 ) {
   const levelCode =
     LEVEL_CODES[levelId] || "ORG";
 
- const templateCode =
+const templateCode =
   TEMPLATE_CODES[templateId] ||
+  organizationAbbreviation ||
   "ORG";
 
   const counterRef =
@@ -405,7 +407,8 @@ await validateRegistration(org);
 const organizationCode =
   await generateOrganizationCode(
     templateId,
-    org.levelId
+    org.levelId,
+    org.organizationAbbreviation
   );
 
 await orgRef.update({

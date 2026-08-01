@@ -21,6 +21,7 @@ export default function CreateChurchScreen() {
 const [denomination, setDenomination] = useState("");
 const [location, setLocation] = useState("");
 
+
  const [contactName, setContactName] = useState("");
 const [contactPhone, setContactPhone] = useState("");
 const [contactEmail, setContactEmail] = useState("");
@@ -31,6 +32,9 @@ const [adminPhone, setAdminPhone] = useState("");
 const [adminEmail, setAdminEmail] = useState("");
 
 const [errors, setErrors] = useState({});
+const [organizationAbbreviation,
+  setOrganizationAbbreviation] =
+  useState("");
 
 
   // Step 2 — Governance (the merge point)
@@ -58,8 +62,15 @@ const [errors, setErrors] = useState({});
     isValidEmail(contactEmail)
   );
 
-  if (step === 1)
-    return !!templateId && !!levelId;
+ if (step === 1)
+  return (
+    !!templateId &&
+    !!levelId &&
+    (
+      templateId !== "independent" ||
+      organizationAbbreviation.trim()
+    )
+  );
 
   return true;
 };
@@ -137,9 +148,16 @@ const handleSubmit = async () => {
 
   try {
     // ✅ Create the organization document
-    const orgRef = await addDoc(collection(db, "organizations"), {
-      name: churchName.trim(),
-      denomination: denomination.trim(),
+    const orgRef = await addDoc(
+  collection(db, "organizations"),
+  {
+    name: churchName.trim(),
+
+    organizationAbbreviation:
+      organizationAbbreviation.trim() || null,
+
+    denomination: denomination.trim(),
+
       location: location.trim(),
       contactName: contactName.trim(),
       contactPhone: normalizePhone(contactPhone),
@@ -289,6 +307,7 @@ await setDoc(
             <Text style={styles.label}>Location *</Text>
             <TextInput style={styles.input} value={location} onChangeText={setLocation}
               placeholder="e.g. Tema, Greater Accra" />
+
 
            <Text style={styles.sectionDivider}>
   Church Administrator
@@ -556,9 +575,44 @@ await setDoc(
               </TouchableOpacity>
             ))}
 
+
+
+{templateId === "independent" && (
+  <>
+    <Text style={styles.label}>
+      Church Abbreviation *
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      value={organizationAbbreviation}
+      onChangeText={(text) =>
+        setOrganizationAbbreviation(
+          text.toUpperCase()
+        )
+      }
+      placeholder="e.g. FTI"
+      autoCapitalize="characters"
+      maxLength={8}
+    />
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#888",
+        marginBottom: 10,
+      }}
+    >
+      Used for organisation codes
+      (e.g. FTI-LC-0001)
+    </Text>
+  </>
+)}
+
 <Text style={styles.label}>
   Registration Level *
 </Text>
+
 
 <Text style={styles.stepSubtitle}>
   Select the level at which this church is registering.
@@ -627,6 +681,13 @@ await setDoc(
             <View style={styles.summaryCard}>
               <SummaryRow label="Church Name" value={churchName} />
               <SummaryRow label="Denomination" value={denomination} />
+              {templateId === "independent" && (
+  <SummaryRow
+    label="Abbreviation"
+    value={organizationAbbreviation}
+  />
+)}
+
               <SummaryRow label="Location" value={location} />
               
 
