@@ -112,7 +112,7 @@ exports.stageWatcherJob =
 
 exports.rejectOrganization =
   orgApproval.rejectOrganization;
-  
+
   const orgRegistration =
   require("./orgRegistration");
 
@@ -121,3 +121,7 @@ exports.checkDuplicateOrganization =
 
 exports.submitOrganizationRegistration =
   orgRegistration.submitOrganizationRegistration;
+
+  exports.getParentOrganizations =
+  orgRegistration.getParentOrganizations;
+  

@@ -6,6 +6,8 @@ const {
   normalize,
 } = require("./orgDuplicateCheck");
 
+
+
 exports.checkDuplicateOrganization =
   onCall(async (request) => {
 
@@ -44,6 +46,8 @@ exports.checkDuplicateOrganization =
   require("firebase-admin/firestore");
 
 const db = getFirestore();
+
+
 
 
 exports.submitOrganizationRegistration =
@@ -261,5 +265,25 @@ exports.submitOrganizationRegistration =
         possibleDuplicates.length > 0,
 
       possibleDuplicates,
+    };
+  });
+
+exports.getParentOrganizations =
+  onCall(async (request) => {
+
+    const {
+      templateId,
+      levelId,
+    } = request.data || {};
+
+    if (!templateId || !levelId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Missing templateId or levelId"
+      );
+    }
+
+    return {
+      parents: [],
     };
   });

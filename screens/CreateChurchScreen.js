@@ -1,5 +1,5 @@
 // screens/CreateChurchScreen.js — multi-step wizard with template baked in
-import React, { useState } from "react";
+import React, { useState, useEffect,} from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator
@@ -32,6 +32,12 @@ const _submitOrganizationRegistration =
     "submitOrganizationRegistration"
   );
 
+  const _getParentOrganizations =
+  httpsCallable(
+    functions,
+    "getParentOrganizations"
+  );
+
   const navigation = useNavigation();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -50,6 +56,20 @@ const [adminPhone, setAdminPhone] = useState("");
 const [adminEmail, setAdminEmail] = useState("");
 
 const [errors, setErrors] = useState({});
+const [dupMatches, setDupMatches] =
+  useState([]);
+
+
+  
+
+const [checkingDup, setCheckingDup] =
+  useState(false);
+const [parentOptions, setParentOptions] =
+  useState([]);
+
+const [loadingParents, setLoadingParents] =
+  useState(false);
+
 const [organizationAbbreviation,
   setOrganizationAbbreviation] =
   useState("");
@@ -62,7 +82,98 @@ const [organizationAbbreviation,
 
   const template = getTemplate(templateId);
 
-  
+  useEffect(() => {
+
+  if (!templateId || !levelId) {
+    setParentOptions([]);
+    return;
+  }
+
+  setLoadingParents(true);
+
+  _getParentOrganizations({
+    templateId,
+    levelId,
+  })
+    .then(({ data }) => {
+      setParentOptions(
+        data.parents || []
+      );
+    })
+    .catch((err) => {
+      console.log(
+        "Parent lookup error:",
+        err
+      );
+
+      setParentOptions([]);
+    })
+    .finally(() => {
+      setLoadingParents(false);
+    });
+
+}, [
+  templateId,
+  levelId,
+]);
+
+
+  useEffect(() => {
+
+  if (
+    !churchName.trim() ||
+    !location.trim() ||
+    !templateId ||
+    !levelId
+  ) {
+    setDupMatches([]);
+    return;
+  }
+
+  const timer = setTimeout(
+    async () => {
+
+      try {
+
+        setCheckingDup(true);
+
+        const { data } =
+          await _checkDuplicateOrganization({
+            name: churchName,
+            location,
+            templateId,
+            levelId,
+          });
+
+        setDupMatches(
+          data.matches || []
+        );
+
+      } catch (e) {
+
+        console.log(
+          "Duplicate check error:",
+          e
+        );
+
+      } finally {
+
+        setCheckingDup(false);
+
+      }
+    },
+    600
+  );
+
+  return () =>
+    clearTimeout(timer);
+
+}, [
+  churchName,
+  location,
+  templateId,
+  levelId,
+]);
 
   const canNext = () => {
   if (step === 0)
@@ -87,6 +198,10 @@ const [organizationAbbreviation,
     (
       templateId !== "independent" ||
       organizationAbbreviation.trim()
+    ) &&
+    (
+      parentOptions.length === 0 ||
+      !!parentNodeId
     )
   );
 
@@ -293,6 +408,58 @@ const handleSubmit = async () => {
             <Text style={styles.label}>Location *</Text>
             <TextInput style={styles.input} value={location} onChangeText={setLocation}
               placeholder="e.g. Tema, Greater Accra" />
+
+              {checkingDup && (
+  <ActivityIndicator
+    size="small"
+    color="#4B3F72"
+    style={{ marginTop: 8 }}
+  />
+)}
+
+{dupMatches.length > 0 && (
+  <View
+    style={[
+      styles.infoBox,
+      {
+        backgroundColor:
+          "#fff3e0",
+        marginTop: 8,
+      },
+    ]}
+  >
+    <Ionicons
+      name="alert-circle-outline"
+      size={14}
+      color="#e67e22"
+    />
+
+    <Text
+      style={[
+        styles.infoBoxText,
+        {
+          color: "#e67e22",
+        },
+      ]}
+    >
+      This registration looks similar
+      to existing churches:
+
+      {"\n\n"}
+
+      {dupMatches
+        .map(
+          (m) =>
+            `• ${m.name}${
+              m.location
+                ? ` — ${m.location}`
+                : ""
+            }`
+        )
+        .join("\n")}
+    </Text>
+  </View>
+)}
 
 
            <Text style={styles.sectionDivider}>
@@ -645,6 +812,65 @@ const handleSubmit = async () => {
     </View>
   </TouchableOpacity>
 ))}
+
+
+{loadingParents && (
+  <ActivityIndicator
+    size="small"
+    color="#4B3F72"
+    style={{ marginTop: 10 }}
+  />
+)}
+
+{parentOptions.length > 0 && (
+  <>
+    <Text style={styles.label}>
+      Parent Organisation
+    </Text>
+
+<Text style={styles.stepSubtitle}>
+  Select the parent organisation this registration belongs under.
+</Text>
+
+    {parentOptions.map(parent => (
+      <TouchableOpacity
+        key={parent.id}
+        style={[
+          styles.templateCard,
+          parentNodeId === parent.id &&
+            styles.templateCardActive
+        ]}
+        onPress={() =>
+          setParentNodeId(parent.id)
+        }
+      >
+        <View style={styles.templateCardTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.templateCardName}>
+              {parent.name}
+            </Text>
+
+            <Text style={styles.templateCardDesc}>
+              {parent.levelLabel}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.radioOuter,
+              parentNodeId === parent.id &&
+                styles.radioOuterActive
+            ]}
+          >
+            {parentNodeId === parent.id && (
+              <View style={styles.radioInner} />
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    ))}
+  </>
+)}
 
 
 
