@@ -112,3 +112,12 @@ exports.stageWatcherJob =
 
 exports.rejectOrganization =
   orgApproval.rejectOrganization;
+  
+  const orgRegistration =
+  require("./orgRegistration");
+
+exports.checkDuplicateOrganization =
+  orgRegistration.checkDuplicateOrganization;
+
+exports.submitOrganizationRegistration =
+  orgRegistration.submitOrganizationRegistration;
