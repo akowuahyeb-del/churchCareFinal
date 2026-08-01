@@ -6,14 +6,32 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { db } from "../firebase";
-import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { ORGANIZATION_TEMPLATES, getTemplate } from "../constants/organizationTemplates";
 import { auth } from "../firebase";
+import {
+  getFunctions,
+  httpsCallable,
+} from "firebase/functions";
+
 
 const STEPS = ["Identity", "Governance", "Confirm"];
 
 export default function CreateChurchScreen() {
+
+const functions = getFunctions();
+
+const _checkDuplicateOrganization =
+  httpsCallable(
+    functions,
+    "checkDuplicateOrganization"
+  );
+
+const _submitOrganizationRegistration =
+  httpsCallable(
+    functions,
+    "submitOrganizationRegistration"
+  );
+
   const navigation = useNavigation();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -147,103 +165,71 @@ const handleSubmit = async () => {
   setSaving(true);
 
   try {
-    // ✅ Create the organization document
-    const orgRef = await addDoc(
-  collection(db, "organizations"),
-  {
-    name: churchName.trim(),
+        const { data } =
+      await _submitOrganizationRegistration({
+        name: churchName,
 
-    organizationAbbreviation:
-      organizationAbbreviation.trim() || null,
+        denomination,
 
-    denomination: denomination.trim(),
+        location,
 
-      location: location.trim(),
-      contactName: contactName.trim(),
-      contactPhone: normalizePhone(contactPhone),
-      contactEmail: contactEmail.trim(),
-      adminName: adminName.trim(),
-      adminPhone: normalizePhone(adminPhone),
-      adminEmail: adminEmail.trim(),
+        organizationAbbreviation,
 
-      // ✅ Applicant information
-      submittedByUid: user?.uid || null,
-      submittedByEmail: user?.email || null,
+        contactName,
 
-      // ✅ Governance
-      templateId,
-      levelId,
-      parentNodeId,
+        contactPhone:
+          normalizePhone(contactPhone),
 
-      // ✅ Status
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    });
+        contactEmail,
 
-    // Keep the rest of your existing code unchanged
-  
+        adminName,
 
-      // ✅ Create the first entity (the congregation being registered)
-      const entityRef = await addDoc(
-        collection(db, "organizations", orgRef.id, "entities"),
-        {
+        adminPhone:
+          normalizePhone(adminPhone),
+
+        adminEmail,
+
+        templateId,
+
+        levelId,
+
+        parentNodeId,
+      });
+
+    if (data.flaggedForReview) {
+      Alert.alert(
+        "Submitted For Review",
+        "This registration is similar to an existing church and has been flagged for additional review."
+      );
+    }
+
+    navigation.replace(
+      "Pending",
+      {
+        org: {
+          id: data.organizationId,
           name: churchName.trim(),
-          organizationId: orgRef.id,
-          status: "pending",
-          createdAt: new Date().toISOString(),
-        }
-      );
-
-console.log(
-  "✅ Creating governance node",
-  {
-    name: churchName.trim(),
-    levelId,
-    organizationId: orgRef.id,
-  }
-);
-
-await setDoc(
-  doc(db, "organizations", orgRef.id),
-  {
-    rootEntityId: entityRef.id,
-  },
-  { merge: true }
-);
-
-// ✅ Link the org + entity to the user's profile so LoginScreen's
-// routing logic knows this user already has a church in flight.
-await setDoc(
-  doc(db, "users", user.uid),
-  {
-    organizationId: orgRef.id,
-    entityId: entityRef.id,
-    entityName: churchName.trim(),
-  },
-  { merge: true }
-);
-      // ✅ Store the structure template immediately — OrganisationStructureScreen
-      // reads from here, so it won't show "Not Configured" even before approval
-      await setDoc(
-        doc(db, "organizations", orgRef.id, "settings", "structure"),
-        {
-          templateId,
-          status: "pending", // nodes will be seeded on approval
-          organizationId: orgRef.id,
-          entityId: entityRef.id,
-        }
-      );
-
-     navigation.replace("Pending", {
-  org: {
-    id: orgRef.id,
-    name: churchName.trim(),
-  }
-});
+        },
+      }
+    );
 
     } catch (e) {
       console.log("❌ CreateChurch error:", e);
-      Alert.alert("Error", "Could not submit. Please try again.");
+      if (
+  e.code ===
+  "functions/already-exists"
+) {
+  Alert.alert(
+    "Possible Duplicate",
+    e.message
+  );
+} else {
+  Alert.alert(
+    "Error",
+    "Could not submit. Please try again."
+  );
+}
+
     } finally {
       setSaving(false);
     }
