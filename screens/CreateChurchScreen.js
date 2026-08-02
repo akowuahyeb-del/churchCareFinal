@@ -38,6 +38,12 @@ const _submitOrganizationRegistration =
     "getParentOrganizations"
   );
 
+const _searchOrganizationNetworks =
+  httpsCallable(
+    functions,
+    "searchOrganizationNetworks"
+  );
+
   const navigation = useNavigation();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -59,7 +65,24 @@ const [errors, setErrors] = useState({});
 const [dupMatches, setDupMatches] =
   useState([]);
 
+const [networkSearch,
+  setNetworkSearch] =
+  useState("");
 
+const [networkOptions,
+  setNetworkOptions] =
+  useState([]);
+
+const [selectedNetworkId,
+  setSelectedNetworkId] =
+  useState(null);
+  const [selectedNetwork,
+  setSelectedNetwork] =
+  useState(null);
+
+const [loadingNetworks,
+  setLoadingNetworks] =
+  useState(false);
   
 
 const [checkingDup, setCheckingDup] =
@@ -79,22 +102,114 @@ const [organizationAbbreviation,
   const [templateId, setTemplateId] = useState("presbyterian");
   const [levelId, setLevelId] = useState(null);
   const [parentNodeId, setParentNodeId] = useState(null);
+  const [relationshipMode,
+  setRelationshipMode] =
+  useState("independent");
+
+const [expectedParentName,
+  setExpectedParentName] =
+  useState("");
+
+const [expectedParentLevel,
+  setExpectedParentLevel] =
+  useState("");
 
   const template = getTemplate(templateId);
+  const selectedLevel =
+  template?.levels?.find(
+    l => l.id === levelId
+  );
 
-  useEffect(() => {
+const isIndependent =
+  templateId === "independent";
+
+const isHeadOffice =
+  selectedLevel?.rank === 1;
+
+const needsNetworkSelection =
+  isIndependent &&
+  !isHeadOffice;
+
+useEffect(() => {
+
+  if (
+    !needsNetworkSelection ||
+    !networkSearch.trim()
+  ) {
+    setNetworkOptions([]);
+    return;
+  }
+
+  const timer =
+    setTimeout(async () => {
+
+      try {
+
+        setLoadingNetworks(true);
+
+        const { data } =
+          await _searchOrganizationNetworks({
+            query: networkSearch,
+          });
+
+        setNetworkOptions(
+          data?.networks || []
+        );
+
+      } catch (error) {
+
+        console.log(
+          "Network search failed",
+          error
+        );
+
+      } finally {
+
+        setLoadingNetworks(false);
+
+      }
+
+    }, 500);
+
+  return () => clearTimeout(timer);
+
+}, [
+  networkSearch,
+  needsNetworkSelection,
+]);
+
+
+useEffect(() => {
 
   if (!templateId || !levelId) {
     setParentOptions([]);
     return;
   }
 
+  // Independent churches below Head Office
+  // must select a network before parent lookup.
+  if (
+    needsNetworkSelection &&
+    relationshipMode === "existing_parent" &&
+    !selectedNetworkId
+  ) {
+    setParentOptions([]);
+    return;
+  }
+
   setLoadingParents(true);
 
-  _getParentOrganizations({
+  const payload = {
     templateId,
     levelId,
-  })
+  };
+
+  if (selectedNetworkId) {
+    payload.networkId =
+      selectedNetworkId;
+  }
+
+  _getParentOrganizations(payload)
     .then(({ data }) => {
       setParentOptions(
         data.parents || []
@@ -115,6 +230,9 @@ const [organizationAbbreviation,
 }, [
   templateId,
   levelId,
+  selectedNetworkId,
+  needsNetworkSelection,
+  relationshipMode,
 ]);
 
 
@@ -199,9 +317,19 @@ const [organizationAbbreviation,
       templateId !== "independent" ||
       organizationAbbreviation.trim()
     ) &&
+
+    
     (
-      parentOptions.length === 0 ||
-      !!parentNodeId
+  relationshipMode !== "existing_parent" ||
+  (
+    parentOptions.length > 0 &&
+    !!parentNodeId
+  )
+) &&
+
+    (
+      relationshipMode !== "future_parent" ||
+      expectedParentName.trim()
     )
   );
 
@@ -813,56 +941,150 @@ const handleSubmit = async () => {
   </TouchableOpacity>
 ))}
 
-
-{loadingParents && (
-  <ActivityIndicator
-    size="small"
-    color="#4B3F72"
-    style={{ marginTop: 10 }}
-  />
-)}
-
-{parentOptions.length > 0 && (
+{templateId === "independent" && (
   <>
     <Text style={styles.label}>
-      Parent Organisation
+      Governance Relationship
     </Text>
 
-<Text style={styles.stepSubtitle}>
-  Select the parent organisation this registration belongs under.
-</Text>
+    <Text style={styles.stepSubtitle}>
+      How does this organisation relate
+      to other organisations?
+    </Text>
 
-    {parentOptions.map(parent => (
+    {[
+      {
+        id: "independent",
+        title: "Operates Independently",
+        desc:
+          "This organisation currently operates on its own.",
+      },
+      {
+        id: "existing_parent",
+        title:
+          "Belongs Under Existing Organisation",
+        desc:
+          "Select an existing parent organisation.",
+      },
+      {
+        id: "future_parent",
+        title:
+          "Parent Organisation Not Yet Registered",
+        desc:
+          "Specify an expected parent for future linkage.",
+      },
+    ].map(option => (
       <TouchableOpacity
-        key={parent.id}
+  key={option.id}
+  style={[
+    styles.templateCard,
+    relationshipMode === option.id &&
+      styles.templateCardActive,
+  ]}
+  onPress={() => {
+    setRelationshipMode(option.id);
+
+    setParentNodeId(null);
+    setExpectedParentName("");
+    setExpectedParentLevel("");
+  }}
+>
+  <View style={styles.templateCardTop}>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.templateCardName}>
+        {option.title}
+      </Text>
+
+      <Text style={styles.templateCardDesc}>
+        {option.desc}
+      </Text>
+    </View>
+
+    <View
+      style={[
+        styles.radioOuter,
+        relationshipMode === option.id &&
+          styles.radioOuterActive,
+      ]}
+    >
+      {relationshipMode === option.id && (
+        <View style={styles.radioInner} />
+      )}
+    </View>
+  </View>
+</TouchableOpacity>
+
+    ))}
+  </>
+)}
+  
+{needsNetworkSelection &&
+ templateId === "independent" &&
+ relationshipMode === "existing_parent" && (
+  <>
+    <Text style={styles.label}>
+      Church Network *
+    </Text>
+
+    <Text style={styles.stepSubtitle}>
+      Search for the church network this
+      organisation belongs to.
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      value={networkSearch}
+      onChangeText={(text) => {
+        setNetworkSearch(text);
+        setSelectedNetworkId(null);
+        setSelectedNetwork(null);
+      }}
+      placeholder="Search church network..."
+    />
+
+    {loadingNetworks && (
+      <ActivityIndicator
+        size="small"
+        color="#4B3F72"
+      />
+    )}
+
+    {networkOptions.map(network => (
+      <TouchableOpacity
+        key={network.id}
         style={[
           styles.templateCard,
-          parentNodeId === parent.id &&
-            styles.templateCardActive
+          selectedNetworkId === network.id &&
+            styles.templateCardActive,
         ]}
-        onPress={() =>
-          setParentNodeId(parent.id)
-        }
+        onPress={() => {
+          setSelectedNetworkId(network.id);
+          setSelectedNetwork(network);
+        }}
       >
         <View style={styles.templateCardTop}>
           <View style={{ flex: 1 }}>
             <Text style={styles.templateCardName}>
-              {parent.name}
-            </Text>
+  {network.name}
+</Text>
 
-            <Text style={styles.templateCardDesc}>
-              {parent.levelLabel}
-            </Text>
+<Text style={styles.templateCardDesc}>
+  📍 {network.location}
+</Text>
+
+<Text style={styles.templateCardDesc}>
+  {network.organizationCode}
+</Text>
           </View>
 
           <View
             style={[
               styles.radioOuter,
-              parentNodeId === parent.id &&
-                styles.radioOuterActive
+              selectedNetworkId === network.id &&
+                styles.radioOuterActive,
             ]}
           >
-            {parentNodeId === parent.id && (
+            {selectedNetworkId === network.id && (
               <View style={styles.radioInner} />
             )}
           </View>
@@ -873,8 +1095,140 @@ const handleSubmit = async () => {
 )}
 
 
+{templateId === "independent" &&
+ relationshipMode ===
+  "existing_parent" && (
+  <>
 
-            <View style={styles.infoBox}>
+  
+    {loadingParents && (
+  <ActivityIndicator
+    size="small"
+    color="#4B3F72"
+    style={{ marginTop: 10 }}
+  />
+)}
+
+{!loadingParents &&
+  parentOptions.length === 0 && (
+    <View style={styles.infoBox}>
+      <Ionicons
+        name="alert-circle-outline"
+        size={14}
+        color="#e67e22"
+      />
+
+      <Text style={styles.infoBoxText}>
+        No parent organisations are
+        currently available for this
+        level. Choose "Operates
+        Independently" or "Parent
+        Organisation Not Yet Registered".
+      </Text>
+    </View>
+)}
+
+{parentOptions.length > 0 && (
+      <>
+        <Text style={styles.label}>
+          Parent Organisation
+        </Text>
+
+        <Text style={styles.stepSubtitle}>
+          Select the parent organisation this
+          registration belongs under.
+        </Text>
+
+        {parentOptions.map(parent => (
+          <TouchableOpacity
+            key={parent.id}
+            style={[
+              styles.templateCard,
+              parentNodeId === parent.id &&
+                styles.templateCardActive
+            ]}
+            onPress={() =>
+              setParentNodeId(parent.id)
+            }
+          >
+            <View style={styles.templateCardTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.templateCardName}>
+                  {parent.name}
+                </Text>
+
+                <Text style={styles.templateCardDesc}>
+                  {parent.levelLabel}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.radioOuter,
+                  parentNodeId === parent.id &&
+                    styles.radioOuterActive,
+                ]}
+              >
+                {parentNodeId === parent.id && (
+                  <View style={styles.radioInner} />
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </>
+    )}
+  </>
+)}
+
+{templateId === "independent" &&
+ relationshipMode ===
+  "future_parent" && (
+  <>
+    <Text style={styles.label}>
+      Expected Parent Name *
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      value={expectedParentName}
+      onChangeText={
+        setExpectedParentName
+      }
+      placeholder="e.g. Asokwa District"
+    />
+
+    <Text style={styles.label}>
+      Expected Parent Level
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      value={expectedParentLevel}
+      onChangeText={
+        setExpectedParentLevel
+      }
+      placeholder="e.g. District"
+    />
+
+    <View style={styles.infoBox}>
+      <Ionicons
+        name="information-circle-outline"
+        size={14}
+        color="#4B3F72"
+      />
+
+      <Text style={styles.infoBoxText}>
+        This organisation will operate
+        normally and can be linked later
+        when the parent organisation is
+        registered.
+      </Text>
+    </View>
+  </>
+)}
+
+<View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />
               <Text style={styles.infoBoxText}>
                 Your hierarchy nodes will be automatically created when your church is approved.

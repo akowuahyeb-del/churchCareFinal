@@ -905,21 +905,169 @@ const loadGovernanceNodes = async () => {
 
       {/* ══════════ APPROVAL MODAL ══════════ */}
       <Modal visible={approvalModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.modalBox}>
-            {selectedOrg && (
-              <>
-                <Text style={styles.modalTitle}>{selectedOrg.name}</Text>
-                <Text style={styles.modalSub}>
-                  {selectedOrg.denomination} · {selectedOrg.location}
-                </Text>
+  <View style={styles.overlay}>
+    <View
+      style={[
+        styles.modalBox,
+        { maxHeight: "85%" }
+      ]}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+      >
+        {selectedOrg && (
+          <>
+                
+<Text style={styles.fieldLabel}>
+  Registration Details
+</Text>
 
-                <View style={styles.modalInfoGrid}>
-                  <InfoPair label="Template" value={getTemplate(selectedOrg.templateId)?.name || "Presbyterian"} />
-                  <InfoPair label="Contact" value={selectedOrg.contactName || "—"} />
-                  <InfoPair label="Phone" value={selectedOrg.contactPhone || "—"} />
-                  <InfoPair label="Submitted" value={selectedOrg.createdAt?.slice(0, 10) || "—"} />
-                </View>
+<View style={styles.subDetail}>
+
+  <InfoPair
+    label="Church Name"
+    value={selectedOrg.name || "—"}
+  />
+
+  <InfoPair
+    label="Location"
+    value={selectedOrg.location || "—"}
+  />
+
+  <InfoPair
+    label="Denomination"
+    value={selectedOrg.denomination || "—"}
+  />
+
+</View>
+                <View
+  style={{
+    backgroundColor: "#EEF0FA",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+  }}
+>
+  <Text
+    style={{
+      color: "#4B3F72",
+      fontWeight: "700",
+    }}
+  >
+    {getTemplate(
+      selectedOrg.templateId
+    )?.name}
+  </Text>
+
+  <Text
+    style={{
+      marginTop: 4,
+      color: "#555",
+    }}
+  >
+    Creating:
+    {" "}
+    {
+      getTemplate(selectedOrg.templateId)
+        ?.levels
+        ?.find(
+          l => l.id === selectedOrg.levelId
+        )?.label
+    }
+  </Text>
+</View>
+
+<Text style={styles.fieldLabel}>
+  Administrator
+</Text>
+
+<View style={styles.subDetail}>
+
+  <InfoPair
+    label="Name"
+    value={selectedOrg.adminName || "—"}
+  />
+
+  <InfoPair
+    label="Phone"
+    value={selectedOrg.adminPhone || "—"}
+  />
+
+  <InfoPair
+    label="Email"
+    value={selectedOrg.adminEmail || "—"}
+  />
+
+</View>
+
+<Text style={styles.fieldLabel}>
+  Primary Contact
+</Text>
+
+
+
+<View style={styles.subDetail}>
+
+  <InfoPair
+    label="Name"
+    value={selectedOrg.contactName || "—"}
+  />
+
+  <InfoPair
+    label="Phone"
+    value={selectedOrg.contactPhone || "—"}
+  />
+
+  <InfoPair
+    label="Email"
+    value={selectedOrg.contactEmail || "—"}
+  />
+
+</View>
+<Text style={styles.fieldLabel}>
+  Governance
+</Text>
+
+<View style={styles.subDetail}>
+
+  <InfoPair
+    label="Template"
+    value={
+      getTemplate(selectedOrg.templateId)?.name ||
+      selectedOrg.templateId ||
+      "—"
+    }
+  />
+
+  <InfoPair
+    label="Level"
+    value={
+      getTemplate(selectedOrg.templateId)
+        ?.levels
+        ?.find(
+          l => l.id === selectedOrg.levelId
+        )?.label ||
+      selectedOrg.levelId ||
+      "—"
+    }
+  />
+
+  <InfoPair
+    label="Relationship"
+    value={
+      selectedOrg.relationshipMode ||
+      "—"
+    }
+  />
+
+</View>
+
+
+
+
+
+
+
 
                 <View style={styles.infoBox}>
                   <Ionicons name="information-circle-outline" size={13} color="#4B3F72" />
@@ -961,11 +1109,13 @@ const loadGovernanceNodes = async () => {
                 <TouchableOpacity onPress={() => { setApprovalModal(false); setRejectReason(""); }}>
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-              </>
+                           </>
             )}
-          </View>
+          </ScrollView>
         </View>
-      </Modal>
+      </View>
+    </Modal>
+
 
       {/* ══════════ ORG DETAIL MODAL ══════════ */}
       <Modal visible={orgDetailModal} transparent animationType="slide">
@@ -1058,6 +1208,7 @@ const loadGovernanceNodes = async () => {
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Override Plan</Text>
             <Text style={styles.modalSub}>{planTarget?.name}</Text>
+
 
             <View style={styles.infoBox}>
               <Ionicons name="alert-outline" size={13} color="#e67e22" />

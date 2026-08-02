@@ -451,11 +451,11 @@ await orgRef.update({
     // Governance Node
     // --------------------------------------------------
 
-    const governanceNodeRef = db
-      .collection("governanceNodes")
-      .doc();
+   const governanceNodeRef = db
+  .collection("governanceNodes")
+  .doc();
 
-  await governanceNodeRef.set({
+await governanceNodeRef.set({
   name: org.name,
 
   location: org.location || null,
@@ -474,7 +474,9 @@ await orgRef.update({
 
   status: "active",
 
-  pendingLink: true,
+  // A node is valid and operational
+  // even if no parent currently exists.
+  pendingLink: false,
 
   createdAt: now,
   updatedAt: now,

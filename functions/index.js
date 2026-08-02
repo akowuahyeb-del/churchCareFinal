@@ -125,3 +125,6 @@ exports.submitOrganizationRegistration =
   exports.getParentOrganizations =
   orgRegistration.getParentOrganizations;
   
+exports.searchOrganizationNetworks =
+  require("./orgHierarchy")
+    .searchOrganizationNetworks;

@@ -303,12 +303,45 @@ const approveChurch = async (org) => {
                   ))}
                 </View>
 
-                <View style={styles.cardDetails}>
-                  {org.contactName && <Text style={styles.detailText}>👤 {org.contactName}</Text>}
-                  {org.contactPhone && <Text style={styles.detailText}>📞 {org.contactPhone}</Text>}
-                  {org.contactEmail && <Text style={styles.detailText}>✉️ {org.contactEmail}</Text>}
-                  <Text style={styles.detailText}>📅 Submitted {org.createdAt?.slice(0, 10) || "—"}</Text>
-                </View>
+              <View style={styles.cardDetails}>
+
+  <Text style={styles.sectionHeader}>
+    Administrator
+  </Text>
+
+  <Text style={styles.detailText}>
+    👤 {org.adminName || "Not supplied"}
+  </Text>
+
+  <Text style={styles.detailText}>
+    📞 {org.adminPhone || "Not supplied"}
+  </Text>
+
+  <Text style={styles.detailText}>
+    ✉️ {org.adminEmail || "Not supplied"}
+  </Text>
+
+  <Text style={styles.sectionHeader}>
+    Primary Contact
+  </Text>
+
+  <Text style={styles.detailText}>
+    👤 {org.contactName || "Not supplied"}
+  </Text>
+
+  <Text style={styles.detailText}>
+    📞 {org.contactPhone || "Not supplied"}
+  </Text>
+
+  <Text style={styles.detailText}>
+    ✉️ {org.contactEmail || "Not supplied"}
+  </Text>
+
+  <Text style={styles.detailText}>
+    📅 Submitted {org.createdAt?.slice(0, 10) || "—"}
+  </Text>
+
+</View>
 
                 <View style={styles.infoBox}>
                   <Ionicons name="information-circle-outline" size={12} color="#0984E3" />
@@ -386,4 +419,11 @@ const styles = StyleSheet.create({
   approveBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   rejectBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#e74c3c", borderRadius: 10, padding: 12 },
   rejectBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  sectionHeader: {
+  fontSize: 12,
+  fontWeight: "800",
+  color: "#4B3F72",
+  marginTop: 8,
+  marginBottom: 4,
+},
 });
