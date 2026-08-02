@@ -20,6 +20,13 @@ import { hasPermission, ALL_PERMISSION_KEYS } from "../constants/permissions";
 import {
   updateMemberLifecycle,
 } from "../utils/memberIntake";
+import {
+  getFunctions,
+  httpsCallable,
+} from "firebase/functions";
+
+
+
 
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
@@ -205,6 +212,23 @@ const viewerName =
       console.log("❌ Load attendance error:", e);
     }
   };
+
+
+const functions = getFunctions();
+
+const _sendApprovalRequestNotifications =
+  httpsCallable(
+    functions,
+    "sendApprovalRequestNotifications"
+  );
+
+const _sendIndividualNotification =
+  httpsCallable(
+    functions,
+    "sendIndividualNotification"
+  );
+
+
 
   // ✅ FIXED: same bug, was collection(db, "contributions") — the real
   // path (fixed several turns ago in DonateScreen.js) is nested under
@@ -393,6 +417,8 @@ const getElderThreshold = (action) => {
     }
   };
 
+
+
   /* ────────────── EDIT FIELD (real persistence now) ────────────── */
   const openEdit = (field, label, value) => {
     setEditField(field); setEditLabel(label); setEditInput(value || "");
@@ -493,6 +519,33 @@ const getElderThreshold = (action) => {
 
     await updateDoc(refDoc, { pendingApprovals: newPending });
 
+if (updated.length === 1) {
+  try {
+    await _sendApprovalRequestNotifications({
+      organizationId,
+      entityId,
+
+      action:
+        ACTION_CONFIG[action]?.label ||
+        action,
+
+      memberId,
+      memberName:
+        member?.name || "Member",
+
+      initiatedBy: viewerName,
+
+      excludeMemberId:
+        viewerMemberId,
+    });
+  } catch (e) {
+    console.log(
+      "⚠️ approval notification failed:",
+      e
+    );
+  }
+}
+
     setMember(prev => ({
       ...prev,
       pendingApprovals: newPending,
@@ -540,6 +593,29 @@ const getElderThreshold = (action) => {
         disciplinaryDate: new Date().toISOString().split("T")[0],
         pendingApprovals: cleared,
       });
+try {
+  await _sendIndividualNotification({
+    organizationId,
+    entityId,
+    memberId,
+
+    title: "Account Status Update",
+
+    message:
+      `Your membership status has been updated to: ${action}.` +
+      (actionNote
+        ? ` Note: ${actionNote}`
+        : ""),
+
+    category: "disciplinary",
+  });
+} catch (e) {
+  console.log(
+    "⚠️ disciplinary notification failed:",
+    e
+  );
+}
+
       setMember(prev => ({
         ...prev,
         disciplinaryStatus: action,

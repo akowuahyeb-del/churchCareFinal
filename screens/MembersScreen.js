@@ -182,7 +182,8 @@ export default function MembersScreen({ navigation }) {
   const [reinstateModal,  setReinstateModal]  = useState(false);
   const [reinstateTarget, setReinstateTarget] = useState(null);
   const [reinstateNote,   setReinstateNote]   = useState("");
-
+const [expandedMemberId, setExpandedMemberId] =
+  useState(null);
   // ── QR modal ──
   const [selectedMember, setSelectedMember] = useState(null);
 
@@ -192,6 +193,8 @@ export default function MembersScreen({ navigation }) {
   const [transferHistory, setTransferHistory] = useState([]);
   const [filterLifecycle, setFilterLifecycle] = useState("All");
   const [showLifecycleMenu, setShowLifecycleMenu] = useState(false);
+  const [showQuickActions, setShowQuickActions] =
+  useState(false);
 
 const visibleLifecycles = [
   "All",
@@ -787,7 +790,36 @@ const lifecycleColor =
 
                 {/* ── Actions area ── */}
                 {showActions && (
-                  <>
+  <>
+    <TouchableOpacity
+      style={styles.expandBtn}
+      onPress={() =>
+        setExpandedMemberId(
+          expandedMemberId === item.id
+            ? null
+            : item.id
+        )
+      }
+    >
+      <Ionicons
+        name={
+          expandedMemberId === item.id
+            ? "chevron-up"
+            : "chevron-down"
+        }
+        size={16}
+        color="#4B3F72"
+      />
+
+      <Text style={styles.expandBtnText}>
+        {expandedMemberId === item.id
+          ? "Hide Actions"
+          : "Show Actions"}
+      </Text>
+    </TouchableOpacity>
+
+    {expandedMemberId === item.id && (
+      <>
                     {/* QR code */}
                     <TouchableOpacity onPress={() => setSelectedMember(item)} style={styles.qrRow}>
                       {/* ✅ FIXED: dropped the hardcoded sessionId: "Sunday-Service-1" — the
@@ -853,20 +885,39 @@ const lifecycleColor =
                     </View>
 
                     {/* Reinstate */}
-                    {isDisciplined && (
-                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#27ae60", marginTop: 4 }]}
-                        onPress={() => openReinstate(item)}>
-                        <Ionicons name="refresh-circle-outline" size={14} color="#fff" />
-                        <Text style={styles.actionBtnText}>Reinstate</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
+{isDisciplined && (
+  <TouchableOpacity
+    style={[
+      styles.actionBtn,
+      {
+        backgroundColor: "#27ae60",
+        marginTop: 4,
+      },
+    ]}
+    onPress={() => openReinstate(item)}
+  >
+    <Ionicons
+      name="refresh-circle-outline"
+      size={14}
+      color="#fff"
+    />
+    <Text style={styles.actionBtnText}>
+      Reinstate
+    </Text>
+  </TouchableOpacity>
+)}
+
+      </>
+    )}
+  </>
+)}
               </View>
             </TouchableOpacity>
           );
         }}
       />
+
+
 {/* ══ LIFECYCLE MORE MENU ══ */}
 <Modal
   visible={showLifecycleMenu}
@@ -1120,77 +1171,198 @@ const lifecycleColor =
         </View>
       </Modal>
 
-  {/* ══ FLOATING ACTION BUTTONS ══ */}
+
+
+
+
 <View style={styles.fab}>
 
-  {/* ✅ IMPORT */}
+  {showQuickActions && (
+    <>
+      {/* APPROVALS */}
+      <TouchableOpacity
+        style={[styles.fabBtn, { backgroundColor: "#E67E22" }]}
+        onPress={() => {
+          setShowQuickActions(false);
+
+          navigation.navigate("ApprovalCenter", {
+            viewerMemberId: null,
+          });
+        }}
+      >
+        <Ionicons
+          name="checkmark-done-circle-outline"
+          size={18}
+          color="#fff"
+        />
+        <Text style={styles.fabBtnText}>
+          Approvals
+        </Text>
+      </TouchableOpacity>
+
+      {/* NOTIFICATIONS */}
+      <TouchableOpacity
+        style={[styles.fabBtn, { backgroundColor: "#16A085" }]}
+        onPress={async () => {
+          setShowQuickActions(false);
+
+          const data =
+            await AsyncStorage.getItem(
+              "activeEntity"
+            );
+
+          if (!data) return;
+
+          const {
+            entityId,
+            organizationId,
+          } = JSON.parse(data);
+
+          navigation.navigate(
+            "NotificationComposer",
+            {
+              entityId,
+              organizationId,
+              viewerMemberId: null,
+              isSuperAdmin: true,
+            }
+          );
+        }}
+      >
+        <Ionicons
+          name="notifications-outline"
+          size={18}
+          color="#fff"
+        />
+        <Text style={styles.fabBtnText}>
+          Notifications
+        </Text>
+      </TouchableOpacity>
+
+      {/* IMPORT */}
+      <TouchableOpacity
+        style={[styles.fabBtn, { backgroundColor: "#0984E3" }]}
+        onPress={async () => {
+          setShowQuickActions(false);
+
+          const data =
+            await AsyncStorage.getItem(
+              "activeEntity"
+            );
+
+          if (!data) {
+            Alert.alert(
+              "Error",
+              "No active church selected"
+            );
+            return;
+          }
+
+          const {
+            entityId,
+            organizationId,
+          } = JSON.parse(data);
+
+          navigation.navigate(
+            "ImportMembers",
+            {
+              entityId,
+              organizationId,
+            }
+          );
+        }}
+      >
+        <Ionicons
+          name="cloud-upload-outline"
+          size={18}
+          color="#fff"
+        />
+        <Text style={styles.fabBtnText}>
+          Import
+        </Text>
+      </TouchableOpacity>
+
+      {/* ADD MEMBER */}
+      <TouchableOpacity
+        style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
+        onPress={async () => {
+          setShowQuickActions(false);
+
+          const data =
+            await AsyncStorage.getItem(
+              "activeEntity"
+            );
+
+          if (!data) {
+            Alert.alert(
+              "Error",
+              "No active church selected"
+            );
+            return;
+          }
+
+          const {
+            entityId,
+            organizationId,
+          } = JSON.parse(data);
+
+          if (membersLimit.isAtLimit) {
+            Alert.alert(
+              "Member Limit Reached",
+              `Current: ${membersLimit.used} / ${membersLimit.limit}`
+            );
+            return;
+          }
+
+          resetForm?.();
+
+          navigation.navigate(
+            "AddMember",
+            {
+              entityId,
+              organizationId,
+            }
+          );
+        }}
+      >
+        <Ionicons
+          name="person-add-outline"
+          size={18}
+          color="#fff"
+        />
+        <Text style={styles.fabBtnText}>
+          Add Member
+        </Text>
+      </TouchableOpacity>
+    </>
+  )}
+
+  {/* QUICK ACTIONS BUTTON */}
   <TouchableOpacity
-    style={[styles.fabBtn, { backgroundColor: "#0984E3" }]}
-    onPress={async () => {
-      const data = await AsyncStorage.getItem("activeEntity");
-
-      if (!data) {
-        Alert.alert("Error", "No active church selected");
-        return;
-      }
-
-      const { entityId, organizationId } = JSON.parse(data);
-
-      navigation.navigate("ImportMembers", {
-        entityId,
-        organizationId,
-      });
-    }}
-  >
-    <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-    <Text style={styles.fabBtnText}>Import</Text>
-  </TouchableOpacity>
-
-  {/* ✅ ADD MEMBER */}
-  <TouchableOpacity
-    style={[styles.fabBtn, { backgroundColor: "#4B3F72" }]}
-    onPress={async () => {
-      const data = await AsyncStorage.getItem("activeEntity");
-
-      if (!data) {
-        Alert.alert("Error", "No active church selected");
-        return;
-      }
-
-      const { entityId, organizationId } = JSON.parse(data);
-     if (membersLimit.isAtLimit) {
-  Alert.alert(
-    "Member Limit Reached",
-    `You have reached your member limit.
-
-Current: ${membersLimit.used} / ${membersLimit.limit} members
-
-Upgrade your plan to continue adding members.`,
-    [
+    style={[
+      styles.fabBtn,
       {
-        text: "View Plans",
-        onPress: () => navigation.navigate("Subscription"),
+        backgroundColor: "#2D3436",
       },
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-    ]
-  );
-  return;
-}
-
-resetForm?.();
-
-navigation.navigate("AddMember", {
-  entityId,
-  organizationId,
-});
-      
-    }}
+    ]}
+    onPress={() =>
+      setShowQuickActions(
+        !showQuickActions
+      )
+    }
   >
-    <Ionicons name="person-add-outline" size={18} color="#fff" />
-    <Text style={styles.fabBtnText}>Add Member</Text>
+    <Ionicons
+      name={
+        showQuickActions
+          ? "close"
+          : "flash-outline"
+      }
+      size={18}
+      color="#fff"
+    />
+    <Text style={styles.fabBtnText}>
+      Quick Actions
+    </Text>
   </TouchableOpacity>
 
 </View>
@@ -1258,7 +1430,12 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 
   // FAB
-  fab: { position: "absolute", bottom: 24, right: 16, flexDirection: "row", gap: 10 },
+  fab: {
+  position: "absolute",
+  bottom: 24,
+  right: 16,
+  alignItems: "flex-end",
+},
   fabBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 28, elevation: 6, gap: 6 },
   fabBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 
@@ -1344,4 +1521,26 @@ lifecycleBadgeText: {
   // Info banner
   infoBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10 },
   infoBannerText: { flex: 1, fontSize: 12, color: "#4B3F72" },
+  expandBtn: {
+  marginTop: 10,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+
+  backgroundColor: "#EEF0FA",
+
+  borderRadius: 10,
+  paddingVertical: 10,
+},
+
+expandBtnText: {
+  marginLeft: 6,
+  color: "#4B3F72",
+  fontWeight: "700",
+},
+quickActionsGroup: {
+  marginBottom: 10,
+  alignItems: "flex-end",
+},
+
 });

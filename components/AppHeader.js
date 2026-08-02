@@ -52,29 +52,31 @@ export default function AppHeader({
   {/* ✅ LOGO */}
  
 
-
-  <View
+<View
   style={{
-    marginLeft: -30,
     flex: 1,
   }}
 >
-  <Logo
-    width={220}
-    height={60}
-  />
+  {title ? (
+    <>
+      <Text style={styles.title}>
+        {title}
+      </Text>
 
-  {subtitle ? (
-    <Text
-      style={[
-        styles.subtitle,
-        { marginLeft: 10 }
-      ]}
-    >
-      {subtitle}
-    </Text>
-  ) : null}
+      {subtitle ? (
+        <Text style={styles.subtitle}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </>
+  ) : (
+    <Logo
+      width={220}
+      height={60}
+    />
+  )}
 </View>
+
 
 
 </View>

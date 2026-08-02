@@ -21,6 +21,9 @@ const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 const { getApps, initializeApp } = require("firebase-admin/app");
+const {
+  deliverToMember,
+} = require("./notify");
 
 if (!getApps().length) initializeApp();
 const db = getFirestore();
@@ -333,14 +336,33 @@ exports.markActiveUser = onCall(async (request) => {
   const now = FieldValue.serverTimestamp();
   const updates = { lastLoginAt: now, updatedAt: now };
 
-  if (member.lifecycleStatus === "registered") {
-    updates.lifecycleStatus = "active_user";
-    updates.lastStageChangeAt = now;
-    updates.lastChangedByUid = request.auth.uid;
-  }
+  const becameActiveUser =
+  member.lifecycleStatus === "registered";
+
+if (becameActiveUser) {
+  updates.lifecycleStatus = "active_user";
+  updates.lastStageChangeAt = now;
+  updates.lastChangedByUid = request.auth.uid;
+}
 
   await ref.update(updates);
-  return { updated: true };
+
+if (becameActiveUser) {
+  await deliverToMember({
+    organizationId,
+    entityId,
+    memberId,
+
+    type: "onboarding_welcome",
+
+    title: "Welcome to ChurchCare!",
+
+    message:
+      `You're all set up, ${member.name || "Member"}. We're glad to have you here.`,
+  });
+}
+
+return { updated: true };
 });
 
 // ─────────────────────────────────────────────────────────────────

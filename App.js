@@ -64,6 +64,8 @@ import DuplicateReviewScreen from "./screens/DuplicateReviewScreen";
 import QRRegistrationScreen from "./screens/QRRegistrationScreen";
 import InviteMemberScreen from "./screens/InviteMemberScreen";
 import ClaimAccountScreen from "./screens/ClaimAccountScreen";
+import NotificationComposerScreen from "./screens/NotificationComposerScreen";
+import ApprovalCenterScreen from "./screens/ApprovalCenterScreen";
 
 
 
@@ -188,6 +190,8 @@ function RootStack() {
       <Stack.Screen name="QRRegistration"component={QRRegistrationScreen}/>
       <Stack.Screen name="InviteMember"component={InviteMemberScreen}options={{ headerShown: false }}/>
       <Stack.Screen name="ClaimAccount"component={ClaimAccountScreen}options={{ headerShown: false }}/>
+      <Stack.Screen name="NotificationComposer"component={NotificationComposerScreen}/>
+      <Stack.Screen name="ApprovalCenter"component={ApprovalCenterScreen}/>
 
     </Stack.Navigator>
   );
