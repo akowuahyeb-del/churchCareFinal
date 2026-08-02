@@ -1430,13 +1430,29 @@ const styles = StyleSheet.create({
   actionBtnText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 
   // FAB
-  fab: {
+ fab: {
   position: "absolute",
   bottom: 24,
   right: 16,
+
   alignItems: "flex-end",
 },
-  fabBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 28, elevation: 6, gap: 6 },
+
+  fabBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+
+  minWidth: 170,
+
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+
+  borderRadius: 28,
+
+  elevation: 6,
+
+  gap: 6,
+},
   fabBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
 
   // Form modal
@@ -1539,8 +1555,8 @@ expandBtnText: {
   fontWeight: "700",
 },
 quickActionsGroup: {
-  marginBottom: 10,
   alignItems: "flex-end",
+  marginBottom: 10,
 },
 
 });
