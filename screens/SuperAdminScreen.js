@@ -81,6 +81,17 @@ const approveOrganization =
     functions,
     "approveOrganization"
   );
+  const deactivateOrganization =
+  httpsCallable(
+    functions,
+    "deactivateOrganization"
+  );
+
+const reinstateOrganization =
+  httpsCallable(
+    functions,
+    "reinstateOrganization"
+  );
 
   // ── LIVE ACTIVITY ──
   const [liveActivity, setLiveActivity] = useState([]);
@@ -100,6 +111,8 @@ const approveOrganization =
   const [approvalModal, setApprovalModal] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [deactivationReason,setDeactivationReason] =useState("");
+  const [deactivateModal,setDeactivateModal] =useState(false);
   const [processingOrgId, setProcessingOrgId] = useState(null);
   const [orgDetailModal, setOrgDetailModal] = useState(false);
   const [orgDetail, setOrgDetail] = useState(null);
@@ -392,35 +405,77 @@ const loadGovernanceNodes = async () => {
     setProcessingOrgId(null);
   }
 };
+const deactivateChurch = async (org) => {
+  if (!deactivationReason.trim()) {
+    Alert.alert(
+      "Reason Required",
+      "Please provide a reason."
+    );
+    return;
+  }
 
-  const rejectChurch = async (org) => {
-    if (!rejectReason.trim()) {
-      Alert.alert("Required", "Please provide a reason for rejection.");
-      return;
-    }
-    setProcessingOrgId(org.id);
-    try {
-      await updateDoc(doc(db, "organizations", org.id), {
-        status: "rejected",
-        rejectedAt: new Date().toISOString(),
-        rejectionReason: rejectReason.trim(),
-      });
-      await logActivity({
-        type: "org_rejected",
-        orgId: org.id,
-        orgName: org.name,
-        message: `${org.name} rejected: ${rejectReason}`,
-      });
-      setApprovalModal(false);
-      setRejectReason("");
-      await loadOrganizations();
-      Alert.alert("Rejected", `${org.name} has been rejected.`);
-    } catch (e) {
-      Alert.alert("Error", "Could not reject.");
-    } finally {
-      setProcessingOrgId(null);
-    }
-  };
+  setProcessingOrgId(org.id);
+
+  try {
+
+    await deactivateOrganization({
+      organizationId: org.id,
+      reason: deactivationReason,
+    });
+
+    await loadOrganizations();
+
+    setDeactivationReason("");
+
+    Alert.alert(
+      "Church Deactivated",
+      `${org.name} has been deactivated.`
+    );
+
+  } catch (e) {
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+
+  } finally {
+
+    setProcessingOrgId(null);
+
+  }
+};
+
+const reinstateChurch = async (org) => {
+
+  setProcessingOrgId(org.id);
+
+  try {
+
+    await reinstateOrganization({
+      organizationId: org.id,
+    });
+
+    await loadOrganizations();
+
+    Alert.alert(
+      "Church Reinstated",
+      `${org.name} has been reinstated.`
+    );
+
+  } catch (e) {
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+
+  } finally {
+
+    setProcessingOrgId(null);
+
+  }
+};
 
   // ─────────────────────────────────────────────────────────────────
   // PLAN OVERRIDE — force a plan for a specific org
@@ -689,7 +744,7 @@ const loadGovernanceNodes = async () => {
               </View>
 
               <View style={styles.filterRow}>
-                {["all", "active", "pending", "rejected"].map(f => (
+                {["all", "active", "inactive", "pending", "rejected"].map(f => (
                   <TouchableOpacity
                     key={f}
                     style={[styles.filterChip, orgFilter === f && styles.filterChipActive]}
@@ -706,13 +761,32 @@ const loadGovernanceNodes = async () => {
 
               {filteredOrgs.map(org => (
                 <OrgCard
-                  key={org.id}
-                  org={org}
-                  processingOrgId={processingOrgId}
-                  onPress={() => openOrgDetail(org)}
-                  onApprove={() => { setSelectedOrg(org); setApprovalModal(true); }}
-                  onPlan={() => { setPlanTarget(org); setSelectedPlan(org.subscription?.planId || "free"); setPlanModal(true); }}
-                />
+  key={org.id}
+  org={org}
+  processingOrgId={processingOrgId}
+  onPress={() => openOrgDetail(org)}
+  onApprove={() => {
+    setSelectedOrg(org);
+    setApprovalModal(true);
+  }}
+  onPlan={() => {
+    setPlanTarget(org);
+    setSelectedPlan(
+      org.subscription?.planId || "free"
+    );
+    setPlanModal(true);
+  }}
+  onDeactivate={() => {
+  setSelectedOrg(org);
+  setDeactivationReason("");
+  setDeactivateModal(true);
+}}
+  onReinstate={() =>
+    reinstateChurch(org)
+  }
+/>
+
+                
               ))}
 
               {filteredOrgs.length === 0 && (
@@ -1066,9 +1140,6 @@ const loadGovernanceNodes = async () => {
 
 
 
-
-
-
                 <View style={styles.infoBox}>
                   <Ionicons name="information-circle-outline" size={13} color="#4B3F72" />
                   <Text style={styles.infoBoxText}>
@@ -1115,6 +1186,90 @@ const loadGovernanceNodes = async () => {
         </View>
       </View>
     </Modal>
+
+
+
+
+
+<Modal
+  visible={deactivateModal}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Deactivate Church
+      </Text>
+
+      <Text style={styles.modalSub}>
+        {selectedOrg?.name}
+      </Text>
+
+      <Text style={styles.fieldLabel}>
+        Reason *
+      </Text>
+
+      <TextInput
+        style={[
+          styles.input,
+          {
+            height: 90,
+            textAlignVertical: "top",
+          },
+        ]}
+        multiline
+        placeholder="Why is this church being deactivated?"
+        value={deactivationReason}
+        onChangeText={setDeactivationReason}
+      />
+
+      <TouchableOpacity
+        style={[
+          styles.rejectBtn,
+          !deactivationReason.trim() &&
+            { opacity: 0.4 }
+        ]}
+        disabled={!deactivationReason.trim()}
+        onPress={async () => {
+          await deactivateChurch(
+            selectedOrg
+          );
+
+          setDeactivateModal(false);
+        }}
+      >
+        <Ionicons
+          name="pause-circle-outline"
+          size={16}
+          color="#fff"
+        />
+
+        <Text style={styles.rejectBtnText}>
+          Deactivate Church
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => {
+          setDeactivateModal(false);
+          setDeactivationReason("");
+        }}
+      >
+        <Text style={styles.cancelText}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+
+
+
+
 
 
       {/* ══════════ ORG DETAIL MODAL ══════════ */}
@@ -1328,7 +1483,15 @@ function ActionCard({ icon, color, label, sub, onPress }) {
   );
 }
 
-function OrgCard({ org, processingOrgId, onPress, onApprove, onPlan }) {
+function OrgCard({
+  org,
+  processingOrgId,
+  onPress,
+  onApprove,
+  onPlan,
+  onDeactivate,
+  onReinstate,
+}) {
   const color = STATUS_COLOR[org.status] || "#888";
   return (
     <TouchableOpacity style={styles.orgCard} onPress={onPress}>
@@ -1360,12 +1523,76 @@ function OrgCard({ org, processingOrgId, onPress, onApprove, onPlan }) {
         )
       )}
 
-      {org.status === "active" && (
-        <TouchableOpacity style={styles.planCardBtn} onPress={onPlan}>
-          <Ionicons name="card-outline" size={12} color="#4B3F72" />
-          <Text style={styles.planCardBtnText}>Manage Plan</Text>
-        </TouchableOpacity>
-      )}
+{org.status === "active" && (
+  <>
+    <TouchableOpacity
+      style={styles.planCardBtn}
+      onPress={onPlan}
+    >
+      <Ionicons
+        name="card-outline"
+        size={12}
+        color="#4B3F72"
+      />
+      <Text style={styles.planCardBtnText}>
+        Manage Plan
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.planCardBtn,
+        {
+          backgroundColor: "#ffe6e6",
+          marginTop: 6,
+        },
+      ]}
+      onPress={onDeactivate}
+    >
+      <Ionicons
+        name="pause-circle-outline"
+        size={12}
+        color="#e74c3c"
+      />
+      <Text
+        style={{
+          color: "#e74c3c",
+          fontWeight: "700",
+        }}
+      >
+        Deactivate
+      </Text>
+    </TouchableOpacity>
+  </>
+)}
+
+{org.status === "inactive" && (
+  <TouchableOpacity
+    style={[
+      styles.planCardBtn,
+      {
+        backgroundColor: "#e8fff0",
+        marginTop: 6,
+      },
+    ]}
+    onPress={onReinstate}
+  >
+    <Ionicons
+      name="refresh-circle-outline"
+      size={12}
+      color="#27ae60"
+    />
+    <Text
+      style={{
+        color: "#27ae60",
+        fontWeight: "700",
+      }}
+    >
+      Reinstate
+    </Text>
+  </TouchableOpacity>
+)}
+
     </TouchableOpacity>
   );
 }

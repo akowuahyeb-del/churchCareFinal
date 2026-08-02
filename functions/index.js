@@ -128,3 +128,13 @@ exports.submitOrganizationRegistration =
 exports.searchOrganizationNetworks =
   require("./orgHierarchy")
     .searchOrganizationNetworks;
+    const {
+  deactivateOrganization,
+  reinstateOrganization,
+} = require("./orgLifecycle");
+
+exports.deactivateOrganization =
+  deactivateOrganization;
+
+exports.reinstateOrganization =
+  reinstateOrganization;
