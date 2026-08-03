@@ -12,7 +12,7 @@ import QRCode from "react-native-qrcode-svg";
 import { db } from "../firebase";
 import {
   collection, addDoc, getDocs, updateDoc,
-  deleteDoc, doc, query, where
+  deleteDoc, doc, query, where,
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import { hasPermission } from "../constants/permissions";
@@ -406,6 +406,8 @@ const editMember = (item) => {
     }
   };
 
+ 
+
   /* ── Approval system ── */
   const approvalKey   = (mId, action) => `${mId}_${action}`;
   const getApprovals  = (mId, action) => approvals[approvalKey(mId, action)] || [];
@@ -431,26 +433,64 @@ const editMember = (item) => {
   };
 
   const grantApproval = () => {
-    if (!approvalAction || !approvalTarget) return;
-    const key     = approvalKey(approvalTarget.id, approvalAction);
-    const current = approvals[key] || [];
-    if (current.includes(viewerRole)) {
-      Alert.alert("Already approved", "You have already approved this action."); return;
-    }
-    const updated = { ...approvals, [key]: [...current, viewerRole] };
-    setApprovals(updated);
-    const required = ACTIONS[approvalAction]?.required || [];
-    const allDone  = required.every(r => updated[key].includes(r));
-    if (allDone) {
-      setApprovalModal(false);
-      executeAction(approvalTarget, approvalAction, approvalNote);
-    } else {
-      const remaining = required.filter(r => !updated[key].includes(r));
-      Alert.alert("Approval recorded", `Still waiting for: ${remaining.join(", ")}`);
-      setApprovalModal(false);
-    }
-    setApprovalNote("");
-  };
+  if (!approvalAction || !approvalTarget) return;
+
+  const key = approvalKey(
+    approvalTarget.id,
+    approvalAction
+  );
+
+  const current =
+    approvals[key] || [];
+
+  if (current.includes(viewerRole)) {
+    Alert.alert(
+      "Already approved",
+      "You have already approved this action."
+    );
+    return;
+  }
+
+  const updated = {
+  ...approvals,
+  [key]: [...current, viewerRole],
+};
+
+
+  setApprovals(updated);
+
+  const required =
+    ACTIONS[approvalAction]?.required || [];
+
+  const allDone = required.every(
+    (r) => updated[key].includes(r)
+  );
+
+  if (allDone) {
+    setApprovalModal(false);
+
+    executeAction(
+      approvalTarget,
+      approvalAction,
+      approvalNote
+    );
+  } else {
+    const remaining =
+      required.filter(
+        (r) => !updated[key].includes(r)
+      );
+
+    Alert.alert(
+      "Approval recorded",
+      `Still waiting for: ${remaining.join(", ")}`
+    );
+
+    setApprovalModal(false);
+  }
+
+  setApprovalNote("");
+};
+
 
   const executeAction = async (m, action, note) => {
   try {

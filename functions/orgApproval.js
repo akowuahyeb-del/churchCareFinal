@@ -416,6 +416,100 @@ await orgRef.update({
   approvedAt: now,
   organizationCode,
 });
+// --------------------------------------------------
+// Approval Audit Log
+// --------------------------------------------------
+
+await orgRef.collection("auditLogs").add({
+  action: "organization_approved",
+
+  organizationId,
+
+  organizationName: org.name,
+
+  organizationCode,
+
+  approvedAt: now,
+
+  approvedByUid:
+    request.auth.uid,
+
+  approvedByEmail:
+    request.auth.token?.email || null,
+
+  previousStatus: "pending",
+
+  newStatus: "active",
+
+  createdAt: now,
+});
+
+// --------------------------------------------------
+// Church Administrator Notification
+// --------------------------------------------------
+
+await orgRef
+  .collection("notifications")
+  .add({
+    type: "organization_approved",
+
+    title:
+      "Church Registration Approved ✅",
+
+    message:
+      `Congratulations. ${org.name} has been approved and activated. ` +
+      `Organisation Code: ${organizationCode}. ` +
+      `You may now continue onboarding and church setup.`,
+
+    recipientType: "church_admin",
+
+    recipientName:
+      org.adminName || null,
+
+    recipientPhone:
+      org.adminPhone || null,
+
+    recipientEmail:
+      org.adminEmail || null,
+
+    read: false,
+
+    createdAt: now,
+  });
+  // --------------------------------------------------
+// Contact Person Notification
+// --------------------------------------------------
+
+await orgRef
+  .collection("notifications")
+  .add({
+    type: "organization_approved",
+
+    title:
+      "Church Registration Approved ✅",
+
+    message:
+      `The registration for ${org.name} has been approved and activated. ` +
+      `Organisation Code: ${organizationCode}. ` +
+      `The church administrator may now continue onboarding and church setup.`,
+
+    recipientType: "contact_person",
+
+    recipientName:
+      org.contactName || null,
+
+    recipientPhone:
+      org.contactPhone || null,
+
+    recipientEmail:
+      org.contactEmail || null,
+
+    read: false,
+
+    createdAt: now,
+  });
+
+
 
     // --------------------------------------------------
     // Activate Entity
