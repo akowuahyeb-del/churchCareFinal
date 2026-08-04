@@ -15,6 +15,10 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
+const {
+  createMemberRecord,
+} = require("./onboarding");
+
 
 const TEMPLATE_STRUCTURE = {
   presbyterian: {
@@ -122,13 +126,15 @@ const LEVEL_CODES = {
   local_assembly: "LA",
   local_church: "LC",
   national_headquarters: "NH",
-area: "AREA",
-region: "REG",
-branch: "BR",
-headquarters: "HQ",
-assembly: "ASM",
-union_conference: "UC",
-conference_mission: "CM",
+  national_executive: "NE",
+  area: "AREA",
+  region: "REG",
+  branch: "BR",
+  headquarters: "HQ",
+  head_office: "HO",
+  assembly: "ASM",
+  union_conference: "UC",
+  conference_mission: "CM",
 };
 
 const TEMPLATE_CODES = {
@@ -148,10 +154,10 @@ async function generateOrganizationCode(
   const levelCode =
     LEVEL_CODES[levelId] || "ORG";
 
-const templateCode =
-  TEMPLATE_CODES[templateId] ||
-  organizationAbbreviation ||
-  "ORG";
+  const templateCode =
+    TEMPLATE_CODES[templateId] ||
+    organizationAbbreviation ||
+    "ORG";
 
   const counterRef =
     db.collection("counters")
@@ -183,9 +189,8 @@ const templateCode =
       }
     );
 
-  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4,"0")}`;
+  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4, "0")}`;
 }
-
 
 
 async function validateRegistration(org) {
@@ -195,7 +200,6 @@ async function validateRegistration(org) {
     levelId,
     name,
     location,
-    denomination,
   } = org;
 
   if (!templateId) {
@@ -221,104 +225,115 @@ async function validateRegistration(org) {
 
   const governanceRef =
     db.collection("governanceNodes");
-    const rank =
-  getHierarchyRank(
-    templateId,
-    levelId
-  );
 
-
- // --------------------------------------------------
-// Rank 1 (Top Level)
-// One top-level node per denomination
-// --------------------------------------------------
-
-if (rank === 1) {
-
-  const existing = await governanceRef
-    .where("status", "==", "active")
-    .where("templateId", "==", templateId)
-    .where("levelId", "==", levelId)
-    .get();
-
-  if (!existing.empty) {
-    throw new HttpsError(
-      "already-exists",
-      `Top-level organization already exists`
-    );
-  }
-
-  return;
-}
-
-// --------------------------------------------------
-// Rank 2 & Rank 3
-// Name must be unique within denomination
-// --------------------------------------------------
-
-if (rank === 2 || rank === 3) {
-
-  const existing = await governanceRef
-    .where("status", "==", "active")
-    .where("templateId", "==", templateId)
-    .where("levelId", "==", levelId)
-    .get();
-
-  const duplicate =
-    existing.docs.find((d) =>
-      d.data().name?.trim().toLowerCase() ===
-      name?.trim().toLowerCase()
+  const rank =
+    getHierarchyRank(
+      templateId,
+      levelId
     );
 
-  if (duplicate) {
-    throw new HttpsError(
-      "already-exists",
-      `${name} already exists`
-    );
-  }
+  // --------------------------------------------------
+  // Rank 1 (Top Level)
+  // One top-level node per denomination
+  // --------------------------------------------------
 
-  return;
-}
+  if (rank === 1) {
 
-// --------------------------------------------------
-// Rank 4 (Local Unit)
-// Name + Location must be unique
-// --------------------------------------------------
+    const existing = await governanceRef
+      .where("status", "==", "active")
+      .where("templateId", "==", templateId)
+      .where("levelId", "==", levelId)
+      .get();
 
-if (rank === 4) {
-
-  const existing = await governanceRef
-    .where("status", "==", "active")
-    .where("templateId", "==", templateId)
-    .where("levelId", "==", levelId)
-    .get();
-
-  const duplicate =
-    existing.docs.find((d) => {
-
-      const data = d.data();
-
-      return (
-        data.name?.trim().toLowerCase() ===
-          name?.trim().toLowerCase() &&
-        data.location?.trim().toLowerCase() ===
-          location?.trim().toLowerCase()
+    if (!existing.empty) {
+      throw new HttpsError(
+        "already-exists",
+        `Top-level organization already exists`
       );
-    });
+    }
 
-  if (duplicate) {
-    throw new HttpsError(
-      "already-exists",
-      `${name} already exists in ${location}`
-    );
+    return;
   }
 
-  return;
-}
+  // --------------------------------------------------
+  // Rank 2 & Rank 3
+  // Name must be unique within denomination
+  // --------------------------------------------------
+
+  if (rank === 2 || rank === 3) {
+
+    const existing = await governanceRef
+      .where("status", "==", "active")
+      .where("templateId", "==", templateId)
+      .where("levelId", "==", levelId)
+      .get();
+
+    const duplicate =
+      existing.docs.find((d) =>
+        d.data().name?.trim().toLowerCase() ===
+        name?.trim().toLowerCase()
+      );
+
+    if (duplicate) {
+      throw new HttpsError(
+        "already-exists",
+        `${name} already exists`
+      );
+    }
+
+    return;
+  }
+
+  // --------------------------------------------------
+  // Rank 4 (Local Unit)
+  // Name + Location must be unique
+  // --------------------------------------------------
+
+  if (rank === 4) {
+
+    const existing = await governanceRef
+      .where("status", "==", "active")
+      .where("templateId", "==", templateId)
+      .where("levelId", "==", levelId)
+      .get();
+
+    const duplicate =
+      existing.docs.find((d) => {
+
+        const data = d.data();
+
+        return (
+          data.name?.trim().toLowerCase() ===
+            name?.trim().toLowerCase() &&
+          data.location?.trim().toLowerCase() ===
+            location?.trim().toLowerCase()
+        );
+      });
+
+    if (duplicate) {
+      throw new HttpsError(
+        "already-exists",
+        `${name} already exists in ${location}`
+      );
+    }
+
+    return;
+  }
 }
 
 exports.approveOrganization =
   onCall(async (request) => {
+
+    // --------------------------------------------------
+    // Auth Guard
+    // --------------------------------------------------
+
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "You must be signed in to approve an organization"
+      );
+    }
 
     const { organizationId } =
       request.data || {};
@@ -347,28 +362,27 @@ exports.approveOrganization =
       );
     }
 
-   const org = {
-  id: orgSnap.id,
-  ...orgSnap.data(),
-};
+    const org = {
+      id: orgSnap.id,
+      ...orgSnap.data(),
+    };
 
-// --------------------------------------------------
-// Validate Status
-// --------------------------------------------------
+    // --------------------------------------------------
+    // Validate Status
+    // --------------------------------------------------
 
-if (org.status !== "pending") {
-  throw new HttpsError(
-    "failed-precondition",
-    `Organization is not pending (current status: ${org.status})`
-  );
-}
+    if (org.status !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Organization is not pending (current status: ${org.status})`
+      );
+    }
 
-// --------------------------------------------------
-// Validate Registration
-// --------------------------------------------------
+    // --------------------------------------------------
+    // Validate Registration
+    // --------------------------------------------------
 
-await validateRegistration(org);
-
+    await validateRegistration(org);
 
     // --------------------------------------------------
     // Load Primary Entity
@@ -393,123 +407,22 @@ await validateRegistration(org);
     const entityId =
       entityDoc.id;
 
-    // --------------------------------------------------
-    // Activate Organization
-    // --------------------------------------------------
-
     const now =
       new Date().toISOString();
 
-       const templateId =
+    const templateId =
       org.templateId || "presbyterian";
 
+    // --------------------------------------------------
+    // Generate Organization Code
+    // --------------------------------------------------
 
-const organizationCode =
-  await generateOrganizationCode(
-    templateId,
-    org.levelId,
-    org.organizationAbbreviation
-  );
-
-await orgRef.update({
-  status: "active",
-  approvedAt: now,
-  organizationCode,
-});
-// --------------------------------------------------
-// Approval Audit Log
-// --------------------------------------------------
-
-await orgRef.collection("auditLogs").add({
-  action: "organization_approved",
-
-  organizationId,
-
-  organizationName: org.name,
-
-  organizationCode,
-
-  approvedAt: now,
-
-  approvedByUid:
-    request.auth.uid,
-
-  approvedByEmail:
-    request.auth.token?.email || null,
-
-  previousStatus: "pending",
-
-  newStatus: "active",
-
-  createdAt: now,
-});
-
-// --------------------------------------------------
-// Church Administrator Notification
-// --------------------------------------------------
-
-await orgRef
-  .collection("notifications")
-  .add({
-    type: "organization_approved",
-
-    title:
-      "Church Registration Approved ✅",
-
-    message:
-      `Congratulations. ${org.name} has been approved and activated. ` +
-      `Organisation Code: ${organizationCode}. ` +
-      `You may now continue onboarding and church setup.`,
-
-    recipientType: "church_admin",
-
-    recipientName:
-      org.adminName || null,
-
-    recipientPhone:
-      org.adminPhone || null,
-
-    recipientEmail:
-      org.adminEmail || null,
-
-    read: false,
-
-    createdAt: now,
-  });
-  // --------------------------------------------------
-// Contact Person Notification
-// --------------------------------------------------
-
-await orgRef
-  .collection("notifications")
-  .add({
-    type: "organization_approved",
-
-    title:
-      "Church Registration Approved ✅",
-
-    message:
-      `The registration for ${org.name} has been approved and activated. ` +
-      `Organisation Code: ${organizationCode}. ` +
-      `The church administrator may now continue onboarding and church setup.`,
-
-    recipientType: "contact_person",
-
-    recipientName:
-      org.contactName || null,
-
-    recipientPhone:
-      org.contactPhone || null,
-
-    recipientEmail:
-      org.contactEmail || null,
-
-    read: false,
-
-    createdAt: now,
-  });
-
-
+    const organizationCode =
+      await generateOrganizationCode(
+        templateId,
+        org.levelId,
+        org.organizationAbbreviation
+      );
 
     // --------------------------------------------------
     // Activate Entity
@@ -521,9 +434,188 @@ await orgRef
     });
 
     // --------------------------------------------------
+    // System Creates Administrator Member
+    // (must happen before we reference adminMemberId)
+    // --------------------------------------------------
+
+    const adminMember =
+      await createMemberRecord({
+        organizationId,
+
+        entityId,
+
+        actorUid:
+          request.auth.uid,
+
+        memberData: {
+
+          name:
+            org.adminName || "",
+
+          phone:
+            org.adminPhone || null,
+
+          email:
+            org.adminEmail || null,
+
+          source:
+            "organization_registration",
+
+          lifecycleStatus:
+            "member",
+        },
+      });
+
+    const adminMemberId = adminMember.id;
+
+    // --------------------------------------------------
+    // Activate Organization
+    // --------------------------------------------------
+
+    await orgRef.update({
+      status: "active",
+      approvedAt: now,
+      organizationCode,
+
+      onboardingStatus: "awaiting_admin_claim",
+
+      adminClaimed: false,
+      adminUid: null,
+      adminMemberId,
+
+      contactClaimed: false,
+      contactUid: null,
+      contactMemberId: null,
+    });
+
+    // --------------------------------------------------
+    // Notify Administrator Of Approval
+    // --------------------------------------------------
+
+    try {
+
+      await orgRef
+        .collection("notifications")
+        .add({
+
+          type:
+            "organization_approved",
+
+          recipientType:
+            "church_admin",
+
+          recipientName:
+            org.adminName || null,
+
+          recipientPhone:
+            org.adminPhone || null,
+
+          recipientEmail:
+            org.adminEmail || null,
+
+          memberId:
+            adminMemberId,
+
+          title:
+            "Church Registration Approved \u2705",
+
+          message:
+            `Congratulations ${org.adminName || ""}.\n\n` +
+            `${org.name} has been approved and activated.\n\n` +
+            `Organisation Code: ${organizationCode}\n\n` +
+            `Please open ChurchCare and complete your onboarding.`,
+
+          read: false,
+
+          createdAt: now,
+        });
+
+    } catch (notificationError) {
+
+      console.error(
+        "ADMIN APPROVAL NOTIFICATION FAILED",
+        notificationError
+      );
+
+      // Do NOT fail approval
+    }
+
+    // --------------------------------------------------
+    // Contact Person Notification
+    // --------------------------------------------------
+
+    try {
+
+      await orgRef
+        .collection("notifications")
+        .add({
+          type: "organization_approved",
+
+          title:
+            "Church Registration Approved \u2705",
+
+          message:
+            `The registration for ${org.name} has been approved and activated. ` +
+            `Organisation Code: ${organizationCode}. ` +
+            `The church administrator may now continue onboarding and church setup.`,
+
+          recipientType: "contact_person",
+
+          recipientName:
+            org.contactName || null,
+
+          recipientPhone:
+            org.contactPhone || null,
+
+          recipientEmail:
+            org.contactEmail || null,
+
+          read: false,
+
+          createdAt: now,
+        });
+
+    } catch (notificationError) {
+
+      console.error(
+        "CONTACT NOTIFICATION FAILED",
+        notificationError
+      );
+
+      // Do NOT fail approval
+    }
+
+    // --------------------------------------------------
+    // Approval Audit Log
+    // --------------------------------------------------
+
+    await orgRef.collection("auditLogs").add({
+      action: "organization_approved",
+
+      organizationId,
+
+      organizationName: org.name,
+
+      organizationCode,
+
+      approvedAt: now,
+
+      approvedByUid:
+        request.auth.uid,
+
+      approvedByEmail:
+        request.auth.token?.email || null,
+
+      previousStatus: "pending",
+
+      newStatus: "active",
+
+      createdAt: now,
+    });
+
+    // --------------------------------------------------
     // Structure Settings
     // --------------------------------------------------
-   
 
     await db
       .collection("organizations")
@@ -545,36 +637,36 @@ await orgRef
     // Governance Node
     // --------------------------------------------------
 
-   const governanceNodeRef = db
-  .collection("governanceNodes")
-  .doc();
+    const governanceNodeRef = db
+      .collection("governanceNodes")
+      .doc();
 
-await governanceNodeRef.set({
-  name: org.name,
+    await governanceNodeRef.set({
+      name: org.name,
 
-  location: org.location || null,
+      location: org.location || null,
 
-  organizationCode,
+      organizationCode,
 
-  levelId: org.levelId,
+      levelId: org.levelId,
 
-  organizationId,
+      organizationId,
 
-  entityId,
+      entityId,
 
-  parentNodeId: null,
+      parentNodeId: null,
 
-  templateId,
+      templateId,
 
-  status: "active",
+      status: "active",
 
-  // A node is valid and operational
-  // even if no parent currently exists.
-  pendingLink: false,
+      // A node is valid and operational
+      // even if no parent currently exists.
+      pendingLink: false,
 
-  createdAt: now,
-  updatedAt: now,
-});
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await orgRef.update({
       governanceNodeId:
@@ -582,62 +674,92 @@ await governanceNodeRef.set({
     });
 
     // --------------------------------------------------
-// Parent Linking
-// --------------------------------------------------
+    // Parent Linking
+    // --------------------------------------------------
 
-const parentLevelId =
-  getParentLevelId(
-    templateId,
-    org.levelId
-  );
+    const parentLevelId =
+      getParentLevelId(
+        templateId,
+        org.levelId
+      );
 
-if (parentLevelId) {
+    if (parentLevelId) {
 
-  const parentSnap = await db
-    .collection("governanceNodes")
-    .where("templateId", "==", templateId)
-    .where("levelId", "==", parentLevelId)
-    .where("status", "==", "active")
-    .get();
+      const parentSnap = await db
+        .collection("governanceNodes")
+        .where("templateId", "==", templateId)
+        .where("levelId", "==", parentLevelId)
+        .where("status", "==", "active")
+        .get();
 
-  if (!parentSnap.empty) {
+      if (!parentSnap.empty) {
 
-    await governanceNodeRef.update({
-      parentNodeId:
-        parentSnap.docs[0].id,
+        // NOTE: if more than one active node exists at the parent
+        // level (e.g. multiple presbyteries/regions), this still
+        // can't determine the *correct* parent without an explicit
+        // parentOrganizationId submitted at registration time.
+        // Flagging via pendingLink rather than guessing wrong.
+        if (parentSnap.docs.length === 1) {
 
-      pendingLink: false,
-    });
-  }
-}
+          await governanceNodeRef.update({
+            parentNodeId:
+              parentSnap.docs[0].id,
 
+            pendingLink: false,
+          });
+
+        } else {
+
+          await governanceNodeRef.update({
+            pendingLink: true,
+          });
+        }
+
+      } else {
+
+        await governanceNodeRef.update({
+          pendingLink: true,
+        });
+      }
+    }
 
     // --------------------------------------------------
-    // TEMPORARY RETURN
+    // Return
     // --------------------------------------------------
 
     return {
-  success: true,
+      success: true,
 
-  organizationId,
+      organizationId,
 
-  entityId,
+      entityId,
 
-  governanceNodeId:
-    governanceNodeRef.id,
+      governanceNodeId:
+        governanceNodeRef.id,
 
-  organizationCode,
+      organizationCode,
 
-  templateId,
+      templateId,
 
-  approvedAt: now,
-};
+      approvedAt: now,
+    };
   });
 
 exports.rejectOrganization =
   onCall(async (request) => {
 
-    const { organizationId } =
+    // --------------------------------------------------
+    // Auth Guard
+    // --------------------------------------------------
+
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "You must be signed in to reject an organization"
+      );
+    }
+
+    const { organizationId, reason } =
       request.data || {};
 
     if (!organizationId) {
@@ -647,9 +769,126 @@ exports.rejectOrganization =
       );
     }
 
-  return {
-  success: true,
-  organizationId,
-};
+    // --------------------------------------------------
+    // Load Organization
+    // --------------------------------------------------
+
+    const orgRef = db
+      .collection("organizations")
+      .doc(organizationId);
+
+    const orgSnap = await orgRef.get();
+
+    if (!orgSnap.exists) {
+      throw new HttpsError(
+        "not-found",
+        "Organization not found"
+      );
+    }
+
+    const org = {
+      id: orgSnap.id,
+      ...orgSnap.data(),
+    };
+
+    // --------------------------------------------------
+    // Validate Status
+    // --------------------------------------------------
+
+    if (org.status !== "pending") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Organization is not pending (current status: ${org.status})`
+      );
+    }
+
+    const now = new Date().toISOString();
+
+    // --------------------------------------------------
+    // Reject Organization
+    // --------------------------------------------------
+
+    await orgRef.update({
+      status: "rejected",
+      rejectedAt: now,
+      rejectionReason: reason || null,
+    });
+
+    // --------------------------------------------------
+    // Rejection Audit Log
+    // --------------------------------------------------
+
+    await orgRef.collection("auditLogs").add({
+      action: "organization_rejected",
+
+      organizationId,
+
+      organizationName: org.name,
+
+      rejectedAt: now,
+
+      rejectedByUid:
+        request.auth.uid,
+
+      rejectedByEmail:
+        request.auth.token?.email || null,
+
+      reason: reason || null,
+
+      previousStatus: "pending",
+
+      newStatus: "rejected",
+
+      createdAt: now,
+    });
+
+    // --------------------------------------------------
+    // Notify Contact/Admin Of Rejection
+    // --------------------------------------------------
+
+    try {
+
+      await orgRef
+        .collection("notifications")
+        .add({
+          type: "organization_rejected",
+
+          title: "Church Registration Update",
+
+          message: reason
+            ? `Your registration for ${org.name} was not approved. Reason: ${reason}`
+            : `Your registration for ${org.name} was not approved.`,
+
+          recipientType: "church_admin",
+
+          recipientName:
+            org.adminName || null,
+
+          recipientPhone:
+            org.adminPhone || null,
+
+          recipientEmail:
+            org.adminEmail || null,
+
+          read: false,
+
+          createdAt: now,
+        });
+
+    } catch (notificationError) {
+
+      console.error(
+        "REJECTION NOTIFICATION FAILED",
+        notificationError
+      );
+
+      // Do NOT fail rejection
+    }
+
+    return {
+      success: true,
+      organizationId,
+      status: "rejected",
+      rejectedAt: now,
+    };
   });
-  

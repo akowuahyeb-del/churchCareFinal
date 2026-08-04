@@ -694,11 +694,17 @@ useEffect(() => {
     onPress={() => {
       setDuplicateModal(false);
 
-      navigation.navigate("MemberProfile", {
-        memberId: duplicateMatch?.id,
-        organizationId,
-        entityId,
-      });
+      navigation.navigate("MainTabs", {
+  screen: "Members",
+  params: {
+    screen: "MemberProfile",
+    params: {
+      memberId: duplicateMatch?.id,
+      organizationId,
+      entityId,
+    },
+  },
+});
     }}
   >
     <Text style={styles.white}>

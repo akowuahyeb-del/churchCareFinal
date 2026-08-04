@@ -102,6 +102,86 @@ exports.checkDuplicateMember = onCall(async (request) => {
   return { matches };
 });
 
+
+async function createMemberRecord({
+  organizationId,
+  entityId,
+  memberData,
+  actorUid = null,
+}) {
+
+  const now = FieldValue.serverTimestamp();
+
+  const initialStatus =
+    memberData.lifecycleStatus || "member";
+
+  const docRef =
+    await MEMBERS_PATH(
+      organizationId,
+      entityId
+    ).add({
+
+      ...memberData,
+
+      name:
+        memberData.name || "",
+
+      phone:
+        memberData.phone || null,
+
+      email:
+        memberData.email
+          ? memberData.email
+              .toLowerCase()
+              .trim()
+          : null,
+
+      lifecycleStatus:
+        initialStatus,
+
+      lastStageChangeAt:
+        now,
+
+      lastChangedByUid:
+        actorUid,
+
+      statusHistory: [
+        {
+          status: initialStatus,
+          changedAt: Timestamp.now(),
+          changedByUid: actorUid,
+          note: "Created",
+        },
+      ],
+
+      source:
+        memberData.source ||
+        "manual",
+
+      assignedAdminUid:
+        memberData.assignedAdminUid ||
+        actorUid,
+
+      inviteToken: null,
+      inviteChannel: null,
+      inviteSentAt: null,
+      inviteRetryCount: 0,
+
+      uid: null,
+      lastLoginAt: null,
+      expoPushToken: null,
+
+      duplicateOf: null,
+
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  return {
+    id: docRef.id,
+    ref: docRef,
+  };
+}
 // Used by manual add + bulk upload (authenticated admin calls).
 // Pass forceCreate:true to skip the duplicate check (e.g. admin already reviewed matches).
 exports.createMemberSafe = onCall(async (request) => {
@@ -119,27 +199,23 @@ exports.createMemberSafe = onCall(async (request) => {
     }
   }
 
-  const now = FieldValue.serverTimestamp();
-  const initialStatus = memberData.lifecycleStatus || "member"; // manual/bulk default straight to Member
-  const docRef = await MEMBERS_PATH(organizationId, entityId).add({
-    ...memberData, // passes through ministry, status, address, memberCode, etc. as-is
-    name: memberData.name || "",
-    phone: memberData.phone || null,
-    email: memberData.email ? memberData.email.toLowerCase().trim() : null,
-    lifecycleStatus: initialStatus,
-    lastStageChangeAt: now,
-    lastChangedByUid: request.auth.uid,
-    statusHistory: [{ status: initialStatus, changedAt: Timestamp.now(), changedByUid: request.auth.uid, note: "Created" }],
-    source: memberData.source || "manual",
-    assignedAdminUid: memberData.assignedAdminUid || request.auth.uid,
-    inviteToken: null, inviteChannel: null, inviteSentAt: null, inviteRetryCount: 0,
-    uid: null, lastLoginAt: null, expoPushToken: null,
-    duplicateOf: null,
-    createdAt: now, updatedAt: now,
+ const member =
+  await createMemberRecord({
+    organizationId,
+    entityId,
+    memberData,
+    actorUid:
+      request.auth.uid,
   });
 
-  return { created: true, id: docRef.id };
+return {
+  created: true,
+  id: member.id,
+};
+
 });
+
+// Public/unauthenticated entry point ...
 
 // Public/unauthenticated entry point — for QR self-serve forms (visitor/interest).
 // Locked down by requiring a valid organizationId/entityId pair to exist; add a
@@ -293,6 +369,229 @@ exports.generateMemberInvite = onCall(async (request) => {
     inviteLink,
   };
 });
+
+
+exports.verifyMemberCode = onCall(
+  async (request) => {
+
+    const {
+      memberCode,
+      phone,
+    } = request.data || {};
+
+    if (!memberCode) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Member code is required"
+      );
+    }
+
+    const snap = await db
+      .collectionGroup("members")
+      .where(
+        "memberCode",
+        "==",
+        memberCode
+      )
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      throw new HttpsError(
+        "not-found",
+        "Member not found"
+      );
+    }
+
+    const memberDoc =
+      snap.docs[0];
+
+    const member =
+      memberDoc.data();
+
+    if (
+      phone &&
+      member.phone &&
+      phone !== member.phone
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "Phone number does not match"
+      );
+    }
+
+    const claimToken =
+      db.collection("_").doc().id;
+
+    await memberDoc.ref.update({
+      claimToken,
+      claimTokenCreatedAt:
+        FieldValue.serverTimestamp(),
+    });
+
+    return {
+      verified: true,
+
+      claimToken,
+
+      memberId:
+        memberDoc.id,
+
+      memberName:
+        member.name || null,
+    };
+  }
+);
+
+
+exports.completeMemberClaim = onCall(
+  async (request) => {
+
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in required"
+      );
+    }
+
+    const { claimToken } =
+      request.data || {};
+
+    if (!claimToken) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Missing claim token"
+      );
+    }
+
+    const snap = await db
+      .collectionGroup("members")
+      .where(
+        "claimToken",
+        "==",
+        claimToken
+      )
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      throw new HttpsError(
+        "not-found",
+        "Invalid claim token"
+      );
+    }
+
+    const memberDoc =
+      snap.docs[0];
+
+    const member =
+      memberDoc.data();
+
+    // Prevent a member from being claimed twice
+    if (member.uid) {
+      throw new HttpsError(
+        "already-exists",
+        "Member already claimed"
+      );
+    }
+
+    const uid =
+      request.auth.uid;
+
+    const now =
+      FieldValue.serverTimestamp();
+
+    await memberDoc.ref.update({
+
+      uid,
+
+      claimToken: null,
+
+      claimTokenCreatedAt: null,
+
+      lifecycleStatus:
+        "registered",
+
+      lastStageChangeAt:
+        now,
+
+      lastChangedByUid:
+        uid,
+
+      updatedAt:
+        now,
+    });
+
+    // --------------------------------------------------
+    // Organisation onboarding update
+    // --------------------------------------------------
+
+    const entityRef =
+      memberDoc.ref.parent.parent;
+
+    const organizationRef =
+      entityRef.parent.parent;
+
+    const organizationSnap =
+      await organizationRef.get();
+
+    if (organizationSnap.exists) {
+
+      const org =
+        organizationSnap.data();
+
+      if (
+        org.adminMemberId ===
+        memberDoc.id
+      ) {
+
+        await organizationRef.update({
+
+          adminClaimed: true,
+
+          adminUid: uid,
+
+          onboardingStatus:
+            "admin_claimed",
+        });
+      }
+
+      if (
+        org.contactMemberId ===
+        memberDoc.id
+      ) {
+
+        await organizationRef.update({
+
+          contactClaimed: true,
+
+          contactUid: uid,
+
+          onboardingStatus:
+            "contact_claimed",
+        });
+      }
+    }
+
+    return {
+
+      success: true,
+
+      memberId:
+        memberDoc.id,
+
+      organizationId:
+        organizationRef.id,
+
+      entityId:
+        entityRef.id,
+
+      lifecycleStatus:
+        "registered",
+    };
+  }
+);
+
 
 // ─────────────────────────────────────────────────────────────────
 // 3. STATUS HISTORY LOGGER — trigger, not a manual client call.
@@ -486,3 +785,5 @@ exports.getFunnelStats = onCall(async (request) => {
 
   return { counts, bySource };
 });
+exports.createMemberRecord =
+  createMemberRecord;

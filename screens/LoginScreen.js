@@ -83,12 +83,21 @@ export default function LoginScreen({ navigation }) {
     ? orgSnap.data()
     : null;
 
+    const onboardingStatus =
+  orgData?.onboardingStatus || null;
+
   console.log("ROUTE 4A - ORG DATA:", orgData);
 
   const orgStatus =
     orgData?.status || "pending";
 
   console.log("ROUTE 5 - ORG STATUS:", orgStatus);
+  
+console.log(
+  "ROUTE 5A - ONBOARDING STATUS:",
+  onboardingStatus
+);
+
 
   await AsyncStorage.setItem(
     "activeEntity",
@@ -134,7 +143,39 @@ export default function LoginScreen({ navigation }) {
     return;
   }
 
-  console.log("ROUTE 9 - Before onboarding getDoc");
+// --------------------------------------------------
+// Awaiting Administrator Claim
+// --------------------------------------------------
+
+if (
+  onboardingStatus ===
+  "awaiting_admin_claim"
+) {
+
+  console.log(
+    "ROUTE 8A - Awaiting Admin Claim"
+  );
+
+  Alert.alert(
+    "Administrator Claim Required",
+    "This church has been approved, but the designated administrator must first claim their identity before onboarding can continue."
+  );
+
+  return;
+}
+
+  if (
+  onboardingStatus ===
+  "awaiting_admin_claim"
+) {
+
+  Alert.alert(
+    "Administrator Claim Required",
+    "This church has been approved but the administrator identity has not yet been claimed."
+  );
+
+  return;
+}
 
   const onboardingSnap = await getDoc(
     doc(
