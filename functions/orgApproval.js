@@ -525,10 +525,16 @@ const organizationCode =
     // Activate Organization
     // --------------------------------------------------
 
-   await orgRef.update({
+  await orgRef.update({
   adminMemberId,
   adminMemberCode:
     adminMember.memberCode,
+
+  onboardingStatus:
+    "awaiting_admin_claim",
+
+  onboardingMessage:
+    "Use your Member Code and Phone Number to claim your administrator account.",
 });
 
 
