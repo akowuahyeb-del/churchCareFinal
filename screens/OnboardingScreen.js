@@ -119,6 +119,18 @@ export default function OnboardingScreen({ route, navigation }) {
         }
       );
 
+      await setDoc(
+  doc(db, "organizations", organizationId),
+  {
+    onboardingStatus:
+      "onboarding_completed",
+
+    onboardingCompletedAt:
+      new Date().toISOString(),
+  },
+  { merge: true }
+);
+
       // ✅ Persist activeEntity so the rest of the app knows the context
       const orgName = org.name || "Church";
       await AsyncStorage.setItem(
