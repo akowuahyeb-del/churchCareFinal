@@ -560,14 +560,16 @@ const organizationCode =
           memberId:
             adminMemberId,
 
-          title:
-            "Church Registration Approved \u2705",
+         title:
+  "Church Registration Approved ✅",
 
-          message:
-            `Congratulations ${org.adminName || ""}.\n\n` +
-            `${org.name} has been approved and activated.\n\n` +
-            `Organisation Code: ${organizationCode}\n\n` +
-            `Please open ChurchCare and complete your onboarding.`,
+message:
+  `Congratulations ${org.adminName || ""}.\n\n` +
+  `${org.name} has been approved and activated.\n\n` +
+  `Organisation Code: ${organizationCode}\n` +
+  `Member Code: ${adminMember.memberCode}\n\n` +
+  `Next Step:\n` +
+  `Open ChurchCare, sign in, and claim your administrator account using your Member Code and Phone number.`,
 
           read: false,
 
