@@ -11,8 +11,15 @@ import { Ionicons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 import { db } from "../firebase";
 import {
-  collection, addDoc, getDocs, updateDoc,
-  deleteDoc, doc, query, where,
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  where,
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import { hasPermission } from "../constants/permissions";
@@ -139,11 +146,20 @@ export default function MembersScreen({ navigation }) {
   const [activeEntity,  setActiveEntity]  = useState(null);
   const entityId       = activeEntity?.entityId       || "";
   const organizationId = activeEntity?.organizationId || "";
-
   // ── Members data ──
   const [members,  setMembers]  = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState(null);
+  const [adminMemberId, setAdminMemberId] =
+  useState(null);
+
+  useEffect(() => {
+  if (activeEntity) {
+   
+    loadMembers();
+  }
+}, [activeEntity, loadMembers]);
+
 
   // ── UI toggles ──
   const [showActions,  setShowActions]  = useState(true);
@@ -221,23 +237,22 @@ const toggleActions = () => {
 };
 
   /* ── Load entity ── */
-useEffect(() => {
-  if (activeEntity) {
-    console.log("🚀 activeEntity ready → loading members");
-    loadMembers();
-  }
-}, [activeEntity]);
 
-  useEffect(() => {
-    AsyncStorage.getItem("activeEntity").then(data => {
-      if (data) {
-        try { setActiveEntity(JSON.parse(data)); } catch (_) {}
-      }
-    });
-    AsyncStorage.getItem("showActions").then(v => {
-      if (v !== null) setShowActions(JSON.parse(v));
-    });
-  }, []);
+useEffect(() => {
+  AsyncStorage.getItem("activeEntity").then(data => {
+    if (data) {
+      try {
+        setActiveEntity(JSON.parse(data));
+      } catch (_) {}
+    }
+  });
+
+  AsyncStorage.getItem("showActions").then(v => {
+    if (v !== null) {
+      setShowActions(JSON.parse(v));
+    }
+  });
+}, []);
 
 const loadMembers = useCallback(async () => {
   setLoading(true);
@@ -253,6 +268,26 @@ const loadMembers = useCallback(async () => {
     }
 
     const { organizationId, entityId } = JSON.parse(stored);
+
+    const orgSnap = await getDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId
+  )
+);
+
+if (orgSnap.exists()) {
+  setAdminMemberId(
+    orgSnap.data().adminMemberId || null
+  );
+}
+
+console.log(
+  "ADMIN MEMBER ID:",
+  orgSnap.data().adminMemberId
+);
+
 
     console.log("🧠 ACTIVE ENTITY FROM STORAGE:", stored);
     console.log("📥 LOADING MEMBERS FROM:", {
@@ -738,6 +773,19 @@ const getLifecycleCount = (status) => {
 
 const lifecycleColor =
   LIFECYCLE_COLORS[lifecycle] || "#888";
+const isAdministrator =
+  adminMemberId === item.id;
+
+  console.log(
+  "COMPARE",
+  {
+    adminMemberId,
+    memberId: item.id,
+    isAdministrator,
+  }
+);
+
+
 
           const pendingApprovals = Object.keys(ACTIONS).filter(a =>
             getApprovals(item.id, a).length > 0 && !isFullyApproved(item.id, a)
@@ -765,26 +813,59 @@ const lifecycleColor =
                     {item.memberCode && (
                       <Text style={styles.memberCode}>ID: {item.memberCode}</Text>
                     )}
-                   <View
-                 style={[
-                  styles.lifecycleBadge,
-                {
-                backgroundColor:
-                  lifecycleColor + "22",
-                 },
-                 ]}
-                >
-               <Text
-               style={[
-                 styles.lifecycleBadgeText,
-                 {
-                 color: lifecycleColor,
-                },
-                 ]}
-                 >
-                {formatLifecycle(lifecycle)}
-                   </Text>
-                  </View>
+                   
+      
+<View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
+  }}
+>
+  {isAdministrator && (
+    <View
+      style={[
+        styles.lifecycleBadge,
+        {
+          backgroundColor: "#4B3F7222",
+          marginRight: 6,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.lifecycleBadgeText,
+          {
+            color: "#4B3F72",
+          },
+        ]}
+      >
+        Administrator
+      </Text>
+    </View>
+  )}
+
+  <View
+    style={[
+      styles.lifecycleBadge,
+      {
+        backgroundColor:
+          lifecycleColor + "22",
+      },
+    ]}
+  >
+    <Text
+      style={[
+        styles.lifecycleBadgeText,
+        {
+          color: lifecycleColor,
+        },
+      ]}
+    >
+      {formatLifecycle(lifecycle)}
+    </Text>
+  </View>
+</View>
 
 
                     {item.ministry && (

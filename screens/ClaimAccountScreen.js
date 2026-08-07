@@ -7,6 +7,13 @@
 // No admin session needed — this is the self-service counterpart to
 // InviteMemberScreen, for someone who got their code via WhatsApp, a
 // printed QR code, or verbally from an admin.
+//
+// IMPORTANT: completeMemberClaim requires an authenticated request.auth
+// server-side (it links the signed-in Firebase Auth uid to the member
+// record). That means step "account" — creating Firebase Auth credentials
+// — must ALWAYS run before completeMemberClaim is called, for both the
+// self-service member flow and the existingUser/admin flow. existingUser
+// only changes copy/messaging; it must never skip straight to claiming.
 
 import React, { useState } from "react";
 import {
@@ -17,12 +24,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { verifyMemberCode, completeMemberClaim } from "../utils/memberIntake";
 
-export default function ClaimAccountScreen({ navigation }) {
-  const [step, setStep] = useState("code"); // "code" | "account"
-  const [memberCode, setMemberCode] = useState("");
+export default function ClaimAccountScreen({navigation,route,}) {
+  const existingUser =
+  route?.params?.existingUser === true;
+  const [step, setStep] = useState("code"); 
+  const [memberCode, setMemberCode] =
+  useState(
+    route?.params?.memberCode || ""
+  );
   const [phone, setPhone] = useState("");
   const [verified, setVerified] = useState(null); // { claimToken, memberName, organizationId, entityId }
   const [email, setEmail] = useState("");
@@ -70,8 +86,12 @@ export default function ClaimAccountScreen({ navigation }) {
     setBusy(true);
     try {
       const result = await verifyMemberCode({ memberCode: memberCode.trim(), phone: phone.trim() });
+      console.log(
+  "VERIFY RESULT:",
+  JSON.stringify(result, null, 2)
+);
 
-      if (!result.valid) {
+      if (!result.verified) {
         const messages = {
           not_found: "We couldn't find that Member ID. Double-check it and try again.",
           already_registered: "This Member ID is already linked to an account — try logging in instead.",
@@ -82,7 +102,58 @@ export default function ClaimAccountScreen({ navigation }) {
       }
 
       setVerified(result);
-      setStep("account");
+
+if (existingUser) {
+
+  const claimResult =
+    await completeMemberClaim({
+      claimToken: result.claimToken,
+    });
+
+  const entitySnap = await getDoc(
+  doc(
+    db,
+    "organizations",
+    result.organizationId,
+    "entities",
+    result.entityId
+  )
+);
+
+const entity = entitySnap.data();
+
+console.log(
+  "CLAIM RESULT",
+  JSON.stringify(result, null, 2)
+);
+
+await AsyncStorage.setItem(
+  "activeEntity",
+  JSON.stringify({
+    organizationId: result.organizationId,
+    entityId: result.entityId,
+    name: result.entityName || "Church",
+  })
+);
+
+  Alert.alert(
+    "Success",
+    "Administrator identity claimed.",
+    [
+      {
+        text: "Continue",
+        onPress: () =>
+          navigation.replace(
+            "Onboarding"
+          ),
+      },
+    ]
+  );
+
+  return;
+}
+
+setStep("account");
     } catch (e) {
       Alert.alert("Error", e.message);
     } finally {
@@ -108,9 +179,21 @@ export default function ClaimAccountScreen({ navigation }) {
         name: result.entityName || "Church",
       }));
 
-      Alert.alert("Welcome!", "Your account is set up.", [
-        { text: "Continue", onPress: () => navigation.replace("MainTabs") },
-      ]);
+      Alert.alert(
+        "Welcome!",
+        existingUser
+          ? "Administrator identity claimed. Your account is set up."
+          : "Your account is set up.",
+        [
+          {
+            text: "Continue",
+            onPress: () =>
+              navigation.replace(
+                existingUser ? "Onboarding" : "MainTabs"
+              ),
+          },
+        ]
+      );
     } catch (e) {
       console.log("CLAIM ACCOUNT ERROR:", e);
       Alert.alert("Couldn't create account", e.message);

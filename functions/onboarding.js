@@ -103,6 +103,90 @@ exports.checkDuplicateMember = onCall(async (request) => {
 });
 
 
+
+async function generateMemberCode({
+  organizationId,
+  entityId,
+}) {
+
+ const organizationSnap =
+  await db
+    .collection("organizations")
+    .doc(organizationId)
+    .get();
+
+const organization =
+  organizationSnap.data() || {};
+
+const organizationCode =
+  organization.organizationCode;
+
+console.log(
+  "GENERATING MEMBER CODE",
+  {
+    organizationId,
+    entityId,
+    organizationCode,
+  }
+);
+
+
+
+  if (!organizationCode) {
+  throw new Error(
+    "Missing organizationCode"
+  );
+}
+
+  const parts =
+  organizationCode.split("-");
+
+if (parts.length !== 3) {
+  throw new Error(
+    `Invalid organizationCode: ${organizationCode}`
+  );
+}
+
+const churchPrefix =
+  `${parts[0]}-${parts[1]}`;
+
+const levelSuffix =
+  parts[2].slice(-1);
+
+
+  let memberCode;
+  let exists = true;
+
+  while (exists) {
+
+    const randomDigits =
+      Math.floor(
+        100 + Math.random() * 900
+      );
+
+   memberCode =
+  `${churchPrefix}-${randomDigits}${levelSuffix}`;
+
+    const existing =
+      await MEMBERS_PATH(
+        organizationId,
+        entityId
+      )
+        .where(
+          "memberCode",
+          "==",
+          memberCode
+        )
+        .limit(1)
+        .get();
+
+    exists = !existing.empty;
+  }
+
+  return memberCode;
+}
+
+
 async function createMemberRecord({
   organizationId,
   entityId,
@@ -110,7 +194,9 @@ async function createMemberRecord({
   actorUid = null,
 }) {
 
-  const now = FieldValue.serverTimestamp();
+
+
+const now = FieldValue.serverTimestamp();
 
   const initialStatus =
     memberData.lifecycleStatus || "member";
@@ -177,11 +263,24 @@ async function createMemberRecord({
       updatedAt: now,
     });
 
+ const memberCode =
+  await generateMemberCode({
+    organizationId,
+    entityId,
+  });
+
+  await docRef.update({
+    memberCode,
+  });
+
   return {
     id: docRef.id,
+    memberCode,
     ref: docRef,
   };
 }
+
+
 // Used by manual add + bulk upload (authenticated admin calls).
 // Pass forceCreate:true to skip the duplicate check (e.g. admin already reviewed matches).
 exports.createMemberSafe = onCall(async (request) => {
@@ -573,22 +672,31 @@ exports.completeMemberClaim = onCall(
       }
     }
 
-    return {
+   const entitySnap =
+  await entityRef.get();
 
-      success: true,
+const entity =
+  entitySnap.data() || {};
 
-      memberId:
-        memberDoc.id,
+return {
 
-      organizationId:
-        organizationRef.id,
+  success: true,
 
-      entityId:
-        entityRef.id,
+  memberId:
+    memberDoc.id,
 
-      lifecycleStatus:
-        "registered",
-    };
+  organizationId:
+    organizationRef.id,
+
+  entityId:
+    entityRef.id,
+
+  entityName:
+    entity.name || null,
+
+  lifecycleStatus:
+    "registered",
+};
   }
 );
 

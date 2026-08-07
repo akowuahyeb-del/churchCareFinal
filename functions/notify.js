@@ -19,6 +19,47 @@ async function deliverToMember({ organizationId, entityId, memberId, type, title
   if (!memberSnap.exists) return { delivered: false, reason: "member_not_found" };
   const member = memberSnap.data();
 
+// Pre-claim delivery channels.
+// Church administrators have uid:null during onboarding,
+// so we must deliver using their email/phone.
+
+if (member.email) {
+  await db.collection("outboundMail").add({
+    to: member.email,
+    subject: title,
+    body: message,
+    type,
+    organizationId,
+    entityId,
+    memberId,
+    createdAt: now,
+    status: "pending",
+  });
+}
+
+if (member.phone) {
+  await db.collection("outboundSms").add({
+    phone: member.phone,
+    message,
+    type,
+    organizationId,
+    entityId,
+    memberId,
+    createdAt: now,
+    status: "pending",
+  });
+
+  await db.collection("outboundWhatsApp").add({
+    phone: member.phone,
+    message,
+    type,
+    organizationId,
+    entityId,
+    memberId,
+    createdAt: now,
+    status: "pending",
+  });
+}
   const now = new Date().toISOString();
   const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
 

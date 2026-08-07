@@ -153,29 +153,21 @@ if (
 ) {
 
   console.log(
-    "ROUTE 8A - Awaiting Admin Claim"
+    "ROUTE 8A - Navigating ClaimAccount"
   );
 
-  Alert.alert(
-    "Administrator Claim Required",
-    "This church has been approved, but the designated administrator must first claim their identity before onboarding can continue."
-  );
+  navigation.replace(
+  "ClaimAccount",
+  {
+    existingUser: true,
+    memberCode:
+      orgData.adminMemberCode,
+  }
+);
 
   return;
 }
 
-  if (
-  onboardingStatus ===
-  "awaiting_admin_claim"
-) {
-
-  Alert.alert(
-    "Administrator Claim Required",
-    "This church has been approved but the administrator identity has not yet been claimed."
-  );
-
-  return;
-}
 
   const onboardingSnap = await getDoc(
     doc(

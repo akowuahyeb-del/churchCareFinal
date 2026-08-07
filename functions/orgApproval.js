@@ -146,52 +146,73 @@ const TEMPLATE_CODES = {
   sda: "SDA",
 };
 
+function generateEntityCode(
+  value = ""
+) {
+  return value
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase()
+    .substring(0, 3);
+}
+
+
+const LEVEL_SUFFIX = {
+  headquarters: "H",
+  head_office: "H",
+
+  presbytery: "P",
+
+  district: "D",
+
+  congregation: "C",
+  local_church: "C",
+  society: "C",
+  local_assembly: "C",
+
+  circuit: "R",
+
+  area: "A",
+
+  region: "G",
+
+  branch: "B",
+
+  general_assembly: "H",
+  national_headquarters: "H",
+  national_executive: "H",
+};
+
 async function generateOrganizationCode(
   templateId,
   levelId,
-  organizationAbbreviation = null
-) {
-  const levelCode =
-    LEVEL_CODES[levelId] || "ORG";
+  organizationAbbreviation = null,
+  organizationName = null
+)
 
-  const templateCode =
+{
+
+  const prefix =
     TEMPLATE_CODES[templateId] ||
     organizationAbbreviation ||
     "ORG";
 
-  const counterRef =
-    db.collection("counters")
-      .doc(`${templateId}_${levelId}`);
+ const churchCode =
+  generateEntityCode(
+    organizationName ||
+    "ORG"
+  );
 
-  const nextValue =
-    await db.runTransaction(
-      async (tx) => {
 
-        const snap =
-          await tx.get(counterRef);
-
-        let current = 0;
-
-        if (snap.exists) {
-          current =
-            snap.data().current || 0;
-        }
-
-        current++;
-
-        tx.set(
-          counterRef,
-          { current },
-          { merge: true }
-        );
-
-        return current;
-      }
+  const randomDigits =
+    Math.floor(
+      100 + Math.random() * 900
     );
 
-  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4, "0")}`;
-}
+  const suffix =
+    LEVEL_SUFFIX[levelId] || "X";
 
+  return `${prefix}-${churchCode}-${randomDigits}${suffix}`;
+}
 
 async function validateRegistration(org) {
 
@@ -413,16 +434,47 @@ exports.approveOrganization =
     const templateId =
       org.templateId || "presbyterian";
 
+
+console.log(
+  "ORG CODE INPUTS",
+  {
+    templateId,
+    levelId: org.levelId,
+    name: org.name,
+    location: org.location,
+    organizationAbbreviation:
+      org.organizationAbbreviation,
+  }
+);
+
+
     // --------------------------------------------------
     // Generate Organization Code
     // --------------------------------------------------
+const organizationCode =
+  await generateOrganizationCode(
+    templateId,
+    org.levelId,
+    org.organizationAbbreviation,
+    org.name
+  );
 
-    const organizationCode =
-      await generateOrganizationCode(
-        templateId,
-        org.levelId,
-        org.organizationAbbreviation
-      );
+
+  await orgRef.update({
+  status: "active",
+  approvedAt: now,
+  organizationCode,
+
+  onboardingStatus:
+    "awaiting_admin_claim",
+
+  adminClaimed: false,
+  adminUid: null,
+
+  contactClaimed: false,
+  contactUid: null,
+  contactMemberId: null,
+});
 
     // --------------------------------------------------
     // Activate Entity
@@ -466,27 +518,19 @@ exports.approveOrganization =
         },
       });
 
-    const adminMemberId = adminMember.id;
+   const adminMemberId =
+  adminMember.id;
 
     // --------------------------------------------------
     // Activate Organization
     // --------------------------------------------------
 
-    await orgRef.update({
-      status: "active",
-      approvedAt: now,
-      organizationCode,
+   await orgRef.update({
+  adminMemberId,
+  adminMemberCode:
+    adminMember.memberCode,
+});
 
-      onboardingStatus: "awaiting_admin_claim",
-
-      adminClaimed: false,
-      adminUid: null,
-      adminMemberId,
-
-      contactClaimed: false,
-      contactUid: null,
-      contactMemberId: null,
-    });
 
     // --------------------------------------------------
     // Notify Administrator Of Approval
