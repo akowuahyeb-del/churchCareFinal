@@ -102,9 +102,10 @@ const [organizationAbbreviation,
   const [templateId, setTemplateId] = useState("presbyterian");
   const [levelId, setLevelId] = useState(null);
   const [parentNodeId, setParentNodeId] = useState(null);
+ 
   const [relationshipMode,
   setRelationshipMode] =
-  useState("independent");
+  useState(null);
 
 const [expectedParentName,
   setExpectedParentName] =
@@ -119,6 +120,11 @@ const [expectedParentLevel,
   template?.levels?.find(
     l => l.id === levelId
   );
+
+ const needsGovernanceRelationship =
+  selectedLevel &&
+  selectedLevel.rank > 1;
+
 
 const isIndependent =
   templateId === "independent";
@@ -189,10 +195,11 @@ useEffect(() => {
   // Independent churches below Head Office
   // must select a network before parent lookup.
   if (
-    needsNetworkSelection &&
-    relationshipMode === "existing_parent" &&
-    !selectedNetworkId
-  ) {
+  templateId === "independent" &&
+  needsNetworkSelection &&
+  relationshipMode === "existing_parent" &&
+  !selectedNetworkId
+) {
     setParentOptions([]);
     return;
   }
@@ -313,19 +320,24 @@ useEffect(() => {
   return (
     !!templateId &&
     !!levelId &&
+
     (
       templateId !== "independent" ||
       organizationAbbreviation.trim()
     ) &&
 
-    
     (
-  relationshipMode !== "existing_parent" ||
-  (
-    parentOptions.length > 0 &&
-    !!parentNodeId
-  )
-) &&
+      !needsGovernanceRelationship ||
+
+      relationshipMode === "future_parent" ||
+
+      !!parentNodeId
+    ) &&
+
+    (
+      relationshipMode !== "existing_parent" ||
+      !!parentNodeId
+    ) &&
 
     (
       relationshipMode !== "future_parent" ||
@@ -333,7 +345,7 @@ useEffect(() => {
     )
   );
 
-  return true;
+return true;
 };
 
 const isValidEmail = (email) => {
@@ -409,35 +421,44 @@ const handleSubmit = async () => {
 
   try {
         const { data } =
-      await _submitOrganizationRegistration({
-        name: churchName,
+  await _submitOrganizationRegistration({
+    name: churchName,
 
-        denomination,
+    denomination,
 
-        location,
+    location,
 
-        organizationAbbreviation,
+    organizationAbbreviation,
 
-        contactName,
+    contactName,
 
-        contactPhone:
-          normalizePhone(contactPhone),
+    contactPhone:
+      normalizePhone(contactPhone),
 
-        contactEmail,
+    contactEmail,
 
-        adminName,
+    adminName,
 
-        adminPhone:
-          normalizePhone(adminPhone),
+    adminPhone:
+      normalizePhone(adminPhone),
 
-        adminEmail,
+    adminEmail,
 
-        templateId,
+    templateId,
 
-        levelId,
+    levelId,
 
-        parentNodeId,
-      });
+    parentNodeId,
+
+    relationshipMode,
+
+    expectedParentName,
+
+    expectedParentLevel,
+
+    networkId:
+      selectedNetworkId,
+  });
 
     if (data.flaggedForReview) {
       Alert.alert(
@@ -906,9 +927,18 @@ const handleSubmit = async () => {
       styles.templateCard,
       levelId === level.id && styles.templateCardActive
     ]}
-    onPress={() => {
+  onPress={() => {
   setLevelId(level.id);
+
   setParentNodeId(null);
+
+  setRelationshipMode(null);
+
+  setExpectedParentName("");
+
+  setExpectedParentLevel("");
+
+  setParentOptions([]);
 }}
   >
     <View style={styles.templateCardTop}>
@@ -941,7 +971,8 @@ const handleSubmit = async () => {
   </TouchableOpacity>
 ))}
 
-{templateId === "independent" && (
+{needsGovernanceRelationship && (
+
   <>
     <Text style={styles.label}>
       Governance Relationship
@@ -951,29 +982,48 @@ const handleSubmit = async () => {
       How does this organisation relate
       to other organisations?
     </Text>
-
-    {[
-      {
-        id: "independent",
-        title: "Operates Independently",
-        desc:
-          "This organisation currently operates on its own.",
-      },
-      {
-        id: "existing_parent",
-        title:
-          "Belongs Under Existing Organisation",
-        desc:
-          "Select an existing parent organisation.",
-      },
-      {
-        id: "future_parent",
-        title:
-          "Parent Organisation Not Yet Registered",
-        desc:
-          "Specify an expected parent for future linkage.",
-      },
-    ].map(option => (
+{
+  (
+    templateId === "independent"
+      ? [
+          {
+            id: "independent",
+            title: "Operates Independently",
+            desc:
+              "This organisation currently operates on its own.",
+          },
+          {
+            id: "existing_parent",
+            title:
+              "Belongs Under Existing Organisation",
+            desc:
+              "Select an existing parent organisation.",
+          },
+          {
+            id: "future_parent",
+            title:
+              "Parent Organisation Not Yet Registered",
+            desc:
+              "Specify an expected parent for future linkage.",
+          },
+        ]
+      : [
+          {
+            id: "existing_parent",
+            title:
+              "Parent Organisation Already Exists",
+            desc:
+              "Select the parent organisation.",
+          },
+          {
+            id: "future_parent",
+            title:
+              "Parent Organisation Not Yet Registered",
+            desc:
+              "Specify the expected parent for future linkage.",
+          },
+        ]
+  ).map(option => (
       <TouchableOpacity
   key={option.id}
   style={[
@@ -981,13 +1031,21 @@ const handleSubmit = async () => {
     relationshipMode === option.id &&
       styles.templateCardActive,
   ]}
-  onPress={() => {
-    setRelationshipMode(option.id);
+ onPress={() => {
+  setRelationshipMode(option.id);
 
-    setParentNodeId(null);
-    setExpectedParentName("");
-    setExpectedParentLevel("");
-  }}
+  setParentNodeId(null);
+  setExpectedParentName("");
+
+  const parentLevel =
+    template.levels.find(
+      l => l.rank === selectedLevel?.rank - 1
+    );
+
+  setExpectedParentLevel(
+    parentLevel?.id || ""
+  );
+}}
 >
   <View style={styles.templateCardTop}>
     <View style={{ flex: 1 }}>
@@ -1094,10 +1152,10 @@ const handleSubmit = async () => {
   </>
 )}
 
-
-{templateId === "independent" &&
- relationshipMode ===
-  "existing_parent" && (
+{(
+  needsGovernanceRelationship &&
+  relationshipMode === "existing_parent"
+) && (
   <>
 
   
@@ -1118,13 +1176,15 @@ const handleSubmit = async () => {
         color="#e67e22"
       />
 
-      <Text style={styles.infoBoxText}>
-        No parent organisations are
-        currently available for this
-        level. Choose "Operates
-        Independently" or "Parent
-        Organisation Not Yet Registered".
-      </Text>
+     <Text style={styles.infoBoxText}>
+  No parent organisations are
+  currently available for this
+  level.
+
+  Use "Parent Organisation Not Yet Registered"
+  if the parent church structure has not yet
+  been created.
+</Text>
     </View>
 )}
 
@@ -1181,9 +1241,8 @@ const handleSubmit = async () => {
   </>
 )}
 
-{templateId === "independent" &&
- relationshipMode ===
-  "future_parent" && (
+
+{relationshipMode === "future_parent" && (
   <>
     <Text style={styles.label}>
       Expected Parent Name *
@@ -1192,9 +1251,7 @@ const handleSubmit = async () => {
     <TextInput
       style={styles.input}
       value={expectedParentName}
-      onChangeText={
-        setExpectedParentName
-      }
+      onChangeText={setExpectedParentName}
       placeholder="e.g. Asokwa District"
     />
 
@@ -1202,14 +1259,26 @@ const handleSubmit = async () => {
       Expected Parent Level
     </Text>
 
-    <TextInput
-      style={styles.input}
-      value={expectedParentLevel}
-      onChangeText={
-        setExpectedParentLevel
-      }
-      placeholder="e.g. District"
-    />
+    <View
+      style={[
+        styles.input,
+        {
+          justifyContent: "center",
+        },
+      ]}
+    >
+      <Text>
+        {
+          selectedLevel?.rank === 2
+            ? template.levels[0]?.label
+            : selectedLevel?.rank === 3
+            ? template.levels[1]?.label
+            : selectedLevel?.rank === 4
+            ? template.levels[2]?.label
+            : "Automatically determined"
+        }
+      </Text>
+    </View>
 
     <View style={styles.infoBox}>
       <Ionicons
@@ -1217,7 +1286,6 @@ const handleSubmit = async () => {
         size={14}
         color="#4B3F72"
       />
-
       <Text style={styles.infoBoxText}>
         This organisation will operate
         normally and can be linked later
@@ -1227,6 +1295,9 @@ const handleSubmit = async () => {
     </View>
   </>
 )}
+  
+  
+
 
 <View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={14} color="#4B3F72" />

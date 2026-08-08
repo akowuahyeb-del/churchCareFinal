@@ -131,6 +131,33 @@ export default function OnboardingScreen({ route, navigation }) {
   { merge: true }
 );
 
+await setDoc(
+  doc(
+    db,
+    "users",
+    uid,
+    "notifications",
+    "welcome"
+  ),
+  {
+    title:
+      "Welcome to ChurchCare 🎉",
+
+    message:
+      "Your church has been configured successfully. You can now start adding members, tracking attendance, and managing church activities.",
+
+    type:
+      "onboarding_completed",
+
+    read: false,
+
+    createdAt:
+      new Date().toISOString(),
+  },
+  { merge: true }
+);
+
+
       // ✅ Persist activeEntity so the rest of the app knows the context
       const orgName = org.name || "Church";
       await AsyncStorage.setItem(

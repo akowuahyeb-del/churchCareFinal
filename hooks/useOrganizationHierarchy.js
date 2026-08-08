@@ -43,90 +43,192 @@ export function useOrganizationHierarchy(organizationId, entityId) {
   }, [organizationId]);
 
   // ── LOAD CURRENT NODE (linked to this entityId) ──
-  useEffect(() => {
-    if (!organizationId || !entityId) return;
+useEffect(() => {
+  if (!organizationId || !entityId) return;
 
-    const loadCurrentNode = async () => {
-      setLoading(true);
-      try {
-        const q = query(
-          collection(db, "organizations", organizationId, "nodes"),
-          where("entityId", "==", entityId)
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const nodeDoc = snap.docs[0];
-          setCurrentNode({ id: nodeDoc.id, ...nodeDoc.data() });
-        } else {
-          setCurrentNode(null);
-        }
-      } catch (e) {
-        console.log("❌ Load current node error:", e);
-      } finally {
-        setLoading(false);
+  const loadCurrentNode = async () => {
+    setLoading(true);
+
+    try {
+
+      const q = query(
+        collection(
+          db,
+          "governanceNodes"
+        ),
+        where(
+          "organizationId",
+          "==",
+          organizationId
+        ),
+        where(
+          "entityId",
+          "==",
+          entityId
+        )
+      );
+
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+
+        const nodeDoc =
+          snap.docs[0];
+
+        setCurrentNode({
+          id: nodeDoc.id,
+          ...nodeDoc.data(),
+        });
+
+      } else {
+
+        setCurrentNode(null);
+
       }
-    };
 
-    loadCurrentNode();
-  }, [organizationId, entityId]);
+    } catch (e) {
 
-  // ── WALK THE TREE ONCE CURRENT NODE IS KNOWN ──
-  useEffect(() => {
-    if (!organizationId || !currentNode) return;
+      console.log(
+        "❌ Load current node error:",
+        e
+      );
 
-    const walkTree = async () => {
-      const templateId = structure?.templateId || "presbyterian";
+    } finally {
 
-      // 1. Ancestors — walk up via parentNodeId
-      const ancestorList = [];
-      let nextParentId = currentNode.parentNodeId;
-      while (nextParentId) {
-        const parentSnap = await getDoc(
-          doc(db, "organizations", organizationId, "nodes", nextParentId)
+      setLoading(false);
+
+    }
+  };
+
+  loadCurrentNode();
+
+}, [organizationId, entityId]);
+
+// ── WALK THE TREE ONCE CURRENT NODE IS KNOWN ──
+useEffect(() => {
+
+  if (!currentNode) return;
+
+  const walkTree = async () => {
+
+    const templateId =
+      structure?.templateId ||
+      "presbyterian";
+
+    // 1. Ancestors — walk up via parentNodeId
+
+    const ancestorList = [];
+
+    let nextParentId =
+      currentNode.parentNodeId;
+
+    while (nextParentId) {
+
+      const parentSnap =
+        await getDoc(
+          doc(
+            db,
+            "governanceNodes",
+            nextParentId
+          )
         );
-        if (!parentSnap.exists()) break;
-        const parentNode = { id: parentSnap.id, ...parentSnap.data() };
-        ancestorList.unshift(parentNode); // prepend so root is first
-        nextParentId = parentNode.parentNodeId;
+
+      if (!parentSnap.exists()) {
+        break;
       }
-      setAncestors(ancestorList);
 
-      // 2. Siblings — same parent
-      if (currentNode.parentNodeId) {
-        const sibQ = query(
-          collection(db, "organizations", organizationId, "nodes"),
-          where("parentNodeId", "==", currentNode.parentNodeId)
-        );
-        const sibSnap = await getDocs(sibQ);
-        setSiblings(
-          sibSnap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(n => n.id !== currentNode.id)
-        );
-      }
+      const parentNode = {
+        id: parentSnap.id,
+        ...parentSnap.data(),
+      };
+
+      ancestorList.unshift(
+        parentNode
+      );
+
+      nextParentId =
+        parentNode.parentNodeId;
+    }
+
+    setAncestors(
+      ancestorList
+    );
+
+    // 2. Siblings
+
+    if (currentNode.parentNodeId) {
+
+      const sibQ = query(
+        collection(
+          db,
+          "governanceNodes"
+        ),
+        where(
+          "parentNodeId",
+          "==",
+          currentNode.parentNodeId
+        )
+      );
+
+      const sibSnap =
+        await getDocs(sibQ);
+
+      setSiblings(
+        sibSnap.docs
+          .map(d => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter(
+            n =>
+              n.id !== currentNode.id
+          )
+      );
+    }
 
       // 3. All descendants — BFS downward
-      const allDescendants = [];
-      const queue = [currentNode.id];
-      const visited = new Set([currentNode.id]);
+    const allDescendants = [];
+const queue = [currentNode.id];
+const visited = new Set([currentNode.id]);
 
-      while (queue.length > 0) {
-        const nodeId = queue.shift();
-        const childQ = query(
-          collection(db, "organizations", organizationId, "nodes"),
-          where("parentNodeId", "==", nodeId)
-        );
-        const childSnap = await getDocs(childQ);
-        childSnap.docs.forEach(d => {
-          if (!visited.has(d.id)) {
-            visited.add(d.id);
-            const child = { id: d.id, ...d.data() };
-            allDescendants.push(child);
-            queue.push(d.id);
-          }
-        });
-      }
-      setDescendants(allDescendants);
+while (queue.length > 0) {
+  const nodeId = queue.shift();
+
+  const childQ = query(
+    collection(
+      db,
+      "governanceNodes"
+    ),
+    where(
+      "parentNodeId",
+      "==",
+      nodeId
+    )
+  );
+
+  const childSnap =
+    await getDocs(childQ);
+
+  childSnap.docs.forEach(d => {
+
+    if (!visited.has(d.id)) {
+
+      visited.add(d.id);
+
+      const child = {
+        id: d.id,
+        ...d.data(),
+      };
+
+      allDescendants.push(child);
+
+      queue.push(d.id);
+    }
+  });
+}
+
+setDescendants(allDescendants);
+
 
       // 4. Aggregate stats across all descendant entities
       // ✅ This is the actual intelligence: a District node sees the

@@ -298,6 +298,8 @@ exports.createMemberSafe = onCall(async (request) => {
     }
   }
 
+
+
  const member =
   await createMemberRecord({
     organizationId,

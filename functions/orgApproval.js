@@ -19,200 +19,62 @@ const {
   createMemberRecord,
 } = require("./onboarding");
 
+const {
+  LEVEL_CODES,
+  TEMPLATE_CODES,
+  getHierarchyRank,
+} = require("./governanceStructure");
 
-const TEMPLATE_STRUCTURE = {
-  presbyterian: {
-    1: "general_assembly",
-    2: "presbytery",
-    3: "district",
-    4: "congregation",
-  },
-
-  methodist: {
-    1: "conference",
-    2: "synod",
-    3: "circuit",
-    4: "society",
-  },
-
-  assemblies_of_god: {
-    1: "national_executive",
-    2: "region",
-    3: "district",
-    4: "local_assembly",
-  },
-
-  cop: {
-    1: "national_headquarters",
-    2: "area",
-    3: "district",
-    4: "local_assembly",
-  },
-
-  cac: {
-    1: "headquarters",
-    2: "area",
-    3: "district",
-    4: "assembly",
-  },
-
-  sda: {
-    1: "union_conference",
-    2: "conference_mission",
-    3: "district",
-    4: "local_church",
-  },
-
-  independent: {
-    1: "head_office",
-    2: "region",
-    3: "branch",
-    4: "local_church",
-  },
-};
-
-function getHierarchyRank(
-  templateId,
-  levelId
-) {
-  const structure =
-    TEMPLATE_STRUCTURE[templateId];
-
-  if (!structure) {
-    return null;
-  }
-
-  for (const [rank, id] of Object.entries(structure)) {
-    if (id === levelId) {
-      return Number(rank);
-    }
-  }
-
-  return null;
-}
-
-function getParentLevelId(
-  templateId,
-  levelId
-) {
-  const structure =
-    TEMPLATE_STRUCTURE[templateId];
-
-  if (!structure) {
-    return null;
-  }
-
-  const rank =
-    getHierarchyRank(
-      templateId,
-      levelId
-    );
-
-  if (!rank || rank === 1) {
-    return null;
-  }
-
-  return structure[rank - 1];
-}
-
-
-const LEVEL_CODES = {
-  general_assembly: "GA",
-  presbytery: "PRE",
-  district: "DIS",
-  circuit: "CIR",
-  congregation: "CON",
-  society: "SOC",
-  local_assembly: "LA",
-  local_church: "LC",
-  national_headquarters: "NH",
-  national_executive: "NE",
-  area: "AREA",
-  region: "REG",
-  branch: "BR",
-  headquarters: "HQ",
-  head_office: "HO",
-  assembly: "ASM",
-  union_conference: "UC",
-  conference_mission: "CM",
-};
-
-const TEMPLATE_CODES = {
-  presbyterian: "PCG",
-  methodist: "MCG",
-  assemblies_of_god: "AOG",
-  cop: "COP",
-  cac: "CAC",
-  sda: "SDA",
-};
-
-function generateEntityCode(
-  value = ""
-) {
-  return value
-    .replace(/[^A-Za-z]/g, "")
-    .toUpperCase()
-    .substring(0, 3);
-}
-
-
-const LEVEL_SUFFIX = {
-  headquarters: "H",
-  head_office: "H",
-
-  presbytery: "P",
-
-  district: "D",
-
-  congregation: "C",
-  local_church: "C",
-  society: "C",
-  local_assembly: "C",
-
-  circuit: "R",
-
-  area: "A",
-
-  region: "G",
-
-  branch: "B",
-
-  general_assembly: "H",
-  national_headquarters: "H",
-  national_executive: "H",
-};
+const {
+  linkNewGovernanceNode,
+} = require("./governanceLinking");
 
 async function generateOrganizationCode(
   templateId,
   levelId,
-  organizationAbbreviation = null,
-  organizationName = null
-)
+  organizationAbbreviation = null
+) {
+  const levelCode =
+    LEVEL_CODES[levelId] || "ORG";
 
-{
-
-  const prefix =
+  const templateCode =
     TEMPLATE_CODES[templateId] ||
     organizationAbbreviation ||
     "ORG";
 
- const churchCode =
-  generateEntityCode(
-    organizationName ||
-    "ORG"
-  );
+  const counterRef =
+    db.collection("counters")
+      .doc(`${templateId}_${levelId}`);
 
+  const nextValue =
+    await db.runTransaction(
+      async (tx) => {
 
-  const randomDigits =
-    Math.floor(
-      100 + Math.random() * 900
+        const snap =
+          await tx.get(counterRef);
+
+        let current = 0;
+
+        if (snap.exists) {
+          current =
+            snap.data().current || 0;
+        }
+
+        current++;
+
+        tx.set(
+          counterRef,
+          { current },
+          { merge: true }
+        );
+
+        return current;
+      }
     );
 
-  const suffix =
-    LEVEL_SUFFIX[levelId] || "X";
-
-  return `${prefix}-${churchCode}-${randomDigits}${suffix}`;
+  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4, "0")}`;
 }
+
 
 async function validateRegistration(org) {
 
@@ -434,47 +296,22 @@ exports.approveOrganization =
     const templateId =
       org.templateId || "presbyterian";
 
-
-console.log(
-  "ORG CODE INPUTS",
-  {
-    templateId,
-    levelId: org.levelId,
-    name: org.name,
-    location: org.location,
-    organizationAbbreviation:
-      org.organizationAbbreviation,
-  }
-);
-
-
     // --------------------------------------------------
     // Generate Organization Code
     // --------------------------------------------------
-const organizationCode =
-  await generateOrganizationCode(
-    templateId,
-    org.levelId,
-    org.organizationAbbreviation,
-    org.name
-  );
 
-
-  await orgRef.update({
-  status: "active",
-  approvedAt: now,
+    const organizationCode =
+      await generateOrganizationCode(
+        templateId,
+        org.levelId,
+        org.organizationAbbreviation
+      );
+     
+       await orgRef.update({
   organizationCode,
-
-  onboardingStatus:
-    "awaiting_admin_claim",
-
-  adminClaimed: false,
-  adminUid: null,
-
-  contactClaimed: false,
-  contactUid: null,
-  contactMemberId: null,
 });
+
+
 
     // --------------------------------------------------
     // Activate Entity
@@ -491,52 +328,55 @@ const organizationCode =
     // --------------------------------------------------
 
     const adminMember =
-      await createMemberRecord({
-        organizationId,
+  await createMemberRecord({
+    organizationId,
 
-        entityId,
+    entityId,
 
-        actorUid:
-          request.auth.uid,
+    organizationCode,
 
-        memberData: {
+    actorUid:
+      request.auth.uid,
 
-          name:
-            org.adminName || "",
+    memberData: {
+      name:
+        org.adminName || "",
 
-          phone:
-            org.adminPhone || null,
+      phone:
+        org.adminPhone || null,
 
-          email:
-            org.adminEmail || null,
+      email:
+        org.adminEmail || null,
 
-          source:
-            "organization_registration",
+      source:
+        "organization_registration",
 
-          lifecycleStatus:
-            "member",
-        },
-      });
+      lifecycleStatus:
+        "member",
+    },
+  });
 
-   const adminMemberId =
-  adminMember.id;
+    const adminMemberId = adminMember.id;
 
     // --------------------------------------------------
     // Activate Organization
     // --------------------------------------------------
 
-  await orgRef.update({
-  adminMemberId,
-  adminMemberCode:
-    adminMember.memberCode,
+    await orgRef.update({
+      status: "active",
+      approvedAt: now,
+      organizationCode,
 
-  onboardingStatus:
-    "awaiting_admin_claim",
+      onboardingStatus: "awaiting_admin_claim",
 
-  onboardingMessage:
-    "Use your Member Code and Phone Number to claim your administrator account.",
-});
+      adminClaimed: false,
+      adminUid: null,
+      adminMemberId,
 
+      contactClaimed: false,
+      contactUid: null,
+      contactMemberId: null,
+    });
 
     // --------------------------------------------------
     // Notify Administrator Of Approval
@@ -566,16 +406,14 @@ const organizationCode =
           memberId:
             adminMemberId,
 
-         title:
-  "Church Registration Approved ✅",
+          title:
+            "Church Registration Approved \u2705",
 
-message:
-  `Congratulations ${org.adminName || ""}.\n\n` +
-  `${org.name} has been approved and activated.\n\n` +
-  `Organisation Code: ${organizationCode}\n` +
-  `Member Code: ${adminMember.memberCode}\n\n` +
-  `Next Step:\n` +
-  `Open ChurchCare, sign in, and claim your administrator account using your Member Code and Phone number.`,
+          message:
+            `Congratulations ${org.adminName || ""}.\n\n` +
+            `${org.name} has been approved and activated.\n\n` +
+            `Organisation Code: ${organizationCode}\n\n` +
+            `Please open ChurchCare and complete your onboarding.`,
 
           read: false,
 
@@ -726,54 +564,56 @@ message:
     });
 
     // --------------------------------------------------
-    // Parent Linking
+    // Governance Auto-Linking (bidirectional)
     // --------------------------------------------------
+    // Links this node up to its parent if exactly one unambiguous
+    // candidate exists, AND retroactively adopts any existing orphaned
+    // nodes one rank below this one (e.g. a Congregation created before
+    // its District existed gets picked up here once the District is
+    // approved). Ambiguous cases (multiple candidates) are queued in
+    // governanceLinkIssues for manual resolution rather than guessed.
 
-    const parentLevelId =
-      getParentLevelId(
+console.log(
+  "LINK INPUT",
+  JSON.stringify({
+    organizationId,
+    organizationName: org.name,
+
+    templateId,
+    levelId: org.levelId,
+
+    parentNodeId:
+      org.parentNodeId || null,
+
+    relationshipMode:
+      org.relationshipMode || null,
+
+    expectedParentName:
+      org.expectedParentName || null,
+
+    expectedParentLevel:
+      org.expectedParentLevel || null,
+
+    networkId:
+      org.networkId || null,
+  }, null, 2)
+);
+
+
+    const linkResult = await linkNewGovernanceNode(
+      governanceNodeRef,
+      {
         templateId,
-        org.levelId
-      );
-
-    if (parentLevelId) {
-
-      const parentSnap = await db
-        .collection("governanceNodes")
-        .where("templateId", "==", templateId)
-        .where("levelId", "==", parentLevelId)
-        .where("status", "==", "active")
-        .get();
-
-      if (!parentSnap.empty) {
-
-        // NOTE: if more than one active node exists at the parent
-        // level (e.g. multiple presbyteries/regions), this still
-        // can't determine the *correct* parent without an explicit
-        // parentOrganizationId submitted at registration time.
-        // Flagging via pendingLink rather than guessing wrong.
-        if (parentSnap.docs.length === 1) {
-
-          await governanceNodeRef.update({
-            parentNodeId:
-              parentSnap.docs[0].id,
-
-            pendingLink: false,
-          });
-
-        } else {
-
-          await governanceNodeRef.update({
-            pendingLink: true,
-          });
-        }
-
-      } else {
-
-        await governanceNodeRef.update({
-          pendingLink: true,
-        });
+        levelId: org.levelId,
+        organizationId,
+        name: org.name,
+        parentNodeId: org.parentNodeId || null,
+        relationshipMode: org.relationshipMode || null,
+        expectedParentName: org.expectedParentName || null,
+        expectedParentLevel: org.expectedParentLevel || null,
+        networkId: org.networkId || null,
       }
-    }
+    );
 
     // --------------------------------------------------
     // Return
@@ -794,6 +634,8 @@ message:
       templateId,
 
       approvedAt: now,
+
+      linking: linkResult,
     };
   });
 

@@ -6,7 +6,9 @@ const {
   normalize,
 } = require("./orgDuplicateCheck");
 
-
+const {
+  getParentLevelId,
+} = require("./governanceStructure");
 
 exports.checkDuplicateOrganization =
   onCall(async (request) => {
@@ -274,6 +276,7 @@ exports.getParentOrganizations =
     const {
       templateId,
       levelId,
+      networkId,
     } = request.data || {};
 
     if (!templateId || !levelId) {
@@ -283,7 +286,55 @@ exports.getParentOrganizations =
       );
     }
 
+    const parentLevelId =
+      getParentLevelId(
+        templateId,
+        levelId
+      );
+
+    if (!parentLevelId) {
+      return {
+        parents: [],
+      };
+    }
+
+    let query = db
+      .collection("governanceNodes")
+      .where(
+        "templateId",
+        "==",
+        templateId
+      )
+      .where(
+        "levelId",
+        "==",
+        parentLevelId
+      )
+      .where(
+        "status",
+        "==",
+        "active"
+      );
+
+    if (networkId) {
+      query = query.where(
+        "networkId",
+        "==",
+        networkId
+      );
+    }
+
+    const snap =
+      await query.get();
+
     return {
-      parents: [],
+      parents: snap.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name,
+        levelId: doc.data().levelId,
+        levelLabel: doc.data().levelId,
+        organizationId:
+          doc.data().organizationId,
+      })),
     };
   });
