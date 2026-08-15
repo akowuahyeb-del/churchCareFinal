@@ -34,6 +34,11 @@ import { verifyMemberCode, completeMemberClaim } from "../utils/memberIntake";
 export default function ClaimAccountScreen({navigation,route,}) {
   const existingUser =
   route?.params?.existingUser === true;
+
+  console.log(
+  "CLAIM ACCOUNT PARAMS",
+  route?.params
+);
   const [step, setStep] = useState("code"); 
   const [memberCode, setMemberCode] =
   useState(

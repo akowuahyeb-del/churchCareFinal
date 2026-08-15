@@ -153,6 +153,11 @@ exports.sendGroupNotification =
 
 exports.absenceWatcherJob =
   notifications.absenceWatcherJob;
+const {
+  updateOrganizationIdentity,
+} = require("./orgIdentity");
 
+exports.updateOrganizationIdentity =
+  updateOrganizationIdentity;
   
 

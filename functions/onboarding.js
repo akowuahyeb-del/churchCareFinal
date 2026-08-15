@@ -103,56 +103,55 @@ exports.checkDuplicateMember = onCall(async (request) => {
 });
 
 
-
 async function generateMemberCode({
   organizationId,
   entityId,
 }) {
 
- const organizationSnap =
-  await db
-    .collection("organizations")
-    .doc(organizationId)
-    .get();
+  const organizationSnap =
+    await db
+      .collection("organizations")
+      .doc(organizationId)
+      .get();
 
-const organization =
-  organizationSnap.data() || {};
+  const organization =
+    organizationSnap.data() || {};
 
-const organizationCode =
-  organization.organizationCode;
+  const organizationCode =
+    organization.organizationCode;
 
-console.log(
-  "GENERATING MEMBER CODE",
-  {
-    organizationId,
-    entityId,
-    organizationCode,
-  }
-);
-
-
+  console.log(
+    "GENERATING MEMBER CODE",
+    {
+      organizationId,
+      entityId,
+      organizationCode,
+    }
+  );
 
   if (!organizationCode) {
-  throw new Error(
-    "Missing organizationCode"
-  );
-}
+    throw new Error(
+      "Missing organizationCode"
+    );
+  }
 
   const parts =
-  organizationCode.split("-");
+    organizationCode.split("-");
 
-if (parts.length !== 3) {
-  throw new Error(
-    `Invalid organizationCode: ${organizationCode}`
-  );
-}
+  if (parts.length !== 4) {
+    throw new Error(
+      `Invalid organizationCode: ${organizationCode}`
+    );
+  }
 
-const churchPrefix =
-  `${parts[0]}-${parts[1]}`;
+  // Example church:
+  // PCG-TC-BM-C482
+  //
+  // Member becomes:
+  // PCG-TC-BM-M731
 
-const levelSuffix =
-  parts[2].slice(-1);
-
+  const memberPrefix =
+    `${parts[0]}-${parts[1]}-${parts[2]}`;
 
   let memberCode;
   let exists = true;
@@ -164,8 +163,8 @@ const levelSuffix =
         100 + Math.random() * 900
       );
 
-   memberCode =
-  `${churchPrefix}-${randomDigits}${levelSuffix}`;
+    memberCode =
+      `${memberPrefix}-M${randomDigits}`;
 
     const existing =
       await MEMBERS_PATH(

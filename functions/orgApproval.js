@@ -31,48 +31,54 @@ const {
 
 async function generateOrganizationCode(
   templateId,
-  levelId,
-  organizationAbbreviation = null
+  organizationAbbreviation,
+  location
 ) {
-  const levelCode =
-    LEVEL_CODES[levelId] || "ORG";
 
   const templateCode =
     TEMPLATE_CODES[templateId] ||
-    organizationAbbreviation ||
     "ORG";
 
-  const counterRef =
-    db.collection("counters")
-      .doc(`${templateId}_${levelId}`);
+  const churchCode =
+    (organizationAbbreviation || "CH")
+      .toUpperCase()
+      .replace(/[^A-Z]/g, "")
+      .substring(0, 3);
 
-  const nextValue =
-    await db.runTransaction(
-      async (tx) => {
+  const locationCode =
+    (location || "XX")
+      .toUpperCase()
+      .replace(/[^A-Z]/g, "")
+      .substring(0, 2);
 
-        const snap =
-          await tx.get(counterRef);
+  let organizationCode;
+  let exists = true;
 
-        let current = 0;
+  while (exists) {
 
-        if (snap.exists) {
-          current =
-            snap.data().current || 0;
-        }
+    const randomNumber =
+      Math.floor(
+        100 + Math.random() * 900
+      );
 
-        current++;
+    organizationCode =
+      `${templateCode}-${churchCode}-${locationCode}-C${randomNumber}`;
 
-        tx.set(
-          counterRef,
-          { current },
-          { merge: true }
-        );
+    const existing =
+      await db
+        .collection("organizations")
+        .where(
+          "organizationCode",
+          "==",
+          organizationCode
+        )
+        .limit(1)
+        .get();
 
-        return current;
-      }
-    );
+    exists = !existing.empty;
+  }
 
-  return `${templateCode}-${levelCode}-${String(nextValue).padStart(4, "0")}`;
+  return organizationCode;
 }
 
 
@@ -300,12 +306,12 @@ exports.approveOrganization =
     // Generate Organization Code
     // --------------------------------------------------
 
-    const organizationCode =
-      await generateOrganizationCode(
-        templateId,
-        org.levelId,
-        org.organizationAbbreviation
-      );
+   const organizationCode =
+  await generateOrganizationCode(
+    templateId,
+    org.organizationAbbreviation,
+    org.location
+  );
      
        await orgRef.update({
   organizationCode,
@@ -362,21 +368,23 @@ exports.approveOrganization =
     // Activate Organization
     // --------------------------------------------------
 
-    await orgRef.update({
-      status: "active",
-      approvedAt: now,
-      organizationCode,
+   await orgRef.update({
+  status: "active",
+  approvedAt: now,
+  organizationCode,
 
-      onboardingStatus: "awaiting_admin_claim",
+  onboardingStatus: "awaiting_admin_claim",
 
-      adminClaimed: false,
-      adminUid: null,
-      adminMemberId,
+  adminClaimed: false,
+  adminUid: null,
+  adminMemberId,
+  adminMemberCode:
+    adminMember.memberCode,
 
-      contactClaimed: false,
-      contactUid: null,
-      contactMemberId: null,
-    });
+  contactClaimed: false,
+  contactUid: null,
+  contactMemberId: null,
+});
 
     // --------------------------------------------------
     // Notify Administrator Of Approval

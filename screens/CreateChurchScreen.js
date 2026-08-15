@@ -316,7 +316,7 @@ useEffect(() => {
     isValidEmail(contactEmail)
   );
 
- if (step === 1)
+if (step === 1)
   return (
     !!templateId &&
     !!levelId &&
@@ -893,7 +893,7 @@ const handleSubmit = async () => {
           text.toUpperCase()
         )
       }
-      placeholder="e.g. FTI"
+      placeholder="e.g. POP, TC, BM"
       autoCapitalize="characters"
       maxLength={8}
     />
@@ -905,8 +905,13 @@ const handleSubmit = async () => {
         marginBottom: 10,
       }}
     >
-      Used for organisation codes
-      (e.g. FTI-LC-0001)
+      Used for organisation and member IDs.
+
+Examples:
+
+PCG-POP-AY-C482
+PCG-TC-BM-C367
+
     </Text>
   </>
 )}

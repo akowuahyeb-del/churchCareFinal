@@ -75,6 +75,38 @@ export default function OrganisationStructureScreen() {
           isConfigured={isConfigured}
         />
 
+
+       {descendants?.length > 0 && (
+  <View style={styles.card}>
+    <Text style={styles.cardTitle}>
+      Churches  Under This {currentLevel?.label}
+    </Text>
+
+    {descendants.map(node => (
+      <View
+        key={node.id}
+        style={styles.siblingRow}
+      >
+        <View
+          style={[
+            styles.siblingDot,
+            {
+              backgroundColor:
+                childLevel?.color || "#4B3F72",
+            },
+          ]}
+        />
+
+        <Text style={styles.siblingName}>
+          {node.name}
+        </Text>
+      </View>
+    ))}
+  </View>
+)}
+
+
+
         {/* ── INTELLIGENCE: AGGREGATED STATS ── */}
         {isConfigured && aggregates && (
           <AggregatesCard
@@ -93,6 +125,8 @@ export default function OrganisationStructureScreen() {
             template={template}
           />
         )}
+
+
 
         {/* ── VISIBILITY SCOPE ── */}
         {isConfigured && currentLevel && (

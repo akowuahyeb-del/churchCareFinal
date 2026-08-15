@@ -71,6 +71,7 @@ exports.submitOrganizationRegistration =
       parentNodeId,
 
       organizationAbbreviation,
+        locationAbbreviation,
 
       contactName,
       contactPhone,
@@ -160,14 +161,17 @@ exports.submitOrganizationRegistration =
         tx.set(orgRef, {
           name: name.trim(),
 
-          organizationAbbreviation:
-            organizationAbbreviation?.trim() || null,
+         organizationAbbreviation:
+  organizationAbbreviation?.trim() || null,
 
-          denomination:
-            denomination?.trim() || null,
+locationAbbreviation:
+  locationAbbreviation?.trim() || null,
 
-          location:
-            location?.trim() || null,
+denomination:
+  denomination?.trim() || null,
+
+location:
+  location?.trim() || null,
 
           contactName:
             contactName?.trim() || null,

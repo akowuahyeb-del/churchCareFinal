@@ -66,6 +66,7 @@ import InviteMemberScreen from "./screens/InviteMemberScreen";
 import ClaimAccountScreen from "./screens/ClaimAccountScreen";
 import NotificationComposerScreen from "./screens/NotificationComposerScreen";
 import ApprovalCenterScreen from "./screens/ApprovalCenterScreen";
+import OrganizationIdentityScreen from "./screens/OrganizationIdentityScreen";
 
 
 
@@ -192,6 +193,8 @@ function RootStack() {
       <Stack.Screen name="ClaimAccount"component={ClaimAccountScreen}options={{ headerShown: false }}/>
       <Stack.Screen name="NotificationComposer"component={NotificationComposerScreen}/>
       <Stack.Screen name="ApprovalCenter"component={ApprovalCenterScreen}/>
+      <Stack.Screen name="OrganizationIdentity"component={OrganizationIdentityScreen}/>
+
 
     </Stack.Navigator>
   );

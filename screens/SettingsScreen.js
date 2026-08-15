@@ -961,6 +961,19 @@ const handleRemovePin = () => {
   onPress={() => navigation.navigate("OrganisationManage")}
   color="#4B3F72"
 />
+<TapRow
+  icon="pricetag-outline"
+  label="Customise Church Identity"
+  sub="Manage organisation code and abbreviations"
+  onPress={() =>
+    navigation.navigate(
+      "OrganizationIdentity"
+    )
+  }
+  color="#4B3F72"
+/>
+
+
 
 <TapRow icon="people-outline"       label="Group Attendance"
   sub="Record attendance for choirs, teams & groups"

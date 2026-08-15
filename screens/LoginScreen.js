@@ -156,8 +156,20 @@ if (
     "ROUTE 8A - Navigating ClaimAccount"
   );
 
+console.log(
+  "ADMIN CLAIM ROUTE",
+  {
+    adminMemberId:
+      orgData.adminMemberId,
+
+    adminMemberCode:
+      orgData.adminMemberCode,
+  }
+);
+
   navigation.replace(
   "ClaimAccount",
+
   {
     existingUser: true,
     memberCode:
