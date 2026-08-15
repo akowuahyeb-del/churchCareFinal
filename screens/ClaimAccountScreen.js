@@ -115,17 +115,7 @@ if (existingUser) {
       claimToken: result.claimToken,
     });
 
-  const entitySnap = await getDoc(
-  doc(
-    db,
-    "organizations",
-    result.organizationId,
-    "entities",
-    result.entityId
-  )
-);
-
-const entity = entitySnap.data();
+ 
 
 console.log(
   "CLAIM RESULT",

@@ -167,13 +167,36 @@ console.log(
   }
 );
 
-  navigation.replace(
-  "ClaimAccount",
+  let memberCode = "";
 
+if (
+  orgData.adminMemberId &&
+  orgData.rootEntityId
+) {
+  const adminMemberSnap =
+    await getDoc(
+      doc(
+        db,
+        "organizations",
+        userData.organizationId,
+        "entities",
+        orgData.rootEntityId,
+        "members",
+        orgData.adminMemberId
+      )
+    );
+
+  if (adminMemberSnap.exists()) {
+    memberCode =
+      adminMemberSnap.data()?.memberCode || "";
+  }
+}
+
+navigation.replace(
+  "ClaimAccount",
   {
     existingUser: true,
-    memberCode:
-      orgData.adminMemberCode,
+    memberCode,
   }
 );
 
