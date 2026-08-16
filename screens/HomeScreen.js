@@ -150,9 +150,10 @@ useEffect(() => {
           : prev + 1;
 
       carouselRef.current?.scrollTo({
-        x: next * 270,
-        animated: true,
-      });
+  x: next * W,
+  animated: true,
+});
+
 
       return next;
     });
@@ -966,13 +967,14 @@ return (
     <View
       key={item.id}
       style={{
-        width: 260,
-        height: 140,
-        borderRadius: 16,
-        overflow: "hidden",
-        marginRight: 10,
-        backgroundColor: "#eee",
-      }}
+  width: W - 32,
+  height: 140,
+  borderRadius: 16,
+  overflow: "hidden",
+  marginRight: 16,
+  backgroundColor: "#eee",
+}}
+
     >
       <Image
         source={{ uri: item.imageUrl }}
