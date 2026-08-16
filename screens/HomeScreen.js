@@ -1045,12 +1045,23 @@ return (
         onPress: () => navigation.navigate("AdminDashboard")
       },
 
-      (hasRole("admin") || hasRole("media")) && {
-        icon: "cloud-upload-outline",
-        label: "Upload",
-        onPress: () => setShowUpload(true)
-      },
+     (hasRole("admin") || hasRole("media")) && {
+  icon: "cloud-upload-outline",
+  label: "Upload",
+  onPress: () => setShowUpload(true)
+},
 
+hasRole("admin") && {
+  icon: "images-outline",
+  label: "Carousel",
+  onPress: () =>
+    navigation.navigate(
+      "ManageCarousel"
+    )
+},
+
+
+      
       {
         icon: "heart-outline",
         label: "Donate",
@@ -1068,6 +1079,8 @@ return (
         label: "QR Code",
         onPress: () => setQrModal(true)
       }
+
+
 
     ]
     .filter(Boolean)

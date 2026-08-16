@@ -67,6 +67,7 @@ import ClaimAccountScreen from "./screens/ClaimAccountScreen";
 import NotificationComposerScreen from "./screens/NotificationComposerScreen";
 import ApprovalCenterScreen from "./screens/ApprovalCenterScreen";
 import OrganizationIdentityScreen from "./screens/OrganizationIdentityScreen";
+import ManageCarouselScreen from "./screens/ManageCarouselScreen";
 
 
 
@@ -194,7 +195,7 @@ function RootStack() {
       <Stack.Screen name="NotificationComposer"component={NotificationComposerScreen}/>
       <Stack.Screen name="ApprovalCenter"component={ApprovalCenterScreen}/>
       <Stack.Screen name="OrganizationIdentity"component={OrganizationIdentityScreen}/>
-
+      <Stack.Screen name="ManageCarousel"component={ManageCarouselScreen}/>
 
     </Stack.Navigator>
   );
