@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
-
+import AppHeader from "../components/AppHeader";
 export default function OrganizationIdentityScreen({ navigation, route }) {
   const {
     organizationId,
@@ -147,13 +147,10 @@ const previewCode =
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Church Identity</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <AppHeader
+  title="Church Identity"
+  onBack={() => navigation.goBack()}
+/>
 
       <Text style={styles.subtitle}>
         Update the church abbreviation used to generate Church IDs and future

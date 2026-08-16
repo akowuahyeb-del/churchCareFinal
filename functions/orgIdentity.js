@@ -72,24 +72,45 @@ const oldCode =
 const segments =
   oldCode.split("-");
 
-// PCG-POP-POP-245C-0001
-//  0   1   2    3     4
-
-if (segments.length < 4) {
-  throw new HttpsError(
-    "failed-precondition",
-    "Invalid organization code structure"
-  );
-}
-
 const denomination =
   segments[0];
 
-const uniqueChurchId =
-  segments[3];
+let newOrganizationCode;
 
-const newOrganizationCode =
-  `${denomination}-${cleanAbbreviation}-${uniqueChurchId}`;
+// --------------------------------------------------
+// Local church / society / congregation
+// Example:
+// MCG-CH-TE-C897
+// --------------------------------------------------
+
+if (segments.length >= 4) {
+
+  const uniqueChurchId =
+    segments[3];
+
+  newOrganizationCode =
+    `${denomination}-${cleanAbbreviation}-${uniqueChurchId}`;
+
+}
+
+// --------------------------------------------------
+// Top-level organizations
+// Example:
+// General Assembly
+// Conference
+// Diocese
+// Presbytery
+// District
+// --------------------------------------------------
+
+else {
+
+  const uniqueId =
+    segments[segments.length - 1];
+
+  newOrganizationCode =
+    `${denomination}-${cleanAbbreviation}-${uniqueId}`;
+}
 
 
 
