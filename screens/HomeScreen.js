@@ -356,15 +356,20 @@ useEffect(() => {
     const u4 = onSnapshot(
       collection(db, "organizations", organizationId, "entities", entityId, "carousel"),
       snap => {
-        const items = snap.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        }));
+        const items = snap.docs
+  .map(d => ({
+    id: d.id,
+    ...d.data()
+  }))
+  .filter(item => item.active !== false);
 
         console.log("✅ CAROUSEL ITEMS:", items);
         setCarouselItems(items);
       }
     );
+
+
+
 
     // ✅ PATCH 3 — PREACHERS LISTENER (same pattern as PROGRAM: one doc, items array)
     // Preachers used to live only in local state and reset on every reload.
@@ -628,6 +633,65 @@ if (entitiesRaw) {
 };
 
 
+const deactivateCarouselItem = async (
+  carouselId
+) => {
+  try {
+    const { organizationId, entityId } =
+      activeEntity;
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "carousel",
+        carouselId
+      ),
+      {
+        active: false,
+      }
+    );
+
+  } catch (e) {
+    Alert.alert(
+      "Deactivate failed",
+      e.message
+    );
+  }
+};
+
+const activateCarouselItem = async (
+  carouselId
+) => {
+  try {
+    const { organizationId, entityId } =
+      activeEntity;
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "carousel",
+        carouselId
+      ),
+      {
+        active: true,
+      }
+    );
+
+  } catch (e) {
+    Alert.alert(
+      "Activate failed",
+      e.message
+    );
+  }
+};
 
 
 const saveProgramToFirestore = async (updatedProgram) => {
