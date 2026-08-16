@@ -85,6 +85,8 @@ export default function HomeScreen({ route }) {
 const [notifCount, setNotifCount] = useState(0);
 const [notifModal, setNotifModal] = useState(false);
 const [notifications, setNotifications] = useState([]);
+const carouselRef = useRef(null);
+const [carouselIndex, setCarouselIndex] = useState(0);
 
   
   
@@ -135,6 +137,30 @@ useEffect(() => {
   console.log("CHURCH QR OPENED:", entityFromQR);
 
 }, [route?.params]);
+
+
+useEffect(() => {
+  if (carouselItems.length <= 1) return;
+
+  const interval = setInterval(() => {
+    setCarouselIndex(prev => {
+      const next =
+        prev >= carouselItems.length - 1
+          ? 0
+          : prev + 1;
+
+      carouselRef.current?.scrollTo({
+        x: next * 270,
+        animated: true,
+      });
+
+      return next;
+    });
+  }, 4000);
+
+  return () => clearInterval(interval);
+}, [carouselItems]);
+
 
 
   /* useEffect */
@@ -810,6 +836,7 @@ return (
 {/* ✅ MAIN SCROLL AREA */}
 <ScrollView
   contentContainerStyle={styles.body}
+  nestedScrollEnabled={true}
   refreshControl={
     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
   }
@@ -859,32 +886,41 @@ return (
       <Text style={styles.featuredHeading}>Featured Events</Text>
     </View>
 
-
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingLeft: 14, paddingRight: 6 }}
+<ScrollView
+  ref={carouselRef}
+  horizontal
+  pagingEnabled
+  nestedScrollEnabled={true}
+  directionalLockEnabled={true}
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={{
+    paddingLeft: 14,
+    paddingRight: 6,
+  }}
+>
+  {carouselItems.map(item => (
+    <View
+      key={item.id}
+      style={{
+        width: 260,
+        height: 140,
+        borderRadius: 16,
+        overflow: "hidden",
+        marginRight: 10,
+        backgroundColor: "#eee",
+      }}
     >
-      {carouselItems.map(item => (
-        <View
-          key={item.id}
-          style={{
-            width: 260,
-            height: 140,
-            borderRadius: 16,
-            overflow: "hidden",
-            marginRight: 10,
-            backgroundColor: "#eee"
-          }}
-        >
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-        </View>
-      ))}
-    </ScrollView>
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+        resizeMode="cover"
+      />
+    </View>
+  ))}
+</ScrollView>
 
   </View>
 )}
