@@ -16,6 +16,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { SESSIONS } from "../constants/sessions";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
 
 export default function PreacherModal({
   visible,
@@ -31,6 +33,8 @@ export default function PreacherModal({
 
   const [date, setDate] = useState(null);
   const [expiry, setExpiry] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+const [showExpiryPicker, setShowExpiryPicker] = useState(false);
 
   // ✅ FIXED: was useState("null") — a literal string, not null.
   // That meant session?.id checks below never failed gracefully,
@@ -49,38 +53,6 @@ export default function PreacherModal({
     setSession(initialData?.session || null);
   }, [initialData, visible]);
 
-  // ✅ QUICK DATE PICKER
-  const pickDate = (type) => {
-    const now = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(now.getDate() + 1);
-
-    Alert.alert("Select Date", "Quick options", [
-      {
-        text: "Today",
-        onPress: () => {
-          type === "date"
-            ? setDate(now.toISOString())
-            : setExpiry(now.toISOString());
-        }
-      },
-      {
-        text: "Tomorrow",
-        onPress: () => {
-          type === "date"
-            ? setDate(tomorrow.toISOString())
-            : setExpiry(tomorrow.toISOString());
-        }
-      },
-      {
-        text: "Clear",
-        onPress: () => {
-          type === "date" ? setDate(null) : setExpiry(null);
-        }
-      },
-      { text: "Cancel", style: "cancel" }
-    ]);
-  };
 
   // ✅ IMAGE UPLOAD
   const pickImage = async () => {
@@ -248,27 +220,69 @@ export default function PreacherModal({
   onChangeText={setBio}
 />
 
-          <Text style={styles.label}>Service Date (Optional)</Text>
+        <View style={styles.row}>
 
-<TouchableOpacity
-  style={styles.input}
-  onPress={() => pickDate("date")}
->
-            <Text>
-              {date ? new Date(date).toLocaleDateString() : "Set Service Date"}
-            </Text>
-          </TouchableOpacity>
-<Text style={styles.label}>Expiry Date (Optional)</Text>
+  <View style={styles.half}>
+    <Text style={styles.label}>Service Date</Text>
 
-<TouchableOpacity
-  style={styles.input}
-  onPress={() => pickDate("expiry")}
->
-            <Text>
-              {expiry ? new Date(expiry).toLocaleDateString() : "Set Expiry"}
-            </Text>
-          </TouchableOpacity>
+    <TouchableOpacity
+      style={styles.input}
+      onPress={() => setShowDatePicker(true)}
+    >
+      <Text>
+        {date
+          ? new Date(date).toLocaleDateString()
+          : "Select Date"}
+      </Text>
+    </TouchableOpacity>
+  </View>
 
+  <View style={styles.half}>
+    <Text style={styles.label}>Expiry Date</Text>
+
+    <TouchableOpacity
+      style={styles.input}
+      onPress={() => setShowExpiryPicker(true)}
+    >
+      <Text>
+        {expiry
+          ? new Date(expiry).toLocaleDateString()
+          : "Select Date"}
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+</View>
+
+{showDatePicker && (
+  <DateTimePicker
+    value={date ? new Date(date) : new Date()}
+    mode="date"
+    display="default"
+    onChange={(event, selectedDate) => {
+      setShowDatePicker(false);
+
+      if (selectedDate) {
+        setDate(selectedDate.toISOString());
+      }
+    }}
+  />
+)}
+
+{showExpiryPicker && (
+  <DateTimePicker
+    value={expiry ? new Date(expiry) : new Date()}
+    mode="date"
+    display="default"
+    onChange={(event, selectedDate) => {
+      setShowExpiryPicker(false);
+
+      if (selectedDate) {
+        setExpiry(selectedDate.toISOString());
+      }
+    }}
+  />
+)}
           {/* ✅ SAVE */}
           <TouchableOpacity style={styles.save} onPress={handleSave}>
             <Text style={styles.white}>Save</Text>
