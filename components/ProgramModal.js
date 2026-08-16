@@ -23,7 +23,8 @@ export default function ProgramModal({
   const [notes, setNotes] = useState("");
   const [time, setTime] = useState("");
   const [date, setDate] = useState(null);
-  const [selectedPreacherId, setSelectedPreacherId] = useState(null);
+  const [participants, setParticipants] = useState([]);
+
   const [showDate, setShowDate] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,7 +35,25 @@ export default function ProgramModal({
     setNotes(initialData?.notes || "");
     setTime(initialData?.time || "");
     setDate(initialData?.date || null);
-    setSelectedPreacherId(initialData?.preacherId || null);
+    if (initialData?.participants?.length) {
+  setParticipants(initialData.participants);
+} else if (initialData?.preacherId) {
+  const preacher = preachers.find(
+    p => p.id === initialData.preacherId
+  );
+
+  setParticipants(
+    preacher
+      ? [{
+          id: preacher.id,
+          name: preacher.name,
+          role: "Preacher"
+        }]
+      : []
+  );
+} else {
+  setParticipants([]);
+}
     setError("");
   }, [visible, initialData]);
 
@@ -43,20 +62,25 @@ export default function ProgramModal({
       setError("Title is required");
       return;
     }
-    if (!selectedPreacherId) {
-      setError("Please select a preacher for this session");
-      return;
-    }
+   
 
-    onSave({
-      id: initialData?.id || Date.now().toString(),
-      title: title.trim(),
-      notes: notes.trim(),
-      time,
-      date,
-      preacherId: selectedPreacherId,
-      session: activeSession // ✅ always the session you're currently viewing
-    });
+   onSave({
+  id: initialData?.id || Date.now().toString(),
+  title: title.trim(),
+  notes: notes.trim(),
+  time,
+  date,
+
+  participants,
+
+  // backward compatibility
+  preacherId:
+    participants.find(
+      p => p.role === "Preacher"
+    )?.id || null,
+
+  session: activeSession
+});
 
     onClose();
   };
@@ -77,20 +101,22 @@ export default function ProgramModal({
             </View>
           )}
 
-          <TextInput
-            placeholder="Program Title"
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-          />
+          <Text style={styles.label}>Programme Item</Text>
+<TextInput
+  placeholder="e.g. Call to Worship"
+  style={styles.input}
+  value={title}
+  onChangeText={setTitle}
+/>
 
-          <TextInput
-            placeholder="Time (e.g. 9:00 AM)"
-            style={styles.input}
-            value={time}
-            onChangeText={setTime}
-          />
-
+          <Text style={styles.label}>Duration / Time</Text>
+<TextInput
+  placeholder="e.g. 5 min or 9:00 AM"
+  style={styles.input}
+  value={time}
+  onChangeText={setTime}
+/>
+   <Text style={styles.label}>Date (Optional)</Text>
           <TouchableOpacity style={styles.input} onPress={() => setShowDate(true)}>
             <Text>
               {date ? new Date(date).toDateString() : "Pick Date (optional)"}
@@ -109,33 +135,78 @@ export default function ProgramModal({
             />
           )}
 
-          <TextInput
-            placeholder="Notes (optional)"
-            style={[styles.input, { height: 70 }]}
-            multiline
-            value={notes}
-            onChangeText={setNotes}
-          />
+          <Text style={styles.label}>Reference / Notes (Optional)</Text>
 
-          {/* ✅ Only preachers belonging to THIS session ever appear here */}
-          <Text style={styles.label}>Preacher</Text>
+<TextInput
+  placeholder="e.g. PH 528:1-3"
+  style={[styles.input, { height: 70 }]}
+  multiline
+  value={notes}
+  onChangeText={setNotes}
+/>
+
+         <Text style={styles.label}>
+  Responsible Person / Group (Optional)
+</Text>
+
 
           {preachers.length === 0 ? (
             <Text style={styles.emptyText}>
-              No preachers added for {activeSession?.name || "this session"} yet.
-              Add one from the Preachers tab first.
+              No preacher available for this service yet.
+
+You may leave this blank or add a preacher from the Preachers tab.
             </Text>
           ) : (
             preachers.map(p => {
-              const active = selectedPreacherId === p.id;
-              return (
+              const active = participants.some(
+  participant => participant.id === p.id
+);
+
+{participants.length > 0 && (
+  <>
+    <Text
+      style={[
+        styles.label,
+        { marginTop: 10 }
+      ]}
+    >
+      Selected
+    </Text>
+
+    <Text style={styles.sub}>
+      {participants.map(p => p.name).join(", ")}
+    </Text>
+  </>
+)}
+       
+return (
                 <TouchableOpacity
                   key={p.id}
                   style={[styles.item, active && styles.itemActive]}
-                  onPress={() => {
-                    setSelectedPreacherId(p.id);
-                    setError("");
-                  }}
+                 onPress={() => {
+  const exists = participants.some(
+    participant => participant.id === p.id
+  );
+
+  if (exists) {
+    setParticipants(prev =>
+      prev.filter(
+        participant => participant.id !== p.id
+      )
+    );
+  } else {
+    setParticipants(prev => [
+      ...prev,
+      {
+        id: p.id,
+        name: p.name,
+        role: "Preacher"
+      }
+    ]);
+  }
+
+  setError("");
+}}
                 >
                   <Text style={[styles.text, active && styles.textActive]}>
                     {p.name}

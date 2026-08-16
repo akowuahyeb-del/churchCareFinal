@@ -189,10 +189,31 @@ const addSession = (name) => {
 
             <Text style={styles.sessionHeader}>{activeSession.name}</Text>
 
-            {sessionProgram.map(item => {
-              const linkedPreacher = preachers.find(p => p.id === item.preacherId);
+    {sessionProgram.map(item => {
+  let participants = item.participants || [];
 
-              return (
+  // Backward compatibility for older records
+  if (
+    participants.length === 0 &&
+    item.preacherId
+  ) {
+    const preacher = preachers.find(
+      p => p.id === item.preacherId
+    );
+
+    if (preacher) {
+      participants = [
+        {
+          id: preacher.id,
+          name: preacher.name,
+          role: "Preacher"
+        }
+      ];
+    }
+  }
+
+  return (
+
                 <TouchableOpacity
                   key={item.id}
                   style={styles.card}
@@ -201,14 +222,29 @@ const addSession = (name) => {
                     setModalVisible(true);
                   }}
                 >
-                  <Text style={styles.title}>{item.title}</Text>
-                  {linkedPreacher ? (
-                    <Text style={styles.sub}>
-                      {linkedPreacher.name} • {linkedPreacher.topic}
-                    </Text>
-                  ) : (
-                    <Text style={styles.unassigned}>No preacher assigned</Text>
-                  )}
+               <View style={styles.programRow}>
+
+  <Text
+    style={styles.programTitle}
+    numberOfLines={1}
+  >
+    {item.title}
+    {!!item.time && ` (${item.time})`}
+  </Text>
+
+  <View style={styles.dots} />
+
+  <Text
+    style={styles.programParticipant}
+    numberOfLines={1}
+  >
+    {participants.length > 0
+      ? participants.map(p => p.name).join(", ")
+      : ""}
+  </Text>
+
+</View>
+
                 </TouchableOpacity>
               );
             })}
@@ -478,5 +514,16 @@ activeTabText: {
     marginLeft: 4,
     marginTop: 10
   },
- 
+  programRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center"
+},
+
+
+programRow: {
+  paddingVertical: 4,
+},
+
+
 });

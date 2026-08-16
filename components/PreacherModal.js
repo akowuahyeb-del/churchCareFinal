@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Alert
+  Alert,
+  ScrollView
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -147,7 +148,12 @@ export default function PreacherModal({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.box}>
+  <View style={styles.box}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+
 
           <Text style={styles.title}>
             {initialData?.id ? "Edit Preacher" : "New Preacher"}
@@ -155,33 +161,56 @@ export default function PreacherModal({
 
           {/* ✅ IMAGE */}
           <TouchableOpacity onPress={pickImage} style={styles.imageBox}>
-            {photo ? (
-              <Image source={{ uri: photo }} style={styles.image} />
-            ) : (
+           {photo && photo !== "" ? (
+  <Image
+    source={{ uri: photo }}
+    style={styles.image}
+  />
+) : (
               <View style={styles.placeholder}>
                 <Ionicons name="camera-outline" size={20} color="#666" />
-                <Text style={{ fontSize: 11, marginTop: 4 }}>
-                  {uploading ? "Uploading..." : "Upload Photo"}
-                </Text>
+               <Text
+  style={{
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "600"
+  }}
+>
+  {uploading
+    ? "Uploading..."
+    : "Tap to Upload Photo"}
+</Text>
+
               </View>
             )}
           </TouchableOpacity>
 
-          {/* ✅ NAME */}
-          <TextInput
-            placeholder="Preacher Name"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-          />
+        <View style={styles.row}>
 
-          {/* ✅ TOPIC */}
-          <TextInput
-            placeholder="Sermon Topic"
-            style={styles.input}
-            value={topic}
-            onChangeText={setTopic}
-          />
+  <View style={styles.half}>
+    <Text style={styles.label}>Name</Text>
+    <TextInput
+      placeholder="Rev. Anomah"
+      style={styles.input}
+      value={name}
+      onChangeText={setName}
+    />
+  </View>
+
+  <View style={styles.half}>
+    <Text style={styles.label}>Topic</Text>
+    <TextInput
+      placeholder="Prayer"
+      style={styles.input}
+      value={topic}
+      onChangeText={setTopic}
+    />
+  </View>
+
+</View>
+
+
+        
 
           {/* ✅ SESSION — now reads from the shared SESSIONS list */}
           <Text style={styles.label}>Session</Text>
@@ -208,36 +237,33 @@ export default function PreacherModal({
             ))}
           </View>
 
-          {session && (
-            <Text style={{ fontSize: 12, color: "#4B3F72", marginBottom: 8 }}>
-              This preacher will appear under: {session.name}
-            </Text>
-          )}
 
-          {/* ✅ BIO */}
-          <TextInput
-            placeholder="Bio"
-            style={[styles.input, { height: 80 }]}
-            multiline
-            value={bio}
-            onChangeText={setBio}
-          />
+          <Text style={styles.label}>Biography (Optional)</Text>
 
-          {/* ✅ DATE */}
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => pickDate("date")}
-          >
+<TextInput
+  placeholder="Short profile, ministry background, church affiliation..."
+  style={[styles.input, { height: 50}]}
+  multiline
+  value={bio}
+  onChangeText={setBio}
+/>
+
+          <Text style={styles.label}>Service Date (Optional)</Text>
+
+<TouchableOpacity
+  style={styles.input}
+  onPress={() => pickDate("date")}
+>
             <Text>
               {date ? new Date(date).toLocaleDateString() : "Set Service Date"}
             </Text>
           </TouchableOpacity>
+<Text style={styles.label}>Expiry Date (Optional)</Text>
 
-          {/* ✅ EXPIRY */}
-          <TouchableOpacity
-            style={styles.input}
-            onPress={() => pickDate("expiry")}
-          >
+<TouchableOpacity
+  style={styles.input}
+  onPress={() => pickDate("expiry")}
+>
             <Text>
               {expiry ? new Date(expiry).toLocaleDateString() : "Set Expiry"}
             </Text>
@@ -265,22 +291,43 @@ export default function PreacherModal({
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.cancel}>Cancel</Text>
           </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+        </ScrollView>
+</View>
+</View>
+</Modal>
   );
 }
 
 /* ✅ STYLES */
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "#0006", justifyContent: "center" },
+  overlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.45)",
+  justifyContent: "center",
+  alignItems: "center",
+},
 
-  box: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 16,
-    borderRadius: 16
-  },
+ box: {
+  width: "92%",
+  alignSelf: "center",
+
+  backgroundColor: "#fff",
+
+  borderRadius: 20,
+
+  paddingHorizontal: 20,
+  paddingTop: 16,
+  paddingBottom: 20,
+
+  maxHeight: "88%",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.15,
+  shadowRadius: 10,
+  elevation: 8,
+},
+
+
 
   title: {
     fontSize: 16,
@@ -289,38 +336,49 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10
-  },
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 12,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  marginBottom: 8,
+},
 
-  imageBox: {
-    height: 100,
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: "hidden",
-    backgroundColor: "#eee"
-  },
+imageBox: {
+  height: 100,
+  borderRadius: 16,
+  marginBottom: 12,
+  overflow: "hidden",
+  backgroundColor: "#f3f4f6",
 
-  image: {
-    width: "100%",
-    height: "100%"
-  },
+  borderWidth: 1,
+  borderColor: "#e5e7eb",
 
-  placeholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center"
-  },
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+image: {
+  width: "100%",
+  height: "100%",
+  resizeMode: "cover",
+},
+
+placeholder: {
+  flex: 1,
+  width: "100%",
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "#f3f4f6",
+},
+
 
   label: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#777",
-    marginBottom: 5
-  },
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#777",
+  marginBottom: 4,
+},
 
   sessionRow: {
     flexDirection: "row",
@@ -350,20 +408,21 @@ const styles = StyleSheet.create({
     color: "#fff"
   },
 
-  save: {
-    backgroundColor: "#4B3F72",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center"
-  },
+ save: {
+  backgroundColor: "#4B3F72",
+  paddingVertical: 12,
+  borderRadius: 12,
+  alignItems: "center",
+  marginTop: 4,
+},
 
-  delete: {
-    backgroundColor: "#e74c3c",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 8
-  },
+delete: {
+  backgroundColor: "#e74c3c",
+  paddingVertical: 12,
+  borderRadius: 12,
+  alignItems: "center",
+  marginTop: 6,
+},
 
   cancel: {
     textAlign: "center",
@@ -374,5 +433,14 @@ const styles = StyleSheet.create({
   white: {
     color: "#fff",
     fontWeight: "700"
-  }
+  },
+  row: {
+  flexDirection: "row",
+  gap: 10,
+},
+
+half: {
+  flex: 1,
+},
+
 });
