@@ -10,7 +10,9 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  FlatList,
 } from "react-native";
+
 
 import AppHeader from "../components/AppHeader";
 
@@ -136,14 +138,18 @@ const convertedCount =
 <View style={styles.statsRow}>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {firstTimeCount}
+</Text>
     <Text style={styles.statLabel}>
       First Time Visitors
     </Text>
   </View>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {returningCount}
+</Text>
     <Text style={styles.statLabel}>
       Returning Visitors
     </Text>
@@ -154,14 +160,19 @@ const convertedCount =
 <View style={styles.statsRow}>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {interestedCount}
+</Text>
     <Text style={styles.statLabel}>
       Interested
     </Text>
   </View>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {convertedCount}
+</Text>
+
     <Text style={styles.statLabel}>
       Converted
     </Text>
@@ -172,14 +183,18 @@ const convertedCount =
 <View style={styles.statsRow}>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {visitingMemberCount}
+</Text>
     <Text style={styles.statLabel}>
       Visiting Members
     </Text>
   </View>
 
   <View style={styles.statCard}>
-    <Text style={styles.statNumber}>0</Text>
+    <Text style={styles.statNumber}>
+  {visitors.length}
+</Text>
     <Text style={styles.statLabel}>
       Total Visitors
     </Text>
@@ -233,13 +248,24 @@ const convertedCount =
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-        >
-          <Text style={styles.actionText}>
-            Share Visitor Link
-          </Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  style={styles.actionBtn}
+>
+  <Text style={styles.actionText}>
+    Share Visitor Link
+  </Text>
+</TouchableOpacity>
+<TouchableOpacity
+  style={styles.actionBtn}
+  onPress={() =>
+    navigation.navigate("VisitorRegister")
+  }
+>
+  <Text style={styles.actionText}>
+    Open Visitor Register
+  </Text>
+</TouchableOpacity>
+
 
       </ScrollView>
 
@@ -286,4 +312,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "700",
   },
+  colHeader: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 12,
+},
+
+visitorRow: {
+  flexDirection: "row",
+  paddingVertical: 12,
+  paddingHorizontal: 8,
+  backgroundColor: "#fff",
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+},
+
+colCell: {
+  fontSize: 12,
+  color: "#333",
+},
 });

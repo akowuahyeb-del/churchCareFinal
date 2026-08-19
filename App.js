@@ -70,6 +70,9 @@ import OrganizationIdentityScreen from "./screens/OrganizationIdentityScreen";
 import ManageCarouselScreen from "./screens/ManageCarouselScreen";
 import VisitorsScreen from "./screens/VisitorsScreen";
 import AddVisitorScreen from "./screens/AddVisitorScreen";
+import VisitorRegisterScreen from "./screens/VisitorRegisterScreen";
+import VisitorProfileScreen from "./screens/VisitorProfileScreen";
+
 
 
 
@@ -201,6 +204,8 @@ function RootStack() {
       <Stack.Screen name="ManageCarousel"component={ManageCarouselScreen}/>
       <Stack.Screen name="Visitors"component={VisitorsScreen}/>
       <Stack.Screen name="AddVisitor"component={AddVisitorScreen}/>
+      <Stack.Screen name="VisitorRegister"component={VisitorRegisterScreen}/>
+      <Stack.Screen name="VisitorProfile" component={VisitorProfileScreen}/>
 
 
     </Stack.Navigator>
