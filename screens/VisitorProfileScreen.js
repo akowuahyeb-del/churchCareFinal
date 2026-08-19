@@ -1,6 +1,15 @@
 import React, {
   useState,
 } from "react";
+
+import {
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+
+import { Alert } from "react-native";
+
+import { db } from "../firebase";
 import {
   View,
   Text,
@@ -21,7 +30,44 @@ export default function VisitorProfileScreen({
   useState(
     visitor?.followUpStatus || "new"
   );
+const saveFollowUpStatus = async () => {
 
+  try {
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        visitor.organizationId,
+        "entities",
+        visitor.entityId,
+        "visitors",
+        visitor.id
+      ),
+      {
+        followUpStatus: status,
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+    Alert.alert(
+      "Success",
+      "Follow-up status updated."
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ UPDATE VISITOR STATUS",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+  }
+};
 
   return (
     <View style={{ flex: 1 }}>
@@ -122,6 +168,15 @@ export default function VisitorProfileScreen({
   ))}
 
 </View>
+
+<TouchableOpacity
+  style={styles.button}
+  onPress={saveFollowUpStatus}
+>
+  <Text style={styles.buttonText}>
+    Save Follow-up Status
+  </Text>
+</TouchableOpacity>
 
         <TouchableOpacity
           style={[

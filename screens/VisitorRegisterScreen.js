@@ -29,8 +29,15 @@ export default function VisitorRegisterScreen({
     useState([]);
 
   useEffect(() => {
-    loadVisitors();
-  }, []);
+  const unsubscribe = navigation.addListener(
+    "focus",
+    () => {
+      loadVisitors();
+    }
+  );
+
+  return unsubscribe;
+}, [navigation]);
 
   const loadVisitors = async () => {
 
