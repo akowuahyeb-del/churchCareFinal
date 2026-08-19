@@ -1036,16 +1036,25 @@ return (
       },
 
       hasRole("admin") && {
-        icon: "people-outline",
-        label: "Members",
-        onPress: () => navigation.navigate("Members")
-      },
+  icon: "people-outline",
+  label: "Members",
+  onPress: () => navigation.navigate("Members")
+},
 
-      hasRole("admin") && {
-        icon: "bar-chart-outline",
-        label: "Reports",
-        onPress: () => navigation.navigate("AdminDashboard")
-      },
+(hasRole("admin") ||
+ hasRole("elder") ||
+ hasRole("pastor") ||
+ hasRole("usher")) && {
+  icon: "person-add-outline",
+  label: "Visitors",
+  onPress: () => navigation.navigate("Visitors")
+},
+
+hasRole("admin") && {
+  icon: "bar-chart-outline",
+  label: "Reports",
+  onPress: () => navigation.navigate("AdminDashboard")
+},
 
      (hasRole("admin") || hasRole("media")) && {
   icon: "cloud-upload-outline",

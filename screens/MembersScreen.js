@@ -389,6 +389,9 @@ const editMember = (item) => {
   navigation.navigate("AddMember", {
     memberData: item,
     editingId: item.id,
+
+    entityId,
+    organizationId,
   });
 };
 
@@ -590,26 +593,45 @@ const executeReinstate = async () => {
     navigation.getParent()?.navigate("Donate", memberId ? { memberId, memberName } : undefined);
   };
 
-  /* ── Filter ── */
-  const filtered = members.filter(m => {
-    const q = search.toLowerCase();
-    const matchSearch   = (m.name || "").toLowerCase().includes(q) || (m.memberCode || "").toLowerCase().includes(q);
-    const matchMinistry = filterMinistry === "All" || m.ministry === filterMinistry;
-    const matchStatus   = filterStatus   === "All" || m.status   === filterStatus;
-    const matchCommun   = filterCommun   === "All"
-      || (filterCommun === "yes" && m.communicant === "yes")
-      || (filterCommun === "no"  && m.communicant === "no");
-      const matchLifecycle =
-  filterLifecycle === "All" ||
-  (m.lifecycleStatus || "member") === filterLifecycle;
-   return (
-  matchSearch &&
-  matchMinistry &&
-  matchStatus &&
-  matchCommun &&
-  matchLifecycle
-);
+ 
+const filtered = members.filter(m => {
+  const q = search.toLowerCase();
+
+  const matchSearch =
+    (m.name || "").toLowerCase().includes(q) ||
+    (m.memberCode || "").toLowerCase().includes(q);
+
+  const matchMinistry =
+    filterMinistry === "All" ||
+    m.ministry === filterMinistry;
+
+  const normalizedStatus =
+    m.status === "Visiting"
+      ? "Visiting Member"
+      : m.status;
+
+  const matchStatus =
+    filterStatus === "All" ||
+    normalizedStatus === filterStatus;
+
+  const matchCommun =
+    filterCommun === "All" ||
+    (filterCommun === "yes" && m.communicant === "yes") ||
+    (filterCommun === "no" && m.communicant === "no");
+
+  const matchLifecycle =
+    filterLifecycle === "All" ||
+    (m.lifecycleStatus || "member") === filterLifecycle;
+
+  return (
+    matchSearch &&
+    matchMinistry &&
+    matchStatus &&
+    matchCommun &&
+    matchLifecycle
+  );
 });
+
 
 const getLifecycleCount = (status) => {
   if (status === "All") return members.length;
@@ -885,6 +907,43 @@ const isAdministrator =
                         </Text>
                       </View>
                     )}
+
+{/* Status badge */}
+{item.status && (
+  <View
+    style={[
+      styles.commBadge,
+      {
+        backgroundColor:
+          item.status === "Visiting Member"
+            ? "#E8F4FD"
+            : item.status === "Inactive"
+            ? "#FCE8E8"
+            : "#E8F8F0",
+      },
+    ]}
+  >
+    <Text
+      style={[
+        styles.commBadgeText,
+        {
+          color:
+            item.status === "Visiting Member"
+              ? "#0984E3"
+              : item.status === "Inactive"
+              ? "#E74C3C"
+              : "#27AE60",
+        },
+      ]}
+    >
+      {item.status === "Visiting"
+        ? "👥 Visiting Member"
+        : `👥 ${item.status}`}
+    </Text>
+  </View>
+)}
+
+
 
                     {/* Discipline badge */}
                     {isDisciplined && (

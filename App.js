@@ -68,6 +68,9 @@ import NotificationComposerScreen from "./screens/NotificationComposerScreen";
 import ApprovalCenterScreen from "./screens/ApprovalCenterScreen";
 import OrganizationIdentityScreen from "./screens/OrganizationIdentityScreen";
 import ManageCarouselScreen from "./screens/ManageCarouselScreen";
+import VisitorsScreen from "./screens/VisitorsScreen";
+import AddVisitorScreen from "./screens/AddVisitorScreen";
+
 
 
 
@@ -196,6 +199,9 @@ function RootStack() {
       <Stack.Screen name="ApprovalCenter"component={ApprovalCenterScreen}/>
       <Stack.Screen name="OrganizationIdentity"component={OrganizationIdentityScreen}/>
       <Stack.Screen name="ManageCarousel"component={ManageCarouselScreen}/>
+      <Stack.Screen name="Visitors"component={VisitorsScreen}/>
+      <Stack.Screen name="AddVisitor"component={AddVisitorScreen}/>
+
 
     </Stack.Navigator>
   );

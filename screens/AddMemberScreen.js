@@ -54,7 +54,7 @@ export default function AddMemberScreen({ navigation, route }) {
   const [editMinistryValue, setEditMinistryValue] = useState("");
 
   /* ── status list (chips) ── */
-  const [statusList, setStatusList] = useState(["Regular", "Visiting", "Inactive"]);
+  const [statusList, setStatusList] = useState(["Regular", "Visiting Member", "Inactive"]);
   const [statusModal, setStatusModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   
@@ -156,30 +156,51 @@ const memberCode = `${denominationCode}-${churchCode}-${mainCode}-${uniqueSuffix
 
 console.log("🆔 GENERATED MEMBER CODE:", memberCode);
 console.log("🔥 BEFORE addMemberManually");
-const result = await addMemberManually({
-  organizationId,
-  entityId,
+if (editingId) {
 
-  ...member,
+  console.log("✏️ UPDATING MEMBER:", editingId);
 
-  memberCode,
+  await updateDoc(
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "members",
+      editingId
+    ),
+    {
+      ...member,
+      updatedAt: new Date().toISOString(),
+    }
+  );
 
-  source: MEMBER_SOURCES.MANUAL,
-  lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
-});
+} else {
+  console.log("🔥 AFTER addMemberManually", result);
 
-if (!result.created && result.duplicate) {
-  const match = result.matches?.[0];
+  const result = await addMemberManually({
+    organizationId,
+    entityId,
 
-  setDuplicateMatch(match);
+    ...member,
 
+    memberCode,
 
-  setDuplicateModal(true);
+    source: MEMBER_SOURCES.MANUAL,
+    lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
+  });
 
-  return;
+  if (!result.created && result.duplicate) {
+    const match = result.matches?.[0];
+
+    setDuplicateMatch(match);
+    setDuplicateModal(true);
+
+    return;
+  }
 }
 
-console.log("🔥 AFTER addMemberManually", result);
     console.log("✅ SAVE SUCCESS");
 
     Alert.alert(
