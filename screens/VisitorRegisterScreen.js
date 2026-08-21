@@ -181,22 +181,26 @@ export default function VisitorRegisterScreen({
     </Text>
 
     <View
-      style={[
-        styles.statusBadge,
+  style={[
+    styles.statusBadge,
 
-        item.followUpStatus === "new" &&
-          styles.statusNew,
+    item.followUpStatus === "new" &&
+      styles.statusNew,
 
-        item.followUpStatus === "contacted" &&
-          styles.statusContacted,
+    item.followUpStatus === "contacted" &&
+      styles.statusContacted,
 
-        item.followUpStatus === "interested" &&
-          styles.statusInterested,
+    item.followUpStatus === "visited" &&
+      styles.statusVisited,
 
-        item.followUpStatus === "converted" &&
-          styles.statusConverted,
-      ]}
-    >
+    item.followUpStatus === "interested" &&
+      styles.statusInterested,
+
+    item.followUpStatus === "converted" &&
+      styles.statusConverted,
+  ]}
+>
+
       <Text style={styles.statusText}>
         {item.followUpStatus || "new"}
       </Text>
@@ -267,5 +271,8 @@ statusInterested: {
 
 statusConverted: {
   backgroundColor: "#8B5CF6",
+},
+statusVisited: {
+  backgroundColor: "#f80b3b",
 },
 });

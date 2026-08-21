@@ -10,6 +10,14 @@ import {
   Alert,
 } from "react-native";
 
+import {
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
+
+
 import AppHeader from "../components/AppHeader";
 
 import { addVisitor } from "../utils/visitorIntake";
@@ -24,28 +32,30 @@ export default function AddVisitorScreen({
 }) {
 
   const {
-    organizationId,
-    entityId,
-  } = route.params || {};
+  organizationId,
+  entityId,
+  visitorData,
+  editingId,
+} = route.params || {};
+
 
   console.log("ADD VISITOR PARAMS", {
   organizationId,
   entityId,
 });
 
-  const [visitor, setVisitor] = useState({
+  const [visitor, setVisitor] = useState(
+  visitorData || {
     name: "",
     phone: "",
     address: "",
     suburb: "",
-
     invitedBy: "",
-
     notes: "",
-
     visitorType:
       VISITOR_TYPES.FIRST_TIME,
-  });
+  }
+);
 
   const saveVisitor = async () => {
 
@@ -68,12 +78,41 @@ export default function AddVisitorScreen({
 
   try {
 
-    const result = await addVisitor({
-      organizationId,
-      entityId,
+    if (editingId) {
 
+  await updateDoc(
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "visitors",
+      editingId
+    ),
+    {
       ...visitor,
-    });
+      updatedAt:
+        new Date().toISOString(),
+    }
+  );
+
+  Alert.alert(
+    "Success",
+    "Visitor updated successfully."
+  );
+
+  navigation.goBack();
+
+  return;
+}
+
+const result = await addVisitor({
+  organizationId,
+  entityId,
+
+  ...visitor,
+});
 
     console.log(
       "✅ ADD VISITOR RESULT",
@@ -127,14 +166,6 @@ export default function AddVisitorScreen({
       <ScrollView
         contentContainerStyle={styles.container}
       >
-<Text style={{ color: "red", marginBottom: 5 }}>
-  ORG: {organizationId || "MISSING"}
-</Text>
-
-<Text style={{ color: "red", marginBottom: 15 }}>
-  ENTITY: {entityId || "MISSING"}
-</Text>
-
 
 
 

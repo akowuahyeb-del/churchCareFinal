@@ -18,7 +18,15 @@ import { db } from "../firebase";
 
 export default function AddMemberScreen({ navigation, route }) {
 
-  const { memberData, editingId, entityId, organizationId } = route.params || {};
+  const {
+  memberData,
+  visitorData,
+  editingId,
+  entityId,
+  organizationId,
+  convertMode,
+} = route.params || {};
+
   const { membersLimit } = useSubscription(
   organizationId,
   entityId
@@ -28,22 +36,46 @@ export default function AddMemberScreen({ navigation, route }) {
   const [step, setStep] = useState(0);
 
   /* ── member form ── */
-  const [member, setMember] = useState(
-    memberData || {
-      name: "",
-      phone: "",
-      address: "",
-      occupation: "",
-      emergencyContact: "",
-      membershipDuration: "",
-      communicant: "",
-      communicantStatus: "active",
-      communicantInvalidSince: null,
-      communicantNote: "",
-      ministry: "",
-      status: "",
-    }
-  );
+const [member, setMember] = useState(
+
+  memberData ||
+
+  (visitorData
+    ? {
+        name: visitorData.name || "",
+        phone: visitorData.phone || "",
+        address: visitorData.address || "",
+
+        occupation: "",
+        emergencyContact: "",
+        membershipDuration: "",
+
+        communicant: "",
+        communicantStatus: "active",
+        communicantInvalidSince: null,
+        communicantNote: "",
+
+        ministry: "",
+        status: "",
+      }
+    : {
+        name: "",
+        phone: "",
+        address: "",
+
+        occupation: "",
+        emergencyContact: "",
+        membershipDuration: "",
+
+        communicant: "",
+        communicantStatus: "active",
+        communicantInvalidSince: null,
+        communicantNote: "",
+
+        ministry: "",
+        status: "",
+      })
+);
 
   /* ── ministry list (chips) ── */
   const [ministries, setMinistries] = useState(["YPG", "Prayer Tower"]);
@@ -177,7 +209,6 @@ if (editingId) {
   );
 
 } else {
-  console.log("🔥 AFTER addMemberManually", result);
 
   const result = await addMemberManually({
     organizationId,
@@ -190,6 +221,36 @@ if (editingId) {
     source: MEMBER_SOURCES.MANUAL,
     lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
   });
+
+if (
+  convertMode &&
+  visitorData?.id &&
+  result.created
+) {
+  await updateDoc(
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "visitors",
+      visitorData.id
+    ),
+    {
+      convertedToMember: true,
+
+      convertedMemberId:
+  result.id || null,
+
+      followUpStatus:
+        "converted",
+
+      updatedAt:
+        new Date().toISOString(),
+    }
+  );
+}
 
   if (!result.created && result.duplicate) {
     const match = result.matches?.[0];

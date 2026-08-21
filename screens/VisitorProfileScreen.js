@@ -16,6 +16,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 
 import AppHeader from "../components/AppHeader";
@@ -30,25 +31,33 @@ export default function VisitorProfileScreen({
   useState(
     visitor?.followUpStatus || "new"
   );
+
+  const [followUpNotes, setFollowUpNotes] =
+  useState(
+    visitor?.followUpNotes || ""
+  );
+
+
 const saveFollowUpStatus = async () => {
 
   try {
 
-    await updateDoc(
-      doc(
-        db,
-        "organizations",
-        visitor.organizationId,
-        "entities",
-        visitor.entityId,
-        "visitors",
-        visitor.id
-      ),
-      {
-        followUpStatus: status,
-        updatedAt: new Date().toISOString(),
-      }
-    );
+   await updateDoc(
+  doc(
+    db,
+    "organizations",
+    visitor.organizationId,
+    "entities",
+    visitor.entityId,
+    "visitors",
+    visitor.id
+  ),
+  {
+    followUpStatus: status,
+    followUpNotes,
+    updatedAt: new Date().toISOString(),
+  }
+);
 
     Alert.alert(
       "Success",
@@ -79,10 +88,12 @@ const saveFollowUpStatus = async () => {
       />
 
       <ScrollView
-        contentContainerStyle={{
-          padding: 16,
-        }}
-      >
+  contentContainerStyle={{
+    padding: 16,
+    paddingBottom: 120,
+  }}
+>
+
 
         <View style={styles.card}>
 
@@ -169,6 +180,27 @@ const saveFollowUpStatus = async () => {
 
 </View>
 
+<View style={styles.card}>
+
+  <Text
+    style={{
+      fontWeight: "700",
+      marginBottom: 10,
+    }}
+  >
+    Follow-up Notes
+  </Text>
+
+  <TextInput
+    style={styles.notesInput}
+    multiline
+    placeholder="Add follow-up notes..."
+    value={followUpNotes}
+    onChangeText={setFollowUpNotes}
+  />
+
+</View>
+
 <TouchableOpacity
   style={styles.button}
   onPress={saveFollowUpStatus}
@@ -178,18 +210,59 @@ const saveFollowUpStatus = async () => {
   </Text>
 </TouchableOpacity>
 
+<TouchableOpacity
+  style={styles.button}
+  onPress={() =>
+    navigation.navigate(
+      "AddVisitor",
+      {
+        editingId: visitor.id,
+        visitorData: visitor,
+        organizationId:
+          visitor.organizationId,
+        entityId:
+          visitor.entityId,
+      }
+    )
+  }
+>
+  <Text style={styles.buttonText}>
+    Edit Visitor's Details ({visitor?.name})
+  </Text>
+</TouchableOpacity>
+
+
         <TouchableOpacity
-          style={[
-            styles.button,
-            {
-              backgroundColor: "#22c55e",
-            },
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            Convert To Member
-          </Text>
-        </TouchableOpacity>
+  style={[
+    styles.button,
+    {
+      backgroundColor: "#22c55e",
+    },
+  ]}
+  onPress={() =>
+    navigation.navigate(
+      "AddMember",
+      {
+        convertMode: true,
+
+        visitorData: visitor,
+
+        organizationId:
+          visitor.organizationId,
+
+        entityId:
+          visitor.entityId,
+      }
+    )
+  }
+>
+
+
+  <Text style={styles.buttonText}>
+    Convert To Member
+  </Text>
+</TouchableOpacity>
+
 
       </ScrollView>
 
@@ -235,5 +308,14 @@ const styles = StyleSheet.create({
 
 statusSelected: {
   backgroundColor: "#DDE3FF",
+},
+notesInput: {
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: "#ddd",
+  borderRadius: 12,
+  padding: 12,
+  minHeight: 100,
+  textAlignVertical: "top",
 },
 });

@@ -38,9 +38,16 @@ const [visitors, setVisitors] =
   useState([]);
 
 
-    useEffect(() => {
-  loadVisitors();
-}, []);
+  useEffect(() => {
+  const unsubscribe = navigation.addListener(
+    "focus",
+    () => {
+      loadVisitors();
+    }
+  );
+
+  return unsubscribe;
+}, [navigation]);
 
 const loadVisitors = async () => {
 
@@ -109,7 +116,16 @@ const visitingMemberCount =
 const interestedCount =
   visitors.filter(
     v =>
-      v.interestedInMembership === true
+      v.followUpStatus === "interested"
+  ).length;
+const contactedCount =
+  visitors.filter(
+    v => v.followUpStatus === "contacted"
+  ).length;
+
+const visitedCount =
+  visitors.filter(
+    v => v.followUpStatus === "visited"
   ).length;
 
 const convertedCount =
