@@ -36,6 +36,10 @@ export default function VisitorRegisterScreen({
     const [activeFilter, setActiveFilter] =
   useState("all");
 
+  const [showMoreFilters,
+  setShowMoreFilters] =
+    useState(false);
+
   const [selectedIds, setSelectedIds] =
   useState([]);
   const [searchText, setSearchText] =
@@ -100,7 +104,8 @@ export default function VisitorRegisterScreen({
 const filteredVisitors =
   visitors.filter((v) => {
 
-    const search = searchText.toLowerCase();
+    const search =
+      searchText.toLowerCase();
 
     const matchesSearch =
 
@@ -124,24 +129,37 @@ const filteredVisitors =
       return false;
     }
 
-    if (activeFilter === "all") {
-      return true;
+    switch (activeFilter) {
+
+      case "all":
+        return true;
+
+      case "active":
+        return !v.convertedToMember;
+
+      case "converted":
+        return !!v.convertedToMember;
+
+      case "assigned":
+        return !!v.assignment;
+
+      case "unassigned":
+        return !v.assignment;
+
+      case "new":
+      case "contacted":
+      case "visited":
+      case "interested":
+      case "membership_class":
+
+        return (
+          v.followUpStatus ===
+          activeFilter
+        );
+
+      default:
+        return true;
     }
-    if (activeFilter === "assigned") {
-  return !!v.assignment;
-}
-
-if (activeFilter === "unassigned") {
-  return !v.assignment;
-}
-
-    if (activeFilter === "converted") {
-      return v.convertedToMember === true;
-    }
-
-    return (
-      v.followUpStatus === activeFilter
-    );
 
   });
 
@@ -282,48 +300,86 @@ const bulkUpdateStatus = async (
   style={styles.searchInput}
 />
 
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  }}
+>
+  <Text
+    style={{
+      fontWeight: "700",
+      color: "#555",
+    }}
+  >
+    Filters
+  </Text>
+
+  <Text
+    style={{
+      color: "#777",
+      fontSize: 12,
+    }}
+  >
+    Showing {filteredVisitors.length} • {activeFilter}
+  </Text>
+</View>
+
 <ScrollView
   horizontal
-  showsHorizontalScrollIndicator={false}
+  showsHorizontalScrollIndicator={true}
   contentContainerStyle={{
     paddingBottom: 16,
     paddingRight: 20,
   }}
 >
 
+
   {[
   "all",
   "assigned",
   "unassigned",
-  "new",
-  "contacted",
-  "visited",
-  "interested",
-  "membership_class",
-  "converted",
+  "active",
+  "more",
 ].map((filter) => (
 
     <TouchableOpacity
       key={filter}
-      onPress={() =>
-        setActiveFilter(filter)
-      }
-      style={[
-        styles.filterChip,
-        activeFilter === filter &&
-          styles.filterChipActive,
-      ]}
+      onPress={() => {
+
+  if (filter === "more") {
+
+    setShowMoreFilters(
+      !showMoreFilters
+    );
+
+    return;
+  }
+
+  setActiveFilter(filter);
+
+}}
+     style={[
+  styles.filterChip,
+  activeFilter === filter &&
+    styles.filterChipActive,
+]}
+
     >
       <Text
-        style={
-          activeFilter === filter
-            ? styles.filterTextActive
-            : styles.filterText
-        }
+     style={
+  activeFilter === filter
+    ? styles.filterTextActive
+    : styles.filterText
+}
       >
-        {filter
-          .replace("_", " ")
-          .toUpperCase()}
+        {filter === "more"
+  ? "MORE"
+  : filter
+      .replace("_", " ")
+      .toUpperCase()}
       </Text>
     </TouchableOpacity>
 
@@ -331,22 +387,102 @@ const bulkUpdateStatus = async (
 
 </ScrollView>
 
+
+
+
+{showMoreFilters && (
+
+  <View
+    style={{
+      backgroundColor: "#fff",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    }}
+  >
+
+    <Text
+      style={{
+        fontWeight: "700",
+        marginBottom: 10,
+      }}
+    >
+      More Filters
+    </Text>
+
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+      }}
+    >
+
+      {[
+        "all",
+        "new",
+        "contacted",
+        "visited",
+        "interested",
+        "membership_class",
+        "converted",
+      ].map((status) => (
+
+        <TouchableOpacity
+          key={status}
+          onPress={() => {
+
+  setActiveFilter(status);
+
+  if (status === "all") {
+  setActiveFilter("all");
+} else {
+  setActiveFilter(status);
+}
+
+setShowMoreFilters(false);
+
+
+}}
+style={[
+  styles.filterChip,
+  activeFilter === status &&
+    styles.filterChipActive,
+]}
+        >
+          <Text
+        style={
+  activeFilter === status
+    ? styles.filterTextActive
+    : styles.filterText
+}
+
+          >
+            {status.toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+
+      ))}
+
+    </View>
+
+  </View>
+
+)}
+
 <View
   style={{
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   }}
 >
 
-  <View
-    style={{
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    }}
-  >
+
+  
 
     <TouchableOpacity
       onPress={() => {
@@ -393,7 +529,6 @@ const bulkUpdateStatus = async (
 
   </View>
 
-</View>
 
 {selectedIds.length > 0 && (
 
@@ -686,10 +821,10 @@ filterWrap: {
 
 filterChip: {
   backgroundColor: "#EDEDED",
-  paddingHorizontal: 14,
-  paddingVertical: 10,
-  borderRadius: 24,
-  marginRight: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+  borderRadius: 20,
+  marginRight: 6,
 },
 
 filterChipActive: {
