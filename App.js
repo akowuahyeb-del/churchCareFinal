@@ -72,7 +72,7 @@ import VisitorsScreen from "./screens/VisitorsScreen";
 import AddVisitorScreen from "./screens/AddVisitorScreen";
 import VisitorRegisterScreen from "./screens/VisitorRegisterScreen";
 import VisitorProfileScreen from "./screens/VisitorProfileScreen";
-
+import VisitorAssignmentScreen from "./screens/VisitorAssignmentScreen";
 
 
 
@@ -206,6 +206,8 @@ function RootStack() {
       <Stack.Screen name="AddVisitor"component={AddVisitorScreen}/>
       <Stack.Screen name="VisitorRegister"component={VisitorRegisterScreen}/>
       <Stack.Screen name="VisitorProfile" component={VisitorProfileScreen}/>
+      <Stack.Screen name="VisitorAssignment"component={VisitorAssignmentScreen}/>
+
 
 
     </Stack.Navigator>

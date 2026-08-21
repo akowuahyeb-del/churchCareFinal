@@ -214,6 +214,23 @@ const saveFollowUpStatus = async () => {
   style={styles.button}
   onPress={() =>
     navigation.navigate(
+      "VisitorAssignment",
+      {
+        visitor,
+      }
+    )
+  }
+>
+  <Text style={styles.buttonText}>
+    Assign Visitor
+  </Text>
+</TouchableOpacity>
+
+
+<TouchableOpacity
+  style={styles.button}
+  onPress={() =>
+    navigation.navigate(
       "AddVisitor",
       {
         editingId: visitor.id,

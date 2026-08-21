@@ -9,11 +9,16 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
+  Alert,
 } from "react-native";
+
 
 import {
   collection,
   getDocs,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -27,6 +32,14 @@ export default function VisitorRegisterScreen({
 
   const [visitors, setVisitors] =
     useState([]);
+
+    const [activeFilter, setActiveFilter] =
+  useState("all");
+
+  const [selectedIds, setSelectedIds] =
+  useState([]);
+  const [searchText, setSearchText] =
+  useState("");
 
   useEffect(() => {
   const unsubscribe = navigation.addListener(
@@ -72,7 +85,8 @@ export default function VisitorRegisterScreen({
           ...doc.data(),
         }));
 
-      setVisitors(data);
+        setVisitors(data);
+
 
     } catch (e) {
 
@@ -83,6 +97,168 @@ export default function VisitorRegisterScreen({
     }
   };
 
+const filteredVisitors =
+  visitors.filter((v) => {
+
+    const search = searchText.toLowerCase();
+
+    const matchesSearch =
+
+      (v.name || "")
+        .toLowerCase()
+        .includes(search)
+
+      ||
+
+      (v.phone || "")
+        .toLowerCase()
+        .includes(search)
+
+      ||
+
+      (v.suburb || "")
+        .toLowerCase()
+        .includes(search);
+
+    if (!matchesSearch) {
+      return false;
+    }
+
+    if (activeFilter === "all") {
+      return true;
+    }
+    if (activeFilter === "assigned") {
+  return !!v.assignment;
+}
+
+if (activeFilter === "unassigned") {
+  return !v.assignment;
+}
+
+    if (activeFilter === "converted") {
+      return v.convertedToMember === true;
+    }
+
+    return (
+      v.followUpStatus === activeFilter
+    );
+
+  });
+
+const toggleVisitor = (id) => {
+
+  setSelectedIds((prev) =>
+
+    prev.includes(id)
+      ? prev.filter(
+          x => x !== id
+        )
+      : [...prev, id]
+  );
+};
+
+
+const bulkUpdateStatus = async (
+  newStatus
+) => {
+
+  if (selectedIds.length === 0) {
+
+    Alert.alert(
+      "No Visitors Selected",
+      "Select one or more visitors first."
+    );
+
+    return;
+  }
+
+  Alert.alert(
+    "Confirm Bulk Update",
+    `Update ${selectedIds.length} visitor(s) to "${newStatus}"?`,
+
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+
+      {
+        text: "Update",
+
+        onPress: async () => {
+
+          try {
+
+            const stored =
+              await AsyncStorage.getItem(
+                "activeEntity"
+              );
+
+            if (!stored) return;
+
+            const {
+              organizationId,
+              entityId,
+            } = JSON.parse(stored);
+
+            const updates =
+              selectedIds.map((id) =>
+
+                updateDoc(
+                  doc(
+                    db,
+                    "organizations",
+                    organizationId,
+                    "entities",
+                    entityId,
+                    "visitors",
+                    id
+                  ),
+                  {
+                    followUpStatus:
+                      newStatus,
+
+                    updatedAt:
+                      new Date()
+                        .toISOString(),
+                  }
+                )
+              );
+
+            await Promise.all(
+              updates
+            );
+
+            await loadVisitors();
+
+            const count =
+              selectedIds.length;
+
+            setSelectedIds([]);
+
+            Alert.alert(
+              "Success",
+              `${count} visitor(s) updated.`
+            );
+
+          } catch (e) {
+
+            console.log(
+              "❌ BULK UPDATE ERROR",
+              e
+            );
+
+            Alert.alert(
+              "Update Failed",
+              e.message
+            );
+          }
+
+        },
+      },
+    ]
+  );
+};
   return (
     <View style={{ flex: 1 }}>
 
@@ -99,9 +275,214 @@ export default function VisitorRegisterScreen({
           padding: 16,
         }}
       >
+ <TextInput
+  placeholder="Search name, phone or area..."
+  value={searchText}
+  onChangeText={setSearchText}
+  style={styles.searchInput}
+/>
+
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={{
+    paddingBottom: 16,
+    paddingRight: 20,
+  }}
+>
+
+  {[
+  "all",
+  "assigned",
+  "unassigned",
+  "new",
+  "contacted",
+  "visited",
+  "interested",
+  "membership_class",
+  "converted",
+].map((filter) => (
+
+    <TouchableOpacity
+      key={filter}
+      onPress={() =>
+        setActiveFilter(filter)
+      }
+      style={[
+        styles.filterChip,
+        activeFilter === filter &&
+          styles.filterChipActive,
+      ]}
+    >
+      <Text
+        style={
+          activeFilter === filter
+            ? styles.filterTextActive
+            : styles.filterText
+        }
+      >
+        {filter
+          .replace("_", " ")
+          .toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</ScrollView>
+
+<View
+  style={{
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  }}
+>
+
+  <View
+    style={{
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    }}
+  >
+
+    <TouchableOpacity
+      onPress={() => {
+
+        if (
+          selectedIds.length ===
+          filteredVisitors.length
+        ) {
+
+          setSelectedIds([]);
+
+        } else {
+
+          setSelectedIds(
+            filteredVisitors.map(
+              v => v.id
+            )
+          );
+
+        }
+
+      }}
+    >
+      <Text
+        style={{
+          color: "#4B3F72",
+          fontWeight: "700",
+        }}
+      >
+        {selectedIds.length ===
+        filteredVisitors.length
+          ? "Deselect All"
+          : "Select All"}
+      </Text>
+    </TouchableOpacity>
+
+    <Text
+      style={{
+        fontWeight: "700",
+      }}
+    >
+      {selectedIds.length} Selected
+    </Text>
+
+  </View>
+
+</View>
+
+{selectedIds.length > 0 && (
+
+  <View
+    style={{
+      backgroundColor: "#fff",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    }}
+  >
+
+    <TouchableOpacity
+  style={styles.bulkBtn}
+  onPress={() =>
+    bulkUpdateStatus(
+      "contacted"
+    )
+  }
+>
+  <Text style={styles.bulkBtnText}>
+    Contacted
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.bulkBtn}
+  onPress={() =>
+    bulkUpdateStatus(
+      "visited"
+    )
+  }
+>
+  <Text style={styles.bulkBtnText}>
+    Visited
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.bulkBtn}
+  onPress={() =>
+    bulkUpdateStatus(
+      "interested"
+    )
+  }
+>
+  <Text style={styles.bulkBtnText}>
+    Interested
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.bulkBtn,
+    {
+      backgroundColor: "#22C55E",
+    },
+  ]}
+  onPress={() =>
+    Alert.alert(
+      "Coming Soon",
+      "Bulk conversion will be implemented after bulk status updates are fully tested."
+    )
+  }
+>
+  <Text style={styles.bulkBtnText}>
+    Convert
+  </Text>
+</TouchableOpacity>
+
+  </View>
+
+)}
+
 
         {/* Table Header */}
-<View style={styles.headerRow}>
+{/* <View style={styles.headerRow}>
+
+  <Text
+    style={[
+      styles.headerCell,
+      { width: 40 }
+    ]}
+  >
+    ✓
+  </Text>
 
   <Text style={[styles.headerCell,{ flex: 2 }]}>
     Name
@@ -123,13 +504,15 @@ export default function VisitorRegisterScreen({
     Status
   </Text>
 
-</View>
+</View> */}
 
-       {visitors.map((item) => (
+      
+
+{filteredVisitors.map((item) => (
 
   <TouchableOpacity
     key={item.id}
-    style={styles.row}
+    style={styles.visitorCard}
     onPress={() =>
       navigation.navigate(
         "VisitorProfile",
@@ -140,75 +523,97 @@ export default function VisitorRegisterScreen({
     }
   >
 
-    <Text
-      style={[
-        styles.cell,
-        { flex: 2 },
-      ]}
-      numberOfLines={1}
-    >
-      {item.name}
-    </Text>
+    {/* Top Row */}
 
-    <Text
-      style={[
-        styles.cell,
-        { flex: 2 },
-      ]}
-      numberOfLines={1}
-    >
-      {item.phone}
-    </Text>
+    <View style={styles.topRow}>
 
-    <Text
-      style={[
-        styles.cell,
-        { flex: 2 },
-      ]}
-      numberOfLines={1}
-    >
-      {item.suburb || "-"}
-    </Text>
-
-    <Text
-      style={[
-        styles.cell,
-        { flex: 2 },
-      ]}
-      numberOfLines={1}
-    >
-      {item.firstVisitDate || "-"}
-    </Text>
-
-    <View
+      <TouchableOpacity
+        onPress={() =>
+          toggleVisitor(item.id)
+        }
+      >
+        <View
   style={[
-    styles.statusBadge,
-
-    item.followUpStatus === "new" &&
-      styles.statusNew,
-
-    item.followUpStatus === "contacted" &&
-      styles.statusContacted,
-
-    item.followUpStatus === "visited" &&
-      styles.statusVisited,
-
-    item.followUpStatus === "interested" &&
-      styles.statusInterested,
-
-    item.followUpStatus === "converted" &&
-      styles.statusConverted,
+    styles.selectCircle,
+    selectedIds.includes(item.id) &&
+      styles.selectCircleActive,
   ]}
 >
+  {selectedIds.includes(item.id) && (
+    <Text style={styles.selectTick}>
+      ✓
+    </Text>
+  )}
+</View>
+      </TouchableOpacity>
 
-      <Text style={styles.statusText}>
-        {item.followUpStatus || "new"}
+      <Text
+        style={styles.visitorName}
+        numberOfLines={1}
+      >
+        {item.name}
       </Text>
+
+      <View
+        style={[
+          styles.statusBadge,
+
+          item.followUpStatus === "new" &&
+            styles.statusNew,
+
+          item.followUpStatus === "contacted" &&
+            styles.statusContacted,
+
+          item.followUpStatus === "visited" &&
+            styles.statusVisited,
+
+          item.followUpStatus === "interested" &&
+            styles.statusInterested,
+
+          item.followUpStatus === "converted" &&
+            styles.statusConverted,
+        ]}
+      >
+        <Text style={styles.statusText}>
+          {item.followUpStatus || "new"}
+        </Text>
+      </View>
+
     </View>
+
+    {/* Phone */}
+
+    <Text style={styles.visitorPhone}>
+      {item.phone || "-"}
+    </Text>
+
+    {/* Area + Date */}
+
+    <Text style={styles.visitorMeta}>
+      {(item.suburb || "No Area")}
+      {" • "}
+      {(item.firstVisitDate || "-")}
+    </Text>
+{item.assignment && (
+
+  <Text
+    style={{
+      marginTop: 4,
+      marginLeft: 30,
+      color: "#4B3F72",
+      fontSize: 12,
+      fontWeight: "600",
+    }}
+  >
+    Assigned: {item.assignment.name}
+  </Text>
+
+)}
 
   </TouchableOpacity>
 
 ))}
+
 
       </ScrollView>
 
@@ -274,5 +679,119 @@ statusConverted: {
 },
 statusVisited: {
   backgroundColor: "#f80b3b",
+},
+filterWrap: {
+  flexDirection: "row",
+},
+
+filterChip: {
+  backgroundColor: "#EDEDED",
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  borderRadius: 24,
+  marginRight: 8,
+},
+
+filterChipActive: {
+  backgroundColor: "#4B3F72",
+},
+
+filterText: {
+  color: "#555",
+  fontSize: 12,
+  fontWeight: "600",
+},
+
+filterTextActive: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "700",
+},
+visitorCard: {
+  backgroundColor: "#fff",
+  borderRadius: 14,
+  padding: 14,
+  marginBottom: 10,
+  elevation: 2,
+},
+
+topRow: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+
+checkbox: {
+  fontSize: 20,
+  marginRight: 10,
+  color: "#4B3F72",
+},
+
+visitorName: {
+  flex: 1,
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#222",
+},
+
+visitorPhone: {
+  marginTop: 8,
+  marginLeft: 30,
+  color: "#555",
+},
+
+visitorMeta: {
+  marginTop: 4,
+  marginLeft: 30,
+  color: "#888",
+  fontSize: 12,
+},
+searchInput: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+  fontSize: 14,
+},
+bulkBtn: {
+  backgroundColor: "#4B3F72",
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  borderRadius: 20,
+},
+
+bulkBtnText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 12,
+},
+
+selectCircle: {
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  borderWidth: 2,
+  borderColor: "#4B3F72",
+  marginRight: 12,
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+selectCircleActive: {
+  backgroundColor: "#4B3F72",
+},
+
+selectTick: {
+  color: "#fff",
+  fontWeight: "700",
+},
+assignmentText: {
+  marginTop: 4,
+  marginLeft: 30,
+  fontSize: 12,
+  fontWeight: "600",
+  color: "#4B3F72",
 },
 });
