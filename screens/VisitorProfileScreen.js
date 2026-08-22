@@ -76,19 +76,27 @@ const saveFollowUpStatus = async () => {
     visitor.id
   ),
   {
-    followUpStatus: status,
+  followUpStatus: status,
 
-    followUpNotes,
+  followUpNotes,
 
-    followUpCount:
-      (visitor.followUpCount || 0) + 1,
+  followUpCount:
+    (visitor.followUpCount || 0) + 1,
 
-    lastFollowUpDate:
-      new Date().toISOString(),
+  lastFollowUpDate:
+    new Date().toISOString(),
 
-    updatedAt:
-      new Date().toISOString(),
-  }
+  membershipClassStartedDate:
+    status === "membership_class"
+      ? (
+          visitor?.membershipClassStartedDate ||
+          new Date().toISOString()
+        )
+      : visitor?.membershipClassStartedDate,
+
+  updatedAt:
+    new Date().toISOString(),
+}
 );
 
 
@@ -159,6 +167,7 @@ const saveFollowUpStatus = async () => {
 </Text>
 
 {visitor?.followUpStatus === "membership_class" && (
+    
 
   <View style={styles.membershipClassBanner}>
 
@@ -173,6 +182,19 @@ const saveFollowUpStatus = async () => {
     </Text>
 
   </View>
+
+)}
+
+{visitor?.followUpStatus === "membership_class" &&
+ visitor?.membershipClassStartedDate && (
+
+  <Text style={styles.item}>
+    Class Started:
+    {" "}
+    {formatDate(
+      visitor.membershipClassStartedDate
+    )}
+  </Text>
 
 )}
           {visitor?.convertedToMember && (
