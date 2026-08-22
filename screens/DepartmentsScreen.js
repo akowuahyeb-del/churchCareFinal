@@ -1,4 +1,7 @@
-import React from "react";
+import React, {
+  useState,
+  useEffect,
+} from "react";
 import {
   View,
   Text,
@@ -10,39 +13,83 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import {
+  collection,
+  onSnapshot,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
 
 
 export default function DepartmentsScreen() {
   const navigation = useNavigation();
-  const [selectedDept, setSelectedDept] = React.useState(null);
+  const [selectedDept, setSelectedDept] =
+  useState(null);
 
-  const departments = [
-  {
-    name: "Choir",
-    members: ["John Doe", "Mary Mensah", "Kwame Asante"],
-    icon: "musical-notes-outline",
-    color: "#4F46E5",
-  },
-  {
-    name: "Ushering",
-    members: ["Daniel Owusu", "Ama Serwaa"],
-    icon: "people-outline",
-    color: "#059669",
-  },
-  {
-    name: "Media",
-    members: ["Kofi Appiah", "Kojo Mensah"],
-    icon: "videocam-outline",
-    color: "#D97706",
-  },
-  {
-    name: "Prayer Team",
-    members: ["Grace Arthur", "Paul Addo"],
-    icon: "heart-outline",
-    color: "#E11D48",
-  },
-];
+const [organizationId,
+  setOrganizationId] =
+    useState(null);
+
+const [departments,
+  setDepartments] =
+    useState([]);
+
+ useEffect(() => {
+
+  AsyncStorage
+    .getItem("activeEntity")
+    .then((data) => {
+
+      if (!data) return;
+
+      const parsed =
+        JSON.parse(data);
+
+      setOrganizationId(
+        parsed.organizationId
+      );
+
+    });
+
+}, []);
+
+useEffect(() => {
+
+  if (!organizationId) return;
+
+  const ministriesRef =
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "ministries"
+    );
+
+  const unsub =
+    onSnapshot(
+      ministriesRef,
+      (snap) => {
+
+        const list =
+          snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }));
+
+        setDepartments(list);
+
+      }
+    );
+
+  return () => unsub();
+
+}, [organizationId]);
+
+
+
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -77,22 +124,19 @@ export default function DepartmentsScreen() {
       <Ionicons name="chevron-forward" size={16} color="#ccc" />
     </TouchableOpacity>
   ))}
+{selectedDept && (
+  <View style={styles.membersBox}>
 
-  {/* ✅ 🔥 PLACE IT HERE (AFTER THE MAP) */}
-  {selectedDept && (
-    <View style={styles.membersBox}>
-      <Text style={styles.membersTitle}>
-        Members in {selectedDept.name}
-      </Text>
+    <Text style={styles.membersTitle}>
+      {selectedDept.name}
+    </Text>
 
-      {selectedDept.members.map((member, i) => (
-        <View key={i} style={styles.memberRow}>
-          <Ionicons name="person-outline" size={16} color="#4B3F72" />
-          <Text style={styles.memberText}>{member}</Text>
-        </View>
-      ))}
-    </View>
-  )}
+    <Text style={styles.memberText}>
+      Ministry details will appear here.
+    </Text>
+
+  </View>
+)}
 
 </ScrollView>
     </SafeAreaView>

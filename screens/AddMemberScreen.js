@@ -6,7 +6,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AppHeader from "../components/AppHeader";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 import { useEffect } from "react";
 import { useSubscription } from "../utils/subscription";
 import {
@@ -308,26 +315,67 @@ useEffect(() => {
 
 
 useEffect(() => {
+
   const loadLists = async () => {
+
     if (!organizationId) return;
 
     try {
-      const ref = doc(db, "organizations", organizationId, "settings", "lists");
+
+      // ✅ LOAD MINISTRIES FROM NEW COLLECTION
+      const ministriesSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "ministries"
+          )
+        );
+
+      const ministryNames =
+        ministriesSnap.docs.map(
+          (d) => d.data().name
+        );
+
+      if (ministryNames.length > 0) {
+        setMinistries(ministryNames);
+      }
+
+      // ✅ KEEP STATUS LOADING FROM settings/lists
+      const ref = doc(
+        db,
+        "organizations",
+        organizationId,
+        "settings",
+        "lists"
+      );
+
       const snap = await getDoc(ref);
 
       if (snap.exists()) {
+
         const data = snap.data();
 
-        if (data.ministries) setMinistries(data.ministries);
-        if (data.statuses) setStatusList(data.statuses);
+        if (data.statuses) {
+          setStatusList(data.statuses);
+        }
+
       }
 
     } catch (e) {
-      console.log("❌ LOAD LIST ERROR:", e);
+
+      console.log(
+        "❌ LOAD LIST ERROR:",
+        e
+      );
+
     }
+
   };
 
   loadLists();
+
 }, [organizationId]);
 
 
@@ -388,6 +436,36 @@ useEffect(() => {
     await setDoc(ref, {
       ministries: updated,
     }, { merge: true });
+
+    // ✅ ALSO SAVE TO NEW MINISTRIES COLLECTION
+
+const ministryId =
+  formatted
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+
+await setDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "ministries",
+    ministryId
+  ),
+  {
+    name: formatted,
+
+    active: true,
+
+    icon: "people-outline",
+
+    color: "#4F46E5",
+
+    createdAt:
+      new Date().toISOString(),
+  },
+  { merge: true }
+);
 
   } catch (e) {
     console.log("❌ SAVE MINISTRY ERROR:", e);

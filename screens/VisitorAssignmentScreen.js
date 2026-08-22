@@ -75,38 +75,53 @@ export default function VisitorAssignmentScreen({
         }));
 
       setMembers(data);
-
-      const settingsSnap =
-  await getDoc(
-    doc(
+const ministriesSnap =
+  await getDocs(
+    collection(
       db,
       "organizations",
       visitor.organizationId,
-      "settings",
-      "lists"
+      "ministries"
     )
   );
 
-if (settingsSnap.exists()) {
+const ministryData =
+  ministriesSnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      (m) =>
+        m.active !== false
+    );
 
-  setMinistries(
-    settingsSnap.data()
-      ?.ministries || []
+setMinistries(ministryData);
+
+
+// ✅ Roles come from Roles & Privileges
+const rolesSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      visitor.organizationId,
+      "roles"
+    )
   );
 
-  setRoles(
-  settingsSnap.data()?.roles || [
-    "Elder",
-    "Session Clerk",
-    "Lay Preacher",
-    "Evangelism Coordinator",
-    "Catechist",
-  ]
-);
+const roleData =
+  rolesSnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      (role) =>
+        role.active !== false
+    );
 
-}
-
-
+setRoles(roleData);
     } catch (e) {
 
       console.log(
@@ -124,68 +139,67 @@ if (settingsSnap.exists()) {
 
 }, [visitor]);
 
-  const saveAssignment =
-    async () => {
+const saveAssignment = async () => {
 
-        if (!selectedTarget) {
+  if (!selectedTarget) {
 
-  Alert.alert(
-    "Required",
-    "Please select a member."
-  );
+    Alert.alert(
+      "Required",
+      "Please select an assignment."
+    );
 
-  return;
-}
+    return;
+  }
 
-      try {
+  try {
 
-        await updateDoc(
-          doc(
-            db,
-            "organizations",
-            visitor.organizationId,
-            "entities",
-            visitor.entityId,
-            "visitors",
-            visitor.id
-          ),
-          {
-            assignment: {
-  type: assignmentType,
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        visitor.organizationId,
+        "entities",
+        visitor.entityId,
+        "visitors",
+        visitor.id
+      ),
+      {
+        assignment: {
+          type: assignmentType,
 
- id:
-  assignmentType === "member"
-    ? selectedTarget.id
-    : selectedTarget,
+          id:
+            selectedTarget.id,
 
-name:
-  assignmentType === "member"
-    ? selectedTarget.name
-    : selectedTarget,
+          name:
+            assignmentType === "member"
+              ? selectedTarget.name
+              : assignmentType === "role"
+                ? selectedTarget.label
+                : selectedTarget.name,
 
-
-              assignedAt:
-                new Date()
-                  .toISOString(),
-            },
-          }
-        );
-
-        Alert.alert(
-          "Success",
-          "Visitor assigned."
-        );
-
-        navigation.goBack();
-
-      } catch (e) {
-
-        Alert.alert(
-          "Error",
-          e.message
-        );
+          assignedAt:
+            new Date().toISOString(),
+        },
       }
-    };
+    );
+
+    Alert.alert(
+      "Success",
+      "Visitor assigned."
+    );
+
+    navigation.goBack();
+
+  } catch (e) {
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+
+  }
+
+};
 
   return (
     <View style={{ flex: 1 }}>
@@ -273,26 +287,28 @@ name:
 
     {ministries.map((item) => (
 
-      <TouchableOpacity
-        key={item}
-        style={[
-          styles.option,
-          selectedTarget === item &&
-            styles.selected,
-        ]}
-        onPress={() =>
-          setSelectedTarget(item)
-        }
-      >
-        <Text>
-          {item}
-        </Text>
-      </TouchableOpacity>
+  <TouchableOpacity
+    key={item.id}
+    style={[
+      styles.option,
+      selectedTarget?.id === item.id &&
+        styles.selected,
+    ]}
+    onPress={() =>
+      setSelectedTarget(item)
+    }
+  >
+    <Text>
+      {item.name}
+    </Text>
+  </TouchableOpacity>
 
-    ))}
-  </>
+))}
+
+</>
 
 )}
+
 {assignmentType === "role" && (
 
   <>
@@ -303,10 +319,10 @@ name:
     {roles.map((item) => (
 
       <TouchableOpacity
-        key={item}
+        key={item.id}
         style={[
           styles.option,
-          selectedTarget === item &&
+          selectedTarget?.id === item.id &&
             styles.selected,
         ]}
         onPress={() =>
@@ -314,15 +330,15 @@ name:
         }
       >
         <Text>
-          {item}
+          {item.label}
         </Text>
       </TouchableOpacity>
 
     ))}
+
   </>
 
 )}
-
 
         <TouchableOpacity
           style={styles.saveBtn}
