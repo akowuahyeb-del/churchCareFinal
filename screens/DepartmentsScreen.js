@@ -40,6 +40,9 @@ const [departments,
     const [members, setMembers] =
   useState([]);
 
+  const [assignments, setAssignments] =
+  useState([]);
+
  useEffect(() => {
 
   AsyncStorage
@@ -127,6 +130,46 @@ useEffect(() => {
 
 }, [organizationId]);
 
+useEffect(() => {
+
+  if (!organizationId) return;
+
+  const loadAssignments = async () => {
+
+    try {
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "leadershipAssignments"
+          )
+        );
+
+      setAssignments(
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ LOAD ASSIGNMENTS:",
+        e
+      );
+
+    }
+
+  };
+
+  loadAssignments();
+
+}, [organizationId]);
+
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -137,7 +180,29 @@ useEffect(() => {
   subtitle="App preferences & controls"
   onBack={() => navigation.goBack()}
 />
-
+<TouchableOpacity
+  style={{
+    backgroundColor: "#4B3F72",
+    margin: 12,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  }}
+  onPress={() =>
+    navigation.navigate(
+      "LeadershipAssignments"
+    )
+  }
+>
+  <Text
+    style={{
+      color: "#fff",
+      fontWeight: "700",
+    }}
+  >
+    Manage Leadership
+  </Text>
+</TouchableOpacity>
 
       {/* ✅ BODY */}
       <ScrollView contentContainerStyle={styles.body}>
@@ -167,6 +232,22 @@ useEffect(() => {
     <Text style={styles.membersTitle}>
       {selectedDept.name}
     </Text>
+<Text
+  style={{
+    fontWeight: "700",
+    color: "#4B3F72",
+    marginTop: 8,
+    marginBottom: 8,
+  }}
+>
+  Leader: {
+    assignments.find(
+      (a) =>
+        a.ministryId === selectedDept.id &&
+        a.status === "active"
+    )?.memberName || "Not Assigned"
+  }
+</Text>
 
    {members
   .filter(

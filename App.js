@@ -73,6 +73,8 @@ import AddVisitorScreen from "./screens/AddVisitorScreen";
 import VisitorRegisterScreen from "./screens/VisitorRegisterScreen";
 import VisitorProfileScreen from "./screens/VisitorProfileScreen";
 import VisitorAssignmentScreen from "./screens/VisitorAssignmentScreen";
+import LeadershipAssignmentsScreen from "./screens/LeadershipAssignmentsScreen";
+import MinistryLeadershipScreen from "./screens/MinistryLeadershipScreen";
 
 
 
@@ -207,6 +209,8 @@ function RootStack() {
       <Stack.Screen name="VisitorRegister"component={VisitorRegisterScreen}/>
       <Stack.Screen name="VisitorProfile" component={VisitorProfileScreen}/>
       <Stack.Screen name="VisitorAssignment"component={VisitorAssignmentScreen}/>
+      <Stack.Screen name="LeadershipAssignments"component={LeadershipAssignmentsScreen}/>
+      <Stack.Screen name="MinistryLeadership"component={MinistryLeadershipScreen}/>
 
 
 

@@ -1057,7 +1057,17 @@ const handleRemovePin = () => {
   onPress={() => navigation.navigate("Roles")}
   color="#6C5CE7"
 />
-
+<TapRow
+  icon="ribbon-outline"
+  label="Leadership & Appointments"
+  sub="Manage ministry leaders, elders, clerks and church offices"
+  onPress={() =>
+    navigation.navigate(
+      "LeadershipAssignments"
+    )
+  }
+  color="#0984E3"
+/>
 
             </View>
           </>
