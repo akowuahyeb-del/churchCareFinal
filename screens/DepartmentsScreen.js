@@ -18,6 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   collection,
   onSnapshot,
+  getDocs,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -36,6 +37,8 @@ const [organizationId,
 const [departments,
   setDepartments] =
     useState([]);
+    const [members, setMembers] =
+  useState([]);
 
  useEffect(() => {
 
@@ -88,7 +91,41 @@ useEffect(() => {
 
 }, [organizationId]);
 
+useEffect(() => {
 
+  if (!organizationId) return;
+
+  AsyncStorage
+    .getItem("activeEntity")
+    .then(async (data) => {
+
+      if (!data) return;
+
+      const parsed =
+        JSON.parse(data);
+
+      const membersSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            parsed.entityId,
+            "members"
+          )
+        );
+
+      setMembers(
+        membersSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    });
+
+}, [organizationId]);
 
 
   return (
@@ -131,9 +168,32 @@ useEffect(() => {
       {selectedDept.name}
     </Text>
 
-    <Text style={styles.memberText}>
-      Ministry details will appear here.
-    </Text>
+   {members
+  .filter(
+    (member) =>
+      member.ministry ===
+      selectedDept.name
+  )
+  .map((member) => (
+
+    <View
+      key={member.id}
+      style={styles.memberRow}
+    >
+      <Ionicons
+        name="person-outline"
+        size={16}
+        color="#4B3F72"
+      />
+
+      <Text
+        style={styles.memberText}
+      >
+        {member.name}
+      </Text>
+    </View>
+
+))}
 
   </View>
 )}
