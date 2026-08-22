@@ -180,6 +180,61 @@ const saveFollowUpStatus = async () => {
 
 </View>
 
+<View style={styles.assignmentCard}>
+
+  <Text style={styles.assignmentTitle}>
+    FOLLOW-UP ASSIGNMENT
+  </Text>
+
+  {visitor?.assignment ? (
+
+    <>
+      <View style={styles.assignmentBadge}>
+        <Text style={styles.assignmentBadgeText}>
+          ASSIGNED
+        </Text>
+      </View>
+
+      <Text style={styles.assignmentName}>
+        {visitor.assignment.name}
+      </Text>
+
+
+      <TouchableOpacity
+        style={styles.reassignBtn}
+        onPress={() =>
+          navigation.navigate(
+            "VisitorAssignment",
+            { visitor }
+          )
+        }
+      >
+        <Text style={styles.reassignText}>
+          Reassign Visitor
+        </Text>
+      </TouchableOpacity>
+    </>
+
+  ) : (
+
+    <TouchableOpacity
+      style={styles.button}
+      onPress={() =>
+        navigation.navigate(
+          "VisitorAssignment",
+          { visitor }
+        )
+      }
+    >
+      <Text style={styles.buttonText}>
+        Assign Visitor
+      </Text>
+    </TouchableOpacity>
+
+  )}
+
+</View>
+
 <View style={styles.card}>
 
   <Text
@@ -210,21 +265,7 @@ const saveFollowUpStatus = async () => {
   </Text>
 </TouchableOpacity>
 
-<TouchableOpacity
-  style={styles.button}
-  onPress={() =>
-    navigation.navigate(
-      "VisitorAssignment",
-      {
-        visitor,
-      }
-    )
-  }
->
-  <Text style={styles.buttonText}>
-    Assign Visitor
-  </Text>
-</TouchableOpacity>
+
 
 
 <TouchableOpacity
@@ -289,10 +330,11 @@ const saveFollowUpStatus = async () => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-  },
+  backgroundColor: "#fff",
+  padding: 16,
+  borderRadius: 12,
+  marginBottom: 12,
+},
 
   name: {
     fontSize: 22,
@@ -335,4 +377,57 @@ notesInput: {
   minHeight: 100,
   textAlignVertical: "top",
 },
+assignmentCard: {
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 16,
+  marginBottom: 12,
+},
+
+assignmentTitle: {
+  fontWeight: "700",
+  marginBottom: 10,
+  color: "#555",
+},
+
+assignmentName: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#222",
+},
+
+
+
+reassignBtn: {
+  backgroundColor: "#4B3F72",
+  borderRadius: 12,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 12,
+},
+
+reassignText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 14,
+  textAlign: "center",
+},
+
+assignmentBadge: {
+  alignSelf: "flex-start",
+  backgroundColor: "#4B3F72",
+  borderRadius: 20,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  marginBottom: 10,
+},
+
+assignmentBadgeText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 12,
+},
+
 });
