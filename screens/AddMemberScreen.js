@@ -238,17 +238,20 @@ if (
       visitorData.id
     ),
     {
-      convertedToMember: true,
+  convertedToMember: true,
 
-      convertedMemberId:
-  result.id || null,
+  convertedDate:
+    new Date().toISOString(),
 
-      followUpStatus:
-        "converted",
+  convertedMemberId:
+    result.id || null,
 
-      updatedAt:
-        new Date().toISOString(),
-    }
+  followUpStatus:
+    "converted",
+
+  updatedAt:
+    new Date().toISOString(),
+}
   );
 }
 

@@ -26,6 +26,26 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppHeader from "../components/AppHeader";
 import { db } from "../firebase";
 
+const formatDate = (dateString) => {
+
+  if (!dateString) return "-";
+
+  const d = new Date(dateString);
+
+  const day = String(
+    d.getDate()
+  ).padStart(2, "0");
+
+  const month = String(
+    d.getMonth() + 1
+  ).padStart(2, "0");
+
+  const year =
+    d.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
 export default function VisitorRegisterScreen({
   navigation,
 }) {
@@ -724,11 +744,26 @@ style={[
 
     {/* Area + Date */}
 
-    <Text style={styles.visitorMeta}>
-      {(item.suburb || "No Area")}
-      {" • "}
-      {(item.firstVisitDate || "-")}
-    </Text>
+   <Text style={styles.visitorMeta}>
+  {(item.suburb || "No Area")}
+  {" • "}
+  {(item.firstVisitDate || "-")}
+</Text>
+
+<Text style={styles.visitorMeta}>
+  Follow-Ups:
+  {" "}
+  {item.followUpCount || 0}
+</Text>
+
+<Text style={styles.visitorMeta}>
+  Last Follow-Up:
+  {" "}
+  {item.lastFollowUpDate
+    ? formatDate(item.lastFollowUpDate)
+    : "Never"}
+</Text>
+
 {item.assignment && (
 
   <Text style={styles.assignmentText}>

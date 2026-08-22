@@ -21,6 +21,27 @@ import {
 
 import AppHeader from "../components/AppHeader";
 
+
+const formatDate = (dateString) => {
+
+  if (!dateString) return "-";
+
+  const d = new Date(dateString);
+
+  const day = String(
+    d.getDate()
+  ).padStart(2, "0");
+
+  const month = String(
+    d.getMonth() + 1
+  ).padStart(2, "0");
+
+  const year =
+    d.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
+
 export default function VisitorProfileScreen({
   navigation,
   route,
@@ -36,13 +57,15 @@ export default function VisitorProfileScreen({
   useState(
     visitor?.followUpNotes || ""
   );
+const isConverted =
+  visitor?.convertedToMember === true;
 
 
 const saveFollowUpStatus = async () => {
 
   try {
 
-   await updateDoc(
+  await updateDoc(
   doc(
     db,
     "organizations",
@@ -54,10 +77,20 @@ const saveFollowUpStatus = async () => {
   ),
   {
     followUpStatus: status,
+
     followUpNotes,
-    updatedAt: new Date().toISOString(),
+
+    followUpCount:
+      (visitor.followUpCount || 0) + 1,
+
+    lastFollowUpDate:
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString(),
   }
 );
+
 
     Alert.alert(
       "Success",
@@ -120,12 +153,56 @@ const saveFollowUpStatus = async () => {
           <Text style={styles.item}>
             Follow-up: {visitor?.followUpStatus || "-"}
           </Text>
+          {visitor?.convertedToMember && (
+
+  <Text style={styles.item}>
+    Converted:
+    {" "}
+    {formatDate(
+      visitor?.convertedDate
+    )}
+  </Text>
+
+)}
+
+<Text style={styles.item}>
+  Follow-Ups:
+  {" "}
+  {visitor?.followUpCount || 0}
+</Text>
+
+<Text style={styles.item}>
+  Last Follow-Up:
+  {" "}
+  {visitor?.lastFollowUpDate
+    ? (() => {
+        const d = new Date(
+          visitor.lastFollowUpDate
+        );
+
+        const day = String(
+          d.getDate()
+        ).padStart(2, "0");
+
+        const month = String(
+          d.getMonth() + 1
+        ).padStart(2, "0");
+
+        const year =
+          d.getFullYear();
+
+        return `${day}/${month}/${year}`;
+      })()
+    : "Never"}
+</Text>
 
           <Text style={styles.item}>
-            First Visit:
-            {" "}
-            {visitor?.firstVisitDate || "-"}
-          </Text>
+  First Visit:
+  {" "}
+  {formatDate(
+    visitor?.firstVisitDate
+  )}
+</Text>
 
           <Text style={styles.item}>
             Invited By:
@@ -141,7 +218,10 @@ const saveFollowUpStatus = async () => {
 
         </View>
 
-        <View style={styles.card}>
+
+{!isConverted && (
+
+<View style={styles.card}>
 
   <Text
     style={{
@@ -180,6 +260,9 @@ const saveFollowUpStatus = async () => {
 
 </View>
 
+)}
+
+
 <View style={styles.assignmentCard}>
 
   <Text style={styles.assignmentTitle}>
@@ -200,19 +283,23 @@ const saveFollowUpStatus = async () => {
       </Text>
 
 
-      <TouchableOpacity
-        style={styles.reassignBtn}
-        onPress={() =>
-          navigation.navigate(
-            "VisitorAssignment",
-            { visitor }
-          )
-        }
-      >
-        <Text style={styles.reassignText}>
-          Reassign Visitor
-        </Text>
-      </TouchableOpacity>
+      {!isConverted && (
+
+  <TouchableOpacity
+    style={styles.reassignBtn}
+    onPress={() =>
+      navigation.navigate(
+        "VisitorAssignment",
+        { visitor }
+      )
+    }
+  >
+    <Text style={styles.reassignText}>
+      Reassign Visitor
+    </Text>
+  </TouchableOpacity>
+
+)}
     </>
 
   ) : (
@@ -235,26 +322,33 @@ const saveFollowUpStatus = async () => {
 
 </View>
 
-<View style={styles.card}>
+{!isConverted && (
 
-  <Text
-    style={{
-      fontWeight: "700",
-      marginBottom: 10,
-    }}
-  >
-    Follow-up Notes
-  </Text>
+  <View style={styles.card}>
 
-  <TextInput
-    style={styles.notesInput}
-    multiline
-    placeholder="Add follow-up notes..."
-    value={followUpNotes}
-    onChangeText={setFollowUpNotes}
-  />
+    <Text
+      style={{
+        fontWeight: "700",
+        marginBottom: 10,
+      }}
+    >
+      Follow-up Notes
+    </Text>
 
-</View>
+    <TextInput
+      style={styles.notesInput}
+      multiline
+      placeholder="Add follow-up notes..."
+      value={followUpNotes}
+      onChangeText={setFollowUpNotes}
+    />
+
+  </View>
+
+)}
+
+
+{!isConverted && (
 
 <TouchableOpacity
   style={styles.button}
@@ -265,61 +359,96 @@ const saveFollowUpStatus = async () => {
   </Text>
 </TouchableOpacity>
 
+)}
 
 
 
-<TouchableOpacity
-  style={styles.button}
-  onPress={() =>
-    navigation.navigate(
-      "AddVisitor",
+
+{!isConverted ? (
+
+  <TouchableOpacity
+    style={styles.button}
+    onPress={() =>
+      navigation.navigate(
+        "AddVisitor",
+        {
+          editingId: visitor.id,
+          visitorData: visitor,
+          organizationId:
+            visitor.organizationId,
+          entityId:
+            visitor.entityId,
+        }
+      )
+    }
+  >
+    <Text style={styles.buttonText}>
+      Edit Visitor's Details ({visitor?.name})
+    </Text>
+  </TouchableOpacity>
+
+) : (
+
+  <View
+    style={[
+      styles.button,
       {
-        editingId: visitor.id,
-        visitorData: visitor,
-        organizationId:
-          visitor.organizationId,
-        entityId:
-          visitor.entityId,
-      }
-    )
-  }
->
-  <Text style={styles.buttonText}>
-    Edit Visitor's Details ({visitor?.name})
-  </Text>
-</TouchableOpacity>
+        backgroundColor: "#9CA3AF",
+      },
+    ]}
+  >
+    <Text style={styles.buttonText}>
+      Visitor Converted To Member
+    </Text>
+  </View>
+
+)}
 
 
-        <TouchableOpacity
-  style={[
-    styles.button,
-    {
-      backgroundColor: "#22c55e",
-    },
-  ]}
-  onPress={() =>
-    navigation.navigate(
-      "AddMember",
+    {!isConverted ? (
+
+  <TouchableOpacity
+    style={[
+      styles.button,
       {
-        convertMode: true,
+        backgroundColor: "#22c55e",
+      },
+    ]}
+    onPress={() =>
+      navigation.navigate(
+        "AddMember",
+        {
+          convertMode: true,
+          visitorData: visitor,
+          organizationId:
+            visitor.organizationId,
+          entityId:
+            visitor.entityId,
+        }
+      )
+    }
+  >
+    <Text style={styles.buttonText}>
+      Convert To Member
+    </Text>
+  </TouchableOpacity>
 
-        visitorData: visitor,
+) : (
 
-        organizationId:
-          visitor.organizationId,
+  <View
+    style={[
+      styles.button,
+      {
+        backgroundColor: "#9CA3AF",
+      },
+    ]}
+  >
+    <Text style={styles.buttonText}>
+      Already Converted To Member
+    </Text>
+  </View>
 
-        entityId:
-          visitor.entityId,
-      }
-    )
-  }
->
-
-
-  <Text style={styles.buttonText}>
-    Convert To Member
-  </Text>
-</TouchableOpacity>
+)}
 
 
       </ScrollView>
