@@ -1,5 +1,6 @@
 import React, {
   useState,
+  useEffect,
 } from "react";
 
 import {
@@ -13,6 +14,8 @@ import {
 import {
   doc,
   updateDoc,
+  collection,
+  getDocs,
 } from "firebase/firestore";
 
 import AppHeader from "../components/AppHeader";
@@ -33,8 +36,66 @@ export default function VisitorAssignmentScreen({
   setSelectedTarget] =
     useState(null);
 
+    const [members,
+  setMembers] =
+    useState([]);
+
+    useEffect(() => {
+
+  const loadMembers = async () => {
+
+    try {
+
+      const snap = await getDocs(
+
+        collection(
+          db,
+          "organizations",
+          visitor.organizationId,
+          "entities",
+          visitor.entityId,
+          "members"
+        )
+
+      );
+
+      const data =
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+      setMembers(data);
+
+    } catch (e) {
+
+      console.log(
+        "❌ LOAD MEMBERS",
+        e
+      );
+
+    }
+
+  };
+
+  if (visitor) {
+    loadMembers();
+  }
+
+}, [visitor]);
+
   const saveAssignment =
     async () => {
+
+        if (!selectedTarget) {
+
+  Alert.alert(
+    "Required",
+    "Please select a member."
+  );
+
+  return;
+}
 
       try {
 
@@ -50,13 +111,13 @@ export default function VisitorAssignmentScreen({
           ),
           {
             assignment: {
-              type:
-                assignmentType,
+  type: "member",
 
-              id: null,
+  id:
+    selectedTarget.id,
 
-              name:
-                assignmentType,
+  name:
+    selectedTarget.name,
 
               assignedAt:
                 new Date()
@@ -106,6 +167,7 @@ export default function VisitorAssignmentScreen({
           "role",
         ].map((item) => (
 
+
           <TouchableOpacity
             key={item}
             style={[
@@ -126,6 +188,39 @@ export default function VisitorAssignmentScreen({
           </TouchableOpacity>
 
         ))}
+
+{assignmentType === "member" && (
+
+  <>
+
+    <Text style={styles.label}>
+      Select Member
+    </Text>
+
+    {members.map((item) => (
+
+      <TouchableOpacity
+        key={item.id}
+        style={[
+          styles.option,
+          selectedTarget?.id === item.id &&
+            styles.selected,
+        ]}
+        onPress={() =>
+          setSelectedTarget(item)
+        }
+      >
+        <Text>
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+
+    ))}
+
+  </>
+
+)}
+
 
         <TouchableOpacity
           style={styles.saveBtn}

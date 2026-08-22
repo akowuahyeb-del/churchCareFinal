@@ -731,19 +731,20 @@ style={[
     </Text>
 {item.assignment && (
 
-  <Text
-    style={{
-      marginTop: 4,
-      marginLeft: 30,
-      color: "#4B3F72",
-      fontSize: 12,
-      fontWeight: "600",
-    }}
-  >
-    Assigned: {item.assignment.name}
+  <Text style={styles.assignmentText}>
+
+    Assigned:
+    {" "}
+    {item.assignment.name}
+
+    {" • "}
+
+    {item.assignment.type}
+
   </Text>
 
 )}
+
 
   </TouchableOpacity>
 
