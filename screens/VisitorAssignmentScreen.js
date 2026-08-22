@@ -45,6 +45,10 @@ export default function VisitorAssignmentScreen({
   setMinistries] =
     useState([]);
 
+    const [roles,
+  setRoles] =
+    useState([]);
+
     useEffect(() => {
 
   const loadMembers = async () => {
@@ -89,6 +93,16 @@ if (settingsSnap.exists()) {
     settingsSnap.data()
       ?.ministries || []
   );
+
+  setRoles(
+  settingsSnap.data()?.roles || [
+    "Elder",
+    "Session Clerk",
+    "Lay Preacher",
+    "Evangelism Coordinator",
+    "Catechist",
+  ]
+);
 
 }
 
@@ -258,6 +272,35 @@ name:
     </Text>
 
     {ministries.map((item) => (
+
+      <TouchableOpacity
+        key={item}
+        style={[
+          styles.option,
+          selectedTarget === item &&
+            styles.selected,
+        ]}
+        onPress={() =>
+          setSelectedTarget(item)
+        }
+      >
+        <Text>
+          {item}
+        </Text>
+      </TouchableOpacity>
+
+    ))}
+  </>
+
+)}
+{assignmentType === "role" && (
+
+  <>
+    <Text style={styles.label}>
+      Select Role
+    </Text>
+
+    {roles.map((item) => (
 
       <TouchableOpacity
         key={item}
