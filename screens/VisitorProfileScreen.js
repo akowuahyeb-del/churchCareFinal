@@ -151,8 +151,30 @@ const saveFollowUpStatus = async () => {
           </Text>
 
           <Text style={styles.item}>
-            Follow-up: {visitor?.followUpStatus || "-"}
-          </Text>
+  Follow-up:
+  {" "}
+  {visitor?.followUpStatus === "membership_class"
+    ? "Membership Class"
+    : visitor?.followUpStatus || "-"}
+</Text>
+
+{visitor?.followUpStatus === "membership_class" && (
+
+  <View style={styles.membershipClassBanner}>
+
+    <Text style={styles.membershipClassTitle}>
+      Membership Class In Progress
+    </Text>
+
+    <Text style={styles.membershipClassText}>
+      This visitor is currently undergoing
+      membership onboarding and may be ready
+      for conversion after successful completion.
+    </Text>
+
+  </View>
+
+)}
           {visitor?.convertedToMember && (
 
   <Text style={styles.item}>
@@ -175,24 +197,9 @@ const saveFollowUpStatus = async () => {
   Last Follow-Up:
   {" "}
   {visitor?.lastFollowUpDate
-    ? (() => {
-        const d = new Date(
-          visitor.lastFollowUpDate
-        );
-
-        const day = String(
-          d.getDate()
-        ).padStart(2, "0");
-
-        const month = String(
-          d.getMonth() + 1
-        ).padStart(2, "0");
-
-        const year =
-          d.getFullYear();
-
-        return `${day}/${month}/${year}`;
-      })()
+    ? formatDate(
+        visitor.lastFollowUpDate
+      )
     : "Never"}
 </Text>
 
@@ -282,45 +289,47 @@ const saveFollowUpStatus = async () => {
         {visitor.assignment.name}
       </Text>
 
-
       {!isConverted && (
+        <TouchableOpacity
+          style={styles.reassignBtn}
+          onPress={() =>
+            navigation.navigate(
+              "VisitorAssignment",
+              { visitor }
+            )
+          }
+        >
+          <Text style={styles.reassignText}>
+            Reassign Visitor
+          </Text>
+        </TouchableOpacity>
+      )}
 
-  <TouchableOpacity
-    style={styles.reassignBtn}
-    onPress={() =>
-      navigation.navigate(
-        "VisitorAssignment",
-        { visitor }
-      )
-    }
-  >
-    <Text style={styles.reassignText}>
-      Reassign Visitor
-    </Text>
-  </TouchableOpacity>
-
-)}
     </>
 
   ) : (
 
-    <TouchableOpacity
-      style={styles.button}
-      onPress={() =>
-        navigation.navigate(
-          "VisitorAssignment",
-          { visitor }
-        )
-      }
-    >
-      <Text style={styles.buttonText}>
-        Assign Visitor
-      </Text>
-    </TouchableOpacity>
+    !isConverted && (
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() =>
+          navigation.navigate(
+            "VisitorAssignment",
+            { visitor }
+          )
+        }
+      >
+        <Text style={styles.buttonText}>
+          Assign Visitor
+        </Text>
+      </TouchableOpacity>
+    )
 
   )}
 
 </View>
+
+
 
 {!isConverted && (
 
@@ -557,6 +566,26 @@ assignmentBadgeText: {
   color: "#fff",
   fontWeight: "700",
   fontSize: 12,
+},
+membershipClassBanner: {
+  backgroundColor: "#EEF0FA",
+  borderLeftWidth: 4,
+  borderLeftColor: "#4B3F72",
+  padding: 12,
+  borderRadius: 10,
+  marginTop: 10,
+  marginBottom: 10,
+},
+
+membershipClassTitle: {
+  color: "#4B3F72",
+  fontWeight: "700",
+  marginBottom: 4,
+},
+
+membershipClassText: {
+  color: "#555",
+  lineHeight: 20,
 },
 
 });

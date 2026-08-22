@@ -16,6 +16,7 @@ import {
   updateDoc,
   collection,
   getDocs,
+  getDoc,
 } from "firebase/firestore";
 
 import AppHeader from "../components/AppHeader";
@@ -38,6 +39,10 @@ export default function VisitorAssignmentScreen({
 
     const [members,
   setMembers] =
+    useState([]);
+
+    const [ministries,
+  setMinistries] =
     useState([]);
 
     useEffect(() => {
@@ -66,6 +71,27 @@ export default function VisitorAssignmentScreen({
         }));
 
       setMembers(data);
+
+      const settingsSnap =
+  await getDoc(
+    doc(
+      db,
+      "organizations",
+      visitor.organizationId,
+      "settings",
+      "lists"
+    )
+  );
+
+if (settingsSnap.exists()) {
+
+  setMinistries(
+    settingsSnap.data()
+      ?.ministries || []
+  );
+
+}
+
 
     } catch (e) {
 
@@ -111,13 +137,18 @@ export default function VisitorAssignmentScreen({
           ),
           {
             assignment: {
-  type: "member",
+  type: assignmentType,
 
-  id:
-    selectedTarget.id,
+ id:
+  assignmentType === "member"
+    ? selectedTarget.id
+    : selectedTarget,
 
-  name:
-    selectedTarget.name,
+name:
+  assignmentType === "member"
+    ? selectedTarget.name
+    : selectedTarget,
+
 
               assignedAt:
                 new Date()
@@ -192,7 +223,6 @@ export default function VisitorAssignmentScreen({
 {assignmentType === "member" && (
 
   <>
-
     <Text style={styles.label}>
       Select Member
     </Text>
@@ -216,7 +246,36 @@ export default function VisitorAssignmentScreen({
       </TouchableOpacity>
 
     ))}
+  </>
 
+)}
+
+{assignmentType === "ministry" && (
+
+  <>
+    <Text style={styles.label}>
+      Select Ministry
+    </Text>
+
+    {ministries.map((item) => (
+
+      <TouchableOpacity
+        key={item}
+        style={[
+          styles.option,
+          selectedTarget === item &&
+            styles.selected,
+        ]}
+        onPress={() =>
+          setSelectedTarget(item)
+        }
+      >
+        <Text>
+          {item}
+        </Text>
+      </TouchableOpacity>
+
+    ))}
   </>
 
 )}
