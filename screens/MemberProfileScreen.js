@@ -127,6 +127,10 @@ const viewerName =
   const [transferHistory, setTransferHistory] =
   useState([]);
 
+   const [assignedVisitors,
+  setAssignedVisitors] =
+    useState([]);
+
   /* ────────────── ACTIVE ENTITY ────────────── */
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -249,6 +253,52 @@ const _sendIndividualNotification =
       console.log("❌ Load contributions error:", e);
     }
   };
+
+const loadAssignedVisitors =
+  async () => {
+
+    try {
+
+      const snap = await getDocs(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "visitors"
+        )
+      );
+
+      const matches =
+        snap.docs
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter(
+            (v) =>
+              v.assignment?.id ===
+              memberId
+          );
+
+      setAssignedVisitors(
+        matches
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ LOAD ASSIGNED VISITORS",
+        e
+      );
+
+    }
+
+  };
+
+
+
 const loadEldersCount = async () => {
   if (!organizationId || !entityId) return;
 
@@ -331,14 +381,16 @@ const handleInviteMember = async () => {
 };
     
 
+useEffect(() => {
+  if (!memberId || !organizationId || !entityId) return;
 
-  useEffect(() => {
-    if (!memberId || !organizationId || !entityId) return;
-    loadMember();
-    loadAttendance();
-    loadContributions();
-    loadTransferHistory();
-  }, [memberId, organizationId, entityId]);
+  loadMember();
+  loadAttendance();
+  loadContributions();
+  loadAssignedVisitors();
+  loadTransferHistory();
+
+}, [memberId, organizationId, entityId]);
 
   useEffect(() => {
   if (organizationId && entityId) {
@@ -851,6 +903,56 @@ console.log("INVITE DEBUG", {
                 </View>
               );
             })}
+
+<View style={styles.infoRow}>
+
+  <View style={{ flex: 1 }}>
+
+    <Text style={styles.infoLabel}>
+      ASSIGNED VISITORS
+    </Text>
+
+    <Text style={styles.infoValue}>
+      {assignedVisitors.length}
+      {" "}
+      visitor(s)
+    </Text>
+
+  </View>
+
+</View>
+
+{assignedVisitors.map((visitor) => (
+
+  <TouchableOpacity
+    key={visitor.id}
+    style={styles.recordRow}
+    onPress={() =>
+      navigation.navigate(
+        "VisitorProfile",
+        {
+          visitor,
+        }
+      )
+    }
+  >
+
+    <View>
+
+      <Text style={styles.recordTitle}>
+        {visitor.name}
+      </Text>
+
+      <Text style={styles.recordSub}>
+        {visitor.phone || "-"}
+      </Text>
+
+    </View>
+
+  </TouchableOpacity>
+
+))}
+
           </View>
         )}
 
@@ -1397,5 +1499,11 @@ transferBtnText: {
   color: "#4B3F72",
   fontWeight: "700",
   fontSize: 14,
+},
+visitorRow: {
+  backgroundColor: "#F7F8FC",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 8,
 },
 });
