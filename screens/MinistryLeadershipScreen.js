@@ -18,6 +18,9 @@ import {
   doc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import DateTimePicker
+  from "@react-native-community/datetimepicker";
+
 import AppHeader from "../components/AppHeader";
 
 export default function MinistryLeadershipScreen({ navigation }) {
@@ -27,6 +30,24 @@ export default function MinistryLeadershipScreen({ navigation }) {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [startDate,
+  setStartDate] =
+    useState(new Date());
+
+const [endDate,
+  setEndDate] =
+    useState(null);
+    const [openEnded,
+  setOpenEnded] =
+    useState(true);
+
+const [showStartPicker,
+  setShowStartPicker] =
+    useState(false);
+
+const [showEndPicker,
+  setShowEndPicker] =
+    useState(false);
 
   // FIX: pulled into a reusable function so we can call it again after
   // a successful assignment, instead of only ever running once on mount.
@@ -74,10 +95,19 @@ export default function MinistryLeadershipScreen({ navigation }) {
           a.positionTitle === "Leader" &&
           a.status === "active"
       );
-      return {
-        ...ministry,
-        leaderName: leader?.memberName || "Not Assigned",
-      };
+     return {
+  ...ministry,
+
+  leaderName:
+    leader?.memberName ||
+    "Not Assigned",
+
+  startDate:
+    leader?.startDate || null,
+
+  endDate:
+    leader?.endDate || null,
+};
     });
 
     setMinistries(data);
@@ -162,8 +192,15 @@ export default function MinistryLeadershipScreen({ navigation }) {
           positionTitle: "Leader",
           category: "ministry",
           status: "active",
-          startDate: new Date().toISOString(),
-          endDate: null,
+         startDate:
+  startDate.toISOString(),
+
+endDate:
+  openEnded
+    ? null
+    : endDate
+      ? endDate.toISOString()
+      : null,
           createdAt: new Date().toISOString(),
         }
       );
@@ -181,6 +218,44 @@ export default function MinistryLeadershipScreen({ navigation }) {
     }
   };
 
+  const formatTerm = (
+  startDate,
+  endDate
+) => {
+
+  if (!startDate) {
+    return "Not Set";
+  }
+
+  const start =
+    new Date(startDate)
+      .toLocaleDateString(
+        "en-GB",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }
+      );
+
+  if (!endDate) {
+    return `${start} - Present`;
+  }
+
+  const end =
+    new Date(endDate)
+      .toLocaleDateString(
+        "en-GB",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }
+      );
+
+  return `${start} - ${end}`;
+};
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
@@ -192,8 +267,40 @@ export default function MinistryLeadershipScreen({ navigation }) {
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {ministries.map((item) => (
           <View key={item.id} style={styles.card}>
-            <Text style={styles.title}>{item.name}</Text>
-            <Text style={styles.leader}>Leader: {item.leaderName}</Text>
+            <Text style={styles.title}>
+  {item.name}
+</Text>
+
+<Text style={styles.label}>
+  Current Leader
+</Text>
+
+<Text style={styles.leaderName}>
+  {item.leaderName}
+</Text>
+
+{item.startDate && (
+
+  <View style={styles.termRow}>
+
+    <Text style={styles.label}>
+      CURRENT TERM
+    </Text>
+
+    <Text style={styles.termText}>
+      {formatTerm(
+        item.startDate,
+        item.endDate
+      )}
+    </Text>
+
+  </View>
+
+)}
+
+
+
+
 
             <TouchableOpacity
               style={styles.assignBtn}
@@ -240,12 +347,114 @@ export default function MinistryLeadershipScreen({ navigation }) {
                 <Text style={styles.memberName}>{member.name}</Text>
               </TouchableOpacity>
             ))}
+<View style={styles.dateCard}>
+
+  <Text style={styles.sectionTitle}>
+    Leadership Term
+  </Text>
+
+  <Text style={styles.dateLabel}>
+    Start Date
+  </Text>
+
+  <TouchableOpacity
+    style={styles.option}
+    onPress={() =>
+      setShowStartPicker(true)
+    }
+  >
+    <Text>
+      {startDate
+        .toISOString()
+        .split("T")[0]}
+    </Text>
+  </TouchableOpacity>
+
+  {showStartPicker && (
+    <DateTimePicker
+      value={startDate}
+      mode="date"
+      onChange={(
+        event,
+        selectedDate
+      ) => {
+        setShowStartPicker(false);
+
+        if (selectedDate) {
+          setStartDate(selectedDate);
+        }
+      }}
+    />
+  )}
+
+  <TouchableOpacity
+    style={styles.checkboxRow}
+    onPress={() =>
+      setOpenEnded(!openEnded)
+    }
+  >
+    <Text style={styles.checkboxIcon}>
+      {openEnded ? "☑" : "☐"}
+    </Text>
+
+    <Text style={styles.checkboxLabel}>
+      Open-ended appointment
+    </Text>
+  </TouchableOpacity>
+
+  {!openEnded && (
+    <>
+      <Text style={styles.dateLabel}>
+        End Date
+      </Text>
+
+      <TouchableOpacity
+        style={styles.option}
+        onPress={() =>
+          setShowEndPicker(true)
+        }
+      >
+        <Text>
+          {endDate
+            ? endDate
+                .toISOString()
+                .split("T")[0]
+            : "Select End Date"}
+        </Text>
+      </TouchableOpacity>
+
+      {showEndPicker && (
+        <DateTimePicker
+          value={
+            endDate || startDate
+          }
+          mode="date"
+          minimumDate={startDate}
+          onChange={(
+            event,
+            selectedDate
+          ) => {
+            setShowEndPicker(false);
+
+            if (selectedDate) {
+              setEndDate(selectedDate);
+            }
+          }}
+        />
+      )}
+    </>
+  )}
+
+</View>
+
 
             <TouchableOpacity
               style={styles.saveBtn}
               onPress={assignLeader}
               disabled={saving}
             >
+
+
               <Text style={{ color: "#fff", fontWeight: "700" }}>
                 {saving ? "Saving..." : "Assign Leader"}
               </Text>
@@ -299,4 +508,76 @@ const styles = StyleSheet.create({
     marginTop: 16,
     alignItems: "center",
   },
+  term: {
+  marginTop: 4,
+  color: "#666",
+  fontSize: 13,
+},
+dateCard: {
+  backgroundColor: "#F5F5F5",
+  padding: 16,
+  borderRadius: 12,
+  marginTop: 16,
+  marginBottom: 16,
+},
+
+dateLabel: {
+  fontWeight: "600",
+  marginTop: 8,
+  marginBottom: 6,
+},
+label: {
+  marginTop: 10,
+  fontSize: 12,
+  color: "#777",
+  textTransform: "uppercase",
+  fontWeight: "600",
+},
+
+leaderName: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#222",
+  marginTop: 2,
+},
+
+termRow: {
+  marginTop: 10,
+},
+
+termText: {
+  marginTop: 2,
+  color: "#4B3F72",
+  fontWeight: "600",
+},
+checkboxRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 10,
+  marginBottom: 10,
+},
+
+checkboxIcon: {
+  fontSize: 20,
+},
+
+checkboxLabel: {
+  marginLeft: 8,
+  fontSize: 15,
+},
+
+dateCard: {
+  backgroundColor: "#F5F5F5",
+  padding: 16,
+  borderRadius: 12,
+  marginTop: 16,
+  marginBottom: 16,
+},
+
+dateLabel: {
+  fontWeight: "600",
+  marginTop: 8,
+  marginBottom: 6,
+},
+
 });
