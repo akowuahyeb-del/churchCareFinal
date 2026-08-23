@@ -1,4 +1,4 @@
-import React from "react";
+
 import {
   View,
   Text,
@@ -7,12 +7,32 @@ import {
   StyleSheet,
 } from "react-native";
 
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+
+import AsyncStorage
+  from "@react-native-async-storage/async-storage";
+
+import {
+  collection,
+  getDocs,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
+
 import AppHeader from "../components/AppHeader";
 
 export default function GovernanceBodyDetailScreen({
   navigation,
   route,
 }) {
+
+const [memberCount,
+  setMemberCount] =
+    useState(0);
 
   const governanceBody =
     route?.params?.governanceBody || {
@@ -21,6 +41,64 @@ export default function GovernanceBodyDetailScreen({
       memberLabel: "Session Members",
       exOfficioLabel: "Agents",
     };
+
+const loadMemberCount =
+  useCallback(async () => {
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!stored) return;
+
+      const entity =
+        JSON.parse(stored);
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            entity.organizationId,
+            "governanceMemberships"
+          )
+        );
+
+      const count =
+        snap.docs.filter((d) => {
+
+          const data =
+            d.data();
+
+          return (
+            data.governanceBodyId ===
+            governanceBody.id
+          );
+
+        }).length;
+
+      setMemberCount(count);
+
+    } catch (error) {
+
+      console.log(
+        "loadMemberCount",
+        error
+      );
+
+    }
+
+  }, [governanceBody]);
+
+  useEffect(() => {
+
+  loadMemberCount();
+
+}, [loadMemberCount]);
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -78,9 +156,9 @@ export default function GovernanceBodyDetailScreen({
 ).toUpperCase()}
           </Text>
 
-          <Text style={styles.countText}>
-            0 Members
-          </Text>
+        <Text style={styles.countText}>
+  {memberCount} Members
+</Text>
 
           <TouchableOpacity
   style={styles.actionBtn}
