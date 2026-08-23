@@ -210,12 +210,24 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
             <Text style={styles.quickTitle}>Ministries</Text>
           </TouchableOpacity>
 
-          {/* TODO: these three don't navigate anywhere yet — wire up
-              once the corresponding screens exist. */}
-          <TouchableOpacity style={styles.quickCard}>
-            <Ionicons name="shield-outline" size={30} color="#16A085" />
-            <Text style={styles.quickTitle}>Elders</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+  style={styles.quickCard}
+  onPress={() =>
+    navigation.navigate(
+      "GovernanceBodies"
+    )
+  }
+>
+  <Ionicons
+    name="shield-outline"
+    size={30}
+    color="#16A085"
+  />
+
+  <Text style={styles.quickTitle}>
+    Governance
+  </Text>
+</TouchableOpacity>
 
           <TouchableOpacity style={styles.quickCard}>
             <Ionicons name="briefcase-outline" size={30} color="#0984E3" />

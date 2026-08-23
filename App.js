@@ -75,6 +75,11 @@ import VisitorProfileScreen from "./screens/VisitorProfileScreen";
 import VisitorAssignmentScreen from "./screens/VisitorAssignmentScreen";
 import LeadershipAssignmentsScreen from "./screens/LeadershipAssignmentsScreen";
 import MinistryLeadershipScreen from "./screens/MinistryLeadershipScreen";
+import SessionLeadershipScreen from "./screens/SessionLeadershipScreen";
+import GovernanceBodyScreen from "./screens/GovernanceBodyScreen";
+import GovernanceBodyDetailScreen from "./screens/GovernanceBodyDetailScreen";
+import GovernanceBodyMemberManagementScreen from "./screens/GovernanceBodyMemberManagementScreen";
+import GovernanceBodySetupScreen from "./screens/GovernanceBodySetupScreen";
 
 
 
@@ -211,6 +216,12 @@ function RootStack() {
       <Stack.Screen name="VisitorAssignment"component={VisitorAssignmentScreen}/>
       <Stack.Screen name="LeadershipAssignments"component={LeadershipAssignmentsScreen}/>
       <Stack.Screen name="MinistryLeadership"component={MinistryLeadershipScreen}/>
+      <Stack.Screen name="SessionLeadership"component={SessionLeadershipScreen}/>
+      <Stack.Screen name="GovernanceBodies"component={GovernanceBodyScreen}/>
+       <Stack.Screen name="GovernanceBodyDetail"component={GovernanceBodyDetailScreen}/>
+       <Stack.Screen name="GovernanceBodyMembers"component={GovernanceBodyMemberManagementScreen}/>
+       <Stack.Screen name="GovernanceBodySetup"component={GovernanceBodySetupScreen}/>
+
 
 
 
