@@ -40,12 +40,28 @@ export default function GovernanceBodyMemberManagementScreen({
 
 const [selectedMember, setSelectedMember] =
   useState(null);
+const [selectedMembership, setSelectedMembership] =
+  useState(null);
+  const [inactiveGovernanceMembers,
+  setInactiveGovernanceMembers] =
+  useState([]);
+
+const [editing, setEditing] =
+  useState(false);
+
   const governanceBody =
     route?.params?.governanceBody || {
       name: "Session",
       memberLabel: "Members",
     };
 
+    const category =
+  route?.params?.category || "member";
+
+const roleLabel =
+  category === "ex_officio"
+    ? (governanceBody.exOfficioLabel || "Agents")
+    : governanceBody.memberLabel;
   const [search, setSearch] =
     useState("");
 
@@ -57,19 +73,9 @@ const [selectedMember, setSelectedMember] =
 const [loadingMembers,
   setLoadingMembers] =
     useState(false);
-
-    const [activeMembers, setActiveMembers] =
+    const [governanceMembers, setGovernanceMembers] =
   useState([]);
 
-const [inactiveMembers, setInactiveMembers] =
-  useState([]);
-
-  const [editing, setEditing] =
-  useState(false);
-
-const [selectedMembership,
-  setSelectedMembership] =
-    useState(null);
 
 const saveMember = async () => {
 
@@ -99,8 +105,6 @@ const saveMember = async () => {
     const entity =
       JSON.parse(stored);
 
-    // Prevent duplicate active membership
-
     const existingSnap =
       await getDocs(
         collection(
@@ -112,87 +116,92 @@ const saveMember = async () => {
       );
 
     const duplicate =
-  existingSnap.docs.find((d) => {
+      existingSnap.docs.find((d) => {
 
-    const data = d.data();
+        const data = d.data();
 
-    return (
-      d.id !== selectedMembership?.id &&
-      data.governanceBodyId === governanceBody.id &&
-      data.memberId === selectedMember.id &&
-      data.status === "active"
-    );
+        return (
+          data.governanceBodyId ===
+            governanceBody.id &&
+          data.memberId ===
+            selectedMember.id &&
+          data.status ===
+            "active" &&
+          (data.category || "member") ===
+            category
+        );
 
-  });
-
+      });
 
     if (duplicate) {
       Alert.alert(
         "Already Added",
-        `${selectedMember.name} is already an active member of ${governanceBody.name}.`
+     `${selectedMember.name} is already an active ${roleLabel.toLowerCase()} of ${governanceBody.name}.`
       );
       return;
     }
-if (editing) {
 
-  await updateDoc(
-    doc(
-      db,
-      "organizations",
-      entity.organizationId,
-      "governanceMemberships",
-      selectedMembership.id
-    ),
-    {
-      status: "inactive",
-      endDate: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    if (editing && selectedMembership) {
+
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          entity.organizationId,
+          "governanceMemberships",
+          selectedMembership.id
+        ),
+        {
+          status: "inactive",
+          endDate:
+            new Date().toISOString(),
+        }
+      );
+
     }
-  );
 
-  await addDoc(
-    collection(
-      db,
-      "organizations",
-      entity.organizationId,
-      "governanceMemberships"
-    ),
-    {
-      governanceBodyId: governanceBody.id,
-      governanceBodyName: governanceBody.name,
-      memberId: selectedMember.id,
-      memberName: selectedMember.name,
-      membershipRole: governanceBody.memberLabel,
-      status: "active",
-      startDate: new Date().toISOString(),
-      endDate: null,
-      createdAt: new Date().toISOString(),
-    }
-  );
+    await addDoc(
 
-} else {
+      collection(
+        db,
+        "organizations",
+        entity.organizationId,
+        "governanceMemberships"
+      ),
 
-  await addDoc(
-    collection(
-      db,
-      "organizations",
-      entity.organizationId,
-      "governanceMemberships"
-    ),
-    {
-      governanceBodyId: governanceBody.id,
-      governanceBodyName: governanceBody.name,
-      memberId: selectedMember.id,
-      memberName: selectedMember.name,
-      membershipRole: governanceBody.memberLabel,
-      status: "active",
-      startDate: new Date().toISOString(),
-      endDate: null,
-      createdAt: new Date().toISOString(),
-    }
-  );
+      {
+        governanceBodyId:
+          governanceBody.id,
 
-}
+        governanceBodyName:
+          governanceBody.name,
+
+        memberId:
+          selectedMember.id,
+
+        memberName:
+          selectedMember.name,
+
+        membershipRole:
+          roleLabel,
+
+        category:
+          category,
+
+        status:
+          "active",
+
+        startDate:
+          new Date().toISOString(),
+
+        endDate:
+          null,
+
+        createdAt:
+          new Date().toISOString(),
+      }
+
+    );
 
     Alert.alert(
       "Success",
@@ -200,11 +209,11 @@ if (editing) {
     );
 
     setSelectedMember(null);
-setSelectedMembership(null);
-setEditing(false);
-setShowAddModal(false);
+    setSelectedMembership(null);
+    setEditing(false);
+    setShowAddModal(false);
 
-await loadGovernanceMembers();
+    await loadGovernanceMembers();
 
   } catch (error) {
 
@@ -214,6 +223,65 @@ await loadGovernanceMembers();
     );
 
   }
+
+};
+
+const removeMember = async (membership) => {
+
+  try {
+
+    const stored =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    if (!stored) return;
+
+    const entity =
+      JSON.parse(stored);
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        entity.organizationId,
+        "governanceMemberships",
+        membership.id
+      ),
+      {
+        status: "inactive",
+        endDate:
+          new Date().toISOString(),
+      }
+    );
+
+    await loadGovernanceMembers();
+
+    Alert.alert(
+      "Removed",
+      `${membership.memberName} removed successfully.`
+    );
+
+  } catch (error) {
+
+    Alert.alert(
+      "Error",
+      error.message
+    );
+
+  }
+
+};
+
+const replaceMember = (membership) => {
+
+  setSelectedMembership(
+    membership
+  );
+
+  setEditing(true);
+
+  setShowAddModal(true);
 
 };
 
@@ -271,13 +339,6 @@ const loadChurchMembers =
 
   }, []);
 
-  useEffect(() => {
-
-  loadChurchMembers();
-
-}, [loadChurchMembers]);
-
-
 const loadGovernanceMembers =
   useCallback(async () => {
 
@@ -303,25 +364,27 @@ const loadGovernanceMembers =
           )
         );
 
-     const data =
-  snap.docs
-    .map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }))
-    .filter(
-      (m) =>
-        m.governanceBodyId ===
-        governanceBody.id
-    );
+      const data =
+        snap.docs
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter(
+  (m) =>
+    m.governanceBodyId ===
+      governanceBody.id &&
+    (m.category || "member") ===
+      category
+);
 
-      setActiveMembers(
+      setGovernanceMembers(
   data.filter(
     (m) => m.status === "active"
   )
 );
 
-setInactiveMembers(
+setInactiveGovernanceMembers(
   data.filter(
     (m) => m.status === "inactive"
   )
@@ -336,229 +399,154 @@ setInactiveMembers(
 
     }
 
-  }, [governanceBody]);
+  }, [
+    governanceBody.id,
+    category,
+  ]);
 
-  useEffect(() => {
 
+ useEffect(() => {
+
+  loadChurchMembers();
   loadGovernanceMembers();
 
-}, [loadGovernanceMembers]);
+}, [
+  loadChurchMembers,
+  loadGovernanceMembers,
+]);
 
-
- const editMember = (member) => {
-
-  setEditing(true);
-
-  setSelectedMembership(member);
-
-  setSelectedMember({
-    id: member.memberId,
-    name: member.memberName,
-  });
-
-  setShowAddModal(true);
-
-};
-
-const removeMember = (member) => {
-
-  Alert.alert(
-    "Remove Membership",
-    `Remove ${member.memberName}?`,
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: async () => {
-
-          try {
-
-            const stored =
-              await AsyncStorage.getItem(
-                "activeEntity"
-              );
-
-            if (!stored) return;
-
-            const entity =
-              JSON.parse(stored);
-
-            await updateDoc(
-              doc(
-                db,
-                "organizations",
-                entity.organizationId,
-                "governanceMemberships",
-                member.id
-              ),
-              {
-                status: "inactive",
-                endDate:
-                  new Date().toISOString(),
-              }
-            );
-
-            await loadGovernanceMembers();
-
-            Alert.alert(
-              "Success",
-              "Membership removed."
-            );
-
-          } catch (error) {
-
-            Alert.alert(
-              "Error",
-              error.message
-            );
-
-          }
-
-        },
-      },
-    ]
-  );
-
-};
-const filteredActiveMembers = activeMembers.filter(
-  (m) =>
-    m.memberName
-      ?.toLowerCase()
-      .includes(search.toLowerCase())
-);
-
-const filteredInactiveMembers = inactiveMembers.filter(
-  (m) =>
-    m.memberName
-      ?.toLowerCase()
-      .includes(search.toLowerCase())
-);
   return (
     <View style={{ flex: 1 }}>
 
       <AppHeader
-        title={governanceBody.memberLabel}
+  title={roleLabel}
         subtitle={governanceBody.name}
         onBack={() =>
           navigation.goBack()
         }
       />
 
-      <TextInput
-  style={styles.search}
-  placeholder={`Search ${governanceBody.memberLabel}`}
-  value={search}
-  onChangeText={setSearch}
-/>
-<Text style={styles.sectionTitle}>
-  Active Members
-</Text>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+        }}
+      >
 
-{activeMembers.length === 0 ? (
+        <TextInput
+          style={styles.search}
+          placeholder={`Search ${roleLabel}`}
+          value={search}
+          onChangeText={setSearch}
+        />
 
-  <View style={styles.emptyCard}>
+        {churchMembers.length === 0 ? (
 
-    <Text style={styles.emptyTitle}>
-      No Active Members
-    </Text>
+          <View style={styles.emptyCard}>
 
-    <Text style={styles.emptyText}>
-      Use Add Member to populate this governance body.
-    </Text>
+            <Text style={styles.emptyTitle}>
+              No Members Added
+            </Text>
+
+            <Text style={styles.emptyText}>
+              Start building the governance
+              body membership register.
+            </Text>
+
+          </View>
+
+        ) : (
+
+          governanceMembers.map((member) => (
+
+            <View
+  key={member.id}
+  style={styles.card}
+>
+
+  <Text style={styles.name}>
+    {member.memberName}
+  </Text>
+
+  <View style={styles.actions}>
+
+    <TouchableOpacity
+      style={styles.replaceBtn}
+      onPress={() =>
+        replaceMember(member)
+      }
+    >
+      <Text style={styles.btnLabel}>
+        Replace
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.removeBtn}
+      onPress={() =>
+        removeMember(member)
+      }
+    >
+      <Text style={styles.btnLabel}>
+        Remove
+      </Text>
+    </TouchableOpacity>
 
   </View>
 
-) : (
+</View>
 
-  filteredActiveMembers.map((member) => (
+          ))
 
-    <View
-      key={member.id}
-      style={styles.card}
-    >
+        )}
+{inactiveGovernanceMembers.length > 0 && (
 
-      <Text style={styles.name}>
-        {member.memberName}
-      </Text>
+  <View style={{ marginTop: 24 }}>
 
-      <Text style={styles.memberMeta}>
-        {member.membershipRole}
-      </Text>
+    <Text style={styles.sectionHeader}>
+      Former {roleLabel}
+    </Text>
 
-      <View style={styles.actionRow}>
+    {inactiveGovernanceMembers.map(
+      (member) => (
 
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() =>
-            editMember(member)
-          }
+        <View
+          key={member.id}
+          style={styles.inactiveCard}
         >
-          <Text style={styles.btnText}>
-            Replace
+
+          <Text style={styles.name}>
+            {member.memberName}
           </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() =>
-            removeMember(member)
-          }
-        >
-          <Text style={styles.btnText}>
-            End Membership
-          </Text>
-        </TouchableOpacity>
-
-      </View>
-
-    </View>
-
-  ))
-
-)}
-
-<Text style={styles.sectionTitle}>
-  Former Members
+         <Text style={styles.historyText}>
+  Started:
+  {" "}
+  {member.startDate
+    ? new Date(
+        member.startDate
+      ).toLocaleDateString()
+    : "Unknown"}
 </Text>
 
-{inactiveMembers.length === 0 ? (
+<Text style={styles.historyText}>
+  Ended:
+  {" "}
+  {member.endDate
+    ? new Date(
+        member.endDate
+      ).toLocaleDateString()
+    : "Unknown"}
+</Text>
 
-  <View style={styles.emptyCard}>
-    <Text style={styles.emptyTitle}>
-      No Former Members
-    </Text>
+        </View>
+
+      )
+    )}
+
   </View>
 
-) : (
-
-  filteredInactiveMembers.map((member) => (
-
-    <View
-      key={member.id}
-      style={styles.card}
-    >
-
-      <Text style={styles.name}>
-        {member.memberName}
-      </Text>
-
-      <Text style={styles.memberMeta}>
-        Ended:
-        {" "}
-        {member.endDate
-          ? member.endDate.split("T")[0]
-          : "Unknown"}
-      </Text>
-
-    </View>
-
-  ))
-
 )}
+      </ScrollView>
 
      <TouchableOpacity
   style={styles.addBtn}
@@ -567,7 +555,7 @@ const filteredInactiveMembers = inactiveMembers.filter(
   }
 >
         <Text style={styles.addBtnText}>
-          Add Member
+          Add {roleLabel}
         </Text>
       </TouchableOpacity>
 
@@ -578,20 +566,12 @@ const filteredInactiveMembers = inactiveMembers.filter(
   <View style={{ flex: 1 }}>
 
     <AppHeader
-      title={
-  editing
-    ? `Replace ${governanceBody.memberLabel}`
-    : `Add ${governanceBody.memberLabel}`
-}
-
+      title={roleLabel}
       subtitle={governanceBody.name}
-   onBack={() => {
+      onBack={() => {
   setShowAddModal(false);
   setSelectedMember(null);
-  setSelectedMembership(null);
-  setEditing(false);
 }}
-
     />
 
     <ScrollView
@@ -633,10 +613,12 @@ const filteredInactiveMembers = inactiveMembers.filter(
   style={styles.saveBtn}
   onPress={saveMember}
 >
-        <Text style={styles.saveBtnText}>
+       <Text
+  style={styles.saveBtnText}
+>
   {editing
-    ? "Replace Member"
-    : "Add Member"}
+    ? `Replace ${roleLabel}`
+    : `Add ${roleLabel}`}
 </Text>
       </TouchableOpacity>
 
@@ -728,40 +710,49 @@ saveBtnText: {
 memberName: {
   fontSize: 15,
 },
-memberMeta: {
-  color: "#666",
-  marginTop: 4,
-},
-actionRow: {
+
+actions: {
   flexDirection: "row",
   marginTop: 12,
 },
 
-editBtn: {
+replaceBtn: {
   flex: 1,
-  backgroundColor: "#0984E3",
+  backgroundColor: "#4B3F72",
   padding: 10,
-  borderRadius: 10,
-  alignItems: "center",
-  marginRight: 8,
-},
-
-deleteBtn: {
-  flex: 1,
-  backgroundColor: "#E74C3C",
-  padding: 10,
-  borderRadius: 10,
+  borderRadius: 8,
+  marginRight: 6,
   alignItems: "center",
 },
 
-btnText: {
+removeBtn: {
+  flex: 1,
+  backgroundColor: "#B00020",
+  padding: 10,
+  borderRadius: 8,
+  marginLeft: 6,
+  alignItems: "center",
+},
+
+btnLabel: {
   color: "#FFF",
   fontWeight: "700",
 },
-sectionTitle: {
-  fontSize: 18,
+sectionHeader: {
+  fontSize: 16,
   fontWeight: "700",
   marginBottom: 12,
 },
 
+inactiveCard: {
+  backgroundColor: "#F5F5F5",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 10,
+},
+
+historyText: {
+  color: "#666",
+  marginTop: 4,
+},
 });

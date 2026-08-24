@@ -80,6 +80,7 @@ import GovernanceBodyScreen from "./screens/GovernanceBodyScreen";
 import GovernanceBodyDetailScreen from "./screens/GovernanceBodyDetailScreen";
 import GovernanceBodyMemberManagementScreen from "./screens/GovernanceBodyMemberManagementScreen";
 import GovernanceBodySetupScreen from "./screens/GovernanceBodySetupScreen";
+import GovernanceRoleManagementScreen from "./screens/GovernanceRoleManagementScreen";
 
 
 
@@ -221,6 +222,7 @@ function RootStack() {
        <Stack.Screen name="GovernanceBodyDetail"component={GovernanceBodyDetailScreen}/>
        <Stack.Screen name="GovernanceBodyMembers"component={GovernanceBodyMemberManagementScreen}/>
        <Stack.Screen name="GovernanceBodySetup"component={GovernanceBodySetupScreen}/>
+       <Stack.Screen name="GovernanceRoleManagement"component={GovernanceRoleManagementScreen}/>
 
 
 
