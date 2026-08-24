@@ -228,6 +228,71 @@ const saveMember = async () => {
 
 const removeMember = async (membership) => {
 
+  Alert.alert(
+    "Remove Member",
+    `Are you sure you want to remove ${membership.memberName}?`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+
+          try {
+
+            const stored =
+              await AsyncStorage.getItem(
+                "activeEntity"
+              );
+
+            if (!stored) return;
+
+            const entity =
+              JSON.parse(stored);
+
+            await updateDoc(
+              doc(
+                db,
+                "organizations",
+                entity.organizationId,
+                "governanceMemberships",
+                membership.id
+              ),
+              {
+                status: "inactive",
+                endDate:
+                  new Date().toISOString(),
+              }
+            );
+
+            await loadGovernanceMembers();
+
+            Alert.alert(
+              "Removed",
+              `${membership.memberName} removed successfully.`
+            );
+
+          } catch (error) {
+
+            Alert.alert(
+              "Error",
+              error.message
+            );
+
+          }
+
+        },
+      },
+    ]
+  );
+
+};
+
+const restoreMember = async (membership) => {
+
   try {
 
     const stored =
@@ -240,26 +305,54 @@ const removeMember = async (membership) => {
     const entity =
       JSON.parse(stored);
 
-    await updateDoc(
-      doc(
+    await addDoc(
+
+      collection(
         db,
         "organizations",
         entity.organizationId,
-        "governanceMemberships",
-        membership.id
+        "governanceMemberships"
       ),
+
       {
-        status: "inactive",
+        governanceBodyId:
+          membership.governanceBodyId,
+
+        governanceBodyName:
+          membership.governanceBodyName,
+
+        memberId:
+          membership.memberId,
+
+        memberName:
+          membership.memberName,
+
+        membershipRole:
+          membership.membershipRole,
+
+       category:
+  membership.category || "member",
+
+        status:
+          "active",
+
+        startDate:
+          new Date().toISOString(),
+
         endDate:
+          null,
+
+        createdAt:
           new Date().toISOString(),
       }
+
     );
 
     await loadGovernanceMembers();
 
     Alert.alert(
-      "Removed",
-      `${membership.memberName} removed successfully.`
+      "Restored",
+      `${membership.memberName} restored successfully.`
     );
 
   } catch (error) {
@@ -272,7 +365,6 @@ const removeMember = async (membership) => {
   }
 
 };
-
 const replaceMember = (membership) => {
 
   setSelectedMembership(
@@ -537,7 +629,16 @@ setInactiveGovernanceMembers(
       ).toLocaleDateString()
     : "Unknown"}
 </Text>
-
+<TouchableOpacity
+  style={styles.restoreBtn}
+  onPress={() =>
+    restoreMember(member)
+  }
+>
+  <Text style={styles.btnLabel}>
+    Restore
+  </Text>
+</TouchableOpacity>
         </View>
 
       )
@@ -754,5 +855,12 @@ inactiveCard: {
 historyText: {
   color: "#666",
   marginTop: 4,
+},
+restoreBtn: {
+  marginTop: 10,
+  backgroundColor: "#2E7D32",
+  padding: 10,
+  borderRadius: 8,
+  alignItems: "center",
 },
 });
