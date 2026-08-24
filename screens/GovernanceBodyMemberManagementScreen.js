@@ -629,6 +629,64 @@ setInactiveGovernanceMembers(
       ).toLocaleDateString()
     : "Unknown"}
 </Text>
+<Text style={styles.historyText}>
+  Served:
+  {" "}
+  {(() => {
+
+    if (
+      !member.startDate ||
+      !member.endDate
+    ) {
+      return "Unknown";
+    }
+
+    const start =
+      new Date(
+        member.startDate
+      );
+
+    const end =
+      new Date(
+        member.endDate
+      );
+
+    const diffMonths =
+      Math.floor(
+        (end - start) /
+        (1000 * 60 * 60 * 24 * 30)
+      );
+
+    if (diffMonths < 1) {
+      return "Less than 1 month";
+    }
+
+    if (diffMonths === 1) {
+      return "1 month";
+    }
+
+    if (diffMonths < 12) {
+      return `${diffMonths} months`;
+    }
+
+    const years =
+      Math.floor(
+        diffMonths / 12
+      );
+
+    const months =
+      diffMonths % 12;
+
+    if (months === 0) {
+      return years === 1
+        ? "1 year"
+        : `${years} years`;
+    }
+
+    return `${years} year${years > 1 ? "s" : ""} ${months} month${months > 1 ? "s" : ""}`;
+
+  })()}
+</Text>
 <TouchableOpacity
   style={styles.restoreBtn}
   onPress={() =>
