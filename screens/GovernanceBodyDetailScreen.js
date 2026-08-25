@@ -9,6 +9,8 @@ import AppHeader from "../components/AppHeader";
 
 export default function GovernanceBodyDetailScreen({ navigation, route }) {
   const [memberCount, setMemberCount] = useState(0);
+  const [agentCount, setAgentCount] =
+  useState(0);
   const [leaderName, setLeaderName] = useState("Not Assigned");
 
   const governanceBody = route?.params?.governanceBody || {
@@ -29,7 +31,8 @@ export default function GovernanceBodyDetailScreen({ navigation, route }) {
       );
 
       let activeCount = 0;
-      let currentLeader = null;
+let activeAgentCount = 0;
+let currentLeader = null;
 
       snap.docs.forEach((d) => {
         const data = d.data();
@@ -41,6 +44,12 @@ export default function GovernanceBodyDetailScreen({ navigation, route }) {
         if (data.status === "active" && category === "member") {
           activeCount++;
         }
+        if (
+  data.status === "active" &&
+  category === "ex_officio"
+) {
+  activeAgentCount++;
+}
         // FIX: pull the actual active leadership holder instead of a
         // hardcoded "Not Assigned" label.
         if (data.status === "active" && category === "leadership") {
@@ -49,7 +58,13 @@ export default function GovernanceBodyDetailScreen({ navigation, route }) {
       });
 
       setMemberCount(activeCount);
-      setLeaderName(currentLeader?.memberName || "Not Assigned");
+setAgentCount(activeAgentCount);
+
+setLeaderName(
+  currentLeader?.memberName ||
+  "Not Assigned"
+);
+
     } catch (error) {
       console.log("loadDetails", error);
     }
@@ -112,7 +127,9 @@ export default function GovernanceBodyDetailScreen({ navigation, route }) {
           <Text style={styles.sectionLabel}>
             {(governanceBody.exOfficioLabel || "Ex-Officio Members").toUpperCase()}
           </Text>
-          <Text style={styles.infoText}>Members of the body by virtue of office.</Text>
+          <Text style={styles.countText}>
+  {agentCount} Members
+</Text>
 
           {/* FIX: wired to the same member-management screen, tagged
               as ex_officio so it doesn't mix with ordinary members */}

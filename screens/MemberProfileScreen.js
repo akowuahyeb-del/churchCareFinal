@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, Modal,
@@ -24,7 +28,8 @@ import {
   getFunctions,
   httpsCallable,
 } from "firebase/functions";
-
+import ServiceHistoryCard
+  from "../components/ServiceHistoryCard";
 
 
 
@@ -121,6 +126,11 @@ const viewerName =
   const [requestField, setRequestField] = useState("");
   const [requestLabel, setRequestLabel] = useState("");
   const [requestValue, setRequestValue] = useState("");
+  const [activeRoles, setActiveRoles] =
+  useState([]);
+
+const [previousRoles, setPreviousRoles] =
+  useState([]);
 
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -253,6 +263,127 @@ const _sendIndividualNotification =
       console.log("❌ Load contributions error:", e);
     }
   };
+
+
+const loadServiceHistory =
+  useCallback(async () => {
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!stored) return;
+
+      const entity =
+        JSON.parse(stored);
+
+      const governanceSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            entity.organizationId,
+            "governanceMemberships"
+          )
+        );
+
+      const memberHistory =
+        governanceSnap.docs
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter(
+  (r) =>
+    r.memberId === member?.id
+)
+;
+
+      const active =
+        memberHistory
+          .filter(
+            (r) => r.status === "active"
+          )
+          .map((r) => ({
+            id: r.id,
+            role:
+              r.membershipRole,
+            organization:
+              r.governanceBodyName,
+            startDate:
+              r.startDate,
+          }));
+
+      const previous =
+        memberHistory
+          .filter(
+            (r) => r.status === "inactive"
+          )
+          .map((r) => {
+
+            let duration =
+              "Unknown";
+
+            if (
+              r.startDate &&
+              r.endDate
+            ) {
+
+              const months =
+                Math.floor(
+                  (
+                    new Date(
+                      r.endDate
+                    ) -
+                    new Date(
+                      r.startDate
+                    )
+                  ) /
+                  (
+                    1000 *
+                    60 *
+                    60 *
+                    24 *
+                    30
+                  )
+                );
+
+              duration =
+                months < 1
+                  ? "Less than 1 month"
+                  : `${months} months`;
+            }
+
+            return {
+              id: r.id,
+              role:
+                r.membershipRole,
+              organization:
+                r.governanceBodyName,
+              startDate:
+                r.startDate,
+              endDate:
+                r.endDate,
+              duration,
+            };
+          });
+
+      setActiveRoles(active);
+      setPreviousRoles(previous);
+
+    } catch (error) {
+
+      console.log(
+        "loadServiceHistory",
+        error
+      );
+
+    }
+
+  }, [member]);
 
 const loadAssignedVisitors =
   async () => {
@@ -390,7 +521,20 @@ useEffect(() => {
   loadAssignedVisitors();
   loadTransferHistory();
 
-}, [memberId, organizationId, entityId]);
+}, [
+  memberId,
+  organizationId,
+  entityId,
+]);
+
+useEffect(() => {
+
+  if (!member?.id) return;
+
+  loadServiceHistory();
+
+}, [member]);
+
 
   useEffect(() => {
   if (organizationId && entityId) {
@@ -952,6 +1096,11 @@ console.log("INVITE DEBUG", {
   </TouchableOpacity>
 
 ))}
+
+<ServiceHistoryCard
+  activeRoles={activeRoles}
+  previousRoles={previousRoles}
+/>
 
           </View>
         )}

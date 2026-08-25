@@ -27,6 +27,8 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+import DateTimePicker
+  from "@react-native-community/datetimepicker";
 
 import AppHeader from "../components/AppHeader";
 
@@ -48,6 +50,35 @@ const [selectedMembership, setSelectedMembership] =
 
 const [editing, setEditing] =
   useState(false);
+  const [
+  showHistoricalModal,
+  setShowHistoricalModal,
+] = useState(false);
+
+const [
+  historicalStartDate,
+  setHistoricalStartDate,
+] = useState(null);
+
+const [
+  historicalEndDate,
+  setHistoricalEndDate,
+] = useState(null);
+
+const [
+  showStartPicker,
+  setShowStartPicker,
+] = useState(false);
+
+const [
+  showEndPicker,
+  setShowEndPicker,
+] = useState(false);
+
+const [
+  historicalNotes,
+  setHistoricalNotes,
+] = useState("");
 
   const governanceBody =
     route?.params?.governanceBody || {
@@ -225,6 +256,137 @@ const saveMember = async () => {
   }
 
 };
+
+const formatDate = (date) => {
+
+  if (!date) return "";
+
+  return date.toLocaleDateString(
+    "en-GB"
+  );
+
+};
+
+
+const saveHistoricalService =
+  async () => {
+
+    if (!selectedMember) {
+
+      Alert.alert(
+        "Required",
+        "Please select a member."
+      );
+
+      return;
+    }
+
+    if (
+      !historicalStartDate ||
+      !historicalEndDate
+    ) {
+
+      Alert.alert(
+        "Required",
+        "Start and End dates are required."
+      );
+
+      return;
+    }
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!stored) {
+        return;
+      }
+
+      const entity =
+        JSON.parse(stored);
+
+      await addDoc(
+
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "governanceMemberships"
+        ),
+
+        {
+          governanceBodyId:
+            governanceBody.id,
+
+          governanceBodyName:
+            governanceBody.name,
+
+          memberId:
+            selectedMember.id,
+
+          memberName:
+            selectedMember.name,
+
+          membershipRole:
+            roleLabel,
+
+          category:
+            category,
+
+          status:
+            "inactive",
+
+          historical:
+            true,
+
+          historicalNotes:
+            historicalNotes || "",
+
+        startDate:
+  historicalStartDate.toISOString(),
+
+endDate:
+  historicalEndDate.toISOString(),
+
+
+          createdAt:
+            new Date().toISOString(),
+        }
+
+      );
+
+      Alert.alert(
+        "Success",
+        "Historical service record added."
+      );
+
+      setSelectedMember(null);
+
+     setHistoricalStartDate(null);
+
+setHistoricalEndDate(null);
+
+      setHistoricalNotes("");
+
+      setShowHistoricalModal(
+        false
+      );
+
+      await loadGovernanceMembers();
+
+    } catch (error) {
+
+      Alert.alert(
+        "Error",
+        error.message
+      );
+
+    }
+
+  };
 
 const removeMember = async (membership) => {
 
@@ -707,16 +869,31 @@ setInactiveGovernanceMembers(
 )}
       </ScrollView>
 
-     <TouchableOpacity
-  style={styles.addBtn}
-  onPress={() =>
-    setShowAddModal(true)
-  }
->
-        <Text style={styles.addBtnText}>
-          Add {roleLabel}
-        </Text>
-      </TouchableOpacity>
+    <View style={styles.actionRow}>
+
+  <TouchableOpacity
+    style={styles.addBtn}
+    onPress={() =>
+      setShowAddModal(true)
+    }
+  >
+    <Text style={styles.addBtnText}>
+      Add {roleLabel}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.historyBtn}
+    onPress={() =>
+      setShowHistoricalModal(true)
+    }
+  >
+    <Text style={styles.addBtnText}>
+      Historical Service
+    </Text>
+  </TouchableOpacity>
+
+</View>
 
       <Modal
   visible={showAddModal}
@@ -785,8 +962,187 @@ setInactiveGovernanceMembers(
 
   </View>
 </Modal>
+
+<Modal
+  visible={showHistoricalModal}
+  animationType="slide"
+>
+
+  <View style={{ flex: 1 }}>
+
+    <AppHeader
+      title="Historical Service"
+      subtitle={governanceBody.name}
+      onBack={() =>
+        setShowHistoricalModal(false)
+      }
+    />
+
+    <ScrollView
+      contentContainerStyle={{
+        padding: 16,
+      }}
+    >
+
+      <Text style={styles.modalLabel}>
+        Select Member
+      </Text>
+
+      {churchMembers.map((member) => (
+
+        <TouchableOpacity
+          key={member.id}
+          style={[
+            styles.option,
+            selectedMember?.id ===
+              member.id &&
+              styles.selected,
+          ]}
+          onPress={() =>
+            setSelectedMember(member)
+          }
+        >
+
+          <Text>
+            {member.name}
+          </Text>
+
+        </TouchableOpacity>
+
+      ))}
+
+      <Text style={styles.modalLabel}>
+        Service Start Date
+      </Text>
+
+     <TouchableOpacity
+  style={styles.input}
+  onPress={() =>
+    setShowStartPicker(true)
+  }
+>
+
+  <Text>
+    {historicalStartDate
+      ? formatDate(
+          historicalStartDate
+        )
+      : "Select Start Date"}
+  </Text>
+
+</TouchableOpacity>
+
+{showStartPicker && (
+
+  <DateTimePicker
+    value={
+      historicalStartDate ||
+      new Date()
+    }
+    mode="date"
+    display="default"
+    onChange={(
+      event,
+      selectedDate
+    ) => {
+
+      setShowStartPicker(false);
+
+      if (selectedDate) {
+        setHistoricalStartDate(
+          selectedDate
+        );
+      }
+
+    }}
+  />
+
+)}
+
+      <Text style={styles.modalLabel}>
+        Service End Date
+      </Text>
+
+      <TouchableOpacity
+  style={styles.input}
+  onPress={() =>
+    setShowEndPicker(true)
+  }
+>
+
+  <Text>
+    {historicalEndDate
+      ? formatDate(
+          historicalEndDate
+        )
+      : "Select End Date"}
+  </Text>
+
+</TouchableOpacity>
+
+{showEndPicker && (
+
+  <DateTimePicker
+    value={
+      historicalEndDate ||
+      new Date()
+    }
+    mode="date"
+    display="default"
+    onChange={(
+      event,
+      selectedDate
+    ) => {
+
+      setShowEndPicker(false);
+
+      if (selectedDate) {
+        setHistoricalEndDate(
+          selectedDate
+        );
+      }
+
+    }}
+  />
+
+)}
+
+      <Text style={styles.modalLabel}>
+        Historical Notes
+      </Text>
+
+      <TextInput
+        style={[
+          styles.input,
+          {
+            height: 100,
+          },
+        ]}
+        multiline
+        value={historicalNotes}
+        onChangeText={
+          setHistoricalNotes
+        }
+      />
+
+     <TouchableOpacity
+  style={styles.saveBtn}
+  onPress={saveHistoricalService}
+>
+  <Text style={styles.saveBtnText}>
+    Save Historical Record
+  </Text>
+</TouchableOpacity>
+
+    </ScrollView>
+
+  </View>
+
+</Modal>
+
     </View>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -920,5 +1276,22 @@ restoreBtn: {
   padding: 10,
   borderRadius: 8,
   alignItems: "center",
+},
+actionRow: {
+  flexDirection: "row",
+},
+
+historyBtn: {
+  flex: 1,
+  backgroundColor: "#7F56D9",
+  padding: 16,
+  alignItems: "center",
+},
+
+input: {
+  backgroundColor: "#FFF",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 16,
 },
 });
