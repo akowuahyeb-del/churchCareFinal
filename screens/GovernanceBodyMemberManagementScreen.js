@@ -79,6 +79,10 @@ const [
   historicalNotes,
   setHistoricalNotes,
 ] = useState("");
+const [
+  appointmentType,
+  setAppointmentType,
+] = useState("historical");
 
   const governanceBody =
     route?.params?.governanceBody || {
@@ -201,38 +205,48 @@ const saveMember = async () => {
       ),
 
       {
-        governanceBodyId:
-          governanceBody.id,
+  governanceBodyId:
+    governanceBody.id,
 
-        governanceBodyName:
-          governanceBody.name,
+  governanceBodyName:
+    governanceBody.name,
 
-        memberId:
-          selectedMember.id,
+  memberId:
+    selectedMember.id,
 
-        memberName:
-          selectedMember.name,
+  memberName:
+    selectedMember.name,
 
-        membershipRole:
-          roleLabel,
+  membershipRole:
+    roleLabel,
 
-        category:
-          category,
+  category:
+    category,
 
-        status:
-          "active",
+  status:
+    "active",
 
-        startDate:
-          new Date().toISOString(),
+  appointmentType:
+    "current",
 
-        endDate:
-          null,
+  historical:
+    false,
 
-        createdAt:
-          new Date().toISOString(),
-      }
+  startDate:
+    new Date().toISOString(),
+
+  endDate:
+    null,
+
+  createdAt:
+    new Date().toISOString(),
+}
+
+     
 
     );
+
+    
 
     Alert.alert(
       "Success",
@@ -339,11 +353,12 @@ const saveHistoricalService =
           status:
             "inactive",
 
-          historical:
-            true,
+         historical: true,
 
-          historicalNotes:
-            historicalNotes || "",
+appointmentType,
+
+historicalNotes:
+  historicalNotes || "",
 
         startDate:
   historicalStartDate.toISOString(),
@@ -370,6 +385,9 @@ endDate:
 setHistoricalEndDate(null);
 
       setHistoricalNotes("");
+      setAppointmentType(
+  "historical"
+);
 
       setShowHistoricalModal(
         false
@@ -495,11 +513,17 @@ const restoreMember = async (membership) => {
        category:
   membership.category || "member",
 
-        status:
-          "active",
+       status:
+  "active",
 
-        startDate:
-          new Date().toISOString(),
+appointmentType:
+  "restored",
+
+historical:
+  false,
+
+startDate:
+  new Date().toISOString(),
 
         endDate:
           null,
@@ -1106,6 +1130,62 @@ setInactiveGovernanceMembers(
   />
 
 )}
+<Text style={styles.modalLabel}>
+  Appointment Type
+</Text>
+
+<View style={styles.typeContainer}>
+
+  {[
+    {
+      value: "historical",
+      label: "Historical",
+    },
+    {
+      value: "appointed",
+      label: "Appointed",
+    },
+    {
+      value: "elected",
+      label: "Elected",
+    },
+    {
+      value: "interim",
+      label: "Interim",
+    },
+  ].map((type) => (
+
+    <TouchableOpacity
+      key={type.value}
+      style={[
+        styles.typeChip,
+        appointmentType ===
+          type.value &&
+          styles.typeChipSelected,
+      ]}
+      onPress={() =>
+        setAppointmentType(
+          type.value
+        )
+      }
+    >
+
+      <Text
+        style={[
+          styles.typeChipText,
+          appointmentType ===
+            type.value &&
+            styles.typeChipTextSelected,
+        ]}
+      >
+        {type.label}
+      </Text>
+
+    </TouchableOpacity>
+
+  ))}
+
+</View>
 
       <Text style={styles.modalLabel}>
         Historical Notes
@@ -1293,5 +1373,34 @@ input: {
   borderRadius: 12,
   padding: 12,
   marginBottom: 16,
+},
+typeContainer: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  marginBottom: 16,
+},
+
+typeChip: {
+  borderWidth: 1,
+  borderColor: "#D1D5DB",
+  borderRadius: 20,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  marginRight: 8,
+  marginBottom: 8,
+},
+
+typeChipSelected: {
+  backgroundColor: "#4B3F72",
+  borderColor: "#4B3F72",
+},
+
+typeChipText: {
+  color: "#666",
+  fontWeight: "600",
+},
+
+typeChipTextSelected: {
+  color: "#FFF",
 },
 });

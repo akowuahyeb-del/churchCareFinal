@@ -147,8 +147,15 @@ export default function ServiceHistoryCard({
               </View>
 
               <Text style={styles.roleOrg}>
-                {role.organization}
-              </Text>
+  {role.organization}
+</Text>
+
+<Text style={styles.roleSource}>
+  {role.organizationType ===
+  "governance"
+    ? "Governance"
+    : "Ministry"}
+</Text>
 
              <Text style={styles.roleMeta}>
   {role.status === "active"
@@ -337,5 +344,11 @@ historicalBadgeText: {
   color: "#D48806",
   fontSize: 11,
   fontWeight: "700",
+},
+roleSource: {
+  marginTop: 4,
+  fontSize: 11,
+  fontWeight: "700",
+  color: "#4B3F72",
 },
 });

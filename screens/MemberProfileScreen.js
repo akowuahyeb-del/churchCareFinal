@@ -302,77 +302,110 @@ const loadServiceHistory =
 )
 ;
 
-      const active =
-        memberHistory
-          .filter(
-            (r) => r.status === "active"
-          )
-          .map((r) => ({
-            id: r.id,
-            role:
-              r.membershipRole,
-            organization:
-              r.governanceBodyName,
-            startDate:
-              r.startDate,
-          }));
 
-      const previous =
-        memberHistory
-          .filter(
-            (r) => r.status === "inactive"
-          )
-          .map((r) => {
 
-            let duration =
-              "Unknown";
 
-            if (
-              r.startDate &&
-              r.endDate
-            ) {
 
-              const months =
-                Math.floor(
-                  (
-                    new Date(
-                      r.endDate
-                    ) -
-                    new Date(
-                      r.startDate
-                    )
-                  ) /
-                  (
-                    1000 *
-                    60 *
-                    60 *
-                    24 *
-                    30
-                  )
-                );
+const governanceHistory =
+  memberHistory.map((r) => ({
+    id: r.id,
+    role: r.membershipRole,
+    organization:
+      r.governanceBodyName,
+    organizationType:
+      "governance",
+    status: r.status,
+    appointmentType:
+      r.appointmentType ||
+      "current",
+    historical:
+      r.historical || false,
+    startDate:
+      r.startDate,
+    endDate:
+      r.endDate,
+  }));
 
-              duration =
-                months < 1
-                  ? "Less than 1 month"
-                  : `${months} months`;
-            }
 
-            return {
-              id: r.id,
-              role:
-                r.membershipRole,
-              organization:
-                r.governanceBodyName,
-              startDate:
-                r.startDate,
-              endDate:
-                r.endDate,
-              duration,
-            };
-          });
 
-      setActiveRoles(active);
-      setPreviousRoles(previous);
+  const ministrySnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "leadershipAssignments"
+    )
+  );
+
+const ministryHistory =
+  ministrySnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      (r) =>
+        r.memberId === member?.id
+    )
+    .map((r) => ({
+      id: r.id,
+      role:
+        r.roleName ||
+        r.role,
+      organization:
+        r.ministryName,
+      organizationType:
+        "ministry",
+      status:
+        r.status ||
+        "active",
+      appointmentType:
+        r.appointmentType ||
+        "current",
+      historical:
+        r.historical || false,
+      startDate:
+        r.startDate,
+      endDate:
+        r.endDate,
+    }));
+
+
+// Merge everything
+
+const combinedHistory = [
+
+  ...governanceHistory,
+
+  ...ministryHistory,
+
+];
+
+combinedHistory.sort(
+  (a, b) =>
+    new Date(
+      b.startDate || 0
+    ) -
+    new Date(
+      a.startDate || 0
+    )
+);
+
+const active =
+  combinedHistory.filter(
+    (r) =>
+      r.status === "active"
+  );
+
+const previous =
+  combinedHistory.filter(
+    (r) =>
+      r.status !== "active"
+  );
+
+setActiveRoles(active);
+setPreviousRoles(previous);
 
     } catch (error) {
 

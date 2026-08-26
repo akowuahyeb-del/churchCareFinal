@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  TextInput,
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -16,18 +17,40 @@ import {
   addDoc,
   updateDoc,
   doc,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import DateTimePicker
   from "@react-native-community/datetimepicker";
-
+import LeadershipAssignmentsCard
+from "../components/LeadershipAssignmentsCard";
 import AppHeader from "../components/AppHeader";
 
 export default function MinistryLeadershipScreen({ navigation }) {
   const [ministries, setMinistries] = useState([]);
+  const [
+  ministryPositions,
+  setMinistryPositions,
+] = useState([]);
+
+const [
+  showPositionModal,
+  setShowPositionModal,
+] = useState(false);
+
+const [
+  newPositionName,
+  setNewPositionName,
+] = useState("");
+
   const [members, setMembers] = useState([]);
   const [selectedMinistry, setSelectedMinistry] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [
+  selectedPosition,
+  setSelectedPosition,
+] = useState("Leader");
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [startDate,
@@ -48,6 +71,15 @@ const [showStartPicker,
 const [showEndPicker,
   setShowEndPicker] =
     useState(false);
+    const [
+  activeEntity,
+  setActiveEntity,
+] = useState(null);
+
+const [
+  isPrimaryLeadership,
+  setIsPrimaryLeadership,
+] = useState(false);
 
   // FIX: pulled into a reusable function so we can call it again after
   // a successful assignment, instead of only ever running once on mount.
@@ -56,18 +88,44 @@ const [showEndPicker,
     if (!stored) return;
 
     const entity = JSON.parse(stored);
+    setActiveEntity(entity);
 
-    const membersSnap = await getDocs(
-      collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "entities",
-        entity.entityId,
-        "members"
-      )
-    );
-    setMembers(membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
+   const membersQuery = query(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "entities",
+    entity.entityId,
+    "members"
+  ),
+  where("status", "==", "active")
+);
+
+const membersSnap = await getDocs(
+  membersQuery
+);
+
+const loadedMembers =
+  membersSnap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+
+// Remove duplicate members
+
+const uniqueMembers =
+  Array.from(
+    new Map(
+      loadedMembers.map((member) => [
+        member.id,
+        member,
+      ])
+    ).values()
+  );
+
+setMembers(uniqueMembers);
 
     const ministriesSnap = await getDocs(
       collection(db, "organizations", entity.organizationId, "ministries")
@@ -95,8 +153,18 @@ const [showEndPicker,
           a.positionTitle === "Leader" &&
           a.status === "active"
       );
-     return {
+    const officers =
+  assignments.filter(
+    (a) =>
+      a.ministryId === ministry.id &&
+      a.status === "active"
+  );
+
+return {
+
   ...ministry,
+
+  officers,
 
   leaderName:
     leader?.memberName ||
@@ -117,13 +185,64 @@ const [showEndPicker,
     loadData();
   }, [loadData]);
 
-  // FIX: clears stale selection state so reopening the modal for a
-  // different ministry doesn't carry over a previously picked member.
-  const openAssignModal = (ministry) => {
-    setSelectedMinistry(ministry);
-    setSelectedMember(null);
-    setShowAssignModal(true);
-  };
+
+ const loadPositions = async (
+  ministryId
+) => {
+
+  const stored =
+    await AsyncStorage.getItem(
+      "activeEntity"
+    );
+
+  if (!stored) return;
+
+  const entity =
+    JSON.parse(stored);
+
+  const snap =
+    await getDocs(
+      collection(
+        db,
+        "organizations",
+        entity.organizationId,
+        "ministries",
+        ministryId,
+        "positions"
+      )
+    );
+
+  const positions =
+    snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+  setMinistryPositions(
+    positions
+  );
+};
+
+  const openAssignModal = async (
+  ministry
+) => {
+
+  setSelectedMinistry(ministry);
+
+  setSelectedMember(null);
+
+  await loadPositions(
+    ministry.id
+  );
+
+  setSelectedPosition(
+  ministryPositions?.[0]?.name || ""
+);
+
+  setShowAssignModal(true);
+
+};
+
 
   const closeAssignModal = () => {
     setShowAssignModal(false);
@@ -131,11 +250,74 @@ const [showEndPicker,
     setSelectedMember(null);
   };
 
-  const assignLeader = async () => {
-    if (!selectedMember || !selectedMinistry) {
-      Alert.alert("Required", "Select a member.");
+const saveMinistryPosition =
+  async () => {
+
+    if (
+      !selectedMinistry ||
+      !newPositionName.trim()
+    ) {
       return;
     }
+
+    const stored =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    const entity =
+      JSON.parse(stored);
+
+    await addDoc(
+
+      collection(
+        db,
+        "organizations",
+        entity.organizationId,
+        "ministries",
+        selectedMinistry.id,
+        "positions"
+      ),
+
+      {
+        name:
+          newPositionName.trim(),
+
+        active: true,
+
+        createdAt:
+          new Date()
+            .toISOString(),
+      }
+
+    );
+
+    setNewPositionName("");
+
+   await loadPositions(
+  selectedMinistry.id
+);
+
+await loadData();
+
+setShowPositionModal(false);
+
+  };
+
+
+
+  const assignLeader = async () => {
+    if (
+  !selectedMember ||
+  !selectedMinistry ||
+  !selectedPosition
+) {
+  Alert.alert(
+    "Required",
+    "Select a position and a member."
+  );
+  return;
+}
 
     const stored = await AsyncStorage.getItem("activeEntity");
     const entity = JSON.parse(stored);
@@ -152,60 +334,121 @@ const [showEndPicker,
         )
       );
 
-      const existingLeaders = existingSnap.docs.filter((d) => {
-        const data = d.data();
-        return (
-          data.ministryId === selectedMinistry.id &&
-          data.positionTitle === "Leader" &&
-          data.status === "active"
-        );
-      });
+    const existingHolder =
+  existingSnap.docs.find((d) => {
 
-      for (const leader of existingLeaders) {
-        await updateDoc(
-          doc(
-            db,
-            "organizations",
-            entity.organizationId,
-            "leadershipAssignments",
-            leader.id
-          ),
-          {
-            status: "completed",
-            endDate: new Date().toISOString(),
-          }
-        );
-      }
+    const data = d.data();
 
-      await addDoc(
-        collection(
-          db,
-          "organizations",
-          entity.organizationId,
-          "leadershipAssignments"
-        ),
-        {
-          ministryId: selectedMinistry.id,
-          ministryName: selectedMinistry.name,
-          memberId: selectedMember.id,
-          memberName: selectedMember.name,
-          positionTitle: "Leader",
-          category: "ministry",
-          status: "active",
-         startDate:
-  startDate.toISOString(),
+    return (
+      data.ministryId ===
+        selectedMinistry.id &&
 
-endDate:
-  openEnded
-    ? null
-    : endDate
-      ? endDate.toISOString()
-      : null,
-          createdAt: new Date().toISOString(),
-        }
-      );
+      data.positionTitle ===
+        selectedPosition &&
 
-      Alert.alert("Success", "Leader assigned.");
+      data.status === "active"
+    );
+
+  });
+
+if (existingHolder) {
+
+  Alert.alert(
+    "Position Already Occupied",
+    `${selectedPosition} already has an active holder. Remove or replace that assignment first.`
+  );
+
+  return;
+}
+
+     
+
+      console.log(
+  "ASSIGNMENT SAVE",
+  {
+    ministry:
+      selectedMinistry?.name,
+
+    position:
+      selectedPosition,
+
+    member:
+      selectedMember?.name,
+  }
+);
+      const selectedPositionObj =
+  ministryPositions.find(
+    (p) =>
+      p.name ===
+      selectedPosition
+  );
+
+  if (!selectedPositionObj) {
+
+  Alert.alert(
+    "Position Missing",
+    "Selected position could not be found."
+  );
+
+  return;
+}
+await addDoc(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "leadershipAssignments"
+  ),
+  {
+
+    ministryId:
+      selectedMinistry.id,
+
+    ministryName:
+      selectedMinistry.name,
+
+    memberId:
+      selectedMember.id,
+
+    memberName:
+      selectedMember.name,
+
+    positionTitle:
+      selectedPosition,
+
+    positionId:
+      selectedPositionObj?.id || null,
+
+    positionIsPrimaryLeadership:
+      selectedPositionObj?.isPrimaryLeadership || false,
+
+    category:
+      "ministry",
+
+    status:
+      "active",
+
+    startDate:
+      startDate.toISOString(),
+
+    endDate:
+      openEnded
+        ? null
+        : endDate
+          ? endDate.toISOString()
+          : null,
+
+    createdAt:
+      new Date().toISOString(),
+
+  }
+);
+
+
+      Alert.alert(
+  "Success",
+  `${selectedPosition} assigned to ${selectedMember.name}`
+);
       closeAssignModal();
 
       // FIX: refresh so the ministry card reflects the new leader
@@ -267,51 +510,25 @@ endDate:
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {ministries.map((item) => (
           <View key={item.id} style={styles.card}>
-            <Text style={styles.title}>
-  {item.name}
-</Text>
-
-<Text style={styles.label}>
-  Current Leader
-</Text>
-
-<Text style={styles.leaderName}>
-  {item.leaderName}
-</Text>
-
-{item.startDate && (
-
-  <View style={styles.termRow}>
-
-    <Text style={styles.label}>
-      CURRENT TERM
-    </Text>
-
-    <Text style={styles.termText}>
-      {formatTerm(
-        item.startDate,
-        item.endDate
-      )}
-    </Text>
-
-  </View>
-
-)}
+       
+<LeadershipAssignmentsCard
+  ministry={item}
+  officers={item.officers || []}
+  members={members}
+  organizationId={
+    activeEntity?.organizationId
+  }
+  onRefresh={loadData}
+  onManage={() =>
+    openAssignModal(item)
+  }
+  onAddPosition={() => {
+    setSelectedMinistry(item);
+    setShowPositionModal(true);
+  }}
+/>
 
 
-
-
-
-            <TouchableOpacity
-              style={styles.assignBtn}
-              onPress={() => openAssignModal(item)}
-            >
-              <Text style={{ color: "#fff", fontWeight: "700" }}>
-                {item.leaderName === "Not Assigned"
-                  ? "Assign Leader"
-                  : "Change Leader"}
-              </Text>
-            </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
@@ -330,8 +547,59 @@ endDate:
               <Text style={styles.summaryValue}>
                 {selectedMinistry?.name}
               </Text>
-              <Text style={styles.summaryPosition}>Position: Leader</Text>
+              <Text style={styles.summaryPosition}>
+  Position: {selectedPosition || "None Selected"}
+</Text>
             </View>
+
+<Text style={styles.sectionTitle}>
+  Position
+</Text>
+
+{ministryPositions.length === 0 ? (
+
+  <View style={styles.option}>
+    <Text>
+      No positions configured.
+      Use "Add Position" first.
+    </Text>
+  </View>
+
+) : (
+
+  ministryPositions.map((position) => (
+
+    <TouchableOpacity
+      key={position.id}
+      style={[
+        styles.option,
+        selectedPosition ===
+          position.name &&
+          styles.selected,
+      ]}
+      onPress={() => {
+
+  console.log(
+    "POSITION SELECTED:",
+    position.name
+  );
+
+  setSelectedPosition(
+    position.name
+  );
+
+}}
+    >
+      <Text>
+        {position.name}
+      </Text>
+    </TouchableOpacity>
+
+  ))
+
+)}
+
+
 
             <Text style={styles.sectionTitle}>Select Member</Text>
 
@@ -462,6 +730,59 @@ endDate:
           </ScrollView>
         </View>
       </Modal>
+
+<Modal
+  visible={showPositionModal}
+  animationType="slide"
+>
+  <View style={{ flex: 1 }}>
+
+    <AppHeader
+      title="Add Position"
+      subtitle={
+        selectedMinistry?.name || ""
+      }
+      onBack={() =>
+        setShowPositionModal(false)
+      }
+    />
+
+    <View style={{ padding: 16 }}>
+
+      <Text style={styles.sectionTitle}>
+        Position Name
+      </Text>
+
+      <TextInput
+        style={styles.option}
+        placeholder="e.g. Secretary"
+        value={newPositionName}
+        onChangeText={
+          setNewPositionName
+        }
+      />
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={
+          saveMinistryPosition
+        }
+      >
+        <Text
+          style={{
+            color: "#FFF",
+            fontWeight: "700",
+          }}
+        >
+          Save Position
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+
+  </View>
+</Modal>
+
     </View>
   );
 }

@@ -9,9 +9,16 @@ import AppHeader from "../components/AppHeader";
 
 export default function GovernanceBodyDetailScreen({ navigation, route }) {
   const [memberCount, setMemberCount] = useState(0);
-  const [agentCount, setAgentCount] =
-  useState(0);
-  const [leaderName, setLeaderName] = useState("Not Assigned");
+const [agentCount, setAgentCount] = useState(0);
+
+const [historicalMemberCount,
+  setHistoricalMemberCount] = useState(0);
+
+const [historicalAgentCount,
+  setHistoricalAgentCount] = useState(0);
+
+const [leaderName, setLeaderName] =
+  useState("Not Assigned");
 
   const governanceBody = route?.params?.governanceBody || {
     name: "Session",
@@ -30,8 +37,12 @@ export default function GovernanceBodyDetailScreen({ navigation, route }) {
         collection(db, "organizations", entity.organizationId, "governanceMemberships")
       );
 
-      let activeCount = 0;
+    let activeCount = 0;
 let activeAgentCount = 0;
+
+let historicalMembers = 0;
+let historicalAgents = 0;
+
 let currentLeader = null;
 
       snap.docs.forEach((d) => {
@@ -40,10 +51,28 @@ let currentLeader = null;
 
         const category = data.category || "member"; // legacy-doc fallback
 
-        // FIX: only count active ordinary members, not former ones.
-        if (data.status === "active" && category === "member") {
-          activeCount++;
-        }
+        if (
+  data.status === "active" &&
+  category === "member"
+) {
+  activeCount++;
+}
+
+
+if (
+  category === "member" &&
+  data.historical === true
+) {
+  historicalMembers++;
+}
+
+if (
+  category === "ex_officio" &&
+  data.historical === true
+) {
+  historicalAgents++;
+}
+
         if (
   data.status === "active" &&
   category === "ex_officio"
@@ -59,6 +88,14 @@ let currentLeader = null;
 
       setMemberCount(activeCount);
 setAgentCount(activeAgentCount);
+
+setHistoricalMemberCount(
+  historicalMembers
+);
+
+setHistoricalAgentCount(
+  historicalAgents
+);
 
 setLeaderName(
   currentLeader?.memberName ||
@@ -107,7 +144,13 @@ setLeaderName(
           <Text style={styles.sectionLabel}>
             {(governanceBody.memberLabel || "Members").toUpperCase()}
           </Text>
-          <Text style={styles.countText}>{memberCount} Members</Text>
+          <Text style={styles.countText}>
+  {memberCount} Active
+</Text>
+
+<Text style={styles.infoText}>
+  {historicalMemberCount} Historical
+</Text>
 
           <TouchableOpacity
             style={styles.actionBtn}
@@ -128,7 +171,11 @@ setLeaderName(
             {(governanceBody.exOfficioLabel || "Ex-Officio Members").toUpperCase()}
           </Text>
           <Text style={styles.countText}>
-  {agentCount} Members
+  {agentCount} Active
+</Text>
+
+<Text style={styles.infoText}>
+  {historicalAgentCount} Historical
 </Text>
 
           {/* FIX: wired to the same member-management screen, tagged
