@@ -474,71 +474,84 @@ const [
               marginTop: 8,
             }}
           >
-
-            <TouchableOpacity
-  onPress={() => {
-
-    setSelectedOfficer(
-      officer
-    );
-
-    setReplacementMember(
-      null
-    );
-
-    setShowReplaceModal(
-      true
-    );
-
-  }}
->
-  <Text
-    style={{
-      color: "#4B3F72",
-      fontWeight: "600",
-    }}
-  >
-    Edit
-  </Text>
-</TouchableOpacity>
-
-           <TouchableOpacity
+<View
   style={{
-    marginLeft: 16,
+    flexDirection: "row",
+    marginTop: 10,
   }}
-  onPress={() =>
-    removeHolder(officer)
-  }
 >
-  <Text
-    style={{
-      color: "#D35400",
-      fontWeight: "600",
-    }}
-  >
-    Remove
-  </Text>
-</TouchableOpacity>
 
-          <TouchableOpacity
-  style={{
-    marginLeft: 16,
-  }}
-  onPress={() =>
-    deletePosition(
-      officer
-    )
-  }
->
-  <Text
+  <TouchableOpacity
+    onPress={() => {
+      setSelectedOfficer(officer);
+      setReplacementMember(null);
+      setShowReplaceModal(true);
+    }}
     style={{
-      color: "#C0392B",
-      fontWeight: "600",
+      backgroundColor: "#EEF2FF",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 8,
     }}
   >
-    Delete
-  </Text>
-</TouchableOpacity>
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700",
+        fontSize: 12,
+      }}
+    >
+      Replace
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() =>
+      removeHolder(officer)
+    }
+    style={{
+      backgroundColor: "#FFF4E8",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 8,
+    }}
+  >
+    <Text
+      style={{
+        color: "#D35400",
+        fontWeight: "700",
+        fontSize: 12,
+      }}
+    >
+      Remove Holder
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    onPress={() =>
+      deletePosition(officer)
+    }
+    style={{
+      backgroundColor: "#FDECEC",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+    }}
+  >
+    <Text
+      style={{
+        color: "#C0392B",
+        fontWeight: "700",
+        fontSize: 12,
+      }}
+    >
+      Delete Position
+    </Text>
+  </TouchableOpacity>
+
+</View>
 
           </View>
 
@@ -622,21 +635,36 @@ const [
   }}
 >
 
+ <View>
   <Text
-  style={{
-    marginTop: 8,
-    color: "#666",
-    marginBottom: 16,
-  }}
->
-  Replacing:
-  {" "}
-  {selectedOfficer?.memberName}
-  {" "}
-  (
-  {selectedOfficer?.positionTitle}
-  )
-</Text>
+    style={{
+      fontSize: 20,
+      fontWeight: "700",
+      color: "#222",
+    }}
+  >
+    Replace Officer
+  </Text>
+
+  <Text
+    style={{
+      marginTop: 6,
+      color: "#666",
+    }}
+  >
+    Position: {selectedOfficer?.positionTitle}
+  </Text>
+
+  <Text
+    style={{
+      marginTop: 2,
+      color: "#4B3F72",
+      fontWeight: "600",
+    }}
+  >
+    Current Holder: {selectedOfficer?.memberName}
+  </Text>
+</View>
 
   <TouchableOpacity
     onPress={() => {
@@ -675,46 +703,47 @@ const [
   )
   .map((member) => (
 
-      <TouchableOpacity
-        key={member.id}
-        style={{
-  backgroundColor:
-
-    replacementMember?.id ===
-    member.id
-
-      ? "#DDE3FF"
-
-      : "#F2F2F2",
-
-  padding: 12,
-  borderRadius: 10,
-  marginBottom: 8,
-}}
-        onPress={() =>
-  setReplacementMember(
-    member
-  )
-}
-      >
-        <Text
+  <TouchableOpacity
+  key={member.id}
   style={{
-    fontWeight:
-      replacementMember?.id ===
-      member.id
-        ? "700"
-        : "400",
+    backgroundColor:
+      replacementMember?.id === member.id
+        ? "#EEF2FF"
+        : "#F8F8F8",
 
-    color:
-      replacementMember?.id ===
-      member.id
+    borderWidth: 1,
+
+    borderColor:
+      replacementMember?.id === member.id
         ? "#4B3F72"
-        : "#222",
+        : "#E5E5E5",
+
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
   }}
+  onPress={() =>
+    setReplacementMember(member)
+  }
 >
-  {member.name}
-</Text>
-      </TouchableOpacity>
+  <Text
+    style={{
+      fontWeight:
+        replacementMember?.id === member.id
+          ? "700"
+          : "500",
+
+      color:
+        replacementMember?.id === member.id
+          ? "#4B3F72"
+          : "#222",
+
+      fontSize: 15,
+    }}
+  >
+    {member.name}
+  </Text>
+</TouchableOpacity>
 
     ))}
 <Text
