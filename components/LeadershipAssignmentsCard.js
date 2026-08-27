@@ -29,6 +29,7 @@ export default function LeadershipAssignmentsCard({
   onRefresh,
   onManage,
   onAddPosition,
+  canManageLeadership = true
 })
 
  {

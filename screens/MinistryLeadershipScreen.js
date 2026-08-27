@@ -103,6 +103,11 @@ const [
   setShowManagePositionsModal,
 ] = useState(false);
 
+const [
+  editingPosition,
+  setEditingPosition,
+] = useState(null);
+
   // FIX: pulled into a reusable function so we can call it again after
   // a successful assignment, instead of only ever running once on mount.
   const loadData = useCallback(async () => {
@@ -1039,6 +1044,51 @@ canManageAttendanceDelegates:
     </Text>
 
   </View>
+<View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+  }}
+>
+
+  <TouchableOpacity
+    onPress={() => {
+      setEditingPosition(position);
+
+      setNewPositionName(
+        position.name || ""
+      );
+
+      setIsPrimaryLeadershipPosition(
+        position.isPrimaryLeadership || false
+      );
+
+      setCanManageSubLeaders(
+        position.canManageSubLeaders || false
+      );
+
+      setCanTakeAttendance(
+        position.canTakeAttendance || false
+      );
+
+      setCanManageAttendanceDelegates(
+        position.canManageAttendanceDelegates || false
+      );
+
+      setShowManagePositionsModal(false);
+      setShowPositionModal(true);
+    }}
+  >
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700",
+        marginRight: 16,
+      }}
+    >
+      Edit
+    </Text>
+  </TouchableOpacity>
 
   <TouchableOpacity
     onPress={() =>
@@ -1054,6 +1104,8 @@ canManageAttendanceDelegates:
       Delete
     </Text>
   </TouchableOpacity>
+
+</View>
 
 </View>
 
