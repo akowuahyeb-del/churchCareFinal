@@ -17,8 +17,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  query,
-  where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import DateTimePicker
@@ -91,7 +89,7 @@ const [
     setActiveEntity(entity);
 
 
-   const membersQuery = query(
+  const membersSnap = await getDocs(
   collection(
     db,
     "organizations",
@@ -99,13 +97,9 @@ const [
     "entities",
     entity.entityId,
     "members"
-  ),
-  where("status", "==", "active")
+  )
 );
 
-const membersSnap = await getDocs(
-  membersQuery
-);
 
 const loadedMembers =
   membersSnap.docs.map((d) => ({
