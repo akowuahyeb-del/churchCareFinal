@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  ScrollView,
 } from "react-native";
 
 
@@ -18,6 +19,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+import AppHeader from "../components/AppHeader";
 
 export default function LeadershipAssignmentsCard({
   ministry,
@@ -505,19 +507,13 @@ const [
           >
             {officer.memberName}
           </Text>
-
-          <View
-            style={{
-              flexDirection: "row",
-              marginTop: 8,
-            }}
-          >
 <View
   style={{
     flexDirection: "row",
     marginTop: 10,
   }}
 >
+
 
   <TouchableOpacity
     onPress={() => {
@@ -591,8 +587,6 @@ const [
 
 </View>
 
-          </View>
-
         </View>
 
       ))}
@@ -647,78 +641,65 @@ const [
   </TouchableOpacity>
 </View>
 
+
 <Modal
   visible={showReplaceModal}
   animationType="slide"
   transparent={false}
   onRequestClose={() => {
     setShowReplaceModal(false);
+    setReplacementMember(null);
+    setSelectedOfficer(null);
   }}
 >
-<View
-  style={{
-    flex: 1,
+<View style={{ flex: 1 }}>
+
+<AppHeader
+  title="Replace Officer"
+  subtitle={
+    selectedOfficer?.positionTitle || ""
+  }
+  onBack={() => {
+    setShowReplaceModal(false);
+    setReplacementMember(null);
+    setSelectedOfficer(null);
+  }}
+/>
+
+<ScrollView
+  contentContainerStyle={{
     padding: 16,
   }}
 >
 
-  <View
+<View
+  style={{
+    marginVertical: 16,
+    backgroundColor: "#F5F5F5",
+    padding: 16,
+    borderRadius: 12,
+  }}
+>
+  <Text
     style={{
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      marginTop: 20,
-      marginBottom: 20,
+      fontSize: 12,
+      color: "#666",
+      marginBottom: 4,
     }}
   >
-    <View>
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: "800",
-          color: "#222",
-        }}
-      >
-        Replace Officer
-      </Text>
+    CURRENT HOLDER
+  </Text>
 
-      <Text
-        style={{
-          marginTop: 6,
-          color: "#666",
-        }}
-      >
-        Position: {selectedOfficer?.positionTitle}
-      </Text>
-
-      <Text
-        style={{
-          marginTop: 2,
-          color: "#4B3F72",
-          fontWeight: "700",
-        }}
-      >
-        Current Holder: {selectedOfficer?.memberName}
-      </Text>
-    </View>
-
-    <TouchableOpacity
-      onPress={() => {
-        setShowReplaceModal(false);
-        setReplacementMember(null);
-        setSelectedOfficer(null);
-      }}
-    >
-      <Text
-        style={{
-          color: "#C0392B",
-          fontWeight: "700",
-        }}
-      >
-        Cancel
-      </Text>
-    </TouchableOpacity>
-  </View>
+  <Text
+    style={{
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#4B3F72",
+    }}
+  >
+    {selectedOfficer?.memberName}
+  </Text>
+</View>
 
   {members
     .filter(
@@ -863,11 +844,13 @@ const [
     </Text>
   </TouchableOpacity>
 
+</ScrollView>
+
 </View>
 
 </Modal>
 
-
     </View>
   );
 }
+    

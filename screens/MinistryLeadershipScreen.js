@@ -16,6 +16,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   doc,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -77,6 +78,10 @@ const [showEndPicker,
 const [
   isPrimaryLeadership,
   setIsPrimaryLeadership,
+] = useState(false);
+const [
+  showManagePositionsModal,
+  setShowManagePositionsModal,
 ] = useState(false);
 
   // FIX: pulled into a reusable function so we can call it again after
@@ -206,15 +211,25 @@ return {
       )
     );
 
-  const positions =
-    snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+ const loadedPositions =
+  snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 
-  setMinistryPositions(
-    positions
+const uniquePositions =
+  Array.from(
+    new Map(
+      loadedPositions.map((p) => [
+        p.name?.trim().toLowerCase(),
+        p,
+      ])
+    ).values()
   );
+
+setMinistryPositions(
+  uniquePositions
+);
 };
 
   const openAssignModal = async (
@@ -262,6 +277,23 @@ const saveMinistryPosition =
     const entity =
       JSON.parse(stored);
 
+      const existing =
+  ministryPositions.find(
+    (p) =>
+      p.name?.trim().toLowerCase() ===
+      newPositionName.trim().toLowerCase()
+  );
+
+if (existing) {
+
+  Alert.alert(
+    "Position Exists",
+    "This position already exists."
+  );
+
+  return;
+}
+
     await addDoc(
 
       collection(
@@ -298,7 +330,51 @@ setShowPositionModal(false);
 
   };
 
+const deleteMinistryPosition =
+  async (position) => {
 
+    Alert.alert(
+      "Delete Position",
+      `Delete ${position.name}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+
+            const stored =
+              await AsyncStorage.getItem(
+                "activeEntity"
+              );
+
+            const entity =
+              JSON.parse(stored);
+
+            await deleteDoc(
+              doc(
+                db,
+                "organizations",
+                entity.organizationId,
+                "ministries",
+                selectedMinistry.id,
+                "positions",
+                position.id
+              )
+            );
+
+            await loadPositions(
+              selectedMinistry.id
+            );
+          },
+        },
+      ]
+    );
+
+  };
 
   const assignLeader = async () => {
     if (
@@ -516,10 +592,11 @@ await addDoc(
   onManage={() =>
     openAssignModal(item)
   }
-  onAddPosition={() => {
-    setSelectedMinistry(item);
-    setShowPositionModal(true);
-  }}
+ onAddPosition={() => {
+  setSelectedMinistry(item);
+  loadPositions(item.id);
+  setShowManagePositionsModal(true);
+}}
 />
 
 
@@ -776,6 +853,99 @@ await addDoc(
 
   </View>
 </Modal>
+
+<Modal
+  visible={showManagePositionsModal}
+  animationType="slide"
+>
+  <View style={{ flex: 1 }}>
+
+    <AppHeader
+      title="Manage Positions"
+      subtitle={
+        selectedMinistry?.name || ""
+      }
+      onBack={() =>
+        setShowManagePositionsModal(false)
+      }
+    />
+
+    <ScrollView
+      contentContainerStyle={{
+        padding: 16,
+      }}
+    >
+
+      {ministryPositions.map(
+        (position) => (
+
+          <View
+            key={position.id}
+            style={{
+              backgroundColor: "#FFF",
+              padding: 14,
+              borderRadius: 12,
+              marginBottom: 10,
+              flexDirection: "row",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+            }}
+          >
+
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "600",
+              }}
+            >
+              {position.name}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() =>
+                deleteMinistryPosition(
+                  position
+                )
+              }
+            >
+              <Text
+                style={{
+                  color: "#C0392B",
+                  fontWeight: "700",
+                }}
+              >
+                Delete
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+
+        )
+      )}
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={() => {
+          setShowManagePositionsModal(false);
+          setShowPositionModal(true);
+        }}
+      >
+        <Text
+          style={{
+            color: "#FFF",
+            fontWeight: "700",
+          }}
+        >
+          Add Position
+        </Text>
+      </TouchableOpacity>
+
+    </ScrollView>
+
+  </View>
+</Modal>
+
 
     </View>
   );
