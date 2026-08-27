@@ -50,6 +50,25 @@ const [
   selectedPosition,
   setSelectedPosition,
 ] = useState("Leader");
+const [
+  canManageSubLeaders,
+  setCanManageSubLeaders,
+] = useState(false);
+
+const [
+  canTakeAttendance,
+  setCanTakeAttendance,
+] = useState(false);
+
+const [
+  canManageAttendanceDelegates,
+  setCanManageAttendanceDelegates,
+] = useState(false);
+
+const [
+  isPrimaryLeadershipPosition,
+  setIsPrimaryLeadershipPosition,
+] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [startDate,
@@ -306,15 +325,26 @@ if (existing) {
       ),
 
       {
-        name:
-          newPositionName.trim(),
+  name:
+    newPositionName.trim(),
 
-        active: true,
+  active: true,
 
-        createdAt:
-          new Date()
-            .toISOString(),
-      }
+  isPrimaryLeadership:
+    isPrimaryLeadershipPosition,
+
+  canManageSubLeaders:
+    canManageSubLeaders,
+
+  canTakeAttendance:
+    canTakeAttendance,
+
+  canManageAttendanceDelegates:
+    canManageAttendanceDelegates,
+
+  createdAt:
+    new Date().toISOString(),
+}
 
     );
 
@@ -491,6 +521,14 @@ await addDoc(
 
     positionIsPrimaryLeadership:
       selectedPositionObj?.isPrimaryLeadership || false,
+      canManageSubLeaders:
+  selectedPositionObj?.canManageSubLeaders || false,
+
+canTakeAttendance:
+  selectedPositionObj?.canTakeAttendance || false,
+
+canManageAttendanceDelegates:
+  selectedPositionObj?.canManageAttendanceDelegates || false,
 
     category:
       "ministry",
@@ -832,6 +870,75 @@ await addDoc(
           setNewPositionName
         }
       />
+<TouchableOpacity
+  style={styles.checkboxRow}
+  onPress={() =>
+    setIsPrimaryLeadershipPosition(
+      !isPrimaryLeadershipPosition
+    )
+  }
+>
+  <Text style={styles.checkboxIcon}>
+    {isPrimaryLeadershipPosition ? "☑" : "☐"}
+  </Text>
+
+  <Text style={styles.checkboxLabel}>
+    Primary Leadership Position
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.checkboxRow}
+  onPress={() =>
+    setCanManageSubLeaders(
+      !canManageSubLeaders
+    )
+  }
+>
+  <Text style={styles.checkboxIcon}>
+    {canManageSubLeaders ? "☑" : "☐"}
+  </Text>
+
+  <Text style={styles.checkboxLabel}>
+    Can Manage Sub-Leaders
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.checkboxRow}
+  onPress={() =>
+    setCanTakeAttendance(
+      !canTakeAttendance
+    )
+  }
+>
+  <Text style={styles.checkboxIcon}>
+    {canTakeAttendance ? "☑" : "☐"}
+  </Text>
+
+  <Text style={styles.checkboxLabel}>
+    Can Take Attendance
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.checkboxRow}
+  onPress={() =>
+    setCanManageAttendanceDelegates(
+      !canManageAttendanceDelegates
+    )
+  }
+>
+  <Text style={styles.checkboxIcon}>
+    {canManageAttendanceDelegates ? "☑" : "☐"}
+  </Text>
+
+  <Text style={styles.checkboxLabel}>
+    Can Assign Attendance Officers
+  </Text>
+</TouchableOpacity>
+
+
 
       <TouchableOpacity
         style={styles.saveBtn}
@@ -880,46 +987,75 @@ await addDoc(
         (position) => (
 
           <View
-            key={position.id}
-            style={{
-              backgroundColor: "#FFF",
-              padding: 14,
-              borderRadius: 12,
-              marginBottom: 10,
-              flexDirection: "row",
-              justifyContent:
-                "space-between",
-              alignItems: "center",
-            }}
-          >
+  key={position.id}
+  style={{
+    backgroundColor: "#FFF",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}
+>
 
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "600",
-              }}
-            >
-              {position.name}
-            </Text>
+  <View style={{ flex: 1 }}>
 
-            <TouchableOpacity
-              onPress={() =>
-                deleteMinistryPosition(
-                  position
-                )
-              }
-            >
-              <Text
-                style={{
-                  color: "#C0392B",
-                  fontWeight: "700",
-                }}
-              >
-                Delete
-              </Text>
-            </TouchableOpacity>
+    <Text
+      style={{
+        fontSize: 16,
+        fontWeight: "600",
+      }}
+    >
+      {position.name}
+    </Text>
 
-          </View>
+    <Text
+      style={{
+        marginTop: 4,
+        fontSize: 12,
+        color: "#666",
+      }}
+    >
+      {[
+        position.isPrimaryLeadership
+          ? "Leader"
+          : null,
+
+        position.canManageSubLeaders
+          ? "Manage Officers"
+          : null,
+
+        position.canTakeAttendance
+          ? "Attendance"
+          : null,
+
+        position.canManageAttendanceDelegates
+          ? "Attendance Delegates"
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" • ")}
+    </Text>
+
+  </View>
+
+  <TouchableOpacity
+    onPress={() =>
+      deleteMinistryPosition(position)
+    }
+  >
+    <Text
+      style={{
+        color: "#C0392B",
+        fontWeight: "700",
+      }}
+    >
+      Delete
+    </Text>
+  </TouchableOpacity>
+
+</View>
 
         )
       )}

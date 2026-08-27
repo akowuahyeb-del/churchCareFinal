@@ -499,14 +499,46 @@ const [
             {officer.positionTitle}
           </Text>
 
-          <Text
-            style={{
-              marginTop: 2,
-              color: "#444",
-            }}
-          >
-            {officer.memberName}
-          </Text>
+         <Text
+  style={{
+    marginTop: 2,
+    color: "#444",
+  }}
+>
+  {officer.memberName}
+</Text>
+
+{(
+  officer.canManageSubLeaders ||
+  officer.canTakeAttendance ||
+  officer.canManageAttendanceDelegates
+) && (
+  <Text
+    style={{
+      marginTop: 4,
+      color: "#666",
+      fontSize: 12,
+    }}
+  >
+    {[
+      officer.canManageSubLeaders
+        ? "Manage Officers"
+        : null,
+
+      officer.canTakeAttendance
+        ? "Attendance"
+        : null,
+
+      officer.canManageAttendanceDelegates
+        ? "Attendance Delegates"
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" • ")}
+  </Text>
+)}
+
+
 <View
   style={{
     flexDirection: "row",
@@ -630,14 +662,14 @@ const [
     }}
   >
     <Text
-      style={{
-        color: "#FFF",
-        fontWeight: "700",
-        fontSize: 13,
-      }}
-    >
-      Add Position
-    </Text>
+  style={{
+    color: "#FFF",
+    fontWeight: "700",
+    fontSize: 13,
+  }}
+>
+  Manage Positions
+</Text>
   </TouchableOpacity>
 </View>
 
