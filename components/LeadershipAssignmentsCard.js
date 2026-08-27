@@ -37,9 +37,13 @@ export default function LeadershipAssignmentsCard({
  const removeHolder =
   async (officer) => {
 
-    Alert.alert(
-      "Remove Holder",
-      `Remove ${officer.memberName} as ${officer.positionTitle}?`,
+   Alert.alert(
+  "Remove Officer",
+  `${officer.memberName} will be removed from the position of ${officer.positionTitle}.
+
+This does NOT delete service history. The assignment will be closed and can still be viewed from the member's service history.
+
+Do you want to continue?`,
       [
         {
           text: "Cancel",
@@ -47,34 +51,38 @@ export default function LeadershipAssignmentsCard({
         },
 
         {
-          text: "Remove",
+  text: "Remove",
+  style: "destructive",
 
-          onPress: async () => {
+  onPress: async () => {
 
             try {
 
               await updateDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "leadershipAssignments",
+    officer.id
+  ),
+  {
+    status: "completed",
+    endDate:
+      new Date()
+        .toISOString(),
+  }
+);
 
-                doc(
-                  db,
-                  "organizations",
-                  organizationId,
-                  "leadershipAssignments",
-                  officer.id
-                ),
+if (onRefresh) {
+  await onRefresh();
+}
 
-                {
-                  status: "completed",
-                  endDate:
-                    new Date()
-                      .toISOString(),
-                }
+Alert.alert(
+  "Leadership Updated",
+  `${officer.memberName} has been removed from the position of ${officer.positionTitle}. Their service history remains preserved.`
+);
 
-              );
-
-              if (onRefresh) {
-                await onRefresh();
-              }
 
             } catch (e) {
 
@@ -340,16 +348,144 @@ const [
  return (
   <View>
 
+    <View
+  style={{
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  }}
+>
+
+  <Text
+    style={{
+      fontSize: 11,
+      color: "#888",
+      fontWeight: "700",
+      textTransform: "uppercase",
+    }}
+  >
+    Ministry
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 24,
+      fontWeight: "800",
+      color: "#222",
+      marginTop: 4,
+    }}
+  >
+    {ministry.name}
+  </Text>
+
+
+
+</View>
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  }}
+>
+
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#EEF2FF",
+      borderRadius: 16,
+      padding: 12,
+      marginRight: 8,
+      alignItems: "center",
+    }}
+  >
     <Text
       style={{
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: "800",
-        marginBottom: 12,
-        color: "#222",
+        color: "#4B3F72",
       }}
     >
-      {ministry.name}
+      {officers.length}
     </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#4B3F72",
+      }}
+    >
+      OFFICERS
+    </Text>
+  </View>
+
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#EAFBF5",
+      borderRadius: 16,
+      padding: 12,
+      marginRight: 8,
+      alignItems: "center",
+    }}
+  >
+    <Text
+      style={{
+        fontSize: 22,
+        fontWeight: "800",
+        color: "#1BA97F",
+      }}
+    >
+      {
+        officers.filter(
+          (o) => o.canTakeAttendance
+        ).length
+      }
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#1BA97F",
+      }}
+    >
+      ATTENDANCE
+    </Text>
+  </View>
+
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#FFF7E0",
+      borderRadius: 16,
+      padding: 12,
+      alignItems: "center",
+    }}
+  >
+    <Text
+      style={{
+        fontSize: 22,
+        fontWeight: "800",
+        color: "#8A6A00",
+      }}
+    >
+      {otherOfficers.length}
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#8A6A00",
+      }}
+    >
+      POSITIONS
+    </Text>
+  </View>
+
+</View>
 
 
 {officers.length === 0 && (
@@ -372,52 +508,52 @@ const [
     {primaryLeader && (
 
   <View
+  style={{
+    backgroundColor: "#FFF7E0",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E6C35C",
+    flexDirection: "row",
+    alignItems: "center",
+  }}
+>
+
+  <View
     style={{
-      backgroundColor: "#FFF7E0",
-      borderRadius: 12,
-      padding: 14,
-      marginTop: 12,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: "#E6C35C",
-      flexDirection: "row",
-      alignItems: "center",
+      backgroundColor: "#E6C35C",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
+      marginRight: 12,
     }}
   >
-
-    <View
-      style={{
-        backgroundColor: "#E6C35C",
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
-        marginRight: 12,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: "700",
-          color: "#4A3A00",
-          textTransform: "uppercase",
-        }}
-      >
-        {primaryLeader.positionTitle}
-      </Text>
-    </View>
-
     <Text
       style={{
-        flex: 1,
-        fontSize: 22,
-        fontWeight: "800",
-        color: "#8A6A00",
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#4A3A00",
+        textTransform: "uppercase",
       }}
     >
-      {primaryLeader.memberName}
+      {primaryLeader.positionTitle}
     </Text>
-
   </View>
+
+  <Text
+    style={{
+      flex: 1,
+      fontSize: 22,
+      fontWeight: "800",
+      color: "#222",
+    }}
+  >
+    {primaryLeader.memberName}
+  </Text>
+
+</View>
 
 )}
 {primaryLeader && (
@@ -479,66 +615,180 @@ const [
   </View>
 
 )}
-      {otherOfficers.map((officer) => (
-
-        <View
-          key={officer.id}
-          style={{
-            marginTop: 12,
-            paddingBottom: 12,
-            borderBottomWidth: 1,
-            borderBottomColor: "#EEE",
-          }}
-        >
-
-          <Text
-            style={{
-              fontWeight: "700",
-              fontSize: 16,
-            }}
-          >
-            {officer.positionTitle}
-          </Text>
-
-         <Text
+<View
   style={{
-    marginTop: 2,
-    color: "#444",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   }}
 >
-  {officer.memberName}
-</Text>
 
-{(
-  officer.canManageSubLeaders ||
-  officer.canTakeAttendance ||
-  officer.canManageAttendanceDelegates
-) && (
-  <Text
+      {otherOfficers.map((officer) => (
+
+    <View
+  key={officer.id}
+  style={{
+    width: "48%",
+
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 18,
+
+    padding: 16,
+
+    marginTop: 12,
+
+    borderWidth: 1,
+
+    borderColor: "#F2F4F7",
+
+    shadowColor: "#000",
+
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+
+    shadowOpacity: 0.06,
+
+    shadowRadius: 8,
+
+    elevation: 3,
+  }}
+>
+
+
+         <View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}
+>
+
+  <View>
+
+    <Text
+      style={{
+        fontSize: 12,
+        color: "#777",
+        textTransform: "uppercase",
+        fontWeight: "700",
+      }}
+    >
+      {officer.positionTitle}
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#222",
+        marginTop: 2,
+      }}
+    >
+      {officer.memberName}
+    </Text>
+
+  </View>
+
+  <View
     style={{
-      marginTop: 4,
-      color: "#666",
-      fontSize: 12,
+      backgroundColor: "#EEF2FF",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
     }}
   >
-    {[
-      officer.canManageSubLeaders
-        ? "Manage Officers"
-        : null,
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700",
+        fontSize: 11,
+      }}
+    >
+      ACTIVE
+    </Text>
+  </View>
 
-      officer.canTakeAttendance
-        ? "Attendance"
-        : null,
+</View>
 
-      officer.canManageAttendanceDelegates
-        ? "Attendance Delegates"
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" • ")}
-  </Text>
-)}
+<View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  }}
+>
 
+  {officer.canManageSubLeaders && (
+    <View
+      style={{
+        backgroundColor: "#EEF2FF",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginRight: 8,
+        marginBottom: 8,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          color: "#4B3F72",
+          fontWeight: "700",
+        }}
+      >
+        MANAGE OFFICERS
+      </Text>
+    </View>
+  )}
+
+  {officer.canTakeAttendance && (
+    <View
+      style={{
+        backgroundColor: "#EAFBF5",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginRight: 8,
+        marginBottom: 8,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          color: "#1BA97F",
+          fontWeight: "700",
+        }}
+      >
+        ATTENDANCE
+      </Text>
+    </View>
+  )}
+
+  {officer.canManageAttendanceDelegates && (
+    <View
+      style={{
+        backgroundColor: "#FFF7E0",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 11,
+          color: "#8A6A00",
+          fontWeight: "700",
+        }}
+      >
+        DELEGATES
+      </Text>
+    </View>
+  )}
+
+</View>
 
 <View
   style={{
@@ -623,7 +873,7 @@ const [
         </View>
 
       ))}
-
+</View>
      <View
   style={{
     flexDirection: "row",

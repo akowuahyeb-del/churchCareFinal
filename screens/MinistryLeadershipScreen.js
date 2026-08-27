@@ -107,6 +107,11 @@ const [
   editingPosition,
   setEditingPosition,
 ] = useState(null);
+const [
+  selectedMinistryCard,
+  setSelectedMinistryCard,
+] = useState(null);
+``
 
   // FIX: pulled into a reusable function so we can call it again after
   // a successful assignment, instead of only ever running once on mount.
@@ -301,67 +306,115 @@ const saveMinistryPosition =
     const entity =
       JSON.parse(stored);
 
-      const existing =
-  ministryPositions.find(
-    (p) =>
-      p.name?.trim().toLowerCase() ===
-      newPositionName.trim().toLowerCase()
-  );
+    const existing =
+      ministryPositions.find(
+        (p) =>
+          p.name?.trim().toLowerCase() ===
+          newPositionName.trim().toLowerCase() &&
+          p.id !== editingPosition?.id
+      );
 
-if (existing) {
+    if (existing) {
 
-  Alert.alert(
-    "Position Exists",
-    "This position already exists."
-  );
+      Alert.alert(
+        "Position Exists",
+        "This position already exists."
+      );
 
-  return;
-}
+      return;
+    }
 
-    await addDoc(
+    if (editingPosition) {
 
-      collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "ministries",
-        selectedMinistry.id,
-        "positions"
-      ),
+      await updateDoc(
 
-      {
-  name:
-    newPositionName.trim(),
+        doc(
+          db,
+          "organizations",
+          entity.organizationId,
+          "ministries",
+          selectedMinistry.id,
+          "positions",
+          editingPosition.id
+        ),
 
-  active: true,
+        {
+          name:
+            newPositionName.trim(),
 
-  isPrimaryLeadership:
-    isPrimaryLeadershipPosition,
+          isPrimaryLeadership:
+            isPrimaryLeadershipPosition,
 
-  canManageSubLeaders:
-    canManageSubLeaders,
+          canManageSubLeaders:
+            canManageSubLeaders,
 
-  canTakeAttendance:
-    canTakeAttendance,
+          canTakeAttendance:
+            canTakeAttendance,
 
-  canManageAttendanceDelegates:
-    canManageAttendanceDelegates,
+          canManageAttendanceDelegates:
+            canManageAttendanceDelegates,
+        }
 
-  createdAt:
-    new Date().toISOString(),
-}
+      );
 
-    );
+    } else {
+
+      await addDoc(
+
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "ministries",
+          selectedMinistry.id,
+          "positions"
+        ),
+
+        {
+          name:
+            newPositionName.trim(),
+
+          active: true,
+
+          isPrimaryLeadership:
+            isPrimaryLeadershipPosition,
+
+          canManageSubLeaders:
+            canManageSubLeaders,
+
+          canTakeAttendance:
+            canTakeAttendance,
+
+          canManageAttendanceDelegates:
+            canManageAttendanceDelegates,
+
+          createdAt:
+            new Date().toISOString(),
+        }
+
+      );
+
+    }
+
+    setEditingPosition(null);
 
     setNewPositionName("");
 
-   await loadPositions(
-  selectedMinistry.id
-);
+    setIsPrimaryLeadershipPosition(false);
 
-await loadData();
+    setCanManageSubLeaders(false);
 
-setShowPositionModal(false);
+    setCanTakeAttendance(false);
+
+    setCanManageAttendanceDelegates(false);
+
+    await loadPositions(
+      selectedMinistry.id
+    );
+
+    await loadData();
+
+    setShowPositionModal(false);
 
   };
 
@@ -620,32 +673,207 @@ canManageAttendanceDelegates:
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {ministries.map((item) => (
-          <View key={item.id} style={styles.card}>
-       
-<LeadershipAssignmentsCard
-  ministry={item}
-  officers={item.officers || []}
-  members={members}
-  organizationId={
-    activeEntity?.organizationId
-  }
-  onRefresh={loadData}
-  onManage={() =>
-    openAssignModal(item)
-  }
- onAddPosition={() => {
-  setSelectedMinistry(item);
-  loadPositions(item.id);
-  setShowManagePositionsModal(true);
+     <ScrollView
+  contentContainerStyle={{
+    padding: 16,
+  }}
+>
+
+  <View
+    style={{
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+    }}
+  >
+
+    {ministries.map((item) => {
+
+     const leader =
+  item.officers?.find(
+    (o) =>
+      o.positionIsPrimaryLeadership === true
+  ) ||
+  item.officers?.find(
+    (o) =>
+      o.positionTitle === "Leader"
+  ) ||
+  item.officers?.[0];
+
+      return (
+
+        <TouchableOpacity
+          key={item.id}
+          style={{
+  width: "48%",
+
+  backgroundColor: "#FFFFFF",
+
+  borderRadius: 18,
+
+  padding: 14,
+
+  marginBottom: 14,
+
+  shadowColor: "#000",
+
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+
+  shadowOpacity: 0.08,
+
+  shadowRadius: 10,
+
+  elevation: 4,
+
+  borderWidth: 1,
+
+  borderColor: "#F5F5F5",
 }}
-/>
+          onPress={() =>
+            setSelectedMinistryCard(item)
+          }
+        >
+
+          <Text
+            style={{
+              fontSize: 11,
+              color: "#888",
+              textTransform: "uppercase",
+              fontWeight: "700",
+            }}
+          >
+            Ministry
+          </Text>
+
+       <Text
+  style={{
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#222",
+    marginTop: 6,
+  }}
+  numberOfLines={2}
+>
+  {item.name}
+</Text>
 
 
+<Text
+  style={{
+    marginTop: 4,
+    color: "#222",
+    fontWeight: "700",
+    fontSize: 15,
+  }}
+  numberOfLines={2}
+>
+  {leader?.memberName || "Not Assigned"}
+</Text>
+
+
+<Text
+  style={{
+    color: "#888",
+    fontSize: 12,
+    marginTop: 2,
+  }}
+>
+  {leader?.positionTitle || "Leader"}
+</Text>
+
+
+          <View
+  style={{
+    marginTop: 14,
+
+    backgroundColor: "#F4F1FF",
+
+    alignSelf: "flex-start",
+
+    paddingHorizontal: 12,
+
+    paddingVertical: 6,
+
+    borderRadius: 20,
+  }}
+>
+            <Text
+              style={{
+                color: "#4B3F72",
+                fontWeight: "700",
+                fontSize: 11,
+              }}
+            >
+              {item.officers?.length || 0} Officers
+            </Text>
           </View>
-        ))}
+
+        </TouchableOpacity>
+
+      );
+
+    })}
+
+  </View>
+
+</ScrollView>
+<Modal
+  visible={!!selectedMinistryCard}
+  animationType="slide"
+>
+  <View style={{ flex: 1 }}>
+
+    <AppHeader
+      title={
+        selectedMinistryCard?.name || ""
+      }
+      subtitle="Leadership Management"
+      onBack={() =>
+        setSelectedMinistryCard(null)
+      }
+    />
+
+    {selectedMinistryCard && (
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+        }}
+      >
+        <LeadershipAssignmentsCard
+          ministry={selectedMinistryCard}
+          officers={
+            selectedMinistryCard.officers || []
+          }
+          members={members}
+          organizationId={
+            activeEntity?.organizationId
+          }
+          onRefresh={loadData}
+          onManage={() =>
+            openAssignModal(
+              selectedMinistryCard
+            )
+          }
+          onAddPosition={() => {
+            setSelectedMinistry(
+              selectedMinistryCard
+            );
+
+            loadPositions(
+              selectedMinistryCard.id
+            );
+
+            setShowManagePositionsModal(true);
+          }}
+        />
       </ScrollView>
+    )}
+
+  </View>
+</Modal>
 
       <Modal visible={showAssignModal} animationType="slide">
         <View style={{ flex: 1 }}>
@@ -1090,6 +1318,14 @@ canManageAttendanceDelegates:
     </Text>
   </TouchableOpacity>
 
+ <View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+  }}
+>
+
+
   <TouchableOpacity
     onPress={() =>
       deleteMinistryPosition(position)
@@ -1104,6 +1340,8 @@ canManageAttendanceDelegates:
       Delete
     </Text>
   </TouchableOpacity>
+
+</View>
 
 </View>
 
