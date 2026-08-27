@@ -364,23 +364,9 @@ const [
   </View>
 )}
 
-      {primaryLeader && (
+      
 
-        <View
-  style={{
-    backgroundColor: "#FFF7E0",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E6C35C",
-  }}
->
-
-        
-
-  {primaryLeader && (
+    {primaryLeader && (
 
   <View
     style={{
@@ -431,13 +417,65 @@ const [
   </View>
 
 )}
+{primaryLeader && (
 
+  <View
+    style={{
+      flexDirection: "row",
+      marginBottom: 16,
+    }}
+  >
 
+    <TouchableOpacity
+      onPress={() => {
+        setSelectedOfficer(primaryLeader);
+        setReplacementMember(null);
+        setShowReplaceModal(true);
+      }}
+      style={{
+        backgroundColor: "#EEF2FF",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+        marginRight: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: "#4B3F72",
+          fontWeight: "700",
+          fontSize: 12,
+        }}
+      >
+        Replace
+      </Text>
+    </TouchableOpacity>
 
-        </View>
+    <TouchableOpacity
+      onPress={() =>
+        removeHolder(primaryLeader)
+      }
+      style={{
+        backgroundColor: "#FFF4E8",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+      }}
+    >
+      <Text
+        style={{
+          color: "#D35400",
+          fontWeight: "700",
+          fontSize: 12,
+        }}
+      >
+        Remove Holder
+      </Text>
+    </TouchableOpacity>
 
-      )}
+  </View>
 
+)}
       {otherOfficers.map((officer) => (
 
         <View
@@ -617,219 +655,215 @@ const [
     setShowReplaceModal(false);
   }}
 >
-
-  <View
-    style={{
-      flex: 1,
-      padding: 16,
-    }}
-  >
-
-   <View
+<View
   style={{
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 20,
+    flex: 1,
+    padding: 16,
   }}
 >
 
- <View>
-  <Text
+  <View
     style={{
-      fontSize: 20,
-      fontWeight: "700",
-      color: "#222",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginTop: 20,
+      marginBottom: 20,
     }}
   >
-    Replace Officer
-  </Text>
+    <View>
+      <Text
+        style={{
+          fontSize: 22,
+          fontWeight: "800",
+          color: "#222",
+        }}
+      >
+        Replace Officer
+      </Text>
+
+      <Text
+        style={{
+          marginTop: 6,
+          color: "#666",
+        }}
+      >
+        Position: {selectedOfficer?.positionTitle}
+      </Text>
+
+      <Text
+        style={{
+          marginTop: 2,
+          color: "#4B3F72",
+          fontWeight: "700",
+        }}
+      >
+        Current Holder: {selectedOfficer?.memberName}
+      </Text>
+    </View>
+
+    <TouchableOpacity
+      onPress={() => {
+        setShowReplaceModal(false);
+        setReplacementMember(null);
+        setSelectedOfficer(null);
+      }}
+    >
+      <Text
+        style={{
+          color: "#C0392B",
+          fontWeight: "700",
+        }}
+      >
+        Cancel
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  {members
+    .filter(
+      (member) =>
+        member.id !== selectedOfficer?.memberId
+    )
+    .map((member) => (
+
+      <TouchableOpacity
+        key={member.id}
+        style={{
+          backgroundColor:
+            replacementMember?.id === member.id
+              ? "#EEF2FF"
+              : "#F8F8F8",
+
+          borderWidth: 1,
+
+          borderColor:
+            replacementMember?.id === member.id
+              ? "#4B3F72"
+              : "#E5E5E5",
+
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 10,
+        }}
+        onPress={() =>
+          setReplacementMember(member)
+        }
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontWeight:
+                replacementMember?.id === member.id
+                  ? "700"
+                  : "500",
+
+              color:
+                replacementMember?.id === member.id
+                  ? "#4B3F72"
+                  : "#222",
+
+              fontSize: 15,
+            }}
+          >
+            {member.name}
+          </Text>
+
+          {replacementMember?.id === member.id && (
+            <View
+              style={{
+                backgroundColor: "#4B3F72",
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 12,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFF",
+                  fontSize: 11,
+                  fontWeight: "700",
+                }}
+              >
+                Selected
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+
+    ))}
 
   <Text
     style={{
-      marginTop: 6,
+      marginTop: 12,
+      marginBottom: 8,
       color: "#666",
-    }}
-  >
-    Position: {selectedOfficer?.positionTitle}
-  </Text>
-
-  <Text
-    style={{
-      marginTop: 2,
-      color: "#4B3F72",
       fontWeight: "600",
     }}
   >
-    Current Holder: {selectedOfficer?.memberName}
+    Replacement Officer:
+    {" "}
+    {replacementMember?.name || "None Selected"}
   </Text>
-</View>
 
   <TouchableOpacity
-    onPress={() => {
+    style={{
+      backgroundColor: "#4B3F72",
+      padding: 16,
+      borderRadius: 12,
+      marginTop: 20,
+    }}
+    onPress={async () => {
 
-      setShowReplaceModal(
-        false
+      if (
+        !selectedOfficer ||
+        !replacementMember
+      ) {
+        return;
+      }
+
+      if (
+        selectedOfficer.memberId ===
+        replacementMember.id
+      ) {
+        Alert.alert(
+          "No Change",
+          "Please select a different member."
+        );
+        return;
+      }
+
+      await replaceHolder(
+        selectedOfficer,
+        replacementMember
       );
 
-      setReplacementMember(
-        null
-      );
-
-      setSelectedOfficer(
-        null
-      );
-
+      setSelectedOfficer(null);
+      setReplacementMember(null);
+      setShowReplaceModal(false);
     }}
   >
     <Text
       style={{
-        color: "#C0392B",
+        color: "#FFF",
+        textAlign: "center",
         fontWeight: "700",
       }}
     >
-      Cancel
+      {replacementMember
+        ? "Confirm Replacement"
+        : "Select Replacement"}
     </Text>
   </TouchableOpacity>
 
 </View>
-
-    {members
-  .filter(
-    (member) =>
-      member.id !==
-      selectedOfficer?.memberId
-  )
-  .map((member) => (
-
-  <TouchableOpacity
-  key={member.id}
-  style={{
-    backgroundColor:
-      replacementMember?.id === member.id
-        ? "#EEF2FF"
-        : "#F8F8F8",
-
-    borderWidth: 1,
-
-    borderColor:
-      replacementMember?.id === member.id
-        ? "#4B3F72"
-        : "#E5E5E5",
-
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-  }}
-  onPress={() =>
-    setReplacementMember(member)
-  }
->
-  <Text
-    style={{
-      fontWeight:
-        replacementMember?.id === member.id
-          ? "700"
-          : "500",
-
-      color:
-        replacementMember?.id === member.id
-          ? "#4B3F72"
-          : "#222",
-
-      fontSize: 15,
-    }}
-  >
-    {member.name}
-  </Text>
-</TouchableOpacity>
-
-    ))}
-<Text
-  style={{
-    marginTop: 12,
-    marginBottom: 8,
-    color: "#666",
-  }}
->
-  Selected:
-  {" "}
-  {
-    replacementMember?.name ||
-    "None"
-  }
-</Text>
-
-    <TouchableOpacity
-      style={{
-        backgroundColor:
-          "#4B3F72",
-        padding: 16,
-        borderRadius: 12,
-        marginTop: 20,
-      }}
-      onPress={async () => {
-
-  if (
-    !selectedOfficer ||
-    !replacementMember
-  ) {
-    return;
-  }
-
-  if (
-    selectedOfficer.memberId ===
-    replacementMember.id
-  ) {
-
-    Alert.alert(
-      "No Change",
-      "Please select a different member."
-    );
-
-    return;
-  }
-
-await replaceHolder(
-  selectedOfficer,
-  replacementMember
-);
-
-
-setSelectedOfficer(
-  null
-);
-
-setReplacementMember(
-  null
-);
-
-
-setShowReplaceModal(
-  false
-);
-
-      }}
-    >
-      <Text
-  style={{
-    color: "#FFF",
-    textAlign: "center",
-    fontWeight: "700",
-  }}
->
-  {
-    replacementMember
-
-      ? `Replace With ${replacementMember.name}`
-
-      : "Choose Member"
-  }
-</Text>
-    </TouchableOpacity>
-
-  </View>
 
 </Modal>
 
