@@ -4,21 +4,14 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
-  Alert,
-  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   collection,
   getDocs,
-  addDoc,
-  updateDoc,
-  doc,
 } from "firebase/firestore";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
 
@@ -27,7 +20,14 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
   const [entityId, setEntityId] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [members, setMembers] = useState([]);
-const [startDate, setStartDate] = useState(new Date());
+  const [overview, setOverview] =
+  useState({
+    ministries: 0,
+    offices: 0,
+    committees: 0,
+    governance: 0,
+  });
+
  
  
   
@@ -54,24 +54,51 @@ const [startDate, setStartDate] = useState(new Date());
       )
     );
     setMembers(membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+ const assignmentsSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "leadershipAssignments"
+  )
+);
+const assignments =
+  assignmentsSnap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 
+setAppointments(assignments);
 
-    const ministriesSnap = await getDocs(
-      collection(db, "organizations", entity.organizationId, "ministries")
-    );
-    setMinistries(ministriesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+setOverview({
+  ministries:
+    assignments.filter(
+      (a) => a.entityType === "ministry"
+    ).length,
 
-    const assignmentsSnap = await getDocs(
-      collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "leadershipAssignments"
-      )
-    );
-    setAppointments(
-      assignmentsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
-    );
+  offices:
+    assignments.filter(
+      (a) => a.entityType === "office"
+    ).length,
+
+  committees:
+    assignments.filter(
+      (a) => a.entityType === "committee"
+    ).length,
+
+  governance:
+    assignments.filter(
+      (a) => a.entityType === "governance"
+    ).length,
+});
+
+setAppointments(
+  assignmentsSnap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }))
+);
+
   }, []);
 
   useEffect(() => {
@@ -79,95 +106,6 @@ const [startDate, setStartDate] = useState(new Date());
   }, [loadData]);
 
  
-
-  const saveAssignment = async () => {
-    if (!selectedMember || !selectedRole) {
-      Alert.alert("Required", "Select member and role.");
-      return;
-    }
-
-    // FIX: prevent saving an end date before the start date.
-    if (endDate && endDate < startDate) {
-      Alert.alert("Invalid dates", "End date cannot be before the start date.");
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      // FIX: mirror MinistryLeadershipScreen's behavior — close out any
-      // existing active assignment for the same role (and ministry, if
-      // one was picked) before creating a new one. Without this, using
-      // this screen to assign a ministry leader left two "active"
-      // leaders for the same ministry, inconsistent with the other
-      // entry point into this same collection.
-      const existingSnap = await getDocs(
-        collection(db, "organizations", organizationId, "leadershipAssignments")
-      );
-
-      const existingActive = existingSnap.docs.filter((d) => {
-        const data = d.data();
-        const sameRole = data.roleId === selectedRole.id;
-        const sameMinistry = selectedMinistry
-          ? data.ministryId === selectedMinistry.id
-          : !data.ministryId;
-        return sameRole && sameMinistry && data.status === "active";
-      });
-
-      for (const existing of existingActive) {
-        await updateDoc(
-          doc(
-            db,
-            "organizations",
-            organizationId,
-            "leadershipAssignments",
-            existing.id
-          ),
-          {
-            status: "completed",
-            endDate: new Date().toISOString(),
-          }
-        );
-      }
-
-      await addDoc(
-        collection(db, "organizations", organizationId, "leadershipAssignments"),
-        {
-          memberId: selectedMember.id,
-          memberName: selectedMember.name,
-          roleId: selectedRole.id,
-          roleLabel: selectedRole.label,
-          ministryId: selectedMinistry?.id || null,
-          ministryName: selectedMinistry?.name || null,
-          positionTitle: selectedRole.label,
-          status: "active",
-          startDate: startDate.toISOString(),
-          endDate: endDate ? endDate.toISOString() : null,
-          notes,
-          createdAt: new Date().toISOString(),
-        }
-      );
-
-      Alert.alert("Success", "Leadership assignment saved.");
-
-      // FIX: refresh local state before leaving so the list is correct
-      // if navigation.goBack() returns to an already-mounted screen
-      // whose useEffect won't rerun on its own.
-      await loadData();
-      resetForm();
-      setShowAppointmentModal(false);
-      navigation.goBack();
-    } catch (e) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const formatDate = (date) => {
-    if (!date) return "Not Set";
-    return date.toISOString().split("T")[0];
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -239,27 +177,138 @@ const [startDate, setStartDate] = useState(new Date());
 </TouchableOpacity>
         </View>
 
+<Text style={styles.activeHeader}>
+  Leadership Distribution
+</Text>
 
-        <Text style={styles.activeHeader}>Active Appointments</Text>
+<View style={styles.distributionCard}>
 
-        {appointments.length === 0 ? (
-          <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>No appointments created</Text>
-            <Text style={styles.infoSub}>
-              Create leaders, elders and office holders.
-            </Text>
-          </View>
-        ) : (
-          appointments.map((item) => (
-            <View key={item.id} style={styles.infoCard}>
-              <Text style={styles.infoTitle}>{item.positionTitle}</Text>
-              <Text style={styles.infoSub}>{item.memberName}</Text>
-              <Text style={{ marginTop: 4, color: "#666" }}>
-                {item.ministryName || "Church Office"}
-              </Text>
-            </View>
-          ))
-        )}
+  {[
+    {
+      label: "Governance",
+      count: appointments.filter(
+        (a) => a.entityType === "governance"
+      ).length,
+      color: "#16A085",
+    },
+
+    {
+      label: "Committees",
+      count: appointments.filter(
+        (a) => a.entityType === "committee"
+      ).length,
+      color: "#E67E22",
+    },
+
+    {
+      label: "Ministries",
+      count: appointments.filter(
+        (a) => a.entityType === "ministry"
+      ).length,
+      color: "#4F46E5",
+    },
+
+    {
+      label: "Offices",
+      count: appointments.filter(
+        (a) => a.entityType === "office"
+      ).length,
+      color: "#0984E3",
+    },
+  ].map((item) => (
+
+    <View
+      key={item.label}
+      style={styles.distributionRow}
+    >
+
+      <Text style={styles.distributionLabel}>
+        {item.label}
+      </Text>
+
+      <View style={styles.badgesContainer}>
+        {Array.from({
+          length: Math.min(item.count, 10),
+        }).map((_, index) => (
+
+          <View
+            key={index}
+            style={[
+              styles.badgeDot,
+              {
+                backgroundColor:
+                  item.color,
+              },
+            ]}
+          />
+
+        ))}
+      </View>
+
+      <Text style={styles.distributionCount}>
+        {item.count}
+      </Text>
+
+    </View>
+
+  ))}
+
+</View>
+
+<Text style={styles.activeHeader}>
+  Recent Leadership Activity
+</Text>
+
+{appointments.length === 0 ? (
+
+  <View style={styles.infoCard}>
+    <Text style={styles.infoTitle}>
+      No leadership appointments yet
+    </Text>
+
+    <Text style={styles.infoSub}>
+      Leadership assignments will appear here.
+    </Text>
+  </View>
+
+) : (
+
+  appointments
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+    )
+    .slice(0, 5)
+    .map((item) => (
+
+      <View
+        key={item.id}
+        style={styles.infoCard}
+      >
+        <Text style={styles.infoTitle}>
+          {item.positionTitle}
+        </Text>
+
+        <Text style={styles.infoSub}>
+          {item.memberName}
+        </Text>
+
+        <Text
+          style={{
+            marginTop: 4,
+            color: "#666",
+          }}
+        >
+          {item.entityName ||
+            item.ministryName ||
+            "Church Office"}
+        </Text>
+      </View>
+
+    ))
+
+)}
       </ScrollView>
 
       
@@ -324,4 +373,45 @@ const styles = StyleSheet.create({
   infoCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, elevation: 2 },
   infoTitle: { fontSize: 14, fontWeight: "700", color: "#222" },
   infoSub: { color: "#666", marginTop: 4 },
+  distributionCard: {
+  backgroundColor: "#FFF",
+  borderRadius: 18,
+  padding: 18,
+  elevation: 2,
+  marginBottom: 20,
+},
+
+distributionRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 14,
+},
+
+distributionLabel: {
+  width: 100,
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#333",
+},
+
+badgesContainer: {
+  flex: 1,
+  flexDirection: "row",
+  flexWrap: "wrap",
+},
+
+badgeDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+  marginRight: 4,
+},
+
+distributionCount: {
+  width: 30,
+  textAlign: "right",
+  fontWeight: "800",
+  color: "#222",
+},
+
 });
