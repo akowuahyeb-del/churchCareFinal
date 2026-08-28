@@ -27,18 +27,11 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
   const [entityId, setEntityId] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [members, setMembers] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [ministries, setMinistries] = useState([]);
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedMinistry, setSelectedMinistry] = useState(null);
-  const [notes, setNotes] = useState("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(null);
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-  const [saving, setSaving] = useState(false);
+const [startDate, setStartDate] = useState(new Date());
+ 
+ 
+  
+ 
 
   // FIX: reusable so we can re-run it after saving a new appointment,
   // instead of only loading once on mount.
@@ -62,10 +55,6 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
     );
     setMembers(membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-    const rolesSnap = await getDocs(
-      collection(db, "organizations", entity.organizationId, "roles")
-    );
-    setRoles(rolesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
     const ministriesSnap = await getDocs(
       collection(db, "organizations", entity.organizationId, "ministries")
@@ -89,19 +78,7 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
     loadData();
   }, [loadData]);
 
-  const resetForm = () => {
-    setSelectedMember(null);
-    setSelectedRole(null);
-    setSelectedMinistry(null);
-    setNotes("");
-    setStartDate(new Date());
-    setEndDate(null);
-  };
-
-  const closeAppointmentModal = () => {
-    setShowAppointmentModal(false);
-    resetForm();
-  };
+ 
 
   const saveAssignment = async () => {
     if (!selectedMember || !selectedRole) {
@@ -262,12 +239,6 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
 </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.primaryAction}
-          onPress={() => setShowAppointmentModal(true)}
-        >
-          <Text style={styles.primaryActionText}>+ New Appointment</Text>
-        </TouchableOpacity>
 
         <Text style={styles.activeHeader}>Active Appointments</Text>
 
@@ -291,120 +262,7 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <Modal
-        visible={showAppointmentModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={{ flex: 1 }}>
-          <AppHeader
-            title="New Appointment"
-            subtitle="Assign church office"
-            onBack={closeAppointmentModal}
-          />
-
-          <ScrollView contentContainerStyle={{ padding: 16 }}>
-            <Text style={styles.label}>Select Member</Text>
-            {members.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.option,
-                  selectedMember?.id === item.id && styles.selected,
-                ]}
-                onPress={() => setSelectedMember(item)}
-              >
-                <Text>{item.name}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <Text style={styles.label}>Select Role</Text>
-            {roles.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.option,
-                  selectedRole?.id === item.id && styles.selected,
-                ]}
-                onPress={() => setSelectedRole(item)}
-              >
-                <Text>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <Text style={styles.label}>Ministry (Optional)</Text>
-            {ministries.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.option,
-                  selectedMinistry?.id === item.id && styles.selected,
-                ]}
-                onPress={() => setSelectedMinistry(item)}
-              >
-                <Text>{item.name}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <Text style={styles.label}>Start Date</Text>
-            <TouchableOpacity
-              style={styles.option}
-              onPress={() => setShowStartPicker(true)}
-            >
-              <Text>{formatDate(startDate)}</Text>
-            </TouchableOpacity>
-
-            {showStartPicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                onChange={(event, selectedDate) => {
-                  setShowStartPicker(false);
-                  if (selectedDate) setStartDate(selectedDate);
-                }}
-              />
-            )}
-
-            <Text style={styles.label}>End Date (Optional)</Text>
-            <TouchableOpacity
-              style={styles.option}
-              onPress={() => setShowEndPicker(true)}
-            >
-              <Text>{formatDate(endDate)}</Text>
-            </TouchableOpacity>
-
-            {showEndPicker && (
-              <DateTimePicker
-                value={endDate || startDate}
-                mode="date"
-                minimumDate={startDate}
-                onChange={(event, selectedDate) => {
-                  setShowEndPicker(false);
-                  if (selectedDate) setEndDate(selectedDate);
-                }}
-              />
-            )}
-
-            <TextInput
-              style={styles.notes}
-              placeholder="Appointment notes..."
-              multiline
-              value={notes}
-              onChangeText={setNotes}
-            />
-
-            <TouchableOpacity
-              style={styles.saveBtn}
-              onPress={saveAssignment}
-              disabled={saving}
-            >
-              <Text style={{ color: "#fff", fontWeight: "700" }}>
-                {saving ? "Saving..." : "Save Appointment"}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
+      
     </View>
   );
 }

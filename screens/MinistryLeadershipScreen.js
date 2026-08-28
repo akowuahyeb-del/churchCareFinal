@@ -116,7 +116,15 @@ const [
   selectedMinistryCard,
   setSelectedMinistryCard,
 ] = useState(null);
-``
+const [
+  showCreateEntityModal,
+  setShowCreateEntityModal,
+] = useState(false);
+
+const [
+  newEntityName,
+  setNewEntityName,
+] = useState("");
 
   // FIX: pulled into a reusable function so we can call it again after
   // a successful assignment, instead of only ever running once on mount.
@@ -169,6 +177,17 @@ setMembers(uniqueMembers);
   )
 );
 
+console.log(
+  "ENTITY COLLECTION:",
+  entityCollection
+);
+
+console.log(
+  "DOCUMENT COUNT:",
+  ministriesSnap.size
+);
+
+
     const assignmentsSnap = await getDocs(
       collection(
         db,
@@ -183,8 +202,15 @@ setMembers(uniqueMembers);
       ...d.data(),
     }));
 
-    const data = ministriesSnap.docs.map((docSnap) => {
-      const ministry = { id: docSnap.id, ...docSnap.data() };
+const data = ministriesSnap.docs
+  .map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  }))
+  .filter(
+    (item) => item.active !== false
+  )
+  .map((ministry) => {
       const leader = assignments.find(
   (a) =>
     (
@@ -700,20 +726,206 @@ await addDoc(
   return `${start} - ${end}`;
 };
 
+
+const saveEntity = async () => {
+
+  if (!newEntityName.trim()) {
+
+    Alert.alert(
+      "Required",
+      "Please enter a name."
+    );
+
+    return;
+
+  }
+
+  try {
+
+    const stored =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    if (!stored) return;
+
+    const entity =
+      JSON.parse(stored);
+
+      const existing = ministries.find(
+  (item) =>
+    item.name?.trim().toLowerCase() ===
+    newEntityName.trim().toLowerCase()
+);
+
+if (existing) {
+
+  Alert.alert(
+    "Already Exists",
+    `${
+      entityType === "office"
+        ? "Office"
+        : entityType === "committee"
+        ? "Committee"
+        : "Ministry"
+    } already exists.`
+  );
+
+  return;
+}
+
+    await addDoc(
+
+      collection(
+        db,
+        "organizations",
+        entity.organizationId,
+        entityCollection
+      ),
+
+      {
+        name:
+          newEntityName.trim(),
+
+        active: true,
+
+        createdAt:
+          new Date()
+            .toISOString(),
+      }
+
+    );
+
+    setNewEntityName("");
+
+    setShowCreateEntityModal(false);
+
+    await loadData();
+
+    Alert.alert(
+      "Success",
+      `${
+        entityType === "office"
+          ? "Office"
+          : entityType === "committee"
+          ? "Committee"
+          : "Ministry"
+      } created successfully.`
+    );
+
+  } catch (e) {
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+
+  }
+
+};
+
+const deactivateEntity = async (
+  entityItem
+) => {
+
+  Alert.alert(
+  `Remove ${
+    entityType === "office"
+      ? "Office"
+      : entityType === "committee"
+      ? "Committee"
+      : "Ministry"
+  }`,
+    `Remove ${entityItem.name}?`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+
+          const stored =
+            await AsyncStorage.getItem(
+              "activeEntity"
+            );
+
+          const activeEntity =
+            JSON.parse(stored);
+
+          await updateDoc(
+            doc(
+              db,
+              "organizations",
+              activeEntity.organizationId,
+              entityCollection,
+              entityItem.id
+            ),
+            {
+              active: false,
+              deactivatedAt:
+                new Date().toISOString(),
+            }
+          );
+
+          await loadData();
+        },
+      },
+    ]
+  );
+
+};
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
   title={title}
-        subtitle="Manage ministry leaders"
-        onBack={() => navigation.goBack()}
-      />
+  subtitle={
+    entityType === "office"
+      ? "Manage office holders"
+      : entityType === "committee"
+      ? "Manage committee officers"
+      : entityType === "governance"
+      ? "Manage governance leaders"
+      : "Manage ministry leaders"
+  }
+  onBack={() => navigation.goBack()}
+/>
 
      <ScrollView
   contentContainerStyle={{
     padding: 16,
   }}
 >
-
+<TouchableOpacity
+  style={{
+    backgroundColor: "#4B3F72",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  }}
+  onPress={() =>
+    setShowCreateEntityModal(true)
+  }
+>
+  <Text
+    style={{
+      color: "#FFF",
+      fontWeight: "700",
+    }}
+  >
+    + Add {
+      entityType === "office"
+        ? "Office"
+        : entityType === "committee"
+        ? "Committee"
+        : "Ministry"
+    }
+  </Text>
+</TouchableOpacity>
   <View
     style={{
       flexDirection: "row",
@@ -771,17 +983,24 @@ await addDoc(
             setSelectedMinistryCard(item)
           }
         >
-
-          <Text
-            style={{
-              fontSize: 11,
-              color: "#888",
-              textTransform: "uppercase",
-              fontWeight: "700",
-            }}
-          >
-            Ministry
-          </Text>
+<Text
+  style={{
+    fontSize: 11,
+    color: "#888",
+    textTransform: "uppercase",
+    fontWeight: "700",
+  }}
+>
+  {
+    entityType === "office"
+      ? "Office"
+      : entityType === "committee"
+      ? "Committee"
+      : entityType === "governance"
+      ? "Governance Body"
+      : "Ministry"
+  }
+</Text>
 
        <Text
   style={{
@@ -845,7 +1064,19 @@ await addDoc(
               {item.officers?.length || 0} Officers
             </Text>
           </View>
-
+<Text
+  onPress={() =>
+    deactivateEntity(item)
+  }
+  style={{
+    marginTop: 8,
+    color: "#C0392B",
+    fontWeight: "700",
+    fontSize: 12,
+  }}
+>
+  Remove
+</Text>
         </TouchableOpacity>
 
       );
@@ -862,14 +1093,22 @@ await addDoc(
   <View style={{ flex: 1 }}>
 
     <AppHeader
-      title={
-        selectedMinistryCard?.name || ""
-      }
-      subtitle="Leadership Management"
-      onBack={() =>
-        setSelectedMinistryCard(null)
-      }
-    />
+  title={
+    selectedMinistryCard?.name || ""
+  }
+  subtitle={
+    entityType === "office"
+      ? "Office Leadership"
+      : entityType === "committee"
+      ? "Committee Leadership"
+      : entityType === "governance"
+      ? "Governance Leadership"
+      : "Ministry Leadership"
+  }
+  onBack={() =>
+    setSelectedMinistryCard(null)
+  }
+/>
 
     {selectedMinistryCard && (
       <ScrollView
@@ -913,14 +1152,32 @@ await addDoc(
       <Modal visible={showAssignModal} animationType="slide">
         <View style={{ flex: 1 }}>
           <AppHeader
-            title="Assign Ministry Leader"
+  title={
+    entityType === "office"
+      ? "Assign Office Holder"
+      : entityType === "committee"
+      ? "Assign Committee Officer"
+      : entityType === "governance"
+      ? "Assign Governance Leader"
+      : "Assign Ministry Leader"
+  }
             subtitle={selectedMinistry?.name || ""}
             onBack={closeAssignModal}
           />
 
           <ScrollView contentContainerStyle={{ padding: 16 }}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Ministry</Text>
+              <Text style={styles.summaryLabel}>
+  {
+    entityType === "office"
+      ? "Office"
+      : entityType === "committee"
+      ? "Committee"
+      : entityType === "governance"
+      ? "Governance Body"
+      : "Ministry"
+  }
+</Text>
               <Text style={styles.summaryValue}>
                 {selectedMinistry?.name}
               </Text>
@@ -1115,7 +1372,15 @@ await addDoc(
   <View style={{ flex: 1 }}>
 
     <AppHeader
-      title="Add Position"
+  title={
+    entityType === "office"
+      ? "Add Office Position"
+      : entityType === "committee"
+      ? "Add Committee Position"
+      : entityType === "governance"
+      ? "Add Governance Position"
+      : "Add Ministry Position"
+  }
       subtitle={
         selectedMinistry?.name || ""
       }
@@ -1215,13 +1480,21 @@ await addDoc(
         }
       >
         <Text
-          style={{
-            color: "#FFF",
-            fontWeight: "700",
-          }}
-        >
-          Save Position
-        </Text>
+  style={{
+    color: "#FFF",
+    fontWeight: "700",
+  }}
+>
+  Save {
+    entityType === "office"
+      ? "Office Position"
+      : entityType === "committee"
+      ? "Committee Position"
+      : entityType === "governance"
+      ? "Governance Position"
+      : "Position"
+  }
+</Text>
       </TouchableOpacity>
 
     </View>
@@ -1236,7 +1509,15 @@ await addDoc(
   <View style={{ flex: 1 }}>
 
     <AppHeader
-      title="Manage Positions"
+  title={
+    entityType === "office"
+      ? "Manage Office Positions"
+      : entityType === "committee"
+      ? "Manage Committee Positions"
+      : entityType === "governance"
+      ? "Manage Governance Positions"
+      : "Manage Ministry Positions"
+  }
       subtitle={
         selectedMinistry?.name || ""
       }
@@ -1407,6 +1688,69 @@ await addDoc(
   </View>
 </Modal>
 
+
+<Modal
+  visible={showCreateEntityModal}
+  animationType="slide"
+>
+  <View style={{ flex: 1 }}>
+
+    <AppHeader
+      title={
+        entityType === "office"
+          ? "Add Office"
+          : entityType === "committee"
+          ? "Add Committee"
+          : "Add Ministry"
+      }
+      onBack={() =>
+        setShowCreateEntityModal(false)
+      }
+    />
+
+    <View style={{ padding: 16 }}>
+<TextInput
+  style={styles.option}
+  placeholder={
+    entityType === "office"
+      ? "Church Secretary"
+      : entityType === "committee"
+      ? "Finance Committee"
+      : entityType === "governance"
+      ? "Session"
+      : "Men's Fellowship"
+  }
+  value={newEntityName}
+  onChangeText={setNewEntityName}
+/>
+
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={saveEntity}
+      >
+       <Text
+  style={{
+    color: "#FFF",
+    fontWeight: "700",
+  }}
+>
+  Save {
+    entityType === "office"
+      ? "Office"
+      : entityType === "committee"
+      ? "Committee"
+      : entityType === "governance"
+      ? "Governance Body"
+      : "Ministry"
+  }
+</Text>
+      </TouchableOpacity>
+
+    </View>
+
+  </View>
+</Modal>
 
     </View>
   );
