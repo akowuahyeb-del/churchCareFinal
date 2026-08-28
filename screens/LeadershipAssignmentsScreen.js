@@ -229,15 +229,37 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
   </Text>
 </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickCard}>
-            <Ionicons name="briefcase-outline" size={30} color="#0984E3" />
-            <Text style={styles.quickTitle}>Offices</Text>
-          </TouchableOpacity>
+         <TouchableOpacity
+  style={styles.quickCard}
+  onPress={() =>
+    navigation.navigate("Office")
+  }
+>
+  <Ionicons
+    name="briefcase-outline"
+    size={30}
+    color="#0984E3"
+  />
+  <Text style={styles.quickTitle}>
+    Offices
+  </Text>
+</TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickCard}>
-            <Ionicons name="git-network-outline" size={30} color="#E67E22" />
-            <Text style={styles.quickTitle}>Committees</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+  style={styles.quickCard}
+  onPress={() =>
+    navigation.navigate("Committee")
+  }
+>
+  <Ionicons
+    name="git-network-outline"
+    size={30}
+    color="#E67E22"
+  />
+  <Text style={styles.quickTitle}>
+    Committees
+  </Text>
+</TouchableOpacity>
         </View>
 
         <TouchableOpacity

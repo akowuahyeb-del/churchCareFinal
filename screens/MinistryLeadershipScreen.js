@@ -26,7 +26,12 @@ import LeadershipAssignmentsCard
 from "../components/LeadershipAssignmentsCard";
 import AppHeader from "../components/AppHeader";
 
-export default function MinistryLeadershipScreen({ navigation }) {
+export default function MinistryLeadershipScreen({
+  navigation,
+  entityType = "ministry",
+  entityCollection = "ministries",
+  title = "Ministry Leadership",
+}) {
   const [ministries, setMinistries] = useState([]);
   const [
   ministryPositions,
@@ -155,9 +160,14 @@ const uniqueMembers =
 
 setMembers(uniqueMembers);
 
-    const ministriesSnap = await getDocs(
-      collection(db, "organizations", entity.organizationId, "ministries")
-    );
+   const ministriesSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    entityCollection
+  )
+);
 
     const assignmentsSnap = await getDocs(
       collection(
@@ -176,15 +186,24 @@ setMembers(uniqueMembers);
     const data = ministriesSnap.docs.map((docSnap) => {
       const ministry = { id: docSnap.id, ...docSnap.data() };
       const leader = assignments.find(
-        (a) =>
-          a.ministryId === ministry.id &&
-          a.positionTitle === "Leader" &&
-          a.status === "active"
-      );
-    const officers =
+  (a) =>
+    (
+      a.entityId === ministry.id ||
+      a.ministryId === ministry.id
+    ) &&
+    a.status === "active" &&
+    (
+      a.positionIsPrimaryLeadership === true ||
+      a.positionTitle === "Leader"
+    )
+);
+   const officers =
   assignments.filter(
     (a) =>
-      a.ministryId === ministry.id &&
+      (
+        a.entityId === ministry.id ||
+        a.ministryId === ministry.id
+      ) &&
       a.status === "active"
   );
 
@@ -231,13 +250,13 @@ return {
   const snap =
     await getDocs(
       collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "ministries",
-        ministryId,
-        "positions"
-      )
+  db,
+  "organizations",
+  entity.organizationId,
+  entityCollection,
+  ministryId,
+  "positions"
+)
     );
 
  const loadedPositions =
@@ -328,17 +347,17 @@ const saveMinistryPosition =
 
       await updateDoc(
 
-        doc(
-          db,
-          "organizations",
-          entity.organizationId,
-          "ministries",
-          selectedMinistry.id,
-          "positions",
-          editingPosition.id
-        ),
+  doc(
+    db,
+    "organizations",
+    entity.organizationId,
+    entityCollection,
+    selectedMinistry.id,
+    "positions",
+    editingPosition.id
+  ),
 
-        {
+  {
           name:
             newPositionName.trim(),
 
@@ -361,16 +380,16 @@ const saveMinistryPosition =
 
       await addDoc(
 
-        collection(
-          db,
-          "organizations",
-          entity.organizationId,
-          "ministries",
-          selectedMinistry.id,
-          "positions"
-        ),
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    entityCollection,
+    selectedMinistry.id,
+    "positions"
+  ),
 
-        {
+  {
           name:
             newPositionName.trim(),
 
@@ -443,16 +462,16 @@ const deleteMinistryPosition =
               JSON.parse(stored);
 
             await deleteDoc(
-              doc(
-                db,
-                "organizations",
-                entity.organizationId,
-                "ministries",
-                selectedMinistry.id,
-                "positions",
-                position.id
-              )
-            );
+  doc(
+    db,
+    "organizations",
+    entity.organizationId,
+    entityCollection,
+    selectedMinistry.id,
+    "positions",
+    position.id
+  )
+);
 
             await loadPositions(
               selectedMinistry.id
@@ -550,6 +569,7 @@ if (existingHolder) {
 
   return;
 }
+
 await addDoc(
   collection(
     db,
@@ -559,11 +579,24 @@ await addDoc(
   ),
   {
 
+    // Existing fields (keep for now)
+
     ministryId:
       selectedMinistry.id,
 
     ministryName:
       selectedMinistry.name,
+
+    // New generic fields
+
+    entityId:
+      selectedMinistry.id,
+
+    entityName:
+      selectedMinistry.name,
+
+    entityType:
+      entityType,
 
     memberId:
       selectedMember.id,
@@ -579,17 +612,18 @@ await addDoc(
 
     positionIsPrimaryLeadership:
       selectedPositionObj?.isPrimaryLeadership || false,
-      canManageSubLeaders:
-  selectedPositionObj?.canManageSubLeaders || false,
 
-canTakeAttendance:
-  selectedPositionObj?.canTakeAttendance || false,
+    canManageSubLeaders:
+      selectedPositionObj?.canManageSubLeaders || false,
 
-canManageAttendanceDelegates:
-  selectedPositionObj?.canManageAttendanceDelegates || false,
+    canTakeAttendance:
+      selectedPositionObj?.canTakeAttendance || false,
+
+    canManageAttendanceDelegates:
+      selectedPositionObj?.canManageAttendanceDelegates || false,
 
     category:
-      "ministry",
+      entityType,
 
     status:
       "active",
@@ -609,6 +643,7 @@ canManageAttendanceDelegates:
 
   }
 );
+
 
 
       Alert.alert(
@@ -668,7 +703,7 @@ canManageAttendanceDelegates:
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
-        title="Ministry Leadership"
+  title={title}
         subtitle="Manage ministry leaders"
         onBack={() => navigation.goBack()}
       />
