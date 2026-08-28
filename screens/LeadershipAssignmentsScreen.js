@@ -16,17 +16,16 @@ import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
 
 export default function LeadershipAssignmentsScreen({ navigation }) {
-  const [organizationId, setOrganizationId] = useState(null);
-  const [entityId, setEntityId] = useState(null);
+
   const [appointments, setAppointments] = useState([]);
-  const [members, setMembers] = useState([]);
-  const [overview, setOverview] =
-  useState({
-    ministries: 0,
-    offices: 0,
-    committees: 0,
-    governance: 0,
-  });
+  const [snapshot, setSnapshot] = useState({
+  ministries: 0,
+  offices: 0,
+  committees: 0,
+  governance: 0,
+});
+ 
+ 
 
  
  
@@ -40,20 +39,8 @@ export default function LeadershipAssignmentsScreen({ navigation }) {
     if (!stored) return;
 
     const entity = JSON.parse(stored);
-    setOrganizationId(entity.organizationId);
-    setEntityId(entity.entityId);
 
-    const membersSnap = await getDocs(
-      collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "entities",
-        entity.entityId,
-        "members"
-      )
-    );
-    setMembers(membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+
  const assignmentsSnap = await getDocs(
   collection(
     db,
@@ -70,34 +57,68 @@ const assignments =
 
 setAppointments(assignments);
 
-setOverview({
+const ministriesSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "ministries"
+    )
+  );
+
+const officesSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "offices"
+    )
+  );
+
+const committeesSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "committees"
+    )
+  );
+
+const governanceSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "governanceBodies"
+    )
+  );
+
+setSnapshot({
   ministries:
-    assignments.filter(
-      (a) => a.entityType === "ministry"
+    ministriesSnap.docs.filter(
+      (d) => d.data().active !== false
     ).length,
 
   offices:
-    assignments.filter(
-      (a) => a.entityType === "office"
+    officesSnap.docs.filter(
+      (d) => d.data().active !== false
     ).length,
 
   committees:
-    assignments.filter(
-      (a) => a.entityType === "committee"
+    committeesSnap.docs.filter(
+      (d) => d.data().active !== false
     ).length,
 
   governance:
-    assignments.filter(
-      (a) => a.entityType === "governance"
+    governanceSnap.docs.filter(
+      (d) => d.data().active !== false
     ).length,
 });
 
-setAppointments(
-  assignmentsSnap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-  }))
-);
 
   }, []);
 
@@ -178,44 +199,35 @@ setAppointments(
         </View>
 
 <Text style={styles.activeHeader}>
-  Leadership Distribution
+  Leadership Structures
 </Text>
 
 <View style={styles.distributionCard}>
+{[
+  {
+    label: "Governance",
+    count: snapshot.governance,
+    color: "#16A085",
+  },
 
-  {[
-    {
-      label: "Governance",
-      count: appointments.filter(
-        (a) => a.entityType === "governance"
-      ).length,
-      color: "#16A085",
-    },
+  {
+    label: "Committees",
+    count: snapshot.committees,
+    color: "#E67E22",
+  },
 
-    {
-      label: "Committees",
-      count: appointments.filter(
-        (a) => a.entityType === "committee"
-      ).length,
-      color: "#E67E22",
-    },
+  {
+    label: "Ministries",
+    count: snapshot.ministries,
+    color: "#4F46E5",
+  },
 
-    {
-      label: "Ministries",
-      count: appointments.filter(
-        (a) => a.entityType === "ministry"
-      ).length,
-      color: "#4F46E5",
-    },
-
-    {
-      label: "Offices",
-      count: appointments.filter(
-        (a) => a.entityType === "office"
-      ).length,
-      color: "#0984E3",
-    },
-  ].map((item) => (
+  {
+    label: "Offices",
+    count: snapshot.offices,
+    color: "#0984E3",
+  },
+].map((item) => (
 
     <View
       key={item.label}
