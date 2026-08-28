@@ -229,39 +229,22 @@ setSnapshot({
   },
 ].map((item) => (
 
-    <View
-      key={item.label}
-      style={styles.distributionRow}
-    >
+   <View
+  key={item.label}
+  style={styles.distributionRow}
+>
 
-      <Text style={styles.distributionLabel}>
-        {item.label}
-      </Text>
+  <Text style={styles.distributionLabel}>
+    {item.label}
+  </Text>
 
-      <View style={styles.badgesContainer}>
-        {Array.from({
-          length: Math.min(item.count, 10),
-        }).map((_, index) => (
+  <View style={{ flex: 1 }} />
 
-          <View
-            key={index}
-            style={[
-              styles.badgeDot,
-              {
-                backgroundColor:
-                  item.color,
-              },
-            ]}
-          />
+  <Text style={styles.distributionCount}>
+    {item.count}
+  </Text>
 
-        ))}
-      </View>
-
-      <Text style={styles.distributionCount}>
-        {item.count}
-      </Text>
-
-    </View>
+</View>
 
   ))}
 
@@ -406,18 +389,7 @@ distributionLabel: {
   color: "#333",
 },
 
-badgesContainer: {
-  flex: 1,
-  flexDirection: "row",
-  flexWrap: "wrap",
-},
 
-badgeDot: {
-  width: 12,
-  height: 12,
-  borderRadius: 6,
-  marginRight: 4,
-},
 
 distributionCount: {
   width: 30,
