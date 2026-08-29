@@ -1188,7 +1188,12 @@ const TIMES =
       {/* ── HEADER ── */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Attendance</Text>
+          <Text
+  numberOfLines={1}
+  style={styles.headerTitle}
+>
+  Attendance
+</Text>
           {sessionId && (
             <Text style={styles.headerSub} numberOfLines={1}>
               Session ID: {sessionId}
@@ -2012,7 +2017,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f4f6fb" },
 
   header: { backgroundColor: "#4B3F72", paddingTop: 50, paddingBottom: 12, paddingHorizontal: 14, flexDirection: "row", alignItems: "center" },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  headerTitle: {
+  color: "#fff",
+  fontSize: 18,
+  fontWeight: "700",
+  flexShrink: 1,
+},
+
   headerSub: { color: "rgba(255,255,255,0.6)", fontSize: 10, marginTop: 2 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
