@@ -95,6 +95,8 @@ const [selectedType, setSelectedType] = useState("");
   const [sessionId,       setSessionId]       = useState(null);
   const [sessionStatus,   setSessionStatus]   = useState(null); // open/extended/ended/null
   const [sessionQR,       setSessionQR]       = useState(null);
+  
+
 
   // ── MEMBERS & ATTENDANCE ──
   const [members,    setMembers]    = useState([]);
@@ -324,7 +326,16 @@ const attendanceRate =
       const snap = await getDoc(
         doc(db, "organizations", organizationId, "entities", entityId, "sessions", targetSessionId)
       );
-      if (!snap.exists()) return false;
+
+  
+      if (!snap.exists()) {
+  Alert.alert(
+    "Debug",
+    `Session ${targetSessionId} not found`
+  );
+  return false;
+}
+
       const data = snap.data();
 
       setSelectedService(data.service || "Sunday");
@@ -336,9 +347,22 @@ const attendanceRate =
       setSessionId(targetSessionId);
       setSessionQR(data.qrPayload || null);
 
-      await AsyncStorage.setItem("activeSession", targetSessionId);
-      await AsyncStorage.setItem("sessionStatus", data.status || "open");
-      return true;
+      await AsyncStorage.setItem(
+  "activeSession",
+  targetSessionId
+);
+
+await AsyncStorage.setItem(
+  "sessionStatus",
+  data.status || "open"
+);
+
+Alert.alert(
+  "DEBUG",
+  `Loaded session: ${targetSessionId}`
+);
+
+return true;
     } catch (e) {
       console.log("❌ applySessionData:", e);
       return false;
@@ -362,29 +386,52 @@ const existingSession =
 
 if (existingSession) {
   Alert.alert(
-    "Session Already Active",
-    `${existingSession.service || ""}
-     ${existingSession.type || ""}
+  "Session Already Active",
+  `${existingSession.service || ""}
+${existingSession.type || ""}
 
 An attendance session is already running.
 
 Do you want to resume it?`,
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+  [
+    {
+      text: "Cancel",
+      style: "cancel",
+    },
+    {
+      text: "Resume",
+      onPress: async () => {
+        Alert.alert(
+          "DEBUG",
+          "Resume button pressed"
+        );
 
-      {
-        text: "Resume",
-        onPress: async () => {
+        const restored =
           await applySessionData(
             existingSession.id
           );
-        },
-      },
-    ]
+
+        Alert.alert(
+          "DEBUG",
+          `Restored = ${restored}`
+        );
+
+        if (restored) {
+  setSessionModal(false);
+
+  // Force close all setup UI
+  setSelectedTemplate(null);
+
+  Alert.alert(
+    "Session Restored",
+    "You have joined the active attendance session."
   );
+}
+      },
+    },
+  ]
+);
+
 
   return;
 }
