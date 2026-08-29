@@ -80,14 +80,31 @@ export default function PinSetupScreen({
       const userData = JSON.parse(storedUser);
       const pinHash = await hashPin(finalPin);
 
-      await AsyncStorage.setItem("pinHash", pinHash);
-      await AsyncStorage.setItem("pinUser", JSON.stringify({
-        uid: userData.uid,
-        email: userData.email,
-      }));
-      await AsyncStorage.setItem("pinUserSnapshot", JSON.stringify(userData));
-      await AsyncStorage.setItem("pinEnabled", "true");
+     if (mode === "app") {
 
+  await AsyncStorage.setItem(
+    "pinHash",
+    pinHash
+  );
+
+  await AsyncStorage.setItem(
+    "pinUser",
+    JSON.stringify({
+      uid: userData.uid,
+      email: userData.email,
+    })
+  );
+
+  await AsyncStorage.setItem(
+    "pinUserSnapshot",
+    JSON.stringify(userData)
+  );
+
+  await AsyncStorage.setItem(
+    "pinEnabled",
+    "true"
+  );
+}
      if (userData.uid) {
 
   const updates =
@@ -102,6 +119,11 @@ export default function PinSetupScreen({
           pinHash,
         };
 
+console.log("PIN MODE:", mode);
+console.log("USER:", userData.uid);
+console.log("UPDATES:", updates);
+
+
   await setDoc(
     doc(db, "users", userData.uid),
     updates,
@@ -109,7 +131,12 @@ export default function PinSetupScreen({
   );
 }
 
-      navigation.replace("MainTabs");
+      if (mode === "attendance") {
+  navigation.goBack();
+} else {
+  navigation.replace("MainTabs");
+}
+
     } catch (e) {
       console.log("PIN SETUP ERROR:", e);
       Alert.alert("Error", "Could not save your PIN. Please try again.");

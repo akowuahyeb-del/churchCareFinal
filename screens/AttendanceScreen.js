@@ -36,6 +36,7 @@ import {
 } from "../constants/memberMobility";
 import { verifyPin } from "../utils/verifyPin";
 import { hashPin } from "../utils/pinHash";
+import PinPad from "../components/PinPad";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -666,9 +667,9 @@ const confirmEndSession = async () => {
 
     if (!valid) {
       Alert.alert(
-        "Invalid PIN",
-        "The PIN entered is incorrect."
-      );
+  "Invalid Attendance PIN",
+  "The Attendance PIN entered is incorrect."
+);
 
       setEnteredPin("");
       return;
@@ -2266,24 +2267,32 @@ setPinModalVisible(true);
   <View style={styles.overlay}>
     <View style={styles.modalBox}>
 
-      <Text style={styles.modalTitle}>
-        Security Verification
-      </Text>
+     <Text style={styles.modalTitle}>
+  Attendance PIN Verification
+</Text>
 
       <Text style={styles.modalSub}>
         Enter your 6-digit PIN to end this
         attendance session.
       </Text>
+<PinPad
+  pin={enteredPin}
+  onDigit={(digit) => {
+    if (enteredPin.length >= 6) {
+      return;
+    }
 
-      <TextInput
-        style={styles.input}
-        placeholder="Enter PIN"
-        value={enteredPin}
-        onChangeText={setEnteredPin}
-        keyboardType="number-pad"
-        secureTextEntry
-        maxLength={6}
-      />
+    setEnteredPin(
+      (prev) => prev + digit
+    );
+  }}
+  onBackspace={() => {
+    setEnteredPin(
+      (prev) => prev.slice(0, -1)
+    );
+  }}
+/>
+
 
       <View style={styles.modalBtnRow}>
 
@@ -2466,4 +2475,6 @@ awayMemberBadgeText: {
   color: "#4B3F72",
   fontWeight: "800",
 },
+
+
 });
