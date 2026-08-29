@@ -354,6 +354,41 @@ const attendanceRate =
       Alert.alert("No Church", "Select a church first.");
       return;
     }
+const existingSession =
+  await findOpenSession(
+    organizationId,
+    entityId
+  );
+
+if (existingSession) {
+  Alert.alert(
+    "Session Already Active",
+    `${existingSession.service || ""}
+     ${existingSession.type || ""}
+
+An attendance session is already running.
+
+Do you want to resume it?`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+
+      {
+        text: "Resume",
+        onPress: async () => {
+          await applySessionData(
+            existingSession.id
+          );
+        },
+      },
+    ]
+  );
+
+  return;
+}
+
     try {
       const ref = await addDoc(
         collection(db, "organizations", organizationId, "entities", entityId, "sessions"),
