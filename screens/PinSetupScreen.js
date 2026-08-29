@@ -29,11 +29,16 @@ const KEYPAD = [
   ["", "0", "back"],
 ];
 
-export default function PinSetupScreen({ navigation }) {
+export default function PinSetupScreen({
+  navigation,
+  route,
+}) {
   const [stage, setStage] = useState("create"); // "create" | "confirm"
   const [firstPin, setFirstPin] = useState("");
   const [pin, setPin] = useState("");
   const [saving, setSaving] = useState(false);
+  const mode =
+  route?.params?.mode || "app";
 
   const handleKey = (key) => {
     if (saving) return;
@@ -83,10 +88,26 @@ export default function PinSetupScreen({ navigation }) {
       await AsyncStorage.setItem("pinUserSnapshot", JSON.stringify(userData));
       await AsyncStorage.setItem("pinEnabled", "true");
 
-      // Mirror onto the account so other/reinstalled devices know a PIN exists.
-      if (userData.uid) {
-        await setDoc(doc(db, "users", userData.uid), { pinHash }, { merge: true });
-      }
+     if (userData.uid) {
+
+  const updates =
+    mode === "attendance"
+      ? {
+          attendancePinHash:
+            pinHash,
+          attendancePinEnabled:
+            true,
+        }
+      : {
+          pinHash,
+        };
+
+  await setDoc(
+    doc(db, "users", userData.uid),
+    updates,
+    { merge: true }
+  );
+}
 
       navigation.replace("MainTabs");
     } catch (e) {
@@ -107,14 +128,25 @@ export default function PinSetupScreen({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
       <View style={styles.header}>
         <Ionicons name="key-outline" size={40} color="#fff" />
-        <Text style={styles.headerTitle}>
-          {stage === "create" ? "Choose a 6-digit PIN" : "Confirm your PIN"}
-        </Text>
+       <Text style={styles.headerTitle}>
+  {stage === "create"
+    ? (
+        mode === "attendance"
+          ? "Create Attendance PIN"
+          : "Choose a 6-digit PIN"
+      )
+    : "Confirm your PIN"}
+</Text>
         <Text style={styles.headerSub}>
-          {stage === "create"
-            ? "You'll use this to sign in quickly next time."
-            : "Enter it once more to confirm."}
-        </Text>
+  {stage === "create"
+    ? (
+        mode === "attendance"
+          ? "Required before joining or ending attendance sessions."
+          : "You'll use this to sign in quickly next time."
+      )
+    : "Enter it once more to confirm."}
+</Text>
+
       </View>
       <View style={styles.dotsRow}>
         {[0,1,2,3,4,5].map(i => (

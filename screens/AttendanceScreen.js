@@ -34,6 +34,8 @@ import {
   trueLocalMembers,
   EXCLUDED_FROM_ABSENCE_ALERTS,
 } from "../constants/memberMobility";
+import { verifyPin } from "../utils/verifyPin";
+import { hashPin } from "../utils/pinHash";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -126,7 +128,13 @@ const [selectedType, setSelectedType] = useState("");
   const [qrModalVisible,  setQrModalVisible]  = useState(false);
   const [scanFeedback,    setScanFeedback]    = useState("");
 
-  // ── UNDO ──
+
+const [enteredPin, setEnteredPin] =
+  useState("");
+  const [verifyingPin, setVerifyingPin] =
+  useState(false);
+  const [pinModalVisible, setPinModalVisible] =
+  useState(false);
   const [undoMap, setUndoMap] = useState({});
 
   // ── GEO ──
@@ -222,6 +230,11 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, [organizationId, entityId]);
 
+  useEffect(() => {
+  if (enteredPin.length === 6) {
+    confirmEndSession();
+  }
+}, [enteredPin]);
   // ─────────────────────────────────────────────────────────────────
   // LOAD MEMBERS
   // ─────────────────────────────────────────────────────────────────
@@ -640,6 +653,37 @@ if (state.status === "ended") {
   organizationId,
   entityId,
 ]);
+
+const confirmEndSession = async () => {
+  if (verifyingPin) return;
+
+  setVerifyingPin(true);
+
+  try {
+    const valid = await verifyPin(
+      enteredPin
+    );
+
+    if (!valid) {
+      Alert.alert(
+        "Invalid PIN",
+        "The PIN entered is incorrect."
+      );
+
+      setEnteredPin("");
+      return;
+    }
+
+    setPinModalVisible(false);
+    setEnteredPin("");
+
+    await endSession();
+
+  } finally {
+    setVerifyingPin(false);
+  }
+};
+
   // ─────────────────────────────────────────────────────────────────
   // END SESSION
   // ─────────────────────────────────────────────────────────────────
@@ -2033,11 +2077,31 @@ const TIMES =
             <Ionicons name="stop-circle" size={40} color="#e74c3c" style={{ alignSelf: "center" }} />
             <Text style={styles.modalTitle}>End Service?</Text>
             <Text style={styles.modalSub}>
-              {presentCount} of {members.length} members marked present ({attendanceRate}%).
-              Attendance will be locked after ending.
-            </Text>
+  ⚠ You are about to end this attendance session.
+
+  {"\n\n"}Present: {presentCount}
+  {"\n"}Absent: {absentCount}
+  {"\n"}Attendance Rate: {attendanceRate}%
+
+  {"\n\n"}This action will:
+
+  {"\n"}• Lock attendance entry
+  {"\n"}• Disable QR check-in
+  {"\n"}• Notify connected devices
+  {"\n"}• Prevent further changes
+
+  {"\n\n"}PIN verification will be required.
+</Text>
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: "#e74c3c" }]} onPress={endSession}>
+              <TouchableOpacity
+  style={[styles.modalSaveBtn, { backgroundColor: "#e74c3c" }]}
+  onPress={() => {
+    setEndServiceModal(false);
+    setEnteredPin("");
+setPinModalVisible(true);
+  }}
+>
+
                 <Text style={styles.white}>End Service</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEndServiceModal(false)}>
@@ -2194,6 +2258,61 @@ const TIMES =
           </View>
         </View>
       </Modal>
+<Modal
+  visible={pinModalVisible}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Security Verification
+      </Text>
+
+      <Text style={styles.modalSub}>
+        Enter your 6-digit PIN to end this
+        attendance session.
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter PIN"
+        value={enteredPin}
+        onChangeText={setEnteredPin}
+        keyboardType="number-pad"
+        secureTextEntry
+        maxLength={6}
+      />
+
+      <View style={styles.modalBtnRow}>
+
+        <TouchableOpacity
+          style={styles.modalSaveBtn}
+          onPress={confirmEndSession}
+        >
+          <Text style={styles.white}>
+            Verify
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.modalCancelBtn}
+          onPress={() => {
+            setPinModalVisible(false);
+            setEnteredPin("");
+          }}
+        >
+          <Text style={styles.white}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+    </View>
+  </View>
+</Modal>
 
     </View>
   );

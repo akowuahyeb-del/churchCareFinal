@@ -33,6 +33,7 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { hashPin } from "../utils/pinHash";
 
 // ─────────────────────────────────────────────────────────────────
 // DEFAULTS — what a brand-new entity gets before an admin configures it
@@ -111,6 +112,8 @@ sessionTemplates: [
   allowSelfCheckin:     true,      // Self QR mode available
   qrSessionTimeoutMins: 120,       // QR codes expire after this many minutes
   requireSessionNote:   false,     // force admin to write a note at session end
+  requireAttendancePin: false,
+
 
   // Offline queue
   offlineSyncEnabled:   true,
@@ -129,6 +132,9 @@ export default function AttendanceSettingsScreen() {
   const [saving,   setSaving]   = useState(false);
   const [locating, setLocating] = useState(false);
   const [dirty,    setDirty]    = useState(false); 
+
+
+
   // Service Defaults Modal
 const [itemModalVisible, setItemModalVisible] = useState(false);
 
@@ -149,6 +155,7 @@ const [itemName, setItemName] = useState("");
 const [timeValue, setTimeValue] = useState(new Date());
 
 const [showTimePicker, setShowTimePicker] = useState(false);
+
 
   // ── BOOTSTRAP ──
   useEffect(() => {
@@ -210,6 +217,7 @@ const [showTimePicker, setShowTimePicker] = useState(false);
     setSettings(prev => ({ ...prev, [key]: value }));
     setDirty(true);
   };
+
 // ─────────────────────────────────────────────────────────────────
 // SESSION DEFAULT MODAL HANDLERS
 // ─────────────────────────────────────────────────────────────────
@@ -953,6 +961,65 @@ if (editingMode === "template") {
         <SettingRow label="Require Session Note" description="Force a summary note before a session can be ended">
           <Switch value={settings.requireSessionNote} onValueChange={v => update("requireSessionNote", v)} trackColor={{ true: "#0984E3" }} />
         </SettingRow>
+       <SettingRow
+  label="Require Attendance PIN"
+  description="Users must verify their Attendance PIN before joining or ending a session"
+>
+  <Switch
+    value={
+      settings.requireAttendancePin
+|| false
+    }
+    onValueChange={v =>
+      update("requireAttendancePin", v)
+    }
+    trackColor={{ true: "#0984E3" }}
+  />
+</SettingRow>
+{settings.requireAttendancePin
+ && (
+  <View style={styles.card}>
+
+    <View style={styles.thresholdRow}>
+
+      <View style={{ flex: 1 }}>
+        <Text style={styles.thresholdLabel}>
+          Session Security PIN
+        </Text>
+
+        <Text style={styles.thresholdSub}>
+          Used to authorise session closure
+          and other attendance security actions.
+        </Text>
+      </View>
+
+      <TouchableOpacity
+  style={styles.detectBtn}
+  onPress={() =>
+    navigation.navigate(
+      "PinSetup",
+      {
+        mode: "attendance",
+      }
+    )
+  }
+>
+  <Ionicons
+    name="key-outline"
+    size={14}
+    color="#fff"
+  />
+
+  <Text style={styles.detectBtnText}>
+    Setup Attendance PIN
+  </Text>
+</TouchableOpacity>
+
+
+    </View>
+
+  </View>
+)}
 
         <View style={styles.card}>
           <View style={styles.thresholdRow}>
@@ -1252,7 +1319,6 @@ if (editingMode === "template") {
     </View>
   </View>
 </Modal>
-
 
     </View>
   );
