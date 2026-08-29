@@ -163,6 +163,8 @@ const [selectedType, setSelectedType] = useState("");
 
   // ── LISTENER CLEANUP ──
   const attendanceUnsubRef = useRef(null);
+  const sessionUnsubRef = useRef(null);
+  const attendanceStateUnsubRef = useRef(null);
 
   // ─────────────────────────────────────────────────────────────────
   // BOOTSTRAP
@@ -280,6 +282,33 @@ useEffect(() => {
     };
   }, [loadAttendance]);
 
+  useEffect(() => {
+  subscribeToSession();
+
+  return () => {
+    if (sessionUnsubRef.current) {
+      sessionUnsubRef.current();
+      sessionUnsubRef.current = null;
+    }
+  };
+}, [subscribeToSession]);
+
+useEffect(() => {
+  subscribeToAttendanceState();
+
+  return () => {
+    if (
+      attendanceStateUnsubRef.current
+    ) {
+      attendanceStateUnsubRef.current();
+    }
+  };
+}, [
+  subscribeToAttendanceState
+]);
+
+
+
   // ─────────────────────────────────────────────────────────────────
   // DERIVED STATS
   // ✅ FIXED: presentCount was useState, which meant it had to be
@@ -329,10 +358,7 @@ const attendanceRate =
 
   
       if (!snap.exists()) {
-  Alert.alert(
-    "Debug",
-    `Session ${targetSessionId} not found`
-  );
+
   return false;
 }
 
@@ -357,10 +383,6 @@ await AsyncStorage.setItem(
   data.status || "open"
 );
 
-Alert.alert(
-  "DEBUG",
-  `Loaded session: ${targetSessionId}`
-);
 
 return true;
     } catch (e) {
@@ -401,20 +423,12 @@ Do you want to resume it?`,
     {
       text: "Resume",
       onPress: async () => {
-        Alert.alert(
-          "DEBUG",
-          "Resume button pressed"
-        );
+        
 
         const restored =
           await applySessionData(
             existingSession.id
           );
-
-        Alert.alert(
-          "DEBUG",
-          `Restored = ${restored}`
-        );
 
         if (restored) {
   setSessionModal(false);
@@ -461,8 +475,25 @@ Do you want to resume it?`,
       );
 
       setSessionId(ref.id);
+      await setDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "attendanceState",
+    "active"
+  ),
+  {
+    activeSessionId: ref.id,
+    status: "open",
+    updatedAt: serverTimestamp(),
+  }
+);
       setSessionQR(qrLink);
       setSessionStatus("open");
+     
       setSessionModal(false);
       setAttendance({});
 
@@ -478,6 +509,137 @@ Do you want to resume it?`,
     }
   };
 
+
+  const subscribeToSession = useCallback(() => {
+  if (!organizationId || !entityId || !sessionId)
+    return;
+
+  if (sessionUnsubRef.current) {
+    sessionUnsubRef.current();
+    sessionUnsubRef.current = null;
+  }
+
+  sessionUnsubRef.current = onSnapshot(
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "sessions",
+      sessionId
+    ),
+    async (snap) => {
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+
+      const newStatus =
+        data.status || "open";
+
+      if (
+        newStatus !== sessionStatus
+      ) {
+        setSessionStatus(newStatus);
+      }
+
+     if (newStatus === "ended") {
+
+  setSessionStatus("ended");
+
+  setSessionId(null);
+  setSessionQR(null);
+  setAttendance({});
+  setPredictedMissing([]);
+
+  await AsyncStorage.setItem(
+    "sessionStatus",
+    "ended"
+  );
+
+  await AsyncStorage.removeItem(
+    "activeSession"
+  );
+
+  Alert.alert(
+    "Session Ended",
+    "Attendance was closed on another device."
+  );
+}
+    },
+    (error) => {
+      console.log(
+        "❌ session listener:",
+        error
+      );
+    }
+  );
+}, [
+  organizationId,
+  entityId,
+  sessionId,
+  sessionStatus,
+]);
+
+const subscribeToAttendanceState =
+  useCallback(() => {
+
+    if (!organizationId || !entityId)
+      return;
+
+    if (
+      attendanceStateUnsubRef.current
+    ) {
+      attendanceStateUnsubRef.current();
+    }
+
+    attendanceStateUnsubRef.current =
+      onSnapshot(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "attendanceState",
+          "active"
+        ),
+        async (snap) => {
+          if (!snap.exists()) return;
+
+          const state = snap.data();
+
+          if (
+            state.activeSessionId &&
+            state.activeSessionId !== sessionId
+          ) {
+            await applySessionData(
+              state.activeSessionId
+            );
+          }
+if (state.status === "ended") {
+  setSessionStatus("ended");
+  setSessionId(null);
+  setAttendance({});
+  setSessionQR(null);
+  setPredictedMissing([]);
+
+  await AsyncStorage.removeItem(
+    "activeSession"
+  );
+
+  await AsyncStorage.setItem(
+    "sessionStatus",
+    "ended"
+  );
+}
+        }
+      );
+
+ }, [
+  organizationId,
+  entityId,
+]);
   // ─────────────────────────────────────────────────────────────────
   // END SESSION
   // ─────────────────────────────────────────────────────────────────
@@ -513,6 +675,22 @@ Do you want to resume it?`,
             finalRate: currentRate,
           }
         );
+        await setDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "attendanceState",
+    "active"
+  ),
+  {
+    activeSessionId: null,
+    status: "ended",
+    updatedAt: serverTimestamp(),
+  }
+);
       }
 
       // Clean up
@@ -582,6 +760,10 @@ Do you want to resume it?`,
     method: mode,
     timestamp: new Date().toISOString(),
   });
+const attendanceDocId = (
+  sessId,
+  memberId
+) => `${sessId}_${memberId}`;
 
   const writeAdd = async (record) => {
     // ✅ OFFLINE QUEUE: if Firestore write fails, queue locally
@@ -651,6 +833,13 @@ const confirmAwayAttendance = (member, status) => {
 
 
   const toggleAttendance = async (member, status) => {
+    if (sessionStatus === "ended") {
+  Alert.alert(
+    "Locked",
+    "This attendance session has been closed."
+  );
+  return;
+}
     if (isSessionLocked && userRole !== "admin") {
       Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
       return;
