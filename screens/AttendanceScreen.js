@@ -76,6 +76,12 @@ const navigation = useNavigation();
 const route = useRoute();
   // ── ENTITY CONTEXT ──
   const [activeEntity, setActiveEntity] = useState(null);
+  const [attendanceAreas, setAttendanceAreas] = useState([]);
+const [selectedAttendanceArea, setSelectedAttendanceArea] =
+  useState(null);
+
+const [currentUser, setCurrentUser] =
+  useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
 
@@ -178,17 +184,53 @@ const [enteredPin, setEnteredPin] =
   // ─────────────────────────────────────────────────────────────────
   // BOOTSTRAP
   // ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    AsyncStorage.getItem("activeEntity").then(data => {
-      if (data) { try { setActiveEntity(JSON.parse(data)); } catch (_) {} }
-    });
-  }, []);
+ useEffect(() => {
+  const bootstrap = async () => {
+    const storedEntity =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
 
-  useEffect(() => {
-    if (!organizationId || !entityId) return;
-    loadMembers();
-    restoreSession();
-  }, [organizationId, entityId]);
+    if (storedEntity) {
+      try {
+        setActiveEntity(
+          JSON.parse(storedEntity)
+        );
+      } catch (_) {}
+    }
+
+    const storedUser =
+      await AsyncStorage.getItem(
+        "currentUser"
+      );
+
+    if (storedUser) {
+      try {
+        setCurrentUser(
+          JSON.parse(storedUser)
+        );
+      } catch (_) {}
+    }
+  };
+
+  bootstrap();
+}, []);
+
+
+ useEffect(() => {
+  if (!organizationId || !entityId)
+    return;
+
+  loadMembers();
+
+  loadAttendanceAreas();
+
+  restoreSession();
+}, [
+  organizationId,
+  entityId,
+  currentUser,
+]);
 
   // Sync defaults from Attendance Settings
 useEffect(() => {
@@ -250,6 +292,56 @@ useEffect(() => {
     } catch (e) {
       console.log("❌ loadMembers:", e);
     }
+  };
+
+  const loadAttendanceAreas =
+  async () => {
+
+    if (
+      !organizationId ||
+      !currentUser?.uid
+    ) {
+      return;
+    }
+
+    const assignmentsSnap =
+      await getDocs(
+        query(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "leadershipAssignments"
+          ),
+          where(
+            "memberId",
+            "==",
+            currentUser.uid
+          ),
+          where(
+            "canTakeAttendance",
+            "==",
+            true
+          ),
+          where(
+            "status",
+            "==",
+            "active"
+          )
+        )
+      );
+
+    const areas =
+      assignmentsSnap.docs.map(
+        (d) => ({
+          id: d.id,
+          ...d.data(),
+        })
+      );
+
+    setAttendanceAreas(
+      areas
+    );
   };
 
   // ─────────────────────────────────────────────────────────────────
@@ -1594,6 +1686,59 @@ const TIMES =
           </View>
         </View>
       )}
+
+{attendanceAreas.length > 0 && (
+  <View
+    style={{
+      backgroundColor: "#fff",
+      margin: 12,
+      padding: 12,
+      borderRadius: 12,
+    }}
+  >
+    <Text
+      style={{
+        fontWeight: "700",
+        marginBottom: 10,
+      }}
+    >
+      Attendance Area
+    </Text>
+
+    {attendanceAreas.map(
+      (area) => (
+        <TouchableOpacity
+          key={area.id}
+          style={[
+            styles.chip,
+            selectedAttendanceArea
+              ?.entityId ===
+              area.entityId &&
+              styles.chipActive,
+          ]}
+          onPress={() =>
+            setSelectedAttendanceArea(
+              area
+            )
+          }
+        >
+          <Text
+            style={[
+              styles.chipText,
+              selectedAttendanceArea
+                ?.entityId ===
+                area.entityId &&
+                styles.chipTextActive,
+            ]}
+          >
+            {area.entityName}
+          </Text>
+        </TouchableOpacity>
+      )
+    )}
+  </View>
+)}
+
 
       {/* ── START SESSION BUTTON ── */}
       {!sessionId && (

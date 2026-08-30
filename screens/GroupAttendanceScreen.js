@@ -32,7 +32,9 @@ export default function GroupAttendanceScreen() {
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
 
-  const [groups,         setGroups]         = useState([]);
+  const [attendanceAreas, setAttendanceAreas] =
+  useState([]);
+
   const [selectedGroup,  setSelectedGroup]  = useState(preselectedGroup);
   const [groupMembers,   setGroupMembers]   = useState([]);
   const [attendance,     setAttendance]     = useState({});
@@ -76,38 +78,114 @@ export default function GroupAttendanceScreen() {
   }, [sessionId]);
 
   const loadGroups = async () => {
-    setLoading(true);
-    try {
-      const snap = await getDocs(
-        collection(db, "organizations", organizationId, "entities", entityId, "groups")
-      );
-      setGroups(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) {
-      console.log("❌ loadGroups:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
 
-  const loadGroupMembers = async (group) => {
-    setLoading(true);
-    try {
-      // ✅ Only members whose `groups` array includes this group's ID
-      // — they are the ONLY ones that appear on this register.
-      const snap = await getDocs(
-        collection(db, "organizations", organizationId, "entities", entityId, "members")
+  try {
+    const snap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "ministries"
+      )
+    );
+
+    const ministries = snap.docs
+      .map((d) => ({
+        id: d.id,
+        ...d.data(),
+        entityType: "ministry",
+      }))
+      .filter(
+        (item) => item.active !== false
       );
-      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const inGroup = all.filter(m =>
-        Array.isArray(m.groups) && m.groups.includes(group.id)
-      );
-      setGroupMembers(inGroup);
-    } catch (e) {
-      console.log("❌ loadGroupMembers:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+    console.log(
+      "MINISTRIES LOADED:",
+      ministries.length
+    );
+
+    console.log(
+      "MINISTRIES:",
+      ministries
+    );
+
+    setAttendanceAreas(
+      ministries
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadGroups:",
+      e
+    );
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
+
+ const loadGroupMembers = async (group) => {
+  setLoading(true);
+
+  try {
+    const snap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members"
+      )
+    );
+
+    const all = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    const ministryName =
+      (group?.name || "")
+        .trim()
+        .toLowerCase();
+
+    const inGroup = all.filter(
+      (member) =>
+        (member?.ministry || "")
+          .trim()
+          .toLowerCase() ===
+        ministryName
+    );
+
+    console.log(
+      "GROUP:",
+      group?.name
+    );
+
+    console.log(
+      "MEMBERS FOUND:",
+      inGroup.length
+    );
+
+    setGroupMembers(inGroup);
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadGroupMembers:",
+      e
+    );
+
+  } finally {
+
+    setLoading(false);
+
+  }
+};
 
   const startAttendanceListener = () => {
     if (attendanceUnsubRef.current) attendanceUnsubRef.current();
@@ -126,36 +204,86 @@ export default function GroupAttendanceScreen() {
     });
   };
 
-  const startSession = async () => {
-    if (!selectedGroup || !startTime) {
-      Alert.alert("Required", "Select a group and set start time.");
-      return;
-    }
-    try {
-      const ref = await addDoc(
-        collection(db, "organizations", organizationId, "entities", entityId, "group_sessions"),
-        {
-          groupId:        selectedGroup.id,
-          groupName:      selectedGroup.name,
-          date:           today,
-          purpose:        sessionPurpose,
-          startTime,
-          status:         "open",
-          sessionScope:   "group",
-          entityId,
-          organizationId,
-          totalMembers:   groupMembers.length,
-          createdAt:      new Date().toISOString(),
-        }
-      );
-      setSessionId(ref.id);
-      setSessionActive(true);
-      setSessionModal(false);
-      Alert.alert("✅ Session Started", `${selectedGroup.name} ${sessionPurpose} session is live.`);
-    } catch (e) {
-      Alert.alert("Error", "Could not start session.");
-    }
-  };
+ const startSession = async () => {
+  if (!selectedGroup || !startTime) {
+    Alert.alert(
+      "Required",
+      "Select a group and set start time."
+    );
+    return;
+  }
+
+  try {
+    const ref = await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "group_sessions"
+      ),
+      {
+        groupId: selectedGroup.id,
+
+        groupName: selectedGroup.name,
+
+        attendanceEntityId:
+          selectedGroup.id,
+
+        attendanceEntityName:
+          selectedGroup.name,
+
+        attendanceEntityType:
+          selectedGroup.entityType ||
+          "group",
+
+        date: today,
+
+        purpose: sessionPurpose,
+
+        startTime: startTime,
+
+        status: "open",
+
+        sessionScope: "group",
+
+        entityId: entityId,
+
+        organizationId: organizationId,
+
+        totalMembers:
+          groupMembers.length,
+
+        createdAt:
+          new Date().toISOString(),
+      }
+    );
+
+    setSessionId(ref.id);
+
+    setSessionActive(true);
+
+    setSessionModal(false);
+
+    Alert.alert(
+      "✅ Session Started",
+      `${selectedGroup.name} ${sessionPurpose} session is live.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ startGroupSession:",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      "Could not start session."
+    );
+  }
+};
 
   const endSession = async () => {
     const present = groupMembers.filter(m => attendance[m.id]?.status === "present").length;
@@ -218,8 +346,18 @@ export default function GroupAttendanceScreen() {
           name:         member.name,
           sessionId,
           sessionScope: "group",      // ✅ The critical tag — marks this as group-only
-          groupId:      selectedGroup.id,
-          groupName:    selectedGroup.name,
+          groupId: selectedGroup.id,
+groupName: selectedGroup.name,
+
+attendanceEntityId:
+  selectedGroup.id,
+
+attendanceEntityName:
+  selectedGroup.name,
+
+attendanceEntityType:
+  selectedGroup.entityType ||
+  "ministry",
           date:         today,
           status,
           method:       "manual",
@@ -250,13 +388,14 @@ export default function GroupAttendanceScreen() {
         <ScrollViewPlaceholder>
           <Text style={styles.pickLabel}>Select Group</Text>
           {loading ? <ActivityIndicator color="#4B3F72" /> : (
-            groups.length === 0 ? (
+            attendanceAreas.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={40} color="#ddd" />
                 <Text style={styles.emptyText}>No groups created yet</Text>
               </View>
             ) : (
-              groups.map(g => (
+              attendanceAreas.map(g => (
+
                 <TouchableOpacity key={g.id} style={styles.groupOption}
                   onPress={() => setSelectedGroup(g)}>
                   <View style={[styles.groupIcon, { backgroundColor: (g.color || "#4B3F72") + "20" }]}>

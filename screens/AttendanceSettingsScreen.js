@@ -976,65 +976,76 @@ if (editingMode === "template") {
     trackColor={{ true: "#0984E3" }}
   />
 </SettingRow>
-{settings.requireAttendancePin
- && (
+{settings.requireAttendancePin && (
   <View style={styles.card}>
+    <Text style={styles.thresholdLabel}>
+      Session Security PIN
+    </Text>
 
-    <View style={styles.thresholdRow}>
+    <Text
+      style={[
+        styles.thresholdSub,
+        { marginBottom: 16 }
+      ]}
+    >
+      Used to authorise session closure and
+      other attendance security actions.
+    </Text>
 
-      <View style={{ flex: 1 }}>
-        <Text style={styles.thresholdLabel}>
-          Session Security PIN
+    <View
+      style={{
+        flexDirection: "row",
+        gap: 10,
+      }}
+    >
+      <TouchableOpacity
+        style={styles.detectBtn}
+        onPress={() =>
+          navigation.navigate(
+            "PinSetup",
+            {
+              mode: "attendance",
+            }
+          )
+        }
+      >
+        <Ionicons
+          name="key-outline"
+          size={14}
+          color="#fff"
+        />
+
+        <Text style={styles.detectBtnText}>
+          Setup Attendance PIN
         </Text>
-
-        <Text style={styles.thresholdSub}>
-          Used to authorise session closure
-          and other attendance security actions.
-        </Text>
-      </View>
+      </TouchableOpacity>
 
       <TouchableOpacity
-  style={styles.detectBtn}
-  onPress={() =>
-    navigation.navigate(
-      "PinSetup",
-      {
-        mode: "attendance",
-      }
-    )
+        style={styles.attendanceResetBtn}
+        onPress={() =>
+          navigation.navigate(
+  "Login",
+  {
+    resetPinMode: "attendance",
   }
->
-  <Ionicons
-    name="key-outline"
-    size={14}
-    color="#fff"
-  />
+)
+        }
+      >
+        <Ionicons
+          name="refresh-circle-outline"
+          size={18}
+          color="#E67E22"
+        />
 
-  <Text style={styles.detectBtnText}>
-    Setup Attendance PIN
-  </Text>
-</TouchableOpacity>
-<TouchableOpacity
-  style={styles.settingRow}
-  onPress={() =>
-    navigation.navigate(
-      "AttendancePinRecovery"
-    )
-  }
->
-  <Ionicons
-    name="refresh-circle-outline"
-    size={20}
-    color="#E67E22"
-  />
-
-  <Text style={styles.settingLabel}>
-    Reset Attendance PIN
-  </Text>
-</TouchableOpacity>
-
+        <Text
+          style={
+            styles.attendanceResetText
+          }
+        >
+          Reset PIN
+        </Text>
+      </TouchableOpacity>
     </View>
-
   </View>
 )}
 
@@ -1173,7 +1184,7 @@ if (editingMode === "template") {
 >
 <View
   style={{
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     marginTop: 6,
     marginBottom: 12,
@@ -1572,5 +1583,25 @@ manageHint: {
   marginTop: 6,
   marginBottom: 12,
   fontWeight: "600",
+},
+attendanceResetBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+
+  borderWidth: 1,
+  borderColor: "#E67E22",
+
+  borderRadius: 8,
+
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+},
+
+attendanceResetText: {
+  color: "#E67E22",
+  fontSize: 11,
+  fontWeight: "700",
 },
 });
