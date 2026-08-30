@@ -19,11 +19,16 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({
+  navigation,
+  route,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [pinEnabled, setPinEnabled] = useState(false);
+  const resetPinMode =
+  route?.params?.resetPinMode || null;
 
  const routeUser = async (uid, userData) => {
 
@@ -384,14 +389,83 @@ navigation.replace("MainTabs");
       "true"
     );
 
-    await AsyncStorage.setItem(
-      "currentUser",
-      JSON.stringify(userData)
-    );
+   await AsyncStorage.setItem(
+  "currentUser",
+  JSON.stringify(userData)
+);
 
-    console.log("STEP 9 - Calling routeUser");
+/* ---------------------------------- */
+/* PIN RESET FLOW */
+/* ---------------------------------- */
 
-    await routeUser(uid, userData);
+if (resetPinMode === "app") {
+
+  console.log(
+    "PIN RESET - APP"
+  );
+
+  await AsyncStorage.multiRemove([
+    "pinHash",
+    "pinUser",
+    "pinUserSnapshot",
+    "pinEnabled",
+  ]);
+
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      pinHash: null,
+    },
+    {
+      merge: true,
+    }
+  );
+
+  navigation.replace(
+    "PinSetup"
+  );
+
+  return;
+}
+
+if (
+  resetPinMode ===
+  "attendance"
+) {
+
+  console.log(
+    "PIN RESET - ATTENDANCE"
+  );
+
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      attendancePinHash: null,
+      attendancePinEnabled: false,
+    },
+    {
+      merge: true,
+    }
+  );
+
+  navigation.replace(
+    "PinSetup",
+    {
+      mode: "attendance",
+    }
+  );
+
+  return;
+}
+
+console.log(
+  "STEP 9 - Calling routeUser"
+);
+
+await routeUser(
+  uid,
+  userData
+);
 
     console.log("STEP 10 - routeUser completed");
 

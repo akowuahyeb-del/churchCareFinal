@@ -102,14 +102,25 @@ export default function PinEntryScreen({ navigation }) {
       const nextAttempts = attempts + 1;
       setAttempts(nextAttempts);
       setPin("");
-
-      if (nextAttempts >= 3) {
-        Alert.alert(
-          "Too Many Attempts",
-          "For your security, please sign in with your email.",
-          [{ text: "OK", onPress: () => navigation.replace("Login") }]
-        );
-      } else {
+if (nextAttempts >= 3) {
+  Alert.alert(
+    "Too Many Attempts",
+    "Forgot your PIN? Sign in with your email to create a new one.",
+    [
+      {
+        text: "Reset PIN",
+        onPress: () =>
+          navigation.replace("Login", {
+            resetPinMode: "app",
+          }),
+      },
+      {
+        text: "Use Email",
+        onPress: () => navigation.replace("Login"),
+      },
+    ]
+  );
+} else {
         Alert.alert("Incorrect PIN", (3 - nextAttempts) + " attempt(s) remaining.");
       }
     } catch (e) {
@@ -160,9 +171,27 @@ export default function PinEntryScreen({ navigation }) {
             })}
           </View>
         ))}
-        <TouchableOpacity onPress={() => navigation.replace("Login")} style={styles.emailBtn}>
-          <Text style={styles.emailText}>Use Email Instead</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+  onPress={() =>
+    navigation.replace("Login", {
+      resetPinMode: "app",
+    })
+  }
+  style={styles.emailBtn}
+>
+ <Text style={styles.emailText}>
+  Reset PIN
+</Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  onPress={() => navigation.replace("Login")}
+  style={styles.emailBtn}
+>
+  <Text style={styles.emailText}>
+    Use Email Instead
+  </Text>
+</TouchableOpacity>
       </View>
     </SafeAreaView>
   );

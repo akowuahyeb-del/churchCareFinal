@@ -1014,7 +1014,24 @@ if (editingMode === "template") {
     Setup Attendance PIN
   </Text>
 </TouchableOpacity>
+<TouchableOpacity
+  style={styles.settingRow}
+  onPress={() =>
+    navigation.navigate(
+      "AttendancePinRecovery"
+    )
+  }
+>
+  <Ionicons
+    name="refresh-circle-outline"
+    size={20}
+    color="#E67E22"
+  />
 
+  <Text style={styles.settingLabel}>
+    Reset Attendance PIN
+  </Text>
+</TouchableOpacity>
 
     </View>
 
