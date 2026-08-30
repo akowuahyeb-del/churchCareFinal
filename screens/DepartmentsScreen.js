@@ -250,12 +250,22 @@ useEffect(() => {
 </Text>
 
    {members
-  .filter(
-    (member) =>
+  .filter((member) => {
+
+    const memberships =
+      member.memberships || [];
+
+    return (
+      memberships.includes(
+        selectedDept.name
+      ) ||
+
       member.ministry ===
-      selectedDept.name
-  )
+        selectedDept.name
+    );
+  })
   .map((member) => (
+
 
     <View
       key={member.id}

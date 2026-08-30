@@ -153,13 +153,29 @@ export default function GroupAttendanceScreen() {
         .trim()
         .toLowerCase();
 
-    const inGroup = all.filter(
-      (member) =>
-        (member?.ministry || "")
+    const inGroup = all.filter((member) => {
+
+  const memberships =
+    (member.memberships || [])
+      .map((m) =>
+        String(m)
           .trim()
-          .toLowerCase() ===
-        ministryName
-    );
+          .toLowerCase()
+      );
+
+  return (
+
+    memberships.includes(
+      ministryName
+    ) ||
+
+    (member?.ministry || "")
+      .trim()
+      .toLowerCase() ===
+    ministryName
+
+  );
+});
 
     console.log(
       "GROUP:",
@@ -496,7 +512,11 @@ attendanceEntityType:
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.memberName}>{item.name}</Text>
-                <Text style={styles.memberSub}>{item.role || item.ministry || ""}</Text>
+                <Text style={styles.memberSub}>
+  {item.memberships?.length > 0
+    ? item.memberships.join(" • ")
+    : item.ministry || ""}
+</Text>
               </View>
               <TouchableOpacity
                 style={[styles.markBtn, { backgroundColor: status === "present" ? "#27ae60" : "#ddd" }]}

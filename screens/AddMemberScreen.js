@@ -63,6 +63,7 @@ const [member, setMember] = useState(
         communicantNote: "",
 
         ministry: "",
+        memberships: [],
         status: "",
       }
     : {
@@ -80,12 +81,21 @@ const [member, setMember] = useState(
         communicantNote: "",
 
         ministry: "",
+        memberships: [],
         status: "",
       })
 );
 
   /* ── ministry list (chips) ── */
-  const [ministries, setMinistries] = useState(["YPG", "Prayer Tower"]);
+  /* ── membership entities ── */
+  const [ministries, setMinistries] =
+  useState(["YPG", "Prayer Tower"]);
+
+const [availableEntities, setAvailableEntities] =
+  useState([]);
+  const [selectedMemberships, setSelectedMemberships] =
+  useState(memberData?.memberships || []);
+
   const [ministryModal, setMinistryModal] = useState(false);
   const [newMinistry, setNewMinistry] = useState("");
   const [editMinistryModal, setEditMinistryModal] = useState(false);
@@ -120,6 +130,8 @@ const goNext = () => {
     if (navigation.canGoBack()) navigation.goBack();
     else navigation.navigate("MembersMain");
   };
+
+
 
  /* ── save ── */
 const handleSaveMember = async () => {
@@ -200,34 +212,53 @@ if (editingId) {
   console.log("✏️ UPDATING MEMBER:", editingId);
 
   await updateDoc(
-    doc(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "members",
-      editingId
-    ),
-    {
-      ...member,
-      updatedAt: new Date().toISOString(),
-    }
-  );
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    editingId
+  ),
+  {
+    ...member,
+
+    memberships: selectedMemberships,
+
+    // Backward compatibility
+    ministry:
+      selectedMemberships[0] || "",
+
+    updatedAt:
+      new Date().toISOString(),
+  }
+);
 
 } else {
 
-  const result = await addMemberManually({
-    organizationId,
-    entityId,
+const memberPayload = {
+  ...member,
 
-    ...member,
+  memberships:
+    selectedMemberships,
 
-    memberCode,
+  // Temporary backward compatibility
+  ministry:
+    selectedMemberships[0] || "",
+};
 
-    source: MEMBER_SOURCES.MANUAL,
-    lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
-  });
+const result = await addMemberManually({
+  organizationId,
+  entityId,
+
+  ...memberPayload,
+
+  memberCode,
+
+  source: MEMBER_SOURCES.MANUAL,
+  lifecycleStatus: MEMBER_LIFECYCLE.MEMBER,
+});
 
 if (
   convertMode &&
@@ -529,6 +560,27 @@ await setDoc(
 };
 
 
+
+const toggleMembership = (membershipName) => {
+
+  setSelectedMemberships(prev => {
+
+    const exists =
+      prev.includes(membershipName);
+
+    if (exists) {
+      return prev.filter(
+        item => item !== membershipName
+      );
+    }
+
+    return [
+      ...prev,
+      membershipName,
+    ];
+  });
+
+};
   /* ══════════════════════════ STEP CONTENT ══════════════════════════ */
 
   const StepOne = (
@@ -627,18 +679,34 @@ await setDoc(
         <Text style={styles.cardTitle}>CHURCH DETAILS</Text>
 
         {/* ── MINISTRY — fixed: wraps instead of horizontal scroll ── */}
-        <Text style={styles.label}>MINISTRY</Text>
+        <Text style={styles.label}>
+  MEMBERSHIPS
+</Text>
         <View style={styles.chipWrap}>
           {ministries.map((item, index) => (
             <TouchableOpacity key={item}
-              onPress={() => setMember(prev => ({ ...prev, ministry: item }))}
+              onPress={() =>
+  toggleMembership(item)
+}
+
               onLongPress={() => {
                 setSelectedMinistryIndex(index);
                 setEditMinistryValue(item);
                 setEditMinistryModal(true);
               }}
-              style={[styles.chip, member.ministry === item && styles.chipActive]}>
-              <Text style={member.ministry === item ? styles.chipTextActive : styles.chipText}>
+              style={[
+  styles.chip,
+  selectedMemberships.includes(item) &&
+    styles.chipActive
+]}
+>
+              <Text
+  style={
+    selectedMemberships.includes(item)
+      ? styles.chipTextActive
+      : styles.chipText
+  }
+>
                 {item}
               </Text>
             </TouchableOpacity>

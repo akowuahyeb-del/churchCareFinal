@@ -889,10 +889,24 @@ const isAdministrator =
   </View>
 </View>
 
+{item.memberships?.length > 0 ? (
 
-                    {item.ministry && (
-                      <Text style={styles.memberMeta}>{item.ministry}</Text>
-                    )}
+  <Text style={styles.memberMeta}>
+    {item.memberships
+      .map(m => typeof m === "string"
+        ? m
+        : m.name)
+      .join(" • ")}
+  </Text>
+
+) : item.ministry ? (
+
+  <Text style={styles.memberMeta}>
+    {item.ministry}
+  </Text>
+
+) : null}
+
 
                     {/* Communicant badge */}
                     {item.communicant === "yes" && (

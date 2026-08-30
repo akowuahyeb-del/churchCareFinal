@@ -68,15 +68,48 @@ const SERIOUS_ACTIONS = ["expel", "investigation"];
 // anywhere in the real member document — those fields always rendered
 // blank no matter what was actually saved.
 const PROFILE_FIELDS = [
-  { key: "phone",              label: "Phone",               selfEditable: true  },
-  { key: "address",            label: "Address",             selfEditable: false },
-  { key: "occupation",         label: "Occupation",          selfEditable: false },
-  { key: "ministry",           label: "Ministry",            selfEditable: false },
-  { key: "baptismStatus",      label: "Baptism Status",      selfEditable: false },
-  { key: "emergencyContact",   label: "Emergency Contact",   selfEditable: false },
-  { key: "membershipDuration", label: "Membership Duration", selfEditable: false },
-];
+  {
+    key: "phone",
+    label: "Phone",
+    selfEditable: true,
+  },
 
+  {
+    key: "address",
+    label: "Address",
+    selfEditable: false,
+  },
+
+  {
+    key: "occupation",
+    label: "Occupation",
+    selfEditable: false,
+  },
+
+  {
+    key: "memberships",
+    label: "Memberships",
+    selfEditable: false,
+  },
+
+  {
+    key: "baptismStatus",
+    label: "Baptism Status",
+    selfEditable: false,
+  },
+
+  {
+    key: "emergencyContact",
+    label: "Emergency Contact",
+    selfEditable: false,
+  },
+
+  {
+    key: "membershipDuration",
+    label: "Membership Duration",
+    selfEditable: false,
+  },
+];
 export default function MemberProfileScreen({ route, navigation }) {
 
  
@@ -190,14 +223,26 @@ const [previousRoles, setPreviousRoles] =
     try {
       const snap = await getDoc(memberRef());
       if (snap.exists()) {
-        setMember({
-  id: snap.id,
-  lifecycleStatus: "member",
-  ...snap.data(),
-});
-      } else {
-        Alert.alert("Not Found", "This member record could not be found.");
-      }
+
+  const data = {
+    id: snap.id,
+    lifecycleStatus: "member",
+    ...snap.data(),
+  };
+
+  console.log(
+    "🔥 MEMBER PROFILE DATA",
+    JSON.stringify(data, null, 2)
+  );
+
+  setMember(data);
+
+} else {
+  Alert.alert(
+    "Not Found",
+    "This member record could not be found."
+  );
+}
     } catch (e) {
       console.log("❌ Load member error:", e);
       Alert.alert("Error", "Could not load this member's profile.");
@@ -950,7 +995,11 @@ try {
         </TouchableOpacity>
 
         <Text style={styles.heroName}>{member.name || "Unnamed Member"}</Text>
-        <Text style={styles.heroMinistry}>{member.ministry || "No ministry assigned"}</Text>
+        <Text style={styles.heroMinistry}>
+  {member.memberships?.length > 0
+    ? member.memberships.join(" • ")
+    : member.ministry || "No memberships"}
+</Text>
 
         {member.memberCode && (
           <Text style={styles.heroCode}>ID: {member.memberCode}</Text>
@@ -1059,7 +1108,15 @@ console.log("INVITE DEBUG", {
                 <View key={key} style={styles.infoRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.infoLabel}>{label}</Text>
-                    <Text style={styles.infoValue}>{member[key] || "—"}</Text>
+                    <Text style={styles.infoValue}>
+  {key === "memberships"
+    ? (
+        member.memberships?.length > 0
+          ? member.memberships.join(" • ")
+          : member.ministry || "—"
+      )
+    : (member[key] || "—")}
+</Text>
                   </View>
                   {canEditField && !isDeceased && (
                     <TouchableOpacity
