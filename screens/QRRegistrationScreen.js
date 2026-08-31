@@ -12,24 +12,31 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AppHeader from "../components/AppHeader";
 
 
-import { addMemberManually } from "../utils/memberIntake";
-
 import {
-  MEMBER_LIFECYCLE,
-} from "../constants/memberLifecycle";
+  addVisitor,
+} from "../utils/visitorIntake";
+
 
 export default function QRRegistrationScreen({
   navigation,
   route,
 }) {
+
+  console.log(
+    "QR REGISTRATION ROUTE:",
+    route?.params
+  );
+
   const { organizationId, entityId } =
     route.params || {};
 
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-  });
+const [form, setForm] = useState({
+  name: "",
+  phone: "",
+  suburb: "",
+  address: "",
+  email: "",
+});
 
   const handleRegister = async () => {
   try {
@@ -49,6 +56,13 @@ export default function QRRegistrationScreen({
       );
       return;
     }
+if (!form.suburb?.trim()) {
+  Alert.alert(
+    "Required",
+    "Please enter your suburb or area."
+  );
+  return;
+}
 
     const organizationId =
       route?.params?.org;
@@ -64,34 +78,34 @@ export default function QRRegistrationScreen({
       return;
     }
 
-    const result = await addMemberManually({
-      organizationId,
-      entityId,
+    const result = await addVisitor({
+  organizationId,
+  entityId,
 
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email?.trim() || "",
+  name: form.name.trim(),
 
-      source: "qr_registration",
+  phone: form.phone.trim(),
 
-      lifecycleStatus:
-        MEMBER_LIFECYCLE.VISITOR,
-    });
+  suburb: form.suburb.trim(),
 
+  address:
+    form.address?.trim() || "",
+
+  email:
+    form.email?.trim() || "",
+
+  source: "qr_registration",
+});
     if (
       !result.created &&
       result.duplicate
     ) {
 
-      const match =
-        result.matches?.[0];
+     Alert.alert(
+  "Already Registered",
+  `${result.visitor?.name || "This visitor"} already exists in the visitor register.`
+);
 
-      Alert.alert(
-        "Already Registered",
-        match?.name
-          ? `${match.name} already exists in the church records.`
-          : "A member or visitor with this phone number already exists."
-      );
 
       return;
     }
@@ -153,18 +167,50 @@ export default function QRRegistrationScreen({
           <Text style={styles.label}>
             Phone *
           </Text>
+<TextInput
+  style={styles.input}
+  keyboardType="phone-pad"
+  value={form.phone}
+  onChangeText={(text) =>
+    setForm((prev) => ({
+      ...prev,
+      phone: text,
+    }))
+  }
+/>
 
-          <TextInput
-            style={styles.input}
-            keyboardType="phone-pad"
-            value={form.phone}
-            onChangeText={(text) =>
-              setForm((prev) => ({
-                ...prev,
-                phone: text,
-              }))
-            }
-          />
+
+<Text style={styles.label}>
+  Suburb / Area *
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={form.suburb}
+  onChangeText={(text) =>
+    setForm((prev) => ({
+      ...prev,
+      suburb: text,
+    }))
+  }
+/>
+
+<Text style={styles.label}>
+  Address
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={form.address}
+  onChangeText={(text) =>
+    setForm((prev) => ({
+      ...prev,
+      address: text,
+    }))
+  }
+/>
+
+         
 
           <Text style={styles.label}>
             Email

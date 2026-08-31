@@ -19,6 +19,7 @@ export const buildRegistrationQR = (orgId, entityId) => {
 // ✅ CHURCH
 export const buildChurchQR = (orgId, entityId) => {
   return `${APP_SCHEME}church?org=${orgId}&entity=${entityId}`;
+
 };
 
 
@@ -72,4 +73,5 @@ export const buildPrayerLink = async () => {
   const ids = await getActiveEntityIds();
   if (!ids) return null;
   return `${APP_SCHEME}prayer?org=${ids.organizationId}&entity=${ids.entityId}`;
+
 };

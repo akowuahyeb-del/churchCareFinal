@@ -241,16 +241,28 @@ function RootStack() {
 
 const linking = {
   prefixes: ["churchcare://"],
+
   config: {
     screens: {
+
       MainTabs: {
         screens: {
-          Attendance: "attendance"
-        }
-      }
-    }
-  }
+          Attendance: "attendance",
+        },
+      },
+
+      QRRegistration: {
+        path: "register",
+        parse: {
+          org: (value) => value,
+          entity: (value) => value,
+        },
+      },
+
+    },
+  },
 };
+
 
 export default function App() {
   return (
