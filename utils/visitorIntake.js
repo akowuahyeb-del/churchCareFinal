@@ -56,10 +56,11 @@ export const addVisitor = async ({
 
   source = VISITOR_SOURCES.MANUAL,
 
-  name = "",
-  phone = "",
-  address = "",
-  suburb = "",
+name = "",
+phone = "",
+email = "",
+address = "",
+suburb = "",
 
   invitedBy = "",
 
@@ -98,6 +99,7 @@ if (existingVisitor) {
 
     name,
     phone,
+    email,
     address,
     suburb,
 
