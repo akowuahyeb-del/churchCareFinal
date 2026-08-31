@@ -29,6 +29,12 @@ import {
   VISITOR_TYPES,
 } from "../constants/visitorConstants";
 
+import { Share } from "react-native";
+
+import {
+  buildRegisterLink,
+} from "../utils/qrLinks";
+
 
 export default function VisitorsScreen({
   navigation,
@@ -256,21 +262,72 @@ const convertedCount =
   </Text>
 </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-        >
-          <Text style={styles.actionText}>
-            Visitor QR
-          </Text>
-        </TouchableOpacity>
-
        <TouchableOpacity
   style={styles.actionBtn}
+  onPress={async () => {
+
+    try {
+
+      const link =
+        await buildRegisterLink();
+
+      if (!link) {
+
+        Alert.alert(
+          "Error",
+          "Could not generate registration link."
+        );
+
+        return;
+      }
+
+      await Share.share({
+        title:
+          "Visitor Registration",
+
+        message:
+          `Welcome to our church.\n\nPlease complete your visitor registration using the link below:\n\n${link}`,
+      });
+
+    } catch (e) {
+
+      console.log(
+        "SHARE LINK ERROR:",
+        e
+      );
+
+      Alert.alert(
+        "Error",
+        "Could not share visitor link."
+      );
+    }
+
+  }}
 >
   <Text style={styles.actionText}>
-    Share Visitor Link
+    Share  Registration Link
   </Text>
 </TouchableOpacity>
+
+
+<TouchableOpacity
+  style={styles.actionBtn}
+  onPress={() =>
+    navigation.navigate(
+      "Settings",
+      {
+        openQrGenerator: true,
+        qrType: "register",
+      }
+    )
+  }
+>
+  <Text style={styles.actionText}>
+  Generate Visitor QR
+</Text>
+</TouchableOpacity>
+
+
 <TouchableOpacity
   style={styles.actionBtn}
   onPress={() =>

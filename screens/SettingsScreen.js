@@ -64,14 +64,47 @@ const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 // never actually called it; it had its own separate, inconsistent
 // template strings instead. utils/qrLinks.js is now the one source of truth.
 const QR_TYPES = [
-  // ✅ RE-ADDED — now backed by a real, live session lookup instead of
-  // the old Date.now() placeholder that never matched a real document
-  { key: "attendance", label: "Attendance Check-In", icon: "checkmark-circle-outline", color: "#4B3F72" },
-  { key: "donate",     label: "Donation Link",       icon: "heart-outline",            color: "#E11D48" },
-  { key: "register",   label: "Member Registration", icon: "person-add-outline",       color: "#0984E3" },
-  { key: "event",      label: "Event Registration",  icon: "calendar-outline",         color: "#00B894" },
-  { key: "prayer",     label: "Prayer Request",      icon: "prism-outline",            color: "#6C5CE7" },
-  { key: "custom",     label: "Custom URL / Text",   icon: "link-outline",             color: "#636e72" },
+  {
+    key: "attendance",
+    label: "Attendance Check-In",
+    icon: "checkmark-circle-outline",
+    color: "#4B3F72",
+  },
+
+  {
+    key: "donate",
+    label: "Donation Link",
+    icon: "heart-outline",
+    color: "#E11D48",
+  },
+
+  {
+    key: "register",
+    label: "Visitor Registration",
+    icon: "person-add-outline",
+    color: "#0984E3",
+  },
+
+  {
+    key: "event",
+    label: "Event Registration",
+    icon: "calendar-outline",
+    color: "#00B894",
+  },
+
+  {
+    key: "prayer",
+    label: "Prayer Request",
+    icon: "prism-outline",
+    color: "#6C5CE7",
+  },
+
+  {
+    key: "custom",
+    label: "Custom URL / Text",
+    icon: "link-outline",
+    color: "#636e72",
+  },
 ];
 
 // ── Reusable rows ─────────────────────────────────────────────────
@@ -125,7 +158,9 @@ function ModalSheet({ visible, onClose, children }) {
     </Modal>
   );
 }
-export default function SettingsScreen() {
+export default function SettingsScreen({
+  route,
+}) {
 
   const navigation = useNavigation();
 
@@ -382,6 +417,30 @@ useEffect(() => {
   const [qrGenerated,   setQrGenerated]   = useState(false);
   const [qrValue,       setQrValue]       = useState("");
   const [generatingQR,  setGeneratingQR]  = useState(false);
+  useEffect(() => {
+
+  if (
+    route?.params?.openQrGenerator === true
+  ) {
+
+    const registerType =
+      QR_TYPES.find(
+        (t) => t.key === "register"
+      );
+
+    if (registerType) {
+
+      setQrType(
+        registerType
+      );
+
+    }
+
+    setQrModal(true);
+
+  }
+
+}, [route?.params]);
 
   // ✅ NEW — donate-specific optional fields
   const [qrDonateAmount,   setQrDonateAmount]   = useState("");
