@@ -1050,7 +1050,7 @@ return (
   onPress: () => navigation.navigate("Visitors")
 },
 {
-  icon: "heart-outline",
+  icon: "medkit-outline",
   label: "Pastoral",
   onPress: () => navigation.navigate("PastoralRequest")
 },

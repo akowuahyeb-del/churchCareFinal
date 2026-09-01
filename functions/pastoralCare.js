@@ -78,6 +78,24 @@ async function findAssignee(organizationId, entityId, category) {
     .where("categories", "array-contains", category)
     .get();
 
+    console.log(
+  "PASTORAL TEAM QUERY",
+  {
+    organizationId,
+    entityId,
+    category,
+    found: teamSnap.size,
+  }
+);
+
+teamSnap.docs.forEach(doc => {
+  console.log(
+    "TEAM MEMBER",
+    doc.id,
+    doc.data()
+  );
+});
+
   if (teamSnap.empty) return null;
 
   const candidates = teamSnap.docs.map((d) => ({ uid: d.id, ...d.data() }));

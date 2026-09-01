@@ -160,4 +160,20 @@ const {
 exports.updateOrganizationIdentity =
   updateOrganizationIdentity;
   
+const pastoralCare =
+  require("./pastoralCare");
 
+exports.submitPastoralRequest =
+  pastoralCare.submitPastoralRequest;
+
+  exports.assignPastoralRequest =
+  pastoralCare.assignPastoralRequest;
+
+exports.updatePastoralRequestStatus =
+  pastoralCare.updatePastoralRequestStatus;
+
+exports.addPastoralNote =
+  pastoralCare.addPastoralNote;
+
+exports.escalateStalePastoralRequests =
+  pastoralCare.escalateStalePastoralRequests;

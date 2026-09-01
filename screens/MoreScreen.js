@@ -48,6 +48,23 @@ const MORE_ITEMS = [
   desc: "Care, counselling & support requests",
 },
 
+{
+  key: "PastoralDashboard",
+  label: "Pastoral Dashboard",
+  icon: "clipboard-outline",
+  color: "#4B3F72",
+  bg: "#EEF0FA",
+  desc: "Manage pastoral requests",
+},
+
+{
+  key: "PastoralTeam",
+  label: "Pastoral Team",
+  icon: "people-outline",
+  color: "#00B894",
+  bg: "#ECFDF5",
+  desc: "Configure pastoral routing team",
+},
 
   {
     key: "History",
@@ -104,7 +121,7 @@ export default function MoreScreen() {
         {/* ✅ MENU ITEMS */}
         <View>
           {MORE_ITEMS.map((item) => {
-            const routes = {
+         const routes = {
   Settings: "Settings",
   Finance: "Finance",
   Help: "Help",
@@ -113,7 +130,14 @@ export default function MoreScreen() {
   History: "HistoryScreen",
 
   PastoralCare: "PastoralRequest",
+
+  PastoralDashboard:
+    "PastoralCareDashboard",
+
+  PastoralTeam:
+    "PastoralTeamManagement",
 };
+
 
             return (
               <TouchableOpacity

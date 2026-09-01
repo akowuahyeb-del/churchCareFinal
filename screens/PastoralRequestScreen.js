@@ -13,6 +13,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import AppHeader from "../components/AppHeader";
+import { getAuth } from "firebase/auth";
 
 const CATEGORIES = [
   { key: "prayer", label: "Prayer Request" },
