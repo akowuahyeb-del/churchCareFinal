@@ -74,20 +74,45 @@ const [categoryLabel, setCategoryLabel] =
     );
     setChurchMembers(membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-    const teamSnap = await getDocs(
-      collection(
-        db,
-        "organizations",
-        ent.organizationId,
-        "entities",
-        ent.entityId,
-        "pastoralTeam"
-      )
-    );
-    setTeam(teamSnap.docs.map((d) => ({ uid: d.id, ...d.data() })));
-  }, []);
+   const teamSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    ent.organizationId,
+    "entities",
+    ent.entityId,
+    "pastoralTeam"
+  )
+);
+
+setTeam(
+  teamSnap.docs.map((d) => ({
+    uid: d.id,
+    ...d.data(),
+  }))
+);
+
+const categoriesSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    ent.organizationId,
+    "entities",
+    ent.entityId,
+    "pastoralCategories"
+  )
+);
+
+setCategories(
+  categoriesSnap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }))
+);
+}, []);
 
  
+
 
   useEffect(() => {
     loadData();
@@ -201,55 +226,43 @@ const [categoryLabel, setCategoryLabel] =
     }
   };
 
-  const saveCategory = () => {
+ const saveCategory = async () => {
   if (!categoryLabel.trim()) return;
 
   const key = categoryLabel
     .toLowerCase()
     .replace(/\s+/g, "_");
 
-  const exists = categories.some(
-    (c) =>
-      c.label.toLowerCase() ===
-        categoryLabel.trim().toLowerCase() &&
-      c.key !== editingCategory?.key
-  );
+  try {
 
-  if (exists) {
-    Alert.alert(
-      "Duplicate Category",
-      "This category already exists."
-    );
-    return;
-  }
-
-  if (editingCategory) {
-
-    setCategories((prev) =>
-      prev.map((c) =>
-        c.key === editingCategory.key
-          ? {
-              ...c,
-              label: categoryLabel.trim(),
-            }
-          : c
-      )
-    );
-
-  } else {
-
-    setCategories((prev) => [
-      ...prev,
+    await setDoc(
+      doc(
+        db,
+        "organizations",
+        entity.organizationId,
+        "entities",
+        entity.entityId,
+        "pastoralCategories",
+        key
+      ),
       {
         key,
         label: categoryLabel.trim(),
+        active: true,
+        updatedAt: new Date().toISOString(),
       },
-    ]);
-  }
+      { merge: true }
+    );
 
-  setEditingCategory(null);
-  setCategoryLabel("");
-  setCategoryModal(false);
+    await loadData();
+
+    setEditingCategory(null);
+    setCategoryLabel("");
+    setCategoryModal(false);
+
+  } catch (error) {
+    Alert.alert("Error", error.message);
+  }
 };
 
 const deleteCategory = (categoryKey) => {
