@@ -21,7 +21,7 @@ import {
 import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { key: "prayer", label: "Prayer" },
   { key: "counselling", label: "Counselling" },
   { key: "bereavement", label: "Bereavement" },
@@ -42,6 +42,16 @@ export default function PastoralTeamManagementScreen({ navigation }) {
   const [isSeniorPastor, setIsSeniorPastor] = useState(false);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] =
+  useState(DEFAULT_CATEGORIES);
+  const [categoryModal, setCategoryModal] =
+  useState(false);
+
+const [editingCategory, setEditingCategory] =
+  useState(null);
+
+const [categoryLabel, setCategoryLabel] =
+  useState("");
 
   const loadData = useCallback(async () => {
     const stored = await AsyncStorage.getItem("activeEntity");
@@ -186,6 +196,80 @@ export default function PastoralTeamManagementScreen({ navigation }) {
     }
   };
 
+const saveCategory = () => {
+  if (!categoryLabel.trim()) return;
+
+  const exists = categories.some(
+  c =>
+    c.label.toLowerCase() ===
+      categoryLabel.trim().toLowerCase() &&
+    c.key !== editingCategory?.key
+);
+
+if (exists) {
+  Alert.alert(
+    "Duplicate Category",
+    "This category already exists."
+  );
+  return;
+}
+
+  const key =
+    categoryLabel
+      .toLowerCase()
+      .replace(/\s+/g, "_");
+
+  if (editingCategory) {
+
+    setCategories(prev =>
+      prev.map(c =>
+        c.key === editingCategory.key
+          ? {
+              ...c,
+              label: categoryLabel.trim(),
+            }
+          : c
+      )
+    );
+
+  } else {
+
+    setCategories(prev => [
+      ...prev,
+      {
+        key,
+        label: categoryLabel.trim(),
+      },
+    ]);
+  }
+setEditingCategory(null);
+  setCategoryModal(false);
+  setCategoryLabel("");
+};
+
+const deleteCategory = (categoryKey) => {
+  Alert.alert(
+    "Delete Category",
+    "Remove this category?",
+    [
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          setCategories(prev =>
+            prev.filter(
+              c => c.key !== categoryKey
+            )
+          );
+        },
+      },
+      { text: "Cancel" },
+    ]
+  );
+};
+
+
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader
@@ -222,7 +306,7 @@ export default function PastoralTeamManagementScreen({ navigation }) {
                 {(member.categories || []).map((c) => (
                   <View key={c} style={styles.categoryPill}>
                     <Text style={styles.categoryPillText}>
-                      {CATEGORIES.find((x) => x.key === c)?.label || c}
+                      {categories.find((x) => x.key === c)?.label || c}
                     </Text>
                   </View>
                 ))}
@@ -300,28 +384,89 @@ export default function PastoralTeamManagementScreen({ navigation }) {
               </>
             )}
 
-            <Text style={styles.label}>Categories Covered</Text>
-            <View style={styles.chipRow}>
-              {CATEGORIES.map((c) => (
-                <TouchableOpacity
-                  key={c.key}
-                  style={[
-                    styles.chip,
-                    selectedCategories.includes(c.key) && styles.chipActive,
-                  ]}
-                  onPress={() => toggleCategory(c.key)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selectedCategories.includes(c.key) && styles.chipTextActive,
-                    ]}
-                  >
-                    {c.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+       <View style={styles.categoryHeader}>
+  <Text style={styles.label}>
+    Categories Covered
+  </Text>
+
+  <TouchableOpacity
+    onPress={() => {
+      setEditingCategory(null);
+      setCategoryLabel("");
+      setCategoryModal(true);
+    }}
+  >
+    <Text style={styles.addCategoryBtn}>
+      + Add
+    </Text>
+  </TouchableOpacity>
+</View>
+
+{/* Category Selection */}
+<View style={styles.chipRow}>
+  {categories.map((c) => (
+    <TouchableOpacity
+      key={c.key}
+      style={[
+        styles.chip,
+        selectedCategories.includes(c.key) &&
+          styles.chipActive,
+      ]}
+      onPress={() => toggleCategory(c.key)}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          selectedCategories.includes(c.key) &&
+            styles.chipTextActive,
+        ]}
+      >
+        {c.label}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
+
+{/* Category Administration */}
+<View style={styles.categoryAdmin}>
+  {categories.map((c) => (
+    <View
+      key={c.key}
+      style={styles.categoryAdminRow}
+    >
+      <Text style={{ fontWeight: "600" }}>
+        {c.label}
+      </Text>
+
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 16,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            setEditingCategory(c);
+            setCategoryLabel(c.label);
+            setCategoryModal(true);
+          }}
+        >
+          <Text style={{ color: "#0984E3" }}>
+            Edit
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => deleteCategory(c.key)}
+        >
+          <Text style={{ color: "#E74C3C" }}>
+            Delete
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ))}
+</View>
 
             <View style={styles.switchRow}>
               <View style={{ flex: 1 }}>
@@ -352,6 +497,57 @@ export default function PastoralTeamManagementScreen({ navigation }) {
           </ScrollView>
         </View>
       </Modal>
+
+      <Modal
+  visible={categoryModal}
+  transparent
+  animationType="slide"
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContent}>
+
+      <Text style={styles.modalTitle}>
+        {editingCategory
+          ? "Edit Category"
+          : "Add Category"}
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Category name"
+        value={categoryLabel}
+        onChangeText={setCategoryLabel}
+      />
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={saveCategory}
+      >
+        <Text style={styles.saveBtnText}>
+          Save
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => {
+          setCategoryModal(false);
+          setCategoryLabel("");
+          setEditingCategory(null);
+        }}
+      >
+        <Text
+          style={{
+            textAlign: "center",
+            marginTop: 10,
+          }}
+        >
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -389,4 +585,46 @@ const styles = StyleSheet.create({
   switchSub: { color: "#777", fontSize: 12, marginTop: 2 },
   saveBtn: { backgroundColor: "#4B3F72", padding: 16, borderRadius: 12, alignItems: "center", marginTop: 24, marginBottom: 40 },
   saveBtnText: { color: "#fff", fontWeight: "700" },
+  categoryHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+addCategoryBtn: {
+  color: "#4B3F72",
+  fontWeight: "700",
+},
+
+categoryAdmin: {
+  marginTop: 16,
+},
+
+categoryAdminRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: "#EEE",
+},
+
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0,0,0,0.4)",
+  justifyContent: "center",
+  padding: 20,
+},
+
+modalContent: {
+  backgroundColor: "#fff",
+  borderRadius: 16,
+  padding: 20,
+},
+
+modalTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  marginBottom: 16,
+},
 });
