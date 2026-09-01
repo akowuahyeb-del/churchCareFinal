@@ -17,6 +17,32 @@ import AppHeader from "../components/AppHeader";
 
 const STATUS_OPTIONS = ["new", "assigned", "in_progress", "resolved", "closed"];
 
+const formatTimelineDate = (value) => {
+  if (!value) return "";
+
+  let d;
+
+  if (typeof value?.toDate === "function") {
+    d = value.toDate(); // Firestore Timestamp
+  } else {
+    d = new Date(value); // ISO string
+  }
+
+  return (
+    d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }) +
+    " • " +
+    d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
+};
+
+
 export default function PastoralTicketDetailScreen({ navigation, route }) {
   const { requestId, organizationId, entityId } = route.params;
 
@@ -48,7 +74,7 @@ export default function PastoralTicketDetailScreen({ navigation, route }) {
     if (snap.exists()) setTicket({ id: snap.id, ...snap.data() });
 
     const notesSnap = await getDocs(
-      query(collection(ref, "notes"), orderBy("createdAt", "asc"))
+      query(collection(ref, "notes"), orderBy("createdAt", "desc"))
     );
     setNotes(notesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
@@ -208,11 +234,19 @@ export default function PastoralTicketDetailScreen({ navigation, route }) {
             key={n.id}
             style={[styles.noteCard, n.internal && styles.noteCardInternal]}
           >
-            <Text style={styles.noteAuthor}>
-              {n.system ? "System" : n.authorName || "Staff"}
-              {n.internal && !n.system ? " · internal" : ""}
-            </Text>
-            <Text style={styles.noteBody}>{n.body}</Text>
+           <Text style={styles.noteAuthor}>
+  {n.system ? "System" : n.authorName || "Staff"}
+  {n.internal && !n.system ? " · internal" : ""}
+</Text>
+
+<Text style={styles.noteDate}>
+  📅 {formatTimelineDate(n.createdAt)}
+</Text>
+
+
+<Text style={styles.noteBody}>
+  {n.body}
+</Text>
           </View>
         ))}
 
@@ -257,4 +291,10 @@ const styles = StyleSheet.create({
   noteInput: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd", borderRadius: 10, padding: 10, minHeight: 70, marginTop: 8, textAlignVertical: "top" },
   saveBtn: { backgroundColor: "#4B3F72", padding: 14, borderRadius: 12, alignItems: "center", marginTop: 10 },
   saveBtnText: { color: "#fff", fontWeight: "700" },
+  noteDate: {
+  fontSize: 11,
+  color: "#888",
+  marginTop: 2,
+  marginBottom: 6,
+},
 });
