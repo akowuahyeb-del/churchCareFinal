@@ -1049,6 +1049,11 @@ return (
   label: "Visitors",
   onPress: () => navigation.navigate("Visitors")
 },
+{
+  icon: "heart-outline",
+  label: "Pastoral",
+  onPress: () => navigation.navigate("PastoralRequest")
+},
 
 hasRole("admin") && {
   icon: "bar-chart-outline",
