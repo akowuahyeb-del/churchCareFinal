@@ -17,8 +17,11 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
+
 import { db } from "../firebase";
+
 import AppHeader from "../components/AppHeader";
 
 const DEFAULT_CATEGORIES = [
@@ -83,6 +86,8 @@ const [categoryLabel, setCategoryLabel] =
     );
     setTeam(teamSnap.docs.map((d) => ({ uid: d.id, ...d.data() })));
   }, []);
+
+ 
 
   useEffect(() => {
     loadData();
@@ -196,33 +201,32 @@ const [categoryLabel, setCategoryLabel] =
     }
   };
 
-const saveCategory = () => {
+  const saveCategory = () => {
   if (!categoryLabel.trim()) return;
 
+  const key = categoryLabel
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+
   const exists = categories.some(
-  c =>
-    c.label.toLowerCase() ===
-      categoryLabel.trim().toLowerCase() &&
-    c.key !== editingCategory?.key
-);
-
-if (exists) {
-  Alert.alert(
-    "Duplicate Category",
-    "This category already exists."
+    (c) =>
+      c.label.toLowerCase() ===
+        categoryLabel.trim().toLowerCase() &&
+      c.key !== editingCategory?.key
   );
-  return;
-}
 
-  const key =
-    categoryLabel
-      .toLowerCase()
-      .replace(/\s+/g, "_");
+  if (exists) {
+    Alert.alert(
+      "Duplicate Category",
+      "This category already exists."
+    );
+    return;
+  }
 
   if (editingCategory) {
 
-    setCategories(prev =>
-      prev.map(c =>
+    setCategories((prev) =>
+      prev.map((c) =>
         c.key === editingCategory.key
           ? {
               ...c,
@@ -234,7 +238,7 @@ if (exists) {
 
   } else {
 
-    setCategories(prev => [
+    setCategories((prev) => [
       ...prev,
       {
         key,
@@ -242,9 +246,10 @@ if (exists) {
       },
     ]);
   }
-setEditingCategory(null);
-  setCategoryModal(false);
+
+  setEditingCategory(null);
   setCategoryLabel("");
+  setCategoryModal(false);
 };
 
 const deleteCategory = (categoryKey) => {
@@ -255,18 +260,38 @@ const deleteCategory = (categoryKey) => {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => {
-          setCategories(prev =>
-            prev.filter(
-              c => c.key !== categoryKey
-            )
-          );
+        onPress: async () => {
+          try {
+            await deleteDoc(
+              doc(
+                db,
+                "organizations",
+                entity.organizationId,
+                "entities",
+                entity.entityId,
+                "pastoralCategories",
+                categoryKey
+              )
+            );
+
+            await loadData();
+
+          } catch (error) {
+            Alert.alert(
+              "Error",
+              error.message
+            );
+          }
         },
       },
-      { text: "Cancel" },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
     ]
   );
 };
+
 
 
 
