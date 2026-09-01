@@ -84,6 +84,10 @@ import GovernanceRoleManagementScreen from "./screens/GovernanceRoleManagementSc
 import EntityManagementScreen from "./screens/EntityManagementScreen";
 import OfficeScreen from "./screens/OfficeScreen";
 import CommitteeScreen from "./screens/CommitteeScreen";
+import PastoralRequestScreen from "./screens/PastoralRequestScreen";
+import PastoralCareDashboardScreen from "./screens/PastoralCareDashboardScreen";
+import PastoralTicketDetailScreen from "./screens/PastoralTicketDetailScreen";
+import PastoralTeamManagementScreen from "./screens/PastoralTeamManagementScreen";
 
 
 
@@ -230,6 +234,11 @@ function RootStack() {
        <Stack.Screen name="EntityManagement"component={EntityManagementScreen} options={{ headerShown: false }}/>
        <Stack.Screen name="Office"component={OfficeScreen}options={{ headerShown: false }}/>
        <Stack.Screen name="Committee"component={CommitteeScreen}options={{ headerShown: false }}/>
+       <Stack.Screen name="PastoralRequest"component={PastoralRequestScreen}/>
+       <Stack.Screen name="PastoralCareDashboard"component={PastoralCareDashboardScreen}/>
+       <Stack.Screen name="PastoralTicketDetail" component={PastoralTicketDetailScreen}/>
+       <Stack.Screen name="PastoralTeamManagement"component={PastoralTeamManagementScreen}/>
+
 
 
 

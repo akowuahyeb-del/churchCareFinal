@@ -15,14 +15,63 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppHeader from "../components/AppHeader";
 import LogoutButton from "../components/LogoutButton";
 const MORE_ITEMS = [
-  { key: "Departments", icon: "people-circle-outline", color: "#4F46E5", bg: "#EEF2FF", desc: "Manage church departments & groups" },
-  { key: "Events", icon: "calendar-outline", color: "#059669", bg: "#ECFDF5", desc: "Church calendar & programmes" },
-  { key: "Finance", icon: "cash-outline", color: "#D97706", bg: "#FFFBEB", desc: "Financial reports & accounting" },
+  {
+    key: "Departments",
+    icon: "people-circle-outline",
+    color: "#4F46E5",
+    bg: "#EEF2FF",
+    desc: "Manage church departments & groups",
+  },
 
-  { key: "History", icon: "book-outline", color: "#00CEC9", bg: "#E8FFFE", desc: "Church history & records" },
+  {
+    key: "Events",
+    icon: "calendar-outline",
+    color: "#059669",
+    bg: "#ECFDF5",
+    desc: "Church calendar & programmes",
+  },
 
-  { key: "Settings", icon: "settings-outline", color: "#4B3F72", bg: "#F5F3FF", desc: "App preferences & controls" },
-  { key: "Help", icon: "help-circle-outline", color: "#0984E3", bg: "#EBF4FD", desc: "AI assistant & support" },
+  {
+    key: "Finance",
+    icon: "cash-outline",
+    color: "#D97706",
+    bg: "#FFFBEB",
+    desc: "Financial reports & accounting",
+  },
+
+  {
+  key: "PastoralCare",
+  label: "Pastoral Care",
+  icon: "heart-circle-outline",
+  color: "#E11D48",
+  bg: "#FFF1F2",
+  desc: "Care, counselling & support requests",
+},
+
+
+  {
+    key: "History",
+    icon: "book-outline",
+    color: "#00CEC9",
+    bg: "#E8FFFE",
+    desc: "Church history & records",
+  },
+
+  {
+    key: "Settings",
+    icon: "settings-outline",
+    color: "#4B3F72",
+    bg: "#F5F3FF",
+    desc: "App preferences & controls",
+  },
+
+  {
+    key: "Help",
+    icon: "help-circle-outline",
+    color: "#0984E3",
+    bg: "#EBF4FD",
+    desc: "AI assistant & support",
+  },
 ];
 
 export default function MoreScreen() {
@@ -56,13 +105,15 @@ export default function MoreScreen() {
         <View>
           {MORE_ITEMS.map((item) => {
             const routes = {
-              Settings: "Settings",
-              Finance: "Finance",
-              Help: "Help",
-              Departments: "Departments",
-              Events: "Events",
-              History: "HistoryScreen"
-            };
+  Settings: "Settings",
+  Finance: "Finance",
+  Help: "Help",
+  Departments: "Departments",
+  Events: "Events",
+  History: "HistoryScreen",
+
+  PastoralCare: "PastoralRequest",
+};
 
             return (
               <TouchableOpacity
@@ -81,7 +132,10 @@ export default function MoreScreen() {
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{item.key}</Text>
+                  <Text style={styles.cardTitle}>
+  {item.label || item.key}
+</Text>
+
                   <Text style={styles.cardDesc}>{item.desc}</Text>
                 </View>
 
