@@ -137,16 +137,23 @@ exports.submitPastoralRequest = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "You must be signed in.");
   }
 
-  const {
-    organizationId,
-    entityId,
-    memberId,
-    memberName,
-    memberPhone,
-    category,
-    description,
-    anonymous,
-  } = request.data || {};
+ const {
+  organizationId,
+  entityId,
+  memberId,
+  memberName,
+  memberPhone,
+
+  category,
+
+  visibility = "team",
+
+  selectedRecipients = [],
+
+  description,
+
+  anonymous,
+} = request.data || {};
 
   if (!organizationId || !entityId || !category || !description?.trim()) {
     throw new HttpsError(
@@ -155,6 +162,15 @@ exports.submitPastoralRequest = onCall(async (request) => {
     );
   }
 
+  if (
+  visibility === "confidential" &&
+  selectedRecipients.length === 0
+) {
+  throw new HttpsError(
+    "invalid-argument",
+    "At least one recipient is required for confidential requests."
+  );
+}
   const categoryDoc = await db
   .collection("organizations")
   .doc(organizationId)
@@ -223,15 +239,64 @@ if (!categoryDoc.exists) {
           : existingOpen.data().status,
     });
 
-    if (existingOpen.data().assignedToUid) {
-      await notify(organizationId, entityId, {
-        type: "pastoral_followup",
-        recipientUid: existingOpen.data().assignedToUid,
-        title: "Follow-up on an open pastoral request",
-        message: `${memberName || "A member"} added an update to an existing ${category} request.`,
-        requestId: existingOpen.id,
-      });
+   if (
+  existingOpen.data().visibility ===
+  "confidential"
+) {
+
+  const recipients =
+    existingOpen.data()
+      .confidentialRecipients || [];
+
+  for (const uid of recipients) {
+
+    await notify(
+      organizationId,
+      entityId,
+      {
+        type:
+          "pastoral_confidential_followup",
+
+        recipientUid: uid,
+
+        title:
+          "Confidential Request Updated",
+
+        message:
+          `${memberName || "A member"} added new information to a confidential pastoral request.`,
+
+        requestId:
+          existingOpen.id,
+      }
+    );
+
+  }
+
+} else if (
+  existingOpen.data().assignedToUid
+) {
+
+  await notify(
+    organizationId,
+    entityId,
+    {
+      type: "pastoral_followup",
+
+      recipientUid:
+        existingOpen.data().assignedToUid,
+
+      title:
+        "Follow-up on an open pastoral request",
+
+      message:
+        `${memberName || "A member"} added an update to an existing ${category} request.`,
+
+      requestId:
+        existingOpen.id,
     }
+  );
+
+}
 
     return {
       success: true,
@@ -244,25 +309,68 @@ if (!categoryDoc.exists) {
   // --------------------------------------------------
   // Create a new ticket
   // --------------------------------------------------
-  const assignee = await findAssignee(organizationId, entityId, category);
+  const assignee =
+  visibility === "team"
+    ? await findAssignee(
+        organizationId,
+        entityId,
+        category
+      )
+    : null;
 
   const newRequest = {
-    memberId: memberId || request.auth.uid,
-    memberName: anonymous ? null : memberName || null,
-    memberPhone: anonymous ? null : memberPhone || null,
-    anonymous: !!anonymous,
-    category,
-    sensitive,
-    description: description.trim(),
-    urgency,
-    status: assignee ? "assigned" : "new",
-    assignedToUid: assignee?.uid || null,
-    assignedToName: assignee?.name || null,
-    source: "member_app",
-    createdAt: now,
-    updatedAt: now,
-    lastActivityAt: now,
-  };
+  memberId: memberId || request.auth.uid,
+
+  memberName:
+    anonymous
+      ? null
+      : memberName || null,
+
+  memberPhone:
+    anonymous
+      ? null
+      : memberPhone || null,
+
+  anonymous: !!anonymous,
+
+  category,
+
+  visibility,
+
+  sensitive,
+
+  confidentialRecipients:
+    visibility === "confidential"
+      ? selectedRecipients
+      : [],
+
+  description: description.trim(),
+
+  urgency,
+
+  status:
+    visibility === "team"
+      ? assignee
+        ? "assigned"
+        : "new"
+      : "confidential",
+
+  assignedToUid:
+    visibility === "team"
+      ? assignee?.uid || null
+      : null,
+
+  assignedToName:
+    visibility === "team"
+      ? assignee?.name || null
+      : null,
+
+  source: "member_app",
+
+  createdAt: now,
+  updatedAt: now,
+  lastActivityAt: now,
+};
 
   const ref = await requestsRef.add(newRequest);
 
@@ -277,25 +385,90 @@ if (!categoryDoc.exists) {
     ? `An anonymous ${category} request was submitted.`
     : `${memberName || "A member"} submitted a ${category} request.`;
 
-  if (assignee) {
-    await notify(organizationId, entityId, {
-      type: "pastoral_request_assigned",
-      recipientUid: assignee.uid,
-      title: notifyTitle,
-      message: notifyMessage,
-      requestId: ref.id,
-      urgency,
-    });
-  } else {
-    await notify(organizationId, entityId, {
-      type: "pastoral_request_unassigned",
-      recipientUid: null,
-      title: notifyTitle,
-      message: `${notifyMessage} No staff member is currently configured for "${category}" requests.`,
-      requestId: ref.id,
-      urgency,
-    });
+  if (visibility === "confidential") {
+
+  for (const recipientUid of selectedRecipients) {
+
+    await notify(
+      organizationId,
+      entityId,
+      {
+        type: "pastoral_confidential",
+
+        recipientUid,
+
+        title:
+          "Confidential Pastoral Request",
+
+        message:
+          anonymous
+            ? "A confidential request has been shared with you."
+            : `${memberName || "A member"} shared a confidential request with you.`,
+
+        requestId: ref.id,
+
+        urgency,
+      }
+    );
+
   }
+
+} else {
+
+  if (assignee) {
+
+    await notify(
+      organizationId,
+      entityId,
+      {
+        type:
+          "pastoral_request_assigned",
+
+        recipientUid:
+          assignee.uid,
+
+        title:
+          notifyTitle,
+
+        message:
+          notifyMessage,
+
+        requestId:
+          ref.id,
+
+        urgency,
+      }
+    );
+
+  } else {
+
+    await notify(
+      organizationId,
+      entityId,
+      {
+        type:
+          "pastoral_request_unassigned",
+
+        recipientUid:
+          null,
+
+        title:
+          notifyTitle,
+
+        message:
+          `${notifyMessage} No staff member is currently configured for "${category}" requests.`,
+
+        requestId:
+          ref.id,
+
+        urgency,
+      }
+    );
+
+  }
+
+}
+
 
   // Crisis requests always additionally page every senior pastor,
   // regardless of category assignment.
@@ -354,6 +527,37 @@ exports.assignPastoralRequest = onCall(async (request) => {
   if (!snap.exists) {
     throw new HttpsError("not-found", "Request not found");
   }
+  if (
+  snap.data().visibility ===
+  "confidential"
+) {
+
+  const recipients =
+    snap.data()
+      .confidentialRecipients || [];
+
+  if (
+    !recipients.includes(
+      request.auth.uid
+    )
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not authorized to add notes to this confidential request."
+    );
+  }
+
+}
+
+  if (
+  snap.data().visibility ===
+  "confidential"
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "Confidential requests cannot be reassigned."
+  );
+}
 
   const now = new Date().toISOString();
 
@@ -406,6 +610,27 @@ exports.updatePastoralRequestStatus = onCall(async (request) => {
     throw new HttpsError("not-found", "Request not found");
   }
 
+  if (
+  snap.data().visibility ===
+  "confidential"
+) {
+
+  const recipients =
+    snap.data()
+      .confidentialRecipients || [];
+
+  if (
+    !recipients.includes(
+      request.auth.uid
+    )
+  ) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not authorized to update this confidential request."
+    );
+  }
+
+}
   const now = new Date().toISOString();
 
   await ref.update({
@@ -492,6 +717,12 @@ exports.escalateStalePastoralRequests = onSchedule("every 2 hours", async () => 
         .get();
 
       for (const reqDoc of openSnap.docs) {
+        if (
+  reqDoc.data().visibility ===
+  "confidential"
+) {
+  continue;
+}
         const data = reqDoc.data();
         if (data.escalated) continue;
 

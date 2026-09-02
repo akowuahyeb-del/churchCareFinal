@@ -86,7 +86,65 @@ const [category, setCategory] =
 
   loadCategories();
 }, []);
+
+useEffect(() => {
+
+  const loadPastoralTeam = async () => {
+
+    try {
+
+      const storedEntity =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!storedEntity) return;
+
+      const entity =
+        JSON.parse(storedEntity);
+
+      const teamSnap = await getDocs(
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "entities",
+          entity.entityId,
+          "pastoralTeam"
+        )
+      );
+
+      setPastoralTeam(
+        teamSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (error) {
+
+      console.log(
+        "LOAD PASTORAL TEAM ERROR",
+        error
+      );
+
+    }
+  };
+
+  loadPastoralTeam();
+
+}, []);
+
+
   const [description, setDescription] = useState("");
+  const [visibility, setVisibility] =
+  useState("team");
+
+const [selectedRecipients, setSelectedRecipients] =
+  useState([]);
+
+const [pastoralTeam, setPastoralTeam] =
+  useState([]);
   const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -98,6 +156,16 @@ const [category, setCategory] =
       Alert.alert("Required", "Please describe what you need.");
       return;
     }
+if (
+  visibility === "confidential" &&
+  selectedRecipients.length === 0
+) {
+  Alert.alert(
+    "Required",
+    "Please select at least one trusted leader."
+  );
+  return;
+}
 
     setSubmitting(true);
     try {
@@ -114,16 +182,24 @@ const [category, setCategory] =
       const entity = JSON.parse(storedEntity);
       const member = storedMember ? JSON.parse(storedMember) : {};
 
-      const { data } = await submitPastoralRequest({
-        organizationId: entity.organizationId,
-        entityId: entity.entityId,
-        memberId: member.id,
-        memberName: member.name,
-        memberPhone: member.phone,
-        category,
-        description: description.trim(),
-        anonymous,
-      });
+     const { data } = await submitPastoralRequest({
+  organizationId: entity.organizationId,
+  entityId: entity.entityId,
+
+  memberId: member.id,
+  memberName: member.name,
+  memberPhone: member.phone,
+
+  category,
+
+  visibility,
+
+  selectedRecipients,
+
+  description: description.trim(),
+
+  anonymous,
+});
 
       if (data.urgency === "crisis") {
         Alert.alert(
@@ -181,7 +257,121 @@ const [category, setCategory] =
           ))}
         </View>
 
+<Text style={styles.label}>
+  Who should see this request?
+</Text>
+
+<View style={styles.chipRow}>
+
+  <TouchableOpacity
+    style={[
+      styles.chip,
+      visibility === "team" &&
+        styles.chipActive,
+    ]}
+    onPress={() =>
+      setVisibility("team")
+    }
+  >
+    <Text
+      style={[
+        styles.chipText,
+        visibility === "team" &&
+          styles.chipTextActive,
+      ]}
+    >
+      Pastoral Team
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.chip,
+      visibility === "confidential" &&
+        styles.chipActive,
+    ]}
+    onPress={() =>
+      setVisibility("confidential")
+    }
+  >
+    <Text
+      style={[
+        styles.chipText,
+        visibility === "confidential" &&
+          styles.chipTextActive,
+      ]}
+    >
+      Confidential Care
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+
+{visibility === "confidential" && (
+  <>
+    <Text style={styles.label}>
+      Choose trusted leaders
+    </Text>
+
+    {pastoralTeam.map((person) => (
+
+      <TouchableOpacity
+        key={person.id}
+        style={[
+          styles.chip,
+          selectedRecipients.includes(
+            person.id
+          ) && styles.chipActive,
+          { marginBottom: 8 }
+        ]}
+        onPress={() => {
+
+          if (
+            selectedRecipients.includes(
+              person.id
+            )
+          ) {
+
+            setSelectedRecipients(
+              selectedRecipients.filter(
+                (id) =>
+                  id !== person.id
+              )
+            );
+
+          } else {
+
+            setSelectedRecipients([
+              ...selectedRecipients,
+              person.id,
+            ]);
+
+          }
+
+        }}
+      >
+        <Text
+          style={[
+            styles.chipText,
+            selectedRecipients.includes(
+              person.id
+            ) &&
+              styles.chipTextActive,
+          ]}
+        >
+          {person.name ||
+           person.displayName ||
+           "Unnamed Leader"}
+        </Text>
+      </TouchableOpacity>
+
+    ))}
+  </>
+)}
+
         <Text style={styles.label}>Tell us more</Text>
+
         <TextInput
           style={styles.textarea}
           placeholder="Share as much or as little as you're comfortable with..."

@@ -71,7 +71,49 @@ export default function PastoralTicketDetailScreen({ navigation, route }) {
       requestId
     );
     const snap = await getDoc(ref);
-    if (snap.exists()) setTicket({ id: snap.id, ...snap.data() });
+
+if (!snap.exists()) {
+  Alert.alert(
+    "Not Found",
+    "The request could not be found."
+  );
+
+  navigation.goBack();
+  return;
+}
+
+const ticketData = {
+  id: snap.id,
+  ...snap.data(),
+};
+
+if (
+  ticketData.visibility ===
+  "confidential"
+) {
+
+  const recipients =
+    ticketData
+      .confidentialRecipients || [];
+
+  if (
+    !recipients.includes(
+      currentUser?.uid
+    )
+  ) {
+
+    Alert.alert(
+      "Access Denied",
+      "You are not authorized to view this confidential pastoral request."
+    );
+
+    navigation.goBack();
+
+    return;
+  }
+}
+
+setTicket(ticketData);
 
     const notesSnap = await getDocs(
       query(collection(ref, "notes"), orderBy("createdAt", "desc"))
@@ -155,9 +197,17 @@ export default function PastoralTicketDetailScreen({ navigation, route }) {
   }
 
   // Staff eligible to take this category, for reassignment.
-  const eligibleStaff = team.filter(
-    (m) => m.active && (m.categories || []).includes(ticket.category)
-  );
+  const eligibleStaff =
+  ticket.visibility ===
+  "confidential"
+    ? []
+    : team.filter(
+        (m) =>
+          m.active &&
+          (m.categories || []).includes(
+            ticket.category
+          )
+      );
 
   return (
     <View style={{ flex: 1 }}>
@@ -197,6 +247,41 @@ export default function PastoralTicketDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {ticket.visibility ===
+  "confidential" && (
+  <View
+    style={{
+      backgroundColor: "#FDEDEC",
+      borderWidth: 1,
+      borderColor: "#E74C3C",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#C0392B",
+        fontWeight: "800",
+      }}
+    >
+      🔒 Confidential Care Request
+    </Text>
+
+    <Text
+      style={{
+        color: "#7B241C",
+        marginTop: 4,
+      }}
+    >
+      This request is visible only
+      to the specifically selected
+      pastoral leaders.
+    </Text>
+  </View>
+)}
+
 
         <Text style={styles.sectionTitle}>Assigned To</Text>
         <View style={styles.chipRow}>

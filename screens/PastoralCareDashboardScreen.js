@@ -58,15 +58,58 @@ export default function PastoralCareDashboardScreen({ navigation }) {
       // Firestore Security Rules — see the rule in the earlier message.
       let visible;
       if (tab === "mine") {
-        visible = all.filter((t) => t.assignedToUid === currentUid);
-      } else if (tab === "unassigned") {
-        visible = all.filter((t) => !t.assignedToUid);
-      } else {
-        // "team": non-sensitive tickets, plus sensitive ones assigned to me
-        visible = all.filter(
-          (t) => !t.sensitive || t.assignedToUid === currentUid
-        );
-      }
+
+  visible = all.filter((t) => {
+
+    if (
+      t.visibility === "confidential"
+    ) {
+      return (
+        t.confidentialRecipients || []
+      ).includes(currentUid);
+    }
+
+    return (
+      t.assignedToUid === currentUid
+    );
+
+  });
+
+} else if (tab === "unassigned") {
+
+  visible = all.filter((t) => {
+
+    if (
+      t.visibility === "confidential"
+    ) {
+      return false;
+    }
+
+    return !t.assignedToUid;
+
+  });
+
+} else {
+
+  visible = all.filter((t) => {
+
+    if (
+      t.visibility === "confidential"
+    ) {
+      return (
+        t.confidentialRecipients || []
+      ).includes(currentUid);
+    }
+
+    return (
+      !t.sensitive ||
+      t.assignedToUid === currentUid
+    );
+
+  });
+
+}
+
 
       visible.sort((a, b) => {
         const urgencyRank = { crisis: 0, urgent: 1, normal: 2 };
