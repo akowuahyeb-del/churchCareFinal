@@ -16,13 +16,7 @@ const db = getFirestore();
 // Categories that require restricted, assigned-staff-only visibility.
 const SENSITIVE_CATEGORIES = ["counselling", "bereavement"];
 
-const VALID_CATEGORIES = [
-  "prayer",
-  "counselling",
-  "bereavement",
-  "financial",
-  "general",
-];
+
 
 // Keyword lists for lightweight, rule-based urgency detection.
 // Not a substitute for human judgement — this only decides routing
@@ -161,9 +155,21 @@ exports.submitPastoralRequest = onCall(async (request) => {
     );
   }
 
-  if (!VALID_CATEGORIES.includes(category)) {
-    throw new HttpsError("invalid-argument", "Unknown request category");
-  }
+  const categoryDoc = await db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("entities")
+  .doc(entityId)
+  .collection("pastoralCategories")
+  .doc(category)
+  .get();
+
+if (!categoryDoc.exists) {
+  throw new HttpsError(
+    "invalid-argument",
+    "Unknown request category"
+  );
+}
 
   const sensitive = isSensitive(category);
   const urgency = detectUrgency(description);

@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, {
+  useState,
+  useEffect,
+} from "react";
 import {
   View,
   Text,
@@ -14,17 +17,75 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import AppHeader from "../components/AppHeader";
 import { getAuth } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
-const CATEGORIES = [
-  { key: "prayer", label: "Prayer Request" },
-  { key: "counselling", label: "Counselling" },
-  { key: "bereavement", label: "Bereavement" },
-  { key: "financial", label: "Financial Support" },
-  { key: "general", label: "General Support" },
-];
+export default function PastoralRequestScreen({
+  navigation,
+  route,
+}) {
+  const preselectedCategory =
+  route?.params?.category;
 
-export default function PastoralRequestScreen({ navigation }) {
-  const [category, setCategory] = useState("prayer");
+const [category, setCategory] =
+  useState(preselectedCategory || "");
+
+  const [categories, setCategories] = useState([]);
+  useEffect(() => {
+  const loadCategories = async () => {
+    try {
+      const storedEntity =
+        await AsyncStorage.getItem("activeEntity");
+
+      if (!storedEntity) return;
+
+      const entity =
+        JSON.parse(storedEntity);
+
+      const categoriesSnap = await getDocs(
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "entities",
+          entity.entityId,
+          "pastoralCategories"
+        )
+      );
+
+      const loadedCategories =
+        categoriesSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+      setCategories(loadedCategories);
+
+      if (
+        loadedCategories.length > 0 &&
+        !loadedCategories.find(
+          (c) => c.key === category
+        )
+      ) {
+        setCategory(
+          loadedCategories[0].key
+        );
+      }
+
+    } catch (error) {
+      console.error(
+        "LOAD CATEGORIES ERROR",
+        error
+      );
+    }
+  };
+
+  loadCategories();
+}, []);
   const [description, setDescription] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -97,7 +158,17 @@ export default function PastoralRequestScreen({ navigation }) {
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={styles.label}>What kind of support do you need?</Text>
         <View style={styles.chipRow}>
-          {CATEGORIES.map((c) => (
+            {categories.length === 0 && (
+  <Text
+    style={{
+      color: "#999",
+      marginBottom: 12,
+    }}
+  >
+    No pastoral categories configured yet.
+  </Text>
+)}
+          {categories.map((c) => (
             <TouchableOpacity
               key={c.key}
               style={[styles.chip, category === c.key && styles.chipActive]}

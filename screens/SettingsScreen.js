@@ -100,6 +100,13 @@ const QR_TYPES = [
   },
 
   {
+  key: "pastoral",
+  label: "Pastoral Care",
+  icon: "library-outline",
+  color: "#8E44AD",
+},
+
+  {
     key: "custom",
     label: "Custom URL / Text",
     icon: "link-outline",
@@ -417,6 +424,59 @@ useEffect(() => {
   const [qrGenerated,   setQrGenerated]   = useState(false);
   const [qrValue,       setQrValue]       = useState("");
   const [generatingQR,  setGeneratingQR]  = useState(false);
+  const [pastoralMode, setPastoralMode] =
+  useState("general");
+
+const [pastoralCategory, setPastoralCategory] =
+  useState("");
+
+const [pastoralCategories, setPastoralCategories] =
+  useState([]);
+  useEffect(() => {
+
+  const loadPastoralCategories =
+    async () => {
+
+      if (
+        !activeEntity?.organizationId ||
+        !activeEntity?.entityId
+      ) {
+        return;
+      }
+
+      try {
+
+        const snap = await getDocs(
+          collection(
+            db,
+            "organizations",
+            activeEntity.organizationId,
+            "entities",
+            activeEntity.entityId,
+            "pastoralCategories"
+          )
+        );
+
+        setPastoralCategories(
+          snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+        );
+
+      } catch (e) {
+
+        console.log(
+          "PASTORAL CATEGORY LOAD ERROR:",
+          e
+        );
+
+      }
+    };
+
+  loadPastoralCategories();
+
+}, [activeEntity]);
   useEffect(() => {
 
   if (
@@ -688,6 +748,36 @@ const generateQR = async () => {
       case "prayer":
         value = await buildPrayerLink();
         break;
+case "pastoral":
+
+  if (
+    pastoralMode === "category" &&
+    !pastoralCategory
+  ) {
+    Alert.alert(
+      "Required",
+      "Please select a pastoral category."
+    );
+    return;
+  }
+
+  if (pastoralMode === "general") {
+
+    value =
+      `churchcare://pastoral?org=${activeEntity.organizationId}` +
+      `&entity=${activeEntity.entityId}`;
+
+  } else {
+
+    value =
+      `churchcare://pastoral?org=${activeEntity.organizationId}` +
+      `&entity=${activeEntity.entityId}` +
+      `&category=${pastoralCategory}`;
+
+  }
+
+  break;
+
 
       case "custom":
         value = qrLabel;
@@ -1366,6 +1456,112 @@ const handleRemovePin = () => {
   </>
 )}
 
+{qrType.key === "pastoral" && (
+  <>
+    <Text style={styles.fieldLabel}>
+      Pastoral QR Type
+    </Text>
+
+    <View style={{ marginBottom: 12 }}>
+
+      <TouchableOpacity
+        style={[
+          styles.choiceRow,
+          pastoralMode === "general" &&
+            styles.choiceRowActive,
+        ]}
+        onPress={() =>
+          setPastoralMode("general")
+        }
+      >
+        <Text style={styles.choiceText}>
+          General Pastoral Care
+        </Text>
+
+        {pastoralMode ===
+          "general" && (
+          <Ionicons
+            name="checkmark-circle"
+            size={18}
+            color="#8E44AD"
+          />
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.choiceRow,
+          pastoralMode === "category" &&
+            styles.choiceRowActive,
+        ]}
+        onPress={() =>
+          setPastoralMode("category")
+        }
+      >
+        <Text style={styles.choiceText}>
+          Category-Specific
+        </Text>
+
+        {pastoralMode ===
+          "category" && (
+          <Ionicons
+            name="checkmark-circle"
+            size={18}
+            color="#8E44AD"
+          />
+        )}
+      </TouchableOpacity>
+
+    </View>
+    {pastoralMode === "category" && (
+  <>
+    <Text style={styles.fieldLabel}>
+      Select Category
+    </Text>
+
+    {pastoralCategories.length === 0 ? (
+      <Text
+        style={{
+          fontSize: 12,
+          color: "#999",
+          marginBottom: 12,
+        }}
+      >
+        No pastoral categories configured.
+      </Text>
+    ) : (
+      <View style={{ marginBottom: 12 }}>
+        {pastoralCategories.map((c) => (
+          <TouchableOpacity
+            key={c.key}
+            style={[
+              styles.choiceRow,
+              pastoralCategory === c.key &&
+                styles.choiceRowActive,
+            ]}
+            onPress={() =>
+              setPastoralCategory(c.key)
+            }
+          >
+            <Text style={styles.choiceText}>
+              {c.label}
+            </Text>
+
+            {pastoralCategory === c.key && (
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color="#8E44AD"
+              />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    )}
+  </>
+)}
+  </>
+)}
                 {/* Church tag */}
 <View style={styles.qrChurchTag}>
   <Ionicons name="business-outline" size={13} color="#4B3F72" />

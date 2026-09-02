@@ -189,6 +189,24 @@ export async function handleQRCode(navigation, data) {
           entityId:params.entity ,
         });
         break;
+case "pastoral":
+  navigation.navigate(
+  "PastoralRequest",
+  {
+
+      organizationId:
+        params.org,
+
+      entityId:
+        params.entity,
+
+      category:
+        params.category || null,
+
+      qr: true,
+    }
+  );
+  break;
 
       default:
         Alert.alert("Unknown QR", "This QR code is not recognised.");
