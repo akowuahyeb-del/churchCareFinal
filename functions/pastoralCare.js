@@ -735,10 +735,34 @@ exports.escalateStalePastoralRequests = onSchedule("every 2 hours", async () => 
         if (hoursSince < staleThresholdHours) continue;
 
         await reqDoc.ref.update({
-          escalated: true,
-          escalatedAt: new Date().toISOString(),
-          urgency: data.urgency === "normal" ? "urgent" : data.urgency,
-        });
+  escalated: true,
+
+  escalationLevel: 1,
+
+  escalationReason:
+    `No activity for over ${staleThresholdHours} hours`,
+
+  escalatedAt:
+    new Date().toISOString(),
+
+  urgency:
+    data.urgency === "normal"
+      ? "urgent"
+      : data.urgency,
+});
+
+await reqDoc.ref
+  .collection("notes")
+  .add({
+    system: true,
+    internal: true,
+
+    body:
+      `Request automatically escalated after ${staleThresholdHours} hours of inactivity.`,
+
+    createdAt:
+      new Date().toISOString(),
+  });
 
         const seniorSnap = await entityDoc.ref
           .collection("pastoralTeam")

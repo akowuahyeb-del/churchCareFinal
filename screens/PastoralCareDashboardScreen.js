@@ -204,11 +204,33 @@ export default function PastoralCareDashboardScreen({ navigation }) {
             </Text>
 
             <View style={styles.cardFooter}>
-              <Text style={styles.statusText}>{item.status}</Text>
-              {item.assignedToName && (
-                <Text style={styles.assignedText}>→ {item.assignedToName}</Text>
-              )}
-            </View>
+  <View>
+
+    <Text style={styles.statusText}>
+      {item.status}
+    </Text>
+
+    {item.escalated && (
+      <Text
+        style={{
+          color: "#E67E22",
+          fontWeight: "700",
+          marginTop: 4,
+          fontSize: 11,
+        }}
+      >
+        ⚠ Escalated
+      </Text>
+    )}
+
+  </View>
+
+  {item.assignedToName && (
+    <Text style={styles.assignedText}>
+      → {item.assignedToName}
+    </Text>
+  )}
+</View>
           </TouchableOpacity>
         )}
       />

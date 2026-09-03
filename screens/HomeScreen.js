@@ -77,7 +77,7 @@ export default function HomeScreen({ route }) {
   const [entities, setEntities] = useState([]);
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
-  const [userRoles, setUserRoles] = useState(["admin"]);
+  const [userRoles, setUserRoles] = useState(["member"]);
 
 
 
@@ -126,6 +126,10 @@ const [carouselIndex, setCarouselIndex] = useState(0);
   const [overview, setOverview] = useState(null);
 
   const hasRole = (role) => userRoles.includes(role);
+  console.log(
+  "CURRENT USER ROLES:",
+  userRoles
+);
   const [permission, requestPermission] =
   useCameraPermissions();
 
@@ -252,13 +256,14 @@ useEffect(() => {
         }
 
       } else {
-        setUserRoles(["admin"]); // ✅ fallback if nothing stored
+        setUserRoles(["member"]); // ✅ fallback if nothing stored
       }
 
     } catch (e) {
-      console.log("❌ Load roles error:", e);
-      setUserRoles(["admin"]); // ✅ fallback on error
-    }
+  console.log("❌ Load roles error:", e);
+  setUserRoles(["member"]);
+}
+
   };
 
   loadRoles();
