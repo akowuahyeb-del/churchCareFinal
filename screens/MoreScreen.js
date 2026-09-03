@@ -104,11 +104,6 @@ const canDo = (permission) =>
 
 
   useEffect(() => {
-    const canDo = (permission) =>
-  hasPermission(
-    { permissions },
-    permission
-  );
     const loadRole = async () => {
       const storedRole =
   await AsyncStorage.getItem("role");
@@ -146,38 +141,32 @@ if (storedUser) {
 
         {/* ✅ MENU ITEMS */}
         <View>
-          {MORE_ITEMS
+       {MORE_ITEMS
 .filter((item) => {
 
-  if (
-    item.key === "Finance"
-  ) {
-    return (
-      canDo("manage_finance") ||
-      canDo("view_finance_reports")
-    );
+  switch (item.key) {
+
+    case "Finance":
+      return (
+        canDo("manage_finance") ||
+        canDo("view_finance_reports")
+      );
+
+    case "PastoralDashboard":
+      return canDo("manage_members");
+
+    case "PastoralTeam":
+      return canDo("manage_members");
+
+    case "Departments":
+      return canDo("manage_members");
+
+    default:
+      return true;
   }
 
-  if (
-    item.key === "PastoralDashboard"
-  ) {
-    return canDo("manage_members");
-  }
-
-  if (
-    item.key === "PastoralTeam"
-  ) {
-    return canDo("manage_members");
-  }
-
-  if (
-    item.key === "Departments"
-  ) {
-    return canDo("manage_members");
-  }
-
-  return true;
 })
+
 .map((item) => {
          const routes = {
   Settings: "Settings",

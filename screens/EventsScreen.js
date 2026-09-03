@@ -109,24 +109,6 @@ const canDo = (permission) =>
   );
 
 
-
-  useEffect(() => {
-  const loadPermissions = async () => {
-    const storedUser =
-      await AsyncStorage.getItem("currentUser");
-
-    if (!storedUser) return;
-
-    const user = JSON.parse(storedUser);
-
-    setPermissions(
-      user.permissions || []
-    );
-  };
-
-  loadPermissions();
-}, []);
-
 useEffect(() => {
   const loadPermissions = async () => {
     const storedUser =
@@ -366,8 +348,11 @@ if (!form.startDate) {
 
 // ── Delete ───────────────────────────────────────────────────
 const handleDelete = (event) => {
-  if (!canDo("pastor")) {
-    Alert.alert("Access denied", "Only pastors and admins can delete events.");
+  if (!canDo("manage_events")) {
+    Alert.alert(
+  "Access denied",
+  "You do not have permission to delete events."
+);
     return;
   }
 
@@ -412,7 +397,7 @@ const handleDelete = (event) => {
 
 // ── Toggle featured ──────────────────────────────────────────
 const toggleFeatured = async (event) => {
-  if (canDo("manage_events")) {
+  if (!canDo("manage_events")) {
     Alert.alert("Access denied");
     return;
   }
@@ -453,7 +438,8 @@ const toggleFeatured = async (event) => {
     return;
   }
 
-  if (!canDo("deacon")) {
+  if (!canDo("manage_events"))
+ {
     Alert.alert("Access denied", "You do not have permission to create events.");
     return;
   }
@@ -464,7 +450,8 @@ const toggleFeatured = async (event) => {
 };
 
   const openEdit = (event) => {
-    if (!canDo("deacon")) { Alert.alert("Access denied"); return; }
+    if (!canDo("manage_events"))
+ { Alert.alert("Access denied"); return; }
     setEditingId(event.id);
     setForm({ ...emptyForm(), ...event });
     setDetailModal(false);
@@ -520,27 +507,30 @@ const toggleFeatured = async (event) => {
     />
 
     <AppHeader
-      title="Events"
-      subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
-      onBack={() => navigation.goBack()}
-      actions={[
-        {
-          icon: "search-outline",
-          onPress: () => setShowSearch(p => !p),
-        },
-        ...VIEWS.map(v => ({
-          icon: v.icon,
-          onPress: () => setViewMode(v.key),
-        })),
-        ...(canDo("deacon")
-          ? [{
-              icon: "add",
-              onPress: openCreate,
-            }]
-          : [])
-      ]}
-    />
+  title="Events"
+  subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
+  onBack={() => navigation.goBack()}
+  actions={[
+    {
+      icon: "search-outline",
+      onPress: () => setShowSearch(p => !p),
+    },
 
+    ...VIEWS.map(v => ({
+      icon: v.icon,
+      onPress: () => setViewMode(v.key),
+    })),
+
+    ...(canDo("manage_events")
+      ? [
+          {
+            icon: "add",
+            onPress: openCreate,
+          },
+        ]
+      : []),
+  ]}
+/>
 
       {/* ── SEARCH BAR ── */}
       {showSearch && (
@@ -567,6 +557,7 @@ const toggleFeatured = async (event) => {
           ))}
         </ScrollView>
       </View>
+
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
 
@@ -603,42 +594,111 @@ const toggleFeatured = async (event) => {
           </View>
         )}
 
-        {/* ── TWO COLUMN GRID ── */}
-        {viewMode === "featured" && regular.length > 0 && (
-          <>
-            <Text style={styles.sectionLabel}>📅 All Events</Text>
-            <View style={styles.grid}>
-              {regular.map(ev => {
-                const cat = categoryOf(ev.category);
-                return (
-                  <TouchableOpacity key={ev.id} style={styles.gridCard}
-                    onPress={() => { setViewingEvent(ev); setDetailModal(true); }}>
-                    {/* Colour accent top */}
-                    <View style={[styles.gridAccent, { backgroundColor: cat.color }]} />
-                    <View style={styles.gridBody}>
-                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <View style={[styles.gridCatIcon, { backgroundColor: cat.color + "22" }]}>
-                          <Ionicons name={cat.icon} size={14} color={cat.color} />
-                        </View>
-                        <StatusBadge event={ev} />
-                      </View>
-                      <Text style={styles.gridTitle} numberOfLines={2}>{ev.title}</Text>
-                      <Text style={styles.gridDate} numberOfLines={1}>{fmtDate(ev.startDate)}</Text>
-                      {ev.location && <Text style={styles.gridLoc} numberOfLines={1}><Ionicons name="location-outline" size={10} color="#aaa" /> {ev.location}</Text>}
-                    </View>
-                    {/* Featured toggle */}
-                    {canDo("deacon") && (
-                      <TouchableOpacity style={styles.starBtn} onPress={() => toggleFeatured(ev)}>
-                        <Ionicons name={ev.featured ? "star" : "star-outline"} size={14} color={ev.featured ? "#FDCB6E" : "#ddd"} />
-                      </TouchableOpacity>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </>
-        )}
 
+{/* ── TWO COLUMN GRID ── */}
+{viewMode === "featured" && regular.length > 0 && (
+  <>
+    <Text style={styles.sectionLabel}>
+      📅 All Events
+    </Text>
+
+    <View style={styles.grid}>
+      {regular.map(ev => {
+        const cat = categoryOf(ev.category);
+
+        return (
+          <TouchableOpacity
+            key={ev.id}
+            style={styles.gridCard}
+            onPress={() => {
+              setViewingEvent(ev);
+              setDetailModal(true);
+            }}
+          >
+            <View
+              style={[
+                styles.gridAccent,
+                { backgroundColor: cat.color }
+              ]}
+            />
+
+            <View style={styles.gridBody}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 6,
+                }}
+              >
+                <View
+                  style={[
+                    styles.gridCatIcon,
+                    { backgroundColor: cat.color + "22" }
+                  ]}
+                >
+                  <Ionicons
+                    name={cat.icon}
+                    size={14}
+                    color={cat.color}
+                  />
+                </View>
+
+                <StatusBadge event={ev} />
+              </View>
+
+              <Text
+                style={styles.gridTitle}
+                numberOfLines={2}
+              >
+                {ev.title}
+              </Text>
+
+              <Text
+                style={styles.gridDate}
+                numberOfLines={1}
+              >
+                {fmtDate(ev.startDate)}
+              </Text>
+
+              {ev.location && (
+                <Text
+                  style={styles.gridLoc}
+                  numberOfLines={1}
+                >
+                  {ev.location}
+                </Text>
+              )}
+            </View>
+
+            {canDo("manage_events") && (
+              <TouchableOpacity
+                style={styles.starBtn}
+                onPress={() => toggleFeatured(ev)}
+              >
+                <Ionicons
+                  name={
+                    ev.featured
+                      ? "star"
+                      : "star-outline"
+                  }
+                  size={14}
+                  color={
+                    ev.featured
+                      ? "#FDCB6E"
+                      : "#ddd"
+                  }
+                />
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  </>
+)}
+
+                  
         {/* ── LIST VIEW ── */}
         {viewMode === "list" && filtered.map(ev => {
           const cat = categoryOf(ev.category);
@@ -682,9 +742,11 @@ const toggleFeatured = async (event) => {
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={48} color="#ddd" />
             <Text style={styles.emptyTitle}>No events found</Text>
-            <Text style={styles.emptyText}>
-              {canDo("deacon") ? "Tap + to create the first event" : "Check back soon for upcoming events"}
-            </Text>
+           <Text style={styles.emptyText}>
+  {canDo("manage_events")
+    ? "Tap + to create the first event"
+    : "Check back soon for upcoming events"}
+</Text>
           </View>
         )}
 
@@ -754,47 +816,101 @@ const toggleFeatured = async (event) => {
                       </View>
                     )}
 
-                    {/* Action buttons */}
-                    <View style={styles.detailActions}>
-                      {canDo("deacon") && (
-                        <TouchableOpacity style={styles.detailEditBtn} onPress={() => openEdit(viewingEvent)}>
-                          <Ionicons name="create-outline" size={15} color="#fff" />
-                          <Text style={styles.detailBtnText}>Edit</Text>
-                        </TouchableOpacity>
-                      )}
-{canDo("deacon") && (
-    <TouchableOpacity
-      style={[styles.detailEditBtn, { backgroundColor: "#0984E3" }]}
-      onPress={async () => {
-        const link = buildEventQR(
-  viewingEvent.id,
-  activeEntity.organizationId,
-  activeEntity.entityId
-);
+                   {/* Action buttons */}
+<View style={styles.detailActions}>
+  {canDo("manage_events") && (
+  <TouchableOpacity
 
-    // ✅ ✅ ADD THIS LINE HERE
-    console.log("EVENT QR:", link);
-
-        setEventQR(link);
-        setEventQRVisible(true);
-      }}
+      style={styles.detailEditBtn}
+      onPress={() => openEdit(viewingEvent)}
     >
-      <Ionicons name="qr-code-outline" size={15} color="#fff" />
-      <Text style={styles.detailBtnText}>Show QR</Text>
+      <Ionicons
+        name="create-outline"
+        size={15}
+        color="#fff"
+      />
+      <Text style={styles.detailBtnText}>
+        Edit
+      </Text>
     </TouchableOpacity>
   )}
 
+ {canDo("manage_events") && (
+  <TouchableOpacity
+    style={[
+      styles.detailEditBtn,
+      { backgroundColor: "#0984E3" }
+    ]}
+    onPress={() => {
+      const link = buildEventQR(
+        viewingEvent.id,
+        activeEntity.organizationId,
+        activeEntity.entityId
+      );
 
-                      {canDo("deacon") && (
-                        <TouchableOpacity
-                          style={[styles.detailEditBtn, { backgroundColor: viewingEvent.featured ? "#FDCB6E" : "#EEF0FA" }]}
-                          onPress={() => toggleFeatured(viewingEvent)}>
-                          <Ionicons name={viewingEvent.featured ? "star" : "star-outline"} size={15} color={viewingEvent.featured ? "#fff" : "#4B3F72"} />
-                          <Text style={[styles.detailBtnText, { color: viewingEvent.featured ? "#fff" : "#4B3F72" }]}>
-                            {viewingEvent.featured ? "Unfeature" : "Feature"}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
+      console.log("EVENT QR:", link);
+
+      setEventQR(link);
+      setEventQRVisible(true);
+    }}
+  >
+    <Ionicons
+      name="qr-code-outline"
+      size={15}
+      color="#fff"
+    />
+
+    <Text style={styles.detailBtnText}>
+      Show QR
+    </Text>
+  </TouchableOpacity>
+)}
+{canDo("manage_events") && (
+  <TouchableOpacity
+    style={[
+      styles.detailEditBtn,
+      {
+        backgroundColor:
+          viewingEvent.featured
+            ? "#FDCB6E"
+            : "#EEF0FA"
+      }
+    ]}
+    onPress={() =>
+      toggleFeatured(viewingEvent)
+    }
+  >
+    <Ionicons
+      name={
+        viewingEvent.featured
+          ? "star"
+          : "star-outline"
+      }
+      size={15}
+      color={
+        viewingEvent.featured
+          ? "#fff"
+          : "#4B3F72"
+      }
+    />
+
+    <Text
+      style={[
+        styles.detailBtnText,
+        {
+          color:
+            viewingEvent.featured
+              ? "#fff"
+              : "#4B3F72"
+        }
+      ]}
+    >
+      {viewingEvent.featured
+        ? "Unfeature"
+        : "Feature"}
+    </Text>
+  </TouchableOpacity>
+)}
                       {canDo("manage_events") && (
                         <TouchableOpacity style={[styles.detailEditBtn, { backgroundColor: "#e74c3c" }]} onPress={() => handleDelete(viewingEvent)}>
                           <Ionicons name="trash-outline" size={15} color="#fff" />
@@ -977,7 +1093,8 @@ const toggleFeatured = async (event) => {
             </FormSection>
 
             {/* ── SECTION: Options (admin/pastor) ── */}
-            {canDo("pastor") && (
+            {canDo("manage_events") && (
+
               <FormSection title="Advanced Options">
                 <View style={styles.switchRow}>
                   <View>
