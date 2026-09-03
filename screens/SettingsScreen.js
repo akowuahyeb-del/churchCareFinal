@@ -27,6 +27,7 @@ import { findOpenSession } from "../utils/findOpenSession";
 
 import QRCode from "react-native-qrcode-svg";
 import { updateDoc, doc, collection, getDocs } from "firebase/firestore";
+import { hasPermission } from "../constants/permissions";
 
 
 
@@ -177,7 +178,10 @@ export default function SettingsScreen({
  const USER_ROLE  = currentUser?.role || "member";
 const USER_NAME  = currentUser?.name || "Unknown User";
 const USER_EMAIL = currentUser?.email || "";
-const canDo = () => false;
+
+
+const canDo = (permission) =>
+  hasPermission(currentUser, permission);
 
 useEffect(() => {
   const loadUser = async () => {
@@ -956,54 +960,63 @@ const handleRemovePin = () => {
           <ToggleRow icon="prism-outline"         label="Prayer Requests"       sub="New prayer requests"     value={notifPrayer}     onChange={setNotifPrayer}     color="#6C5CE7" />
         </View>
 
-{/* ── FINANCE ── */}
-<SectionHeader title="Finance" />
-<TapRow
-  icon="card-outline"
-  label="Subscription & Billing"
-  sub={
-  status === "trialing" && !isTrialExpired
-    ? `${plan.label} • ${daysLeftInTrial} days left`
-    : `${plan.label} • ${status}`
-}
-  onPress={() => navigation.navigate("Subscription")}
-  color="#4B3F72"
-/>
+{canDo("manage_finance") && (
+  <>
+    <SectionHeader title="Finance" />
 
-{/* ✅ Approve Donations (Fintech style row) */}
-<TouchableOpacity
-  style={styles.approvalRow}
-  onPress={() =>
-    navigation.navigate("ApproveDonations", {
-      organizationId,
-      entityId,
-      viewerName,
-    })
-  }
->
-  
+    <TapRow
+      icon="card-outline"
+      label="Subscription & Billing"
+      sub={
+        status === "trialing" && !isTrialExpired
+          ? `${plan.label} • ${daysLeftInTrial} days left`
+          : `${plan.label} • ${status}`
+      }
+      onPress={() => navigation.navigate("Subscription")}
+      color="#4B3F72"
+    />
 
-  {/* ✅ LEFT ICON */}
-  <View style={styles.approvalIcon}>
-    <Ionicons name="checkmark-done-outline" size={16} color="#27ae60" />
+    <TouchableOpacity
+      style={styles.approvalRow}
+      onPress={() =>
+        navigation.navigate("ApproveDonations", {
+          organizationId,
+          entityId,
+          viewerName,
+        })
+      }
+    >
+      <View style={styles.approvalIcon}>
+        <Ionicons
+          name="checkmark-done-outline"
+          size={16}
+          color="#27ae60"
+        />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={styles.approvalTitle}>
+          Approve Donations
+          {pendingCount > 0
+            ? ` (${pendingCount})`
+            : ""}
+        </Text>
+
+        <Text style={styles.approvalSub}>
+          Review pending contributions
+        </Text>
+      </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={18}
+        color="#999"
+      />
+    </TouchableOpacity>
+  </>
+)}
 
 
-  </View>
-
-  {/* ✅ TEXT SECTION */}
-  <View style={{ flex: 1 }}>
-    <Text style={styles.approvalTitle}>
-      Approve Donations {pendingCount > 0 ? `(${pendingCount})` : ""}
-    </Text>
-    <Text style={styles.approvalSub}>
-      Review pending contributions
-    </Text>
-  </View>
-
-  {/* ✅ RIGHT ARROW (IMPORTANT UX) */}
-  <Ionicons name="chevron-forward" size={18} color="#999" />
-
-</TouchableOpacity>
 
 
         {/* ── DISPLAY ── */}
@@ -1021,7 +1034,15 @@ const handleRemovePin = () => {
           <ToggleRow icon="finger-print-outline"     label="Biometric Login"     sub="Fingerprint / Face ID"           value={biometric}     onChange={setBiometric}     color="#4B3F72" />
           <ToggleRow icon="eye-outline"              label="Public Profile"       sub="Visible to other members"        value={profilePublic} onChange={setProfilePublic} color="#0984E3" />
           <ToggleRow icon="call-outline"             label="Show Phone Number"    sub="Visible to church leaders"       value={showPhone}     onChange={setShowPhone}     color="#00B894" />
-          <TapRow    icon="key-outline"              label="Change Admin PIN"     sub="Update attendance lock PIN"      onPress={() => setPinModal(true)} color="#D97706" />
+   {canDo("manage_attendance") && (
+  <TapRow
+    icon="key-outline"
+    label="Change Admin PIN"
+    sub="Update attendance lock PIN"
+    onPress={() => setPinModal(true)}
+    color="#D97706"
+  />
+)}
           <TapRow    icon="shield-checkmark-outline" label="Data & Privacy Policy"sub="How your data is used"          onPress={() => Alert.alert("Privacy Policy", "Your data is securely stored and never shared.")} color="#6C5CE7" />
             <TapRow
   icon="keypad-outline"
@@ -1143,34 +1164,53 @@ const handleRemovePin = () => {
 
 
 
-<SectionHeader title="Church Branding" />
-<View style={styles.card}>
+{canDo("manage_church_settings") && (
+  <>
+    <SectionHeader title="Church Branding" />
 
-  <TouchableOpacity onPress={uploadChurchLogo} style={styles.logoRow}>
+    <View style={styles.card}>
+      <TouchableOpacity
+        onPress={uploadChurchLogo}
+        style={styles.logoRow}
+      >
+        {activeEntity?.logo ? (
+          <Image
+            source={{ uri: activeEntity.logo }}
+            style={styles.logoPreview}
+          />
+        ) : (
+          <View style={styles.logoPlaceholder}>
+            <Ionicons
+              name="camera-outline"
+              size={20}
+              color="#fff"
+            />
+          </View>
+        )}
 
-    {activeEntity?.logo ? (
-      <Image
-        source={{ uri: activeEntity.logo }}
-        style={styles.logoPreview}
-      />
-    ) : (
-      <View style={styles.logoPlaceholder}>
-        <Ionicons name="camera-outline" size={20} color="#fff" />
-      </View>
-    )}
+        <View style={{ marginLeft: 12 }}>
+          <Text
+            style={{
+              fontWeight: "700",
+              fontSize: 14,
+            }}
+          >
+            Upload Church Logo
+          </Text>
 
-    <View style={{ marginLeft: 12 }}>
-      <Text style={{ fontWeight: "700", fontSize: 14 }}>
-        Upload Church Logo
-      </Text>
-      <Text style={{ fontSize: 12, color: "#888" }}>
-        Tap to select image
-      </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              color: "#888",
+            }}
+          >
+            Tap to select image
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
-
-  </TouchableOpacity>
-
-</View>
+  </>
+)}
 
 
         {/* ── ADMIN CONTROLS ── */}

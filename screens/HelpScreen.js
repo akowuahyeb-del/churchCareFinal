@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AppHeader from "../components/AppHeader";
 
 const { width: W } = Dimensions.get("window");
 
@@ -168,24 +169,23 @@ export default function HelpScreen() {
 
   /* ════════════════════════ RENDER ════════════════════════ */
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView
+  style={[
+    styles.safe,
+    {
+      paddingTop:
+        Platform.OS === "ios" ? 20 : 0,
+    },
+  ]}
+>
+
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Help & Support</Text>
-          <Text style={styles.headerSub}>We're here for you</Text>
-        </View>
-        {activeTab === "ai" && (
-          <TouchableOpacity style={styles.clearBtn} onPress={clearChat}>
-            <Ionicons name="refresh-outline" size={16} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <AppHeader
+  title="Help & Support"
+  subtitle="We're here for you"
+  onBack={() => navigation.goBack()}
+/>
 
       {/* ── TAB BAR ── */}
       <View style={styles.tabBar}>
@@ -528,7 +528,14 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#4B3F72" },
 
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingBottom: 10, paddingTop: 4, gap: 10 },
+  header: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 14,
+  paddingBottom: 10,
+  paddingTop: Platform.OS === "ios" ? 20 : 4,
+  gap: 10,
+},
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
   headerTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
   headerSub: { color: "rgba(255,255,255,0.65)", fontSize: 11 },
