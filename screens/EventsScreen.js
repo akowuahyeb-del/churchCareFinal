@@ -21,13 +21,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import QRCodeDisplay from "../components/QRCodeDisplay";
 import { buildEventLink } from "../utils/qrLinks";
 import { buildEventQR } from "../utils/qrLinks";
+import { hasPermission } from "../constants/permissions";
+
 
 const { width: W } = Dimensions.get("window");
 
-// ── Role config ───────────────────────────────────────────────────
-const USER_ROLE  = "admin"; // replace with auth context
-const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
-const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
+
 
 // ── Event categories ──────────────────────────────────────────────
 const CATEGORIES = [
@@ -101,6 +100,49 @@ const emptyForm = () => ({
   const [eventQR, setEventQR] = useState(null);
   const [eventQRVisible, setEventQRVisible] = useState(false);
 
+  const [permissions, setPermissions] = useState([]);
+
+const canDo = (permission) =>
+  hasPermission(
+    { permissions },
+    permission
+  );
+
+
+
+  useEffect(() => {
+  const loadPermissions = async () => {
+    const storedUser =
+      await AsyncStorage.getItem("currentUser");
+
+    if (!storedUser) return;
+
+    const user = JSON.parse(storedUser);
+
+    setPermissions(
+      user.permissions || []
+    );
+  };
+
+  loadPermissions();
+}, []);
+
+useEffect(() => {
+  const loadPermissions = async () => {
+    const storedUser =
+      await AsyncStorage.getItem("currentUser");
+
+    if (!storedUser) return;
+
+    const user = JSON.parse(storedUser);
+
+    setPermissions(
+      user.permissions || []
+    );
+  };
+
+  loadPermissions();
+}, []);
 
 
 useEffect(() => {
@@ -370,7 +412,7 @@ const handleDelete = (event) => {
 
 // ── Toggle featured ──────────────────────────────────────────
 const toggleFeatured = async (event) => {
-  if (!canDo("deacon")) {
+  if (canDo("manage_events")) {
     Alert.alert("Access denied");
     return;
   }
@@ -753,7 +795,7 @@ const toggleFeatured = async (event) => {
                           </Text>
                         </TouchableOpacity>
                       )}
-                      {canDo("pastor") && (
+                      {canDo("manage_events") && (
                         <TouchableOpacity style={[styles.detailEditBtn, { backgroundColor: "#e74c3c" }]} onPress={() => handleDelete(viewingEvent)}>
                           <Ionicons name="trash-outline" size={15} color="#fff" />
                           <Text style={styles.detailBtnText}>Delete</Text>

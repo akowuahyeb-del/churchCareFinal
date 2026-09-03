@@ -49,7 +49,6 @@ import { useSubscription } from "../utils/subscription";
 
 // ── Role config ───────────────────────────────────────────────────
 
-const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
 
 
 // ✅ "Attendance Check-In" removed — there's no real, live session to
@@ -178,7 +177,7 @@ export default function SettingsScreen({
  const USER_ROLE  = currentUser?.role || "member";
 const USER_NAME  = currentUser?.name || "Unknown User";
 const USER_EMAIL = currentUser?.email || "";
-const canDo = (minRole) => ROLE_LEVEL[USER_ROLE] >= ROLE_LEVEL[minRole];
+const canDo = () => false;
 
 useEffect(() => {
   const loadUser = async () => {
@@ -1041,7 +1040,7 @@ const handleRemovePin = () => {
         </View>
 
         {/* ── CHURCH INFORMATION ── */}
-        {canDo("pastor") && (
+        {canDo("manage_church_settings") && (
           <>
             <SectionHeader title="Church Information" />
             <View style={styles.card}>

@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import AppHeader from "../components/AppHeader";
 import LogoutButton from "../components/LogoutButton";
+import { hasPermission } from "../constants/permissions";
 const MORE_ITEMS = [
   {
     key: "Departments",
@@ -94,11 +95,36 @@ const MORE_ITEMS = [
 export default function MoreScreen() {
   const navigation = useNavigation();
   const [role, setRole] = useState("");
+const [permissions, setPermissions] = useState([]);
+const canDo = (permission) =>
+  hasPermission(
+    { permissions },
+    permission
+  );
+
 
   useEffect(() => {
+    const canDo = (permission) =>
+  hasPermission(
+    { permissions },
+    permission
+  );
     const loadRole = async () => {
-      const storedRole = await AsyncStorage.getItem("role");
-      setRole(storedRole || "User");
+      const storedRole =
+  await AsyncStorage.getItem("role");
+
+const storedUser =
+  await AsyncStorage.getItem("currentUser");
+
+setRole(storedRole || "User");
+
+if (storedUser) {
+  const user = JSON.parse(storedUser);
+
+  setPermissions(
+    user.permissions || []
+  );
+}
     };
 
     loadRole();
@@ -120,7 +146,39 @@ export default function MoreScreen() {
 
         {/* ✅ MENU ITEMS */}
         <View>
-          {MORE_ITEMS.map((item) => {
+          {MORE_ITEMS
+.filter((item) => {
+
+  if (
+    item.key === "Finance"
+  ) {
+    return (
+      canDo("manage_finance") ||
+      canDo("view_finance_reports")
+    );
+  }
+
+  if (
+    item.key === "PastoralDashboard"
+  ) {
+    return canDo("manage_members");
+  }
+
+  if (
+    item.key === "PastoralTeam"
+  ) {
+    return canDo("manage_members");
+  }
+
+  if (
+    item.key === "Departments"
+  ) {
+    return canDo("manage_members");
+  }
+
+  return true;
+})
+.map((item) => {
          const routes = {
   Settings: "Settings",
   Finance: "Finance",
