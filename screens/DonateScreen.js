@@ -81,6 +81,7 @@ const [viewerPermissions] = useState(
   const detectedProvider = detectMomoProvider(momoPhone);
 
   const [history,    setHistory]    = useState([]);
+  const [pendingInKind, setPendingInKind] = useState([]);
   const [activeTab,  setActiveTab]  = useState("give"); // give | history | pending
   const [generatingReceiptId, setGeneratingReceiptId] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -124,6 +125,32 @@ useEffect(() => {
   return unsub;
 }, [organizationId, entityId]);   // ✅ this is correct
 
+useEffect(() => {
+  if (!organizationId || !entityId) return;
+
+  const q = query(
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "inkind_donations"
+    ),
+    where("status", "==", "pending")
+  );
+
+  const unsub = onSnapshot(q, snap => {
+    const data = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    setPendingInKind(data);
+  });
+
+  return unsub;
+}, [organizationId, entityId]);
 
 
   useEffect(() => {
@@ -388,6 +415,17 @@ if (
 
   const acknowledgedHistory = history.filter(h => h.status === "acknowledged" || !h.status);
   const pendingHistory = history.filter(h => h.status === "pending");
+  const combinedPending = [
+  ...pendingHistory.map(item => ({
+    ...item,
+    donationKind: "cash",
+  })),
+
+  ...pendingInKind.map(item => ({
+    ...item,
+    donationKind: "inkind",
+  })),
+];
   const totalGiven = acknowledgedHistory.reduce((s, h) => s + (h.amount || 0), 0);
 
   return (
@@ -899,60 +937,153 @@ console.log("memberName =", memberName);
       )}
 
       {activeTab === "pending" && (
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          <Text style={styles.label}>Awaiting Acknowledgment</Text>
+  <ScrollView
+    contentContainerStyle={styles.body}
+    showsVerticalScrollIndicator={false}
+  >
+    <Text style={styles.label}>
+      Awaiting Acknowledgment
+    </Text>
 
-          {pendingHistory.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="checkmark-done-circle-outline" size={42} color="#ccc" />
-              <Text style={styles.emptyText}>Nothing pending — all caught up</Text>
+    {combinedPending.length === 0 ? (
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="checkmark-done-circle-outline"
+          size={42}
+          color="#ccc"
+        />
+        <Text style={styles.emptyText}>
+          Nothing pending — all caught up
+        </Text>
+      </View>
+    ) : (
+      combinedPending.map(item => {
+        const methodInfo =
+          findMethod(item.method) || {
+            icon: "cash-outline",
+            color: "#888",
+          };
+
+        return (
+          <View
+            key={`${item.donationKind}-${item.id}`}
+            style={styles.pendingCard}
+          >
+            <View style={styles.pendingCardHeader}>
+              <Text style={styles.pendingAmt}>
+                {item.donationKind === "inkind"
+                  ? `${item.quantity || 0} ${item.unit || ""}`
+                  : `GH₵ ${item.amount?.toLocaleString()}`}
+              </Text>
+
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>
+                  Pending
+                </Text>
+              </View>
             </View>
-          ) : (
-            pendingHistory.map(item => {
-              const methodInfo = findMethod(item.method) || { icon: "cash-outline", color: "#888" };
-              return (
-                <View key={item.id} style={styles.pendingCard}>
-                  <View style={styles.pendingCardHeader}>
-                    <Text style={styles.pendingAmt}>GH₵ {item.amount?.toLocaleString()}</Text>
-                    <View style={styles.pendingBadge}>
-                      <Text style={styles.pendingBadgeText}>Pending</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.pendingMeta}>
-                    {item.memberName} · {item.type} · {item.date}
-                  </Text>
-                  <View style={styles.historyMethodRow}>
-                    <Ionicons name={methodInfo.icon} size={12} color={methodInfo.color} />
-                    <Text style={[styles.historyMethodText, { color: methodInfo.color }]}>
-                      {item.methodLabel}
-                      {item.momoProvider ? ` · ${item.momoProvider} · ${item.momoPhone}` : ""}
-                      {item.reference ? ` · Ref: ${item.reference}` : ""}
-                    </Text>
-                  </View>
-                  <Text style={styles.pendingRecordedBy}>Recorded by {item.recordedBy || "—"}</Text>
 
-  {canAcknowledge && (
-  <FeatureGate
-    feature={FEATURES.DONATION_APPROVALS}
-    planId={planId}
-    onUpgrade={() => navigation.navigate("Subscription")}
-  >
-  <TouchableOpacity
-    style={styles.acknowledgeBtn}
-    onPress={() => acknowledgeDonation(item)}
-  >
-    <Ionicons name="checkmark-circle-outline" size={15} color="#fff" />
-    <Text style={styles.acknowledgeBtnText}>Acknowledge</Text>
-  </TouchableOpacity>
-</FeatureGate>
+            <Text style={styles.pendingMeta}>
+              {item.memberName}
+
+              {" • "}
+
+              {item.donationKind === "inkind"
+                ? item.itemName ||
+                  item.categoryLabel ||
+                  "In-Kind Donation"
+                : item.type}
+
+              {" • "}
+
+              {item.date}
+            </Text>
+
+            {item.donationKind === "inkind" && (
+              <Text style={styles.pendingRecordedBy}>
+                {item.quantity} {item.unit || ""}
+                {" • "}
+                {item.conditionLabel ||
+                  item.condition}
+              </Text>
+            )}
+
+            {item.donationKind !== "inkind" && (
+              <View style={styles.historyMethodRow}>
+                <Ionicons
+                  name={methodInfo.icon}
+                  size={12}
+                  color={methodInfo.color}
+                />
+
+                <Text
+                  style={[
+                    styles.historyMethodText,
+                    { color: methodInfo.color },
+                  ]}
+                >
+                  {item.methodLabel}
+
+                  {item.momoProvider
+                    ? ` • ${item.momoProvider} • ${item.momoPhone}`
+                    : ""}
+
+                  {item.reference
+                    ? ` • Ref: ${item.reference}`
+                    : ""}
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.pendingRecordedBy}>
+              Recorded by{" "}
+              {item.recordedBy ||
+                item.memberName ||
+                "—"}
+            </Text>
+
+            {canAcknowledge &&
+              item.donationKind !== "inkind" && (
+                <FeatureGate
+                  feature={
+                    FEATURES.DONATION_APPROVALS
+                  }
+                  planId={planId}
+                  onUpgrade={() =>
+                    navigation.navigate(
+                      "Subscription"
+                    )
+                  }
+                >
+                  <TouchableOpacity
+                    style={styles.acknowledgeBtn}
+                    onPress={() =>
+                      acknowledgeDonation(item)
+                    }
+                  >
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={15}
+                      color="#fff"
+                    />
+
+                    <Text
+                      style={
+                        styles.acknowledgeBtnText
+                      }
+                    >
+                      Acknowledge
+                    </Text>
+                  </TouchableOpacity>
+                </FeatureGate>
+              )}
+          </View>
+        );
+      })
+    )}
+  </ScrollView>
 )}
 
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
-      )}
     </View>
   );
 }
