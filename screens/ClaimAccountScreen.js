@@ -107,6 +107,10 @@ export default function ClaimAccountScreen({navigation,route,}) {
       }
 
       setVerified(result);
+      console.log(
+  "VERIFIED MEMBER",
+  JSON.stringify(result, null, 2)
+);
 
 if (existingUser) {
 

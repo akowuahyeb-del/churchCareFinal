@@ -88,6 +88,8 @@ import PastoralRequestScreen from "./screens/PastoralRequestScreen";
 import PastoralCareDashboardScreen from "./screens/PastoralCareDashboardScreen";
 import PastoralTicketDetailScreen from "./screens/PastoralTicketDetailScreen";
 import PastoralTeamManagementScreen from "./screens/PastoralTeamManagementScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState, useEffect } from "react";
 
 
 
@@ -120,21 +122,72 @@ function MembersStack() {
 
 /* ── Main bottom tabs ─────────────────────────────────────────── */
 function MainTabs() {
+  const [userRoles, setUserRoles] = React.useState(["member"]);
+
+  React.useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const stored = await AsyncStorage.getItem("userRoles");
+
+        if (stored) {
+          const parsed = JSON.parse(stored);
+
+          if (
+            Array.isArray(parsed) &&
+            parsed.length > 0
+          ) {
+            setUserRoles(parsed);
+          }
+        }
+      } catch (e) {
+        console.log("Load roles error:", e);
+      }
+    };
+
+    loadRoles();
+  }, []);
+
+  const isLeader =
+    userRoles.includes("admin") ||
+    userRoles.includes("elder") ||
+    userRoles.includes("pastor") ||
+    userRoles.includes("finance") ||
+    userRoles.includes("attendance_manager");
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor:   "#4B3F72",
+        tabBarActiveTintColor: "#4B3F72",
         tabBarInactiveTintColor: "#aaa",
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({ focused, color }) => {
-          const tab  = TABS.find(t => t.name === route.name);
-          const base = tab?.icon || "ellipse";
+
+        tabBarIcon: ({
+          focused,
+          color,
+        }) => {
+          const tab = TABS.find(
+            t => t.name === route.name
+          );
+
+          const base =
+            tab?.icon || "ellipse";
+
           return (
-            <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+            <View
+              style={[
+                styles.iconWrap,
+                focused &&
+                  styles.iconWrapActive,
+              ]}
+            >
               <Ionicons
-                name={focused ? base : `${base}-outline`}
+                name={
+                  focused
+                    ? base
+                    : `${base}-outline`
+                }
                 size={20}
                 color={color}
               />
@@ -143,14 +196,50 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Home"       component={HomeScreen}    />
-      <Tab.Screen name="Members"    component={MembersStack}  />
-      <Tab.Screen name="Attendance" component={AttendanceScreen} />
-      <Tab.Screen name="Help"       component={HelpScreen}    />
-      <Tab.Screen name="More"       component={MoreScreen}    />
+      {/* Everyone */}
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+      />
+
+      {/* Leaders only */}
+      {isLeader && (
+        <Tab.Screen
+          name="Members"
+          component={MembersStack}
+        />
+      )}
+
+      {isLeader && (
+        <Tab.Screen
+          name="Attendance"
+          component={AttendanceScreen}
+        />
+      )}
+
+      {/* Everyone */}
+      <Tab.Screen
+        name="PastoralCare"
+        component={PastoralRequestScreen}
+        options={{
+          title: "Care",
+        }}
+      />
+
+      <Tab.Screen
+        name="Help"
+        component={HelpScreen}
+      />
+
+      <Tab.Screen
+        name="More"
+        component={MoreScreen}
+      />
     </Tab.Navigator>
   );
 }
+
+
 
 /* ── Root stack ───────────────────────────────────────────────── */
 function RootStack() {
@@ -238,6 +327,7 @@ function RootStack() {
        <Stack.Screen name="PastoralCareDashboard"component={PastoralCareDashboardScreen}/>
        <Stack.Screen name="PastoralTicketDetail" component={PastoralTicketDetailScreen}/>
        <Stack.Screen name="PastoralTeamManagement"component={PastoralTeamManagementScreen}/>
+       <Stack.Screen name="MemberProfile"component={MemberProfileScreen}/>
 
 
 

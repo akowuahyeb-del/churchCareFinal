@@ -174,6 +174,7 @@ export default function SettingsScreen({
 
   const [activeEntity, setActiveEntity] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [linkedMember, setLinkedMember] = useState(null);
  const isSuperAdmin = currentUser?.role === "super_admin";
  const USER_ROLE  = currentUser?.role || "member";
 const USER_NAME  = currentUser?.name || "Unknown User";
@@ -192,6 +193,10 @@ useEffect(() => {
   const user = JSON.parse(stored);
 
   setCurrentUser(user);
+  console.log(
+  "CURRENT USER",
+  JSON.stringify(user, null, 2)
+);
 
   if (user?.photo) {
     setProfilePhoto(user.photo);
@@ -204,6 +209,64 @@ useEffect(() => {
 
   loadUser();
 }, []);
+
+useEffect(() => {
+  const findMyMemberRecord = async () => {
+    if (!currentUser?.uid) return;
+    if (!organizationId || !entityId) return;
+
+    try {
+      const snap = await getDocs(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "members"
+        )
+      );
+
+      const match = snap.docs
+        .map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+        .find(
+          m =>
+            m.uid === currentUser.uid ||
+            m.email === currentUser.email ||
+            m.phone === currentUser.phone
+        );
+
+      if (match) {
+        console.log(
+          "✅ LINKED MEMBER",
+          match.id
+        );
+
+        console.log(
+          "✅ FULL MEMBER",
+          JSON.stringify(match, null, 2)
+        );
+
+        setLinkedMember(match);
+      }
+    } catch (e) {
+      console.log(
+        "MEMBER LOOKUP ERROR:",
+        e
+      );
+    }
+  };
+
+  findMyMemberRecord();
+}, [
+  currentUser,
+  organizationId,
+  entityId,
+]);
+
 
 useEffect(() => {
   if (currentUser) {
@@ -931,7 +994,32 @@ const handleRemovePin = () => {
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* ── PROFILE CARD ── */}
-        <TouchableOpacity style={styles.profileCard} onPress={() => setProfileModal(true)}>
+      <TouchableOpacity
+  style={styles.profileCard}
+  onPress={() => {
+    if (linkedMember?.id) {
+      navigation.navigate("MemberProfile", {
+        memberId: linkedMember.id,
+
+        viewerMemberId: linkedMember.id,
+
+        viewerUid: currentUser?.uid,
+
+        viewerName: currentUser?.name,
+
+        viewerPermissions:
+          currentUser?.permissions || [],
+      });
+
+      return;
+    }
+
+    Alert.alert(
+      "Profile Not Found",
+      "Your member profile could not be located."
+    );
+  }}
+>
           {profilePhoto
             ? <Image source={{ uri: profilePhoto }} style={styles.avatarImg} />
             : <View style={styles.avatar}><Text style={styles.avatarText}>{USER_NAME.split(" ").map(n=>n[0]).join("").toUpperCase()}</Text></View>
@@ -948,6 +1036,22 @@ const handleRemovePin = () => {
             <Text style={{ fontSize: 9, color: "#4B3F72", fontWeight: "700" }}>Edit</Text>
           </View>
         </TouchableOpacity>
+
+        <SectionHeader title="My Account" />
+
+<View style={styles.card}>
+
+  <TapRow
+    icon="person-outline"
+    label="My Profile"
+    sub="Attendance, giving, ministry and membership details"
+    onPress={() =>
+      navigation.navigate("MemberProfile")
+    }
+    color="#4B3F72"
+  />
+
+</View>
 
         {/* ── NOTIFICATIONS ── */}
         <SectionHeader title="Notifications" />
