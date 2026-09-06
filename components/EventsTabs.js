@@ -12,7 +12,8 @@ export default function EventsTabs({
   preachers = [],
   setProgram,
   onAddPreacher,
-  onEditPreacher
+  onEditPreacher,
+  canManage = false
 }) {
   const [activeTab, setActiveTab] = useState("events");
   const [modalVisible, setModalVisible] = useState(false);
@@ -112,45 +113,60 @@ const addSession = (name) => {
             style={[styles.sessionChip, active && styles.sessionChipActive]}
             onPress={() => setActiveSession(s)}
             onLongPress={() => {
-              setEditingSession(s);
-              setSessionNameInput(s.name);
-              setEditModalVisible(true);
-            }}
+  if (!canManage) return;
+
+  setEditingSession(s);
+  setSessionNameInput(s.name);
+  setEditModalVisible(true);
+}}
+
           >
             <Text style={[styles.sessionChipText, active && styles.sessionChipTextActive]}>
               {s.name}
             </Text>
           </TouchableOpacity>
 
-          {/* ✅ DELETE */}
-          <TouchableOpacity
-            onPress={() => {
-              setSessions(prev => prev.filter(item => item.id !== s.id));
+          {canManage && (
+  <TouchableOpacity
+    onPress={() => {
+      setSessions(prev =>
+        prev.filter(item => item.id !== s.id)
+      );
 
-              if (activeSession.id === s.id && sessions.length > 1) {
-                setActiveSession(sessions[0]);
-              }
-            }}
-            style={{ marginLeft: 4 }}
-          >
-            <Ionicons name="close-circle" size={16} color="#E11D48" />
-          </TouchableOpacity>
+      if (
+        activeSession.id === s.id &&
+        sessions.length > 1
+      ) {
+        setActiveSession(sessions[0]);
+      }
+    }}
+    style={{ marginLeft: 4 }}
+  >
+    <Ionicons
+      name="close-circle"
+      size={16}
+      color="#E11D48"
+    />
+  </TouchableOpacity>
+)}
 
         </View>
       );
     })}
 
-    {/* ✅ ADD SESSION */}
-    <TouchableOpacity
-      style={[styles.sessionChip, { backgroundColor: "#ddd" }]}
-      onPress={() => {
-        setEditingSession(null);
-        setSessionNameInput("");
-        setEditModalVisible(true);
-      }}
-    >
-      <Text style={{ fontSize: 11 }}>+ Add</Text>
-    </TouchableOpacity>
+   {/* ✅ ADD SESSION */}
+{canManage && (
+  <TouchableOpacity
+    style={[styles.sessionChip, { backgroundColor: "#ddd" }]}
+    onPress={() => {
+      setEditingSession(null);
+      setSessionNameInput("");
+      setEditModalVisible(true);
+    }}
+  >
+    <Text style={{ fontSize: 11 }}>+ Add</Text>
+  </TouchableOpacity>
+)}
   </View>
 )}
 
@@ -175,17 +191,24 @@ const addSession = (name) => {
         {/* ── PROGRAM (session-scoped + preacher-linked) ── */}
         {activeTab === "program" && (
           <>
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => {
-                setSelectedItem({}); // empty = "new" to ProgramModal
-                setModalVisible(true);
-              }}
-            >
-              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-                + Add Program Item
-              </Text>
-            </TouchableOpacity>
+            {canManage && (
+  <TouchableOpacity
+    style={styles.card}
+    onPress={() => {
+      setSelectedItem({});
+      setModalVisible(true);
+    }}
+  >
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700",
+      }}
+    >
+      + Add Program Item
+    </Text>
+  </TouchableOpacity>
+)}
 
             <Text style={styles.sessionHeader}>{activeSession.name}</Text>
 
@@ -215,13 +238,15 @@ const addSession = (name) => {
   return (
 
                 <TouchableOpacity
-                  key={item.id}
-                  style={styles.card}
-                  onPress={() => {
-                    setSelectedItem(item);
-                    setModalVisible(true);
-                  }}
-                >
+  key={item.id}
+  style={styles.card}
+  onPress={() => {
+    if (!canManage) return;
+
+    setSelectedItem(item);
+    setModalVisible(true);
+  }}
+>
                <View style={styles.programRow}>
 
   <Text
@@ -262,23 +287,37 @@ const addSession = (name) => {
           <>
             <Text style={styles.sessionHeader}>{activeSession.name}</Text>
 
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => onAddPreacher && onAddPreacher(activeSession)}
-            >
-              <Text style={{ color: "#4B3F72", fontWeight: "700" }}>
-                + Add Preacher
-              </Text>
-            </TouchableOpacity>
+           {canManage && (
+  <TouchableOpacity
+    style={styles.card}
+    onPress={() => onAddPreacher && onAddPreacher(activeSession)}
+  >
+    <Text
+      style={{
+        color: "#4B3F72",
+        fontWeight: "700"
+      }}
+    >
+      + Add Preacher
+    </Text>
+  </TouchableOpacity>
+)}
 
             {sessionPreachers.map(p => (
               <TouchableOpacity
-                key={p.id}
-                style={styles.card}
-                onPress={() => onEditPreacher && onEditPreacher(p)}
-              >
+  key={p.id}
+  style={styles.card}
+  onPress={() => {
+    if (!canManage) return;
+
+    onEditPreacher &&
+      onEditPreacher(p);
+  }}
+>
                 <Text style={styles.title}>{p.name}</Text>
-                <Text style={styles.sub}>{p.topic}</Text>
+                <Text style={styles.sub}>
+  {p.type || "Guest"} • {p.session?.name || ""}
+</Text>
               </TouchableOpacity>
             ))}
 
@@ -296,8 +335,9 @@ const addSession = (name) => {
   {/* ✅ PROGRAM MODAL */}
 
 <ProgramModal
-  visible={modalVisible}
+  visible={canManage && modalVisible}
   initialData={selectedItem || {}}
+
   onClose={() => setModalVisible(false)}
   preachers={sessionPreachers}
   activeSession={activeSession}
@@ -317,7 +357,11 @@ const addSession = (name) => {
 />
 
 {/* ✅ EDIT SESSION MODAL */}
-<Modal visible={editModalVisible} transparent animationType="fade">
+<Modal
+  visible={canManage && editModalVisible}
+  transparent
+  animationType="fade"
+>
   <View style={{
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

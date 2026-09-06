@@ -78,7 +78,29 @@ export default function HomeScreen({ route }) {
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
   const [userRoles, setUserRoles] = useState(["member"]);
+  const currentUser = auth.currentUser;
+const [currentUserData, setCurrentUserData] = useState(null);
 
+useEffect(() => {
+  const loadCurrentUser = async () => {
+    try {
+      const raw = await AsyncStorage.getItem("currentUser");
+
+      if (raw) {
+        const user = JSON.parse(raw);
+
+        console.log("CURRENT USER:", user);
+        console.log("FULL USER OBJECT:", JSON.stringify(user, null, 2));
+
+        setCurrentUserData(user);
+      }
+    } catch (e) {
+      console.log("Load user error:", e);
+    }
+  };
+
+  loadCurrentUser();
+}, []);
 
 
 /* ── notifications ── */
@@ -248,27 +270,22 @@ useEffect(() => {
       if (stored) {
         const parsed = JSON.parse(stored);
 
-        // ✅ Safety: ensure it's an array and not empty
         if (Array.isArray(parsed) && parsed.length > 0) {
           setUserRoles(parsed);
         } else {
-          setUserRoles(["admin"]); // ✅ fallback
+          setUserRoles(["member"]);
         }
-
       } else {
-        setUserRoles(["member"]); // ✅ fallback if nothing stored
+        setUserRoles(["member"]);
       }
-
     } catch (e) {
-  console.log("❌ Load roles error:", e);
-  setUserRoles(["member"]);
-}
-
+      console.log("❌ Load roles error:", e);
+      setUserRoles(["member"]);
+    }
   };
 
   loadRoles();
 }, []);
-
 
  useEffect(() => {
   const loadOverview = async () => {
@@ -763,17 +780,16 @@ const savePreachersToFirestore = async (updatedPreachers) => {
       typeof updatedPreachers === "function"
         ? updatedPreachers(preachers)
         : updatedPreachers;
-
-    const cleanPreachers = resolved.map(p => ({
-      id: p.id,
-      name: p.name || "",
-      topic: p.topic || "",
-      bio: p.bio || "",
-      photo: p.photo || null,
-      date: p.date || null,
-      expiry: p.expiry || null,
-      session: p.session || null, // ✅ {id, name} — same shape Program items link against
-    }));
+const cleanPreachers = resolved.map(p => ({
+  id: p.id,
+  name: p.name || "",
+  bio: p.bio || "",
+  photo: p.photo || null,
+  type: p.type || "guest",
+  date: p.date || null,
+  expiry: p.expiry || null,
+  session: p.session || null,
+}));
 
     await setDoc(
       doc(
@@ -831,18 +847,21 @@ return (
       subtitle="Welcome back 👋"
       entity={activeEntity}
       actions={[
-        {
-          icon: "notifications-outline",
-          onPress: () => {
-            setNotifModal(true);
-            setNotifCount(0);
-          },
-        },
-        {
-          icon: "cloud-upload-outline",
-          onPress: () => setShowUpload(true),
-        },
-      ]}
+  {
+    icon: "notifications-outline",
+    onPress: () => {
+      setNotifModal(true);
+      setNotifCount(0);
+    },
+  },
+
+  ...(hasRole("admin") || hasRole("media")
+    ? [{
+        icon: "cloud-upload-outline",
+        onPress: () => setShowUpload(true),
+      }]
+    : []),
+]}
     />
 
 
@@ -915,10 +934,26 @@ return (
 
   {/* ✅ PASTOR CARD */}
   <TouchableOpacity
-    onPress={openPastorModal}
-    activeOpacity={0.7}
-    style={[styles.pastorCard, styles.pastorCardActive]}
-  >
+  onPress={() => {
+    if (
+      hasRole("admin") ||
+      hasRole("pastor")
+    ) {
+      openPastorModal();
+    }
+  }}
+  activeOpacity={
+    hasRole("admin") ||
+    hasRole("pastor")
+      ? 0.7
+      : 1
+  }
+  style={[
+    styles.pastorCard,
+    styles.pastorCardActive
+  ]}
+>
+
     <View style={styles.pastorCardLeft}>
       <Ionicons name="book-outline" size={20} color="#4B3F72" />
     </View>
@@ -945,7 +980,14 @@ return (
       )}
     </View>
 
-    <Ionicons name="pencil-outline" size={16} color="#4B3F72" />
+    {(hasRole("admin") ||
+  hasRole("pastor")) && (
+  <Ionicons
+    name="pencil-outline"
+    size={16}
+    color="#4B3F72"
+  />
+)}
   </TouchableOpacity>
 
   {/* ✅ CAROUSEL */}
@@ -997,7 +1039,13 @@ return (
 )}
 
 
- <Section title="Overview">
+ {(
+  hasRole("admin") ||
+  hasRole("pastor") ||
+  hasRole("elder")
+) && (
+  <Section title="Overview">
+
   <View style={styles.statsRow}>
     <StatCard
       label="Members"
@@ -1023,7 +1071,9 @@ return (
       value={String(overview?.activeUserCount ?? 0)}
     />
   </View>
-</Section>
+  </Section>
+)}
+
 
 {/* ✅ QUICK ACTIONS */}
 {/* ✅ QUICK ACTIONS */}
@@ -1084,10 +1134,31 @@ hasRole("admin") && {
 
       
       {
-        icon: "heart-outline",
-        label: "Donate",
-        onPress: () => navigation.navigate("Donate")
-      },
+  icon: "heart-outline",
+  label: "Donate",
+  onPress: () =>
+  navigation.navigate("Donate", {
+  viewerUid:
+    currentUserData?.uid ||
+    auth.currentUser?.uid,
+
+  viewerName:
+    currentUserData?.name ||
+    auth.currentUser?.displayName ||
+    "Member",
+
+  memberId:
+    currentUserData?.uid ||
+    auth.currentUser?.uid,
+
+  memberName:
+    currentUserData?.name ||
+    auth.currentUser?.displayName ||
+    "Member",
+
+  viewerPermissions: userRoles,
+})
+},
 
       {
         icon: "help-circle-outline",
@@ -1130,11 +1201,16 @@ hasRole("admin") && {
   {/* ✅ SERVICE FLOW */}
   <Section title="Order of Service">
     <EventsTabs
-      events={upcomingEvents}
-      program={program}
-      preachers={preachers}
-      setProgram={saveProgramToFirestore}
-      onAddPreacher={(session) => {
+  events={upcomingEvents}
+  program={program}
+  preachers={preachers}
+  setProgram={saveProgramToFirestore}
+  canManage={
+    hasRole("admin") ||
+    hasRole("pastor") ||
+    hasRole("elder")
+  }
+  onAddPreacher={(session) => {
         
         setEditingPreacher(session ? { session } : null);
         setPreacherModal(true);

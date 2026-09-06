@@ -167,6 +167,17 @@ setStep("account");
       // auth.currentUser is now set — completeMemberClaim reads request.auth server-side.
       const result = await completeMemberClaim({ claimToken: verified.claimToken });
 
+await AsyncStorage.setItem(
+  "user",
+  JSON.stringify({
+    uid: auth.currentUser?.uid,
+    name: verified.memberName,
+    email: email.trim(),
+    organizationId: result.organizationId,
+    entityId: result.entityId,
+  })
+);
+
       await AsyncStorage.setItem("isLoggedIn", "true");
       await AsyncStorage.setItem("activeEntity", JSON.stringify({
         organizationId: result.organizationId,

@@ -26,8 +26,9 @@ export default function PreacherModal({
   initialData
 }) {
   const [name, setName] = useState("");
-  const [topic, setTopic] = useState("");
+  
   const [bio, setBio] = useState("");
+  const [type, setType] = useState("guest");
   const [photo, setPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -43,15 +44,18 @@ const [showExpiryPicker, setShowExpiryPicker] = useState(false);
 
   // ✅ LOAD EDIT DATA (and reset cleanly every time the modal opens)
   useEffect(() => {
-    if (!visible) return;
-    setName(initialData?.name || "");
-    setTopic(initialData?.topic || "");
-    setBio(initialData?.bio || "");
-    setPhoto(initialData?.photo || null);
-    setDate(initialData?.date || null);
-    setExpiry(initialData?.expiry || null);
-    setSession(initialData?.session || null);
-  }, [initialData, visible]);
+  if (!visible) return;
+
+  setName(initialData?.name || "");
+
+  setBio(initialData?.bio || "");
+  setType(initialData?.type || "guest");
+  setPhoto(initialData?.photo || null);
+  setDate(initialData?.date || null);
+  setExpiry(initialData?.expiry || null);
+  setSession(initialData?.session || null);
+
+}, [initialData, visible]);
 
 
   // ✅ IMAGE UPLOAD
@@ -91,10 +95,13 @@ const [showExpiryPicker, setShowExpiryPicker] = useState(false);
 
   // ✅ SAVE HANDLER
   const handleSave = () => {
-    if (!name.trim() || !topic.trim()) {
-      Alert.alert("Required", "Name and topic are required");
-      return;
-    }
+    if (!name.trim()) {
+  Alert.alert(
+    "Required",
+    "Preacher name is required"
+  );
+  return;
+}
 
     // ✅ A preacher with no session can never be matched to a program item —
     // so a session is now mandatory, same as name/topic.
@@ -104,15 +111,15 @@ const [showExpiryPicker, setShowExpiryPicker] = useState(false);
     }
 
     onSave({
-      id: initialData?.id || Date.now().toString(),
-      name,
-      topic,
-      bio,
-      photo,
-      date,
-      expiry,
-      session // ✅ {id, name} — same shape Program items use to link back
-    });
+  id: initialData?.id || Date.now().toString(),
+  name,
+  bio,
+  photo,
+  date,
+  expiry,
+  type,
+  session
+});
 
     onClose();
   };
@@ -156,29 +163,61 @@ const [showExpiryPicker, setShowExpiryPicker] = useState(false);
               </View>
             )}
           </TouchableOpacity>
+<Text style={styles.label}>Name</Text>
 
-        <View style={styles.row}>
+<TextInput
+  placeholder="Rev. Anomah"
+  style={styles.input}
+  value={name}
+  onChangeText={setName}
+/>
 
-  <View style={styles.half}>
-    <Text style={styles.label}>Name</Text>
-    <TextInput
-      placeholder="Rev. Anomah"
-      style={styles.input}
-      value={name}
-      onChangeText={setName}
-    />
-  </View>
+<Text style={styles.label}>
+  Preacher Type
+</Text>
 
-  <View style={styles.half}>
-    <Text style={styles.label}>Topic</Text>
-    <TextInput
-      placeholder="Prayer"
-      style={styles.input}
-      value={topic}
-      onChangeText={setTopic}
-    />
-  </View>
+<View style={styles.sessionRow}>
+  <TouchableOpacity
+    style={[
+      styles.sessionChip,
+      type === "resident" &&
+        styles.sessionChipActive,
+    ]}
+    onPress={() =>
+      setType("resident")
+    }
+  >
+    <Text
+      style={[
+        styles.sessionText,
+        type === "resident" &&
+          styles.sessionTextActive,
+      ]}
+    >
+      Resident
+    </Text>
+  </TouchableOpacity>
 
+  <TouchableOpacity
+    style={[
+      styles.sessionChip,
+      type === "guest" &&
+        styles.sessionChipActive,
+    ]}
+    onPress={() =>
+      setType("guest")
+    }
+  >
+    <Text
+      style={[
+        styles.sessionText,
+        type === "guest" &&
+          styles.sessionTextActive,
+      ]}
+    >
+      Guest
+    </Text>
+  </TouchableOpacity>
 </View>
 
 

@@ -19,14 +19,27 @@ import {
   INKIND_CATEGORIES, CONDITION_OPTIONS, DONOR_TYPES, findCategory
 } from "../constants/inKindCategories";
 import { generateInKindReceipt } from "../utils/receiptGenerator";
+import {
+  formatDate,
+  todayDisplayDate,
+} from "../utils/dateUtils";
 
 export default function InKindDonationScreen({ route }) {
   const navigation = useNavigation();
 
-  const viewerName        = route?.params?.viewerName        || "Staff";
+  const viewerName =
+  route?.params?.viewerName || "";
   const viewerUid         = route?.params?.viewerUid         || null;
   const viewerPermissions = route?.params?.viewerPermissions || [];
+
+
   const canAcknowledge    = hasPermission({ permissions: viewerPermissions }, "manage_donations");
+  const canManageInKind =
+  hasPermission(
+    { permissions: viewerPermissions },
+    "manage_donations"
+  );
+  const canViewAllInKind = canManageInKind;
 
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
@@ -42,13 +55,25 @@ export default function InKindDonationScreen({ route }) {
   const [estimatedValue, setEstimatedValue] = useState("");
   const [description, setDescription] = useState("");
   const [locationNote, setLocationNote] = useState("");
-  const [dateReceived, setDateReceived] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+ 
+
+const [dateReceived, setDateReceived] = useState(
+  todayDisplayDate()
+);
 
   // ── DONOR ──
   const [donorType,    setDonorType]    = useState("member");
-  const [donors,       setDonors]       = useState([]); // [{ id, name, type }]
+  const [donors, setDonors] = useState(
+  viewerUid && !canManageInKind
+    ? [
+        {
+          id: viewerUid,
+          name: viewerName,
+          type: "member",
+        },
+      ]
+    : []
+);
   const [donorModal,   setDonorModal]   = useState(false);
   const [externalName, setExternalName] = useState("");
 
@@ -86,6 +111,22 @@ export default function InKindDonationScreen({ route }) {
   useEffect(() => {
     if (category?.units?.length > 0) setUnit(category.units[0]);
   }, [category]);
+
+
+  useEffect(() => {
+  console.log("INKIND SCREEN");
+  console.log("viewerUid:", viewerUid);
+  console.log("viewerName:", viewerName);
+  console.log("donorType:", donorType);
+  console.log("donors:", donors);
+}, [donors]);
+// FIX: this used to fire for every user regardless of permission,
+// which meant a privileged staff member could never actually remove
+// themselves as the sole "member" donor — the moment donors.length
+// hit 0, this effect silently put them right back. Self-donor
+// auto-fill only makes sense for the self-service (non-privileged)
+// flow, where the donor IS the person filling out the form.
+
 
   const loadPeopleData = async () => {
     try {
@@ -146,7 +187,7 @@ export default function InKindDonationScreen({ route }) {
   };
 
   const removeDonor = (id) => setDonors(prev => prev.filter(d => d.id !== id));
-
+  
   // ─────────────────────────────────────────────────────────────────
   // SUBMIT
   // ─────────────────────────────────────────────────────────────────
@@ -157,60 +198,107 @@ export default function InKindDonationScreen({ route }) {
       Alert.alert("Required", "Enter a valid quantity.");
       return;
     }
-    if (donorType !== "anonymous" && donorType !== "external" && donors.length === 0) {
-      Alert.alert("Required", "Add at least one donor, or select Anonymous.");
+    // FIX: estimatedValue went through the same Number() conversion as
+    // quantity but had no validation — a stray non-numeric paste stored
+    // NaN, which then poisoned totalEstimated ("GH₵NaN") for every
+    // subsequent acknowledged item.
+    if (estimatedValue && (isNaN(Number(estimatedValue)) || Number(estimatedValue) < 0)) {
+      Alert.alert("Invalid Value", "Estimated value must be a valid number.");
       return;
     }
-    if (donorType === "external" && !externalName.trim()) {
-      Alert.alert("Required", "Enter the external donor's name.");
-      return;
-    }
+
+if (
+  donorType !== "anonymous" &&
+  donorType !== "external" &&
+  donors.length === 0 &&
+  !viewerUid
+) {
+  Alert.alert(
+    "Required",
+    "Add at least one donor."
+  );
+  return;
+}
     if (!organizationId || !entityId) return;
 
     setSubmitting(true);
-    try {
-      const acknowledged = canAcknowledge && selfAcknowledge;
-      const cat = findCategory(category.key);
 
-      const payload = {
-        // Item
-        categoryKey:    category.key,
-        categoryLabel:  category.label,
-        itemName:       itemName.trim(),
-        quantity:       Number(quantity),
-        unit,
-        condition,
-        conditionLabel: CONDITION_OPTIONS.find(c => c.key === condition)?.label || condition,
-        description:    description.trim(),
-        locationNote:   locationNote.trim(),
-        estimatedValue: estimatedValue ? Number(estimatedValue) : null,
-        dateReceived,
+try {
+  const acknowledged = canAcknowledge && selfAcknowledge;
+  const cat = findCategory(category.key);
 
-        // Donors
-        donorType,
-        donors: donorType === "anonymous"
-          ? [{ id: "anonymous", name: "Anonymous", type: "anonymous" }]
-          : donorType === "external"
-            ? [{ id: "external", name: externalName.trim(), type: "external" }]
-            : donors,
-        donorSummary: donorType === "anonymous"
-          ? "Anonymous"
-          : donorType === "external"
-            ? externalName.trim()
-            : donors.map(d => d.name).join(", "),
+  const effectiveDonors =
+    donorType === "member" &&
+    donors.length === 0 &&
+    viewerUid
+      ? [
+          {
+            id: viewerUid,
+            name: viewerName,
+            type: "member",
+          },
+        ]
+      : donors;
 
-        // Meta
-        recordedBy:      viewerName,
-        organizationId,
-        entityId,
-        status:          acknowledged ? "acknowledged" : "pending",
-        createdAt:       new Date().toISOString(),
+ const payload = {
+  // Item
+  categoryKey: category.key,
+  categoryLabel: category.label,
+  itemName: itemName.trim(),
+  quantity: Number(quantity),
+  unit,
+  condition,
+  conditionLabel:
+    CONDITION_OPTIONS.find(c => c.key === condition)?.label || condition,
+  description: description.trim(),
+  locationNote: locationNote.trim(),
+  estimatedValue: estimatedValue
+    ? Number(estimatedValue)
+    : null,
+  dateReceived,
 
-        ...(acknowledged && {
-          acknowledgedByName: viewerName,
-          acknowledgedAt:     new Date().toISOString().split("T")[0],
-        }),
-      };
+  // Donors
+  donorType,
+
+  donors:
+    donorType === "anonymous"
+      ? [
+          {
+            id: "anonymous",
+            name: "Anonymous",
+            type: "anonymous",
+          },
+        ]
+      : donorType === "external"
+      ? [
+          {
+            id: "external",
+            name: externalName.trim(),
+            type: "external",
+          },
+        ]
+      : effectiveDonors,
+
+  donorSummary:
+    donorType === "anonymous"
+      ? "Anonymous"
+      : donorType === "external"
+      ? externalName.trim()
+      : effectiveDonors.map(d => d.name).join(", "),
+
+  // Meta
+  recordedBy: viewerName,
+  recordedByUid: viewerUid,
+  organizationId,
+  entityId,
+  status: acknowledged ? "acknowledged" : "pending",
+  createdAt: new Date().toISOString(),
+
+  ...(acknowledged && {
+    acknowledgedByName: viewerName,
+    acknowledgedAt: new Date().toISOString(),
+  }),
+};
 
       const ref = await addDoc(
         collection(db, "organizations", organizationId, "entities", entityId, "inkind_donations"),
@@ -230,7 +318,17 @@ export default function InKindDonationScreen({ route }) {
       setEstimatedValue("");
       setDescription("");
       setLocationNote("");
-      setDonors([]);
+      setDonors(
+  viewerUid && !canManageInKind
+    ? [
+        {
+          id: viewerUid,
+          name: viewerName,
+          type: "member",
+        },
+      ]
+    : []
+);
       setExternalName("");
       setSelfAcknowledge(false);
 
@@ -253,7 +351,7 @@ export default function InKindDonationScreen({ route }) {
         {
           status:             "acknowledged",
           acknowledgedByName: viewerName,
-          acknowledgedAt:     new Date().toISOString().split("T")[0],
+          acknowledgedAt: new Date().toISOString(),
         }
       );
       await loadHistory();
@@ -287,8 +385,33 @@ export default function InKindDonationScreen({ route }) {
   }
 };
 
-  const acknowledgedItems = history.filter(h => h.status === "acknowledged");
-  const pendingItems      = history.filter(h => h.status === "pending");
+  // FIX: was matching by display name string (h.recordedBy ===
+  // viewerName / h.donorSummary === viewerName). Two real problems:
+  // (1) two members sharing a name would see each other's records —
+  // a privacy leak, and (2) donorSummary is a comma-joined string for
+  // multi-donor entries, so exact equality against a single name meant
+  // a donation with several donors never matched ANY of them. Now
+  // matches by stable ID: recordedByUid, or membership in the donors
+  // array. Falls back to the old name-based check only for records
+  // written before recordedByUid existed.
+  const isVisibleToViewer = (h) => {
+    if (canViewAllInKind) return true;
+
+    const recordedByMatch = h.recordedByUid
+      ? h.recordedByUid === viewerUid
+      : h.recordedBy === viewerName;
+
+    const isDonor = (h.donors || []).some((d) => d.id === viewerUid);
+
+    return recordedByMatch || isDonor;
+  };
+
+  const acknowledgedItems = history.filter(
+    (h) => h.status === "acknowledged" && isVisibleToViewer(h)
+  );
+  const pendingItems = history.filter(
+    (h) => h.status === "pending" && isVisibleToViewer(h)
+  );
 
   const totalEstimated = acknowledgedItems.reduce(
     (s, h) => s + (h.estimatedValue || 0), 0
@@ -307,7 +430,8 @@ export default function InKindDonationScreen({ route }) {
       />
 
       {/* SUMMARY BANNER */}
-      <View style={styles.summaryBanner}>
+      {canAcknowledge && (
+  <View style={styles.summaryBanner}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{acknowledgedItems.length}</Text>
           <Text style={styles.summaryLabel}>Confirmed</Text>
@@ -324,7 +448,8 @@ export default function InKindDonationScreen({ route }) {
           </Text>
           <Text style={styles.summaryLabel}>Est. Value</Text>
         </View>
-      </View>
+        </View>
+)}
 
       {/* FINTECH TABS */}
       <View style={styles.tabRow}>
@@ -470,13 +595,67 @@ export default function InKindDonationScreen({ route }) {
           {/* DONOR(S) */}
           <Text style={styles.sectionLabel}>Donated By *</Text>
 
+         {/* FIX: this used to wrap a duplicate "Selected Donor" card
+             (same #EEF0FA background, same padding) inside an identical
+             outer box — a visible card-inside-a-card. Flattened into a
+             single box with conditional content instead. */}
+         {!canManageInKind && (
+  <View style={styles.selfDonorBox}>
+   {donorType === "member" && donors.length > 0 ? (
+    <>
+      <Text style={styles.selfDonorLabel}>Selected Donor</Text>
+      <Text style={styles.selfDonorName}>{donors[0]?.name || viewerName}</Text>
+      <Text style={styles.selfDonorNote}>
+        Recorded as an individual member donation.
+      </Text>
+    </>
+   ) : (
+    <Text style={styles.selfDonorNote}>
+      Choose whether this donation is from yourself, a group or a ministry.
+    </Text>
+   )}
+  </View>
+)}
+
           {/* Donor type selector */}
-          <View style={styles.donorTypeRow}>
-            {DONOR_TYPES.map(dt => (
+<View style={styles.donorTypeRow}>
+            {DONOR_TYPES
+  .filter(dt =>
+    canManageInKind
+      ? true
+      : ["member", "group", "ministry"].includes(dt.key)
+  )
+  .map(dt => (
+
               <TouchableOpacity
                 key={dt.key}
                 style={[styles.donorTypeChip, donorType === dt.key && styles.donorTypeChipActive]}
-                onPress={() => { setDonorType(dt.key); setDonors([]); setExternalName(""); }}
+                onPress={() => {
+  setDonorType(dt.key);
+  setExternalName("");
+
+  // FIX: only force the viewer as the donor for the self-service
+  // (non-privileged) flow. Privileged staff recording a donation on
+  // someone else's behalf should get an empty list they populate via
+  // "Add Member" — forcing themselves in here (as before) meant they
+  // could never actually record anyone but themselves as a "member"
+  // donor.
+  if (dt.key === "member") {
+  if (!canManageInKind) {
+    setDonors([
+      {
+        id: viewerUid,
+        name: viewerName,
+        type: "member",
+      },
+    ]);
+  } else {
+    setDonors([]);
+  }
+} else {
+  setDonors([]);
+}
+}}
               >
                 <Ionicons
                   name={dt.icon}
@@ -488,21 +667,32 @@ export default function InKindDonationScreen({ route }) {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+            </View>
+
+
 
           {/* Donor list or external name field */}
           {(donorType === "member" || donorType === "group" || donorType === "ministry") && (
             <>
               {/* Added donors */}
+              {donorType === "member" && donors.length === 0 && (
+  <View style={styles.infoBox}>
+    <Text style={styles.infoBoxText}>
+      No donor selected. Tap "Add Member" to choose the donor.
+    </Text>
+  </View>
+)}
               {donors.length > 0 && (
                 <View style={styles.donorList}>
                   {donors.map(d => (
                     <View key={d.id} style={styles.donorTag}>
                       <Ionicons name="person-circle-outline" size={14} color="#4B3F72" />
                       <Text style={styles.donorTagText}>{d.name}</Text>
-                      <TouchableOpacity onPress={() => removeDonor(d.id)}>
-                        <Ionicons name="close-circle" size={14} color="#e74c3c" />
-                      </TouchableOpacity>
+                      {canManageInKind && (
+  <TouchableOpacity onPress={() => removeDonor(d.id)}>
+    <Ionicons name="close-circle" size={14} color="#e74c3c" />
+  </TouchableOpacity>
+)}
                     </View>
                   ))}
                 </View>
@@ -510,14 +700,15 @@ export default function InKindDonationScreen({ route }) {
 
               {/* Add donor button */}
               <TouchableOpacity
-                style={styles.addDonorBtn}
+  style={styles.addDonorBtn}
                 onPress={() => { setSearchTerm(""); setDonorModal(true); }}
               >
                 <Ionicons name="add-circle-outline" size={15} color="#4B3F72" />
                 <Text style={styles.addDonorBtnText}>
                   Add {donorType === "member" ? "Member" : donorType === "group" ? "Group" : "Ministry"}
                 </Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+
 
               {donors.length > 1 && (
                 <Text style={styles.hint}>
@@ -555,23 +746,37 @@ export default function InKindDonationScreen({ route }) {
             multiline
           />
 
-          {/* WHERE IT WENT */}
-          <Text style={styles.sectionLabel}>Received / Stored At</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Site office, Church store, Vestry"
-            value={locationNote}
-            onChangeText={setLocationNote}
-          />
+          {/* LOCATION / COLLECTION */}
+<Text style={styles.sectionLabel}>
+  {canManageInKind
+    ? "Received / Stored At"
+    : "Collection / Delivery Notes"}
+</Text>
+
+<TextInput
+  style={styles.input}
+  placeholder={
+    canManageInKind
+      ? "e.g. Site office, Church store, Vestry"
+      : "e.g. Stored at my home, ready for pickup"
+  }
+  value={locationNote}
+  onChangeText={setLocationNote}
+/>
 
           {/* DATE */}
-          <Text style={styles.sectionLabel}>Date Received</Text>
-          <TextInput
-            style={styles.input}
-            value={dateReceived}
-            onChangeText={setDateReceived}
-            placeholder="YYYY-MM-DD"
-          />
+<Text style={styles.sectionLabel}>
+  {canManageInKind
+    ? "Date Received"
+    : "Donation Date"}
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={dateReceived}
+  onChangeText={setDateReceived}
+  placeholder="DD/MM/YYYY"
+/>
 
           {/* ACKNOWLEDGMENT */}
           {canAcknowledge && (
@@ -611,9 +816,11 @@ export default function InKindDonationScreen({ route }) {
                   {CONDITION_OPTIONS.find(c => c.key === condition)?.label}
                   {estimatedValue ? `  ·  Est. GH₵${Number(estimatedValue).toLocaleString()}` : ""}
                 </Text>
-                {donors.length > 0 && (
-                  <Text style={styles.previewDonors}>From: {donors.map(d => d.name).join(", ")}</Text>
-                )}
+        {donors.length > 0 && (
+  <Text style={styles.previewDonors}>
+    From: {donors.map(d => d.name).join(", ")}
+  </Text>
+)}
               </View>
             </View>
           )}
@@ -682,7 +889,12 @@ export default function InKindDonationScreen({ route }) {
       )}
 
       {/* ══ DONOR SEARCH MODAL ══ */}
-      <Modal visible={donorModal} transparent animationType="slide">
+      <Modal
+  visible={donorModal}
+  transparent
+  animationType="slide"
+>
+
         <View style={styles.overlay}>
           <View style={[styles.modalBox, { maxHeight: "70%" }]}>
             <Text style={styles.modalTitle}>
@@ -832,7 +1044,9 @@ function InKindCard({ item, onAcknowledge, onReceipt, generatingPDF, showAcknowl
         ) : null}
 
         <View style={styles.ikFooter}>
-          <Text style={styles.ikDate}>{item.dateReceived}</Text>
+        <Text style={styles.ikDate}>
+  {item.dateReceived}
+</Text>
           {item.acknowledgedByName
             ? <Text style={styles.ikAck}>✓ {item.acknowledgedByName}</Text>
             : <Text style={[styles.ikAck, { color: "#F39C12" }]}>⏳ Pending confirmation</Text>}
@@ -907,6 +1121,11 @@ const styles = StyleSheet.create({
 
   input: { backgroundColor: "#fff", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#eee", fontSize: 14, marginBottom: 4 },
   hint: { fontSize: 10, color: "#aaa", marginBottom: 4, lineHeight: 14 },
+
+  selfDonorBox: { backgroundColor: "#EEF0FA", padding: 12, borderRadius: 10, marginBottom: 10 },
+  selfDonorLabel: { color: "#4B3F72", fontWeight: "700" },
+  selfDonorName: { color: "#4B3F72", marginTop: 4 },
+  selfDonorNote: { color: "#777", marginTop: 4, fontSize: 12 },
 
   donorTypeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   donorTypeChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f0f0f0" },

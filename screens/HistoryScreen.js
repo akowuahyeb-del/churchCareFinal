@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AppHeader from "../components/AppHeader";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width: W } = Dimensions.get("window");
 
@@ -22,12 +23,6 @@ const { width: W } = Dimensions.get("window");
 // admin  → can do everything
 // pastor → can edit content, add agents, cannot delete
 // elder  → can view only + add comments
-// member → view only
-const ROLE = "admin"; // replace with auth context
-
-const CAN_EDIT   = ["admin", "pastor"].includes(ROLE);
-const CAN_DELETE = ["admin"].includes(ROLE);
-const CAN_ADD    = ["admin", "pastor"].includes(ROLE);
 
 // ── Tabs ───────────────────────────────────────────────────────────
 const TABS = [
@@ -125,9 +120,47 @@ export default function HistoryScreen() {
 
   // Image fullscreen
   const [fullscreenImg,  setFullscreenImg]  = useState(null);
+  const [userRoles, setUserRoles] = useState([]);
 
   /* ══════════ LOAD ══════════ */
   useEffect(() => { loadAll(); }, []);
+useEffect(() => {
+  const loadRoles = async () => {
+    try {
+      const stored =
+        await AsyncStorage.getItem(
+          "userRoles"
+        );
+
+      if (stored) {
+        setUserRoles(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.log(
+        "Role load error:",
+        e
+      );
+    }
+  };
+
+  loadRoles();
+}, []);
+
+const CAN_EDIT =
+  userRoles.includes("admin") ||
+  userRoles.includes("pastor");
+
+const CAN_DELETE =
+  userRoles.includes("admin");
+
+const CAN_ADD =
+  userRoles.includes("admin") ||
+  userRoles.includes("pastor");
+  const CAN_VIEW_SENSITIVE =
+  userRoles.includes("admin") ||
+  userRoles.includes("pastor") ||
+  userRoles.includes("elder");
+
 
   const loadAll = async () => {
     setLoading(true);
@@ -303,12 +336,22 @@ export default function HistoryScreen() {
 
         {hasContent ? (
           <View style={styles.sectionCard}>
-            {fields.map(f => data[f.key] ? (
+            {fields.map(f => {
+
+  if (
+    !CAN_VIEW_SENSITIVE &&
+    ["background"].includes(f.key)
+  ) {
+    return null;
+  }
+
+  return data[f.key] ? (
               <View key={f.key} style={styles.sectionField}>
                 <Text style={styles.sectionFieldLabel}>{f.label}</Text>
                 <Text style={styles.sectionFieldText}>{data[f.key]}</Text>
               </View>
-            ) : null)}
+            ) : null;
+})}
           </View>
         ) : (
           <View style={styles.emptyState}>
@@ -367,10 +410,24 @@ export default function HistoryScreen() {
                 )}
               </View>
             </View>
-            {p.transferred_to && <InfoRow icon="swap-horizontal-outline" label="Transferred to" value={p.transferred_to} />}
+            {CAN_VIEW_SENSITIVE &&
+ p.transferred_to && (
+  <InfoRow
+    icon="swap-horizontal-outline"
+    label="Transferred to"
+    value={p.transferred_to}
+  />
+)}
             {p.contribution   && <InfoRow icon="star-outline"            label="Contributions"  value={p.contribution} />}
             {p.bio            && <InfoRow icon="book-outline"            label="Biography"      value={p.bio} />}
-            {p.achievements   && <InfoRow icon="trophy-outline"          label="Achievements"   value={p.achievements} />}
+            {CAN_VIEW_SENSITIVE &&
+ p.achievements && (
+  <InfoRow
+    icon="trophy-outline"
+    label="Achievements"
+    value={p.achievements}
+  />
+)}
             {(CAN_EDIT || CAN_DELETE) && (
               <View style={styles.actionRow}>
                 {CAN_EDIT && (
@@ -521,7 +578,7 @@ export default function HistoryScreen() {
             fontWeight: "700",
           }}
         >
-          {ROLE}
+          {userRoles.join(", ")}
         </Text>
       </View>
     )

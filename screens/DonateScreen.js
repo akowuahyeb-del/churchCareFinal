@@ -17,6 +17,10 @@ import { generateDonationReceipt } from "../utils/receiptGenerator";
 import FeatureGate from "../components/FeatureGate";
 import { FEATURES, planHasFeature } from "../constants/subscriptionPlans";
 import { useSubscription } from "../utils/subscription";
+import {
+  formatDate,
+  todayDisplayDate,
+} from "../utils/dateUtils";
 
 
 
@@ -33,11 +37,27 @@ const CATEGORIES = [
 
 export default function DonateScreen({ route, navigation }) {
   const memberId   = route?.params?.memberId   || null;
-  const memberName = route?.params?.memberName || null;
-  
-  const viewerName = route?.params?.viewerName || "Staff";
-  const [viewerPermissions] = useState(route?.params?.viewerPermissions || []);
+const memberName = route?.params?.memberName || null;
+
+const viewerUid = route?.params?.viewerUid || memberId;
+const viewerName = route?.params?.viewerName || memberName || "Staff";
+
+console.log("DonateScreen");
+console.log("memberId:", memberId);
+console.log("memberName:", memberName);
+console.log("viewerUid:", viewerUid);
+console.log("viewerName:", viewerName);
+
+
+const [viewerPermissions] = useState(
+  route?.params?.viewerPermissions || []
+);
   const canAcknowledge = hasPermission({ permissions: viewerPermissions }, "manage_donations");
+  const canViewAllDonations =
+  hasPermission(
+    { permissions: viewerPermissions },
+    "manage_donations"
+  );
 
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId || null;
@@ -149,9 +169,18 @@ useEffect(() => {
     "contributions"
   );
 
-  const q = memberId
-    ? query(contributionsRef, where("memberId", "==", memberId))
-    : query(contributionsRef);
+const q =
+  !canViewAllDonations && memberId
+    ? query(
+        contributionsRef,
+        where("memberId", "==", memberId)
+      )
+    : canViewAllDonations
+      ? query(contributionsRef)
+      : query(
+          contributionsRef,
+          where("memberId", "==", "__NO_MATCH__")
+        );
 
   const unsubscribe = onSnapshot(
     q,
@@ -231,7 +260,7 @@ useEffect(() => {
         note:       note.trim(),
         entityId,
         organizationId,
-        date:new Date().toISOString().split("T")[0],
+        date: formatDate(),
         createdAt:  serverTimestamp(),
 
         method:       selectedMethod,
@@ -328,7 +357,7 @@ if (
       {
         status: "acknowledged",
         acknowledgedByName: viewerName,
-        acknowledgedAt: new Date().toISOString().split("T")[0],
+        acknowledgedAt: new Date().toISOString()
       }
     );
 
@@ -364,131 +393,131 @@ if (
   return (
     <View style={styles.container}>
 
-      {/* HEADER */}
-    <View style={styles.header}>
-  <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-    <Ionicons name="arrow-back" size={20} color="#fff" />
+     {/* HEADER */}
+<View style={styles.header}>
+  <TouchableOpacity
+    onPress={() => navigation?.goBack()}
+    style={styles.backBtn}
+  >
+    <Ionicons
+      name="arrow-back"
+      size={20}
+      color="#fff"
+    />
   </TouchableOpacity>
 
   <View style={{ flex: 1 }}>
-    <Text style={styles.headerTitle}>Donate</Text>
-    {memberName && (
-      <Text style={styles.headerSub}>{memberName}</Text>
+    <Text style={styles.headerTitle}>
+      Donations
+    </Text>
+
+    {memberName ? (
+      <Text style={styles.headerSub}>
+        {memberName}
+      </Text>
+    ) : (
+      <Text style={styles.headerSub}>
+        {canAcknowledge
+          ? "Finance Management"
+          : "My Giving"}
+      </Text>
     )}
   </View>
-  <TouchableOpacity
-    onPress={() => navigation.navigate("VerifyReceipt")}
-    style={styles.scanBtn}
-  >
-    <Ionicons name="qr-code-outline" size={20} color="#fff" />
-  </TouchableOpacity>
-  
+
+  {canAcknowledge && (
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate("VerifyReceipt")
+      }
+      style={styles.scanBtn}
+    >
+      <Ionicons
+        name="qr-code-outline"
+        size={20}
+        color="#fff"
+      />
+    </TouchableOpacity>
+  )}
 </View>
-
-
 {/* ✅ ACTION ROW */}
 <View style={styles.actionRow}>
-<TouchableOpacity
-  
-  style={[
-    styles.actionItem,
-    pendingCount > 0 && styles.actionItemAlert
-  ]}
-  onPress={() =>
-  navigation.navigate("ApproveDonations", {
-    organizationId,
-    entityId,
-    viewerName,
-  })
-}
->
 
-  {/* ✅ LEFT SIDE (Approve) */}
-  <View style={styles.actionLeft}>
-    <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
-    <Text style={styles.actionText}>Approve</Text>
-  </View>
+  {canAcknowledge && (
+    <TouchableOpacity
+      style={[
+        styles.actionItem,
+        pendingCount > 0 && styles.actionItemAlert,
+      ]}
+      onPress={() =>
+        navigation.navigate("ApproveDonations", {
+          organizationId,
+          entityId,
+          viewerName,
+        })
+      }
+    >
+      <View style={styles.actionLeft}>
+        <Ionicons
+          name="alert-circle-outline"
+          size={16}
+          color="#D97706"
+        />
+        <Text style={styles.actionText}>
+          Approve
+        </Text>
+      </View>
 
-  {/* ✅ RIGHT SIDE (INSIDE BUTTON NOW) */}
-  <View style={styles.actionRight}>
+      <View style={styles.actionRight}>
+        {pendingCount > 0 && (
+          <>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {pendingCount}
+              </Text>
+            </View>
 
-    {pendingCount > 0 && (
-      <>
-        {/* ✅ Divider */}
-        <View style={styles.divider} />
+            <View style={styles.pendingBox}>
+              <Text style={styles.pendingLabel}>
+                Pending
+              </Text>
+              <Text style={styles.pendingAmountStrong}>
+                GH₵ {pendingTotal.toLocaleString()}
+              </Text>
+            </View>
+          </>
+        )}
 
-        {/* ✅ Count */}
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{pendingCount}</Text>
-        </View>
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color="#999"
+        />
+      </View>
+    </TouchableOpacity>
+  )}
 
-        {/* ✅ Pending Info */}
-        <View style={styles.pendingBox}>
-          <Text style={styles.pendingLabel}>Pending</Text>
-          <Text style={styles.pendingAmountStrong}>
-            GH₵ {pendingTotal.toLocaleString()}
-          </Text>
-        </View>
-      </>
-    )}
-
-    <Ionicons name="chevron-forward" size={16} color="#999" />
-
-  </View>
-
-</TouchableOpacity>
-
-
-
-
-
-  <TouchableOpacity
-    style={styles.actionItem}
-    onPress={() => navigation.navigate("VerifyReceipt")}
-  >
-    <Ionicons name="qr-code-outline" size={16} color="#4B3F72" />
-    <Text style={styles.actionText}>Scan</Text>
-    <Ionicons name="chevron-forward" size={16} color="#999" />
-  </TouchableOpacity>
-
-
-<View style={styles.totalPill}>
-  <Text style={styles.totalPillText}>
-    GH₵ {totalGiven.toLocaleString()}
-  </Text>
-
-  {/* ✅ UPDATED LABEL */}
-  <Text style={styles.totalPillLabel}>Confirmed</Text>
-<View style={styles.actionRightWrapper}>
-
-  {/* ✅ Divider */}
-  {pendingCount > 0 && <View style={styles.divider} />}
-
-  <View style={styles.actionRight}>
-
-    {pendingCount > 0 && (
-      <>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{pendingCount}</Text>
-        </View>
-
-        <View style={styles.pendingBox}>
-          <Text style={styles.pendingLabel}>Pending</Text>
-          <Text style={styles.pendingAmountStrong}>
-            GH₵ {pendingTotal.toLocaleString()}
-          </Text>
-        </View>
-      </>
-    )}
-
-    <Ionicons name="chevron-forward" size={16} color="#999" />
-
-  </View>
-</View>
-
-  
-</View>
-
+  {canAcknowledge && (
+    <TouchableOpacity
+      style={styles.actionItem}
+      onPress={() =>
+        navigation.navigate("VerifyReceipt")
+      }
+    >
+      <Ionicons
+        name="qr-code-outline"
+        size={16}
+        color="#4B3F72"
+      />
+      <Text style={styles.actionText}>
+        Scan
+      </Text>
+      <Ionicons
+        name="chevron-forward"
+        size={16}
+        color="#999"
+      />
+    </TouchableOpacity>
+  )}
 
 </View>
 
@@ -502,9 +531,13 @@ if (
 
   { key: "inkind",  label: "In-Kind", icon: "cube-outline",  color: "#7C3AED" },
 
-  ...(canAcknowledge ? [
-    { key: "pending", label: "Pending", icon: "alert-circle", color: "#e67e22" }
-  ] : []),
+  {
+  key: "pending",
+  label: "Pending",
+  icon: "alert-circle",
+  color: "#e67e22"
+},
+
 ].map(t => {
           const active = activeTab === t.key;
           const badgeCount = t.key === "pending" ? pendingHistory.length : 0;
@@ -514,7 +547,16 @@ if (
   style={styles.fintechTabItem}
   onPress={() => {
     if (t.key === "inkind") {
-      navigation.navigate("InKindDonation", {
+
+      console.log("NAVIGATING TO INKIND");
+console.log("viewerUid =", viewerUid);
+console.log("viewerName =", viewerName);
+console.log("viewerPermissions =", viewerPermissions);
+console.log("memberId =", memberId);
+console.log("memberName =", memberName);
+
+    navigation.navigate("InKindDonation", {
+  viewerUid,
   viewerName,
   viewerPermissions,
 });
@@ -735,8 +777,12 @@ if (
       {activeTab === "history" && (
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>
-            {memberName ? `${memberName}'s Giving History` : "All Donations"}
-          </Text>
+  {canViewAllDonations
+    ? (memberName
+        ? `${memberName}'s Giving History`
+        : "All Donations")
+    : "My Giving History"}
+</Text>
 
           {acknowledgedHistory.length === 0 ? (
             <View style={styles.emptyState}>
@@ -745,18 +791,57 @@ if (
             </View>
           ) : (
             <>
-              <View style={styles.summaryRow}>
-                {CATEGORIES.map(cat => {
-                  const total = acknowledgedHistory.filter(h => h.type === cat.label).reduce((s, h) => s + (h.amount || 0), 0);
-                  if (!total) return null;
-                  return (
-                    <View key={cat.label} style={[styles.summaryChip, { borderColor: cat.color }]}>
-                      <Text style={[styles.summaryChipLabel, { color: cat.color }]}>{cat.label}</Text>
-                      <Text style={[styles.summaryChipAmt, { color: cat.color }]}>GH₵ {total.toLocaleString()}</Text>
-                    </View>
-                  );
-                })}
-              </View>
+              {canViewAllDonations && (
+  <View style={styles.summaryRow}>
+    {CATEGORIES.map(cat => {
+      const total = acknowledgedHistory
+        .filter(h => h.type === cat.label)
+        .reduce((s, h) => s + (h.amount || 0), 0);
+
+      if (!total) return null;
+
+      return (
+        <View
+          key={cat.label}
+          style={[
+            styles.summaryChip,
+            { borderColor: cat.color }
+          ]}
+        >
+          <Text
+            style={[
+              styles.summaryChipLabel,
+              { color: cat.color }
+            ]}
+          >
+            {cat.label}
+          </Text>
+
+          <Text
+            style={[
+              styles.summaryChipAmt,
+              { color: cat.color }
+            ]}
+          >
+            GH₵ {total.toLocaleString()}
+          </Text>
+        </View>
+      );
+    })}
+  </View>
+)}
+
+{!canViewAllDonations && (
+  <View style={styles.summaryBox}>
+    <Text style={styles.summaryText}>
+      Total Given
+    </Text>
+
+    <Text style={styles.summaryAmt}>
+      GH₵ {totalGiven.toLocaleString()}
+    </Text>
+  </View>
+)}
 
               {acknowledgedHistory.map(item => {
                 const cat = CATEGORIES.find(c => c.label === item.type) || CATEGORIES[5];
@@ -813,7 +898,7 @@ if (
         </ScrollView>
       )}
 
-      {activeTab === "pending" && canAcknowledge && (
+      {activeTab === "pending" && (
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>Awaiting Acknowledgment</Text>
 
@@ -846,11 +931,12 @@ if (
                   </View>
                   <Text style={styles.pendingRecordedBy}>Recorded by {item.recordedBy || "—"}</Text>
 
-     <FeatureGate
-  feature={FEATURES.DONATION_APPROVALS}
-  planId={planId}
-  onUpgrade={() => navigation.navigate("Subscription")}
->
+  {canAcknowledge && (
+  <FeatureGate
+    feature={FEATURES.DONATION_APPROVALS}
+    planId={planId}
+    onUpgrade={() => navigation.navigate("Subscription")}
+  >
   <TouchableOpacity
     style={styles.acknowledgeBtn}
     onPress={() => acknowledgeDonation(item)}
@@ -859,6 +945,7 @@ if (
     <Text style={styles.acknowledgeBtnText}>Acknowledge</Text>
   </TouchableOpacity>
 </FeatureGate>
+)}
 
                 </View>
               );
