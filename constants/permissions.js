@@ -56,30 +56,35 @@ export const PERMISSION_GROUPS = [
 
   // ✅ PEOPLE (FIXED POSITION ✅)
   {
-    group: "People",
-    permissions: [
-      {
-        key: "manage_attendance",
-        label: "Manage Attendance",
-        description: "Mark and correct attendance records."
-      },
-      {
-        key: "start_session",
-        label: "Start Service Session",
-        description: "Allows user to start a service session"
-      },
-      {
-        key: "end_session",
-        label: "End Service Session",
-        description: "Allows user to end and lock a service session"
-      },
-      {
-        key: "unlock_session",
-        label: "Unlock Service Session",
-        description: "Allows user to unlock a locked session"
-      }
-    ]
-  },
+  group: "People",
+  permissions: [
+    {
+      key: "manage_attendance",
+      label: "Manage Attendance",
+      description: "Mark and correct attendance records."
+    },
+    {
+      key: "start_session",
+      label: "Start Service Session",
+      description: "Allows user to start a service session"
+    },
+    {
+      key: "end_session",
+      label: "End Service Session",
+      description: "Allows user to end and lock a service session"
+    },
+    {
+      key: "unlock_session",
+      label: "Unlock Service Session",
+      description: "Allows user to unlock a locked session"
+    },
+    {
+      key: "manage_visitors",
+      label: "Manage Visitors",
+      description: "Register visitors and manage visitor records."
+    }
+  ]
+},
 
   // ✅ FINANCE (CLEANED ✅)
   {
@@ -186,15 +191,16 @@ export const DEFAULT_ROLES = [
   },
 
   {
-    id: "usher",
-    label: "Usher",
-    permissions: [
-      "manage_attendance",
-      "start_session",
-      "end_session"
-    ],
-    active: true
-  },
+  id: "usher",
+  label: "Usher",
+  permissions: [
+    "manage_attendance",
+    "start_session",
+    "end_session",
+    "manage_visitors"
+  ],
+  active: true
+},
 
   {
     id: "media_team",

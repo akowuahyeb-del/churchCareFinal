@@ -27,6 +27,93 @@ import {
   getDocs
 } from "firebase/firestore";
 
+// FIX: extracted from handleLogin so both the fresh-login path and the
+// session-restore useEffect compute roles/permissions the exact same
+// way, and neither can silently forget to write "userRoles" — which
+// is the key HomeScreen actually reads (previously it only ever ended
+// up inside the "currentUser" blob, which HomeScreen doesn't look at).
+async function loadMemberRolesAndPermissions(userData) {
+  let memberId = null;
+  let memberRoles = [];
+  let memberPermissions = [];
+
+  try {
+    if (userData.organizationId && userData.entityId) {
+      const membersRef = collection(
+        db,
+        "organizations",
+        userData.organizationId,
+        "entities",
+        userData.entityId,
+        "members"
+      );
+
+      const memberQuery = query(membersRef, where("uid", "==", userData.uid));
+      const memberSnap = await getDocs(memberQuery);
+
+      if (!memberSnap.empty) {
+        const memberDoc = memberSnap.docs[0];
+        const memberData = memberDoc.data();
+
+        memberId = memberDoc.id;
+        memberRoles = memberData.roles || [];
+        memberPermissions = memberData.permissions || [];
+      }
+    }
+  } catch (e) {
+    console.log("❌ Member role load failed:", e);
+  }
+
+  // FIX: combine the account-level role (userData.role — a single
+  // string like "admin" or "super_admin", set at signup) with any
+  // roles assigned on the member record, instead of only trusting
+  // the member record. The person who registered the church usually
+  // has no "members" doc roles array at all — their permission lives
+  // entirely on userData.role, which was previously dropped on the
+  // floor here.
+  const combinedRoles = Array.from(
+    new Set([
+      ...(userData.role === "super_admin" ? ["super_admin", "admin"] : []),
+      ...(userData.role && userData.role !== "super_admin" ? [userData.role] : []),
+      ...(Array.isArray(memberRoles) ? memberRoles : []),
+    ])
+  );
+
+  if (combinedRoles.length === 0) combinedRoles.push("member");
+
+  return {
+    memberId,
+    memberRoles: Array.isArray(memberRoles) ? memberRoles : [],
+    memberPermissions: Array.isArray(memberPermissions) ? memberPermissions : [],
+    combinedRoles,
+  };
+}
+
+// FIX: writes both keys HomeScreen actually reads from, in one place,
+// so "currentUser" and "userRoles" can never fall out of sync again.
+async function persistSession(userData) {
+  const { memberId, memberRoles, memberPermissions, combinedRoles } =
+    await loadMemberRolesAndPermissions(userData);
+
+  const sessionUser = {
+  ...userData,
+  memberId,
+  roles: combinedRoles,
+  permissions: memberPermissions,
+};
+
+
+  await AsyncStorage.setItem("isLoggedIn", "true");
+  await AsyncStorage.setItem("currentUser", JSON.stringify(sessionUser));
+  // FIX: this line did not exist anywhere in the file. HomeScreen's
+  // loadRoles() reads exactly this key — without it, HomeScreen always
+  // fell through to its fallback branch regardless of the user's
+  // actual role.
+  await AsyncStorage.setItem("userRoles", JSON.stringify(combinedRoles));
+
+  return sessionUser;
+}
+
 export default function LoginScreen({
   navigation,
   route,
@@ -67,8 +154,6 @@ export default function LoginScreen({
     return;
   }
 
-  // To be removed later
-
   console.log("ROUTE 1 - Admin path");
   console.log("ROUTE 1A - ROLE:", userData?.role);
   console.log("ROUTE 1B - ORG:", userData?.organizationId);
@@ -107,7 +192,7 @@ export default function LoginScreen({
     orgData?.status || "pending";
 
   console.log("ROUTE 5 - ORG STATUS:", orgStatus);
-  
+
 console.log(
   "ROUTE 5A - ONBOARDING STATUS:",
   onboardingStatus
@@ -319,14 +404,27 @@ navigation.replace("MainTabs");
       // Re-fetch fresh user data (approval may have happened between sessions)
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (!storedUser) {
-  await AsyncStorage.setItem(
-    "currentUser",
-    JSON.stringify(fresh)
-  );
-}
-        await AsyncStorage.setItem("currentUser", JSON.stringify(fresh));
-        await routeUser(firebaseUser.uid, fresh);
+
+        // FIX: `fresh` was referenced three times below but never
+        // defined anywhere — a ReferenceError thrown on every single
+        // app reopen with a valid session, silently swallowed by the
+        // catch block, leaving the user stuck on Login with no
+        // explanation and no session restored.
+        if (!snap.exists()) {
+          console.log("useEffect route error: user doc missing");
+          return;
+        }
+
+        const fresh = { ...snap.data(), uid: firebaseUser.uid };
+
+        // FIX: this path previously skipped role/permission loading
+        // entirely and just re-routed with stale data. Now goes
+        // through the same persistSession helper as handleLogin so
+        // "userRoles" gets refreshed here too (e.g. if an admin's
+        // role changed while they were logged out).
+        const sessionUser = await persistSession(fresh);
+
+        await routeUser(firebaseUser.uid, sessionUser);
       } catch (e) {
         console.log("useEffect route error:", e);
       }
@@ -366,9 +464,6 @@ navigation.replace("MainTabs");
     console.log("STEP 5 - getDoc Success");
 
     let userData;
-    let memberRoles = [];
-let memberPermissions = [];
-let memberId = null;
 
     if (!userSnap.exists()) {
 
@@ -398,112 +493,19 @@ let memberId = null;
         ...userSnap.data(),
         uid,
       };
-
-      // --------------------------------------------------
-// Load Member Roles & Permissions
-// --------------------------------------------------
-
-
-
-try {
-
-  if (
-    userData.organizationId &&
-    userData.entityId
-  ) {
-
-    const membersRef = collection(
-      db,
-      "organizations",
-      userData.organizationId,
-      "entities",
-      userData.entityId,
-      "members"
-    );
-
-    const memberQuery = query(
-      membersRef,
-      where("uid", "==", uid)
-    );
-
-    const memberSnap = await getDocs(
-      memberQuery
-    );
-
-    if (!memberSnap.empty) {
-
-      const memberDoc =
-        memberSnap.docs[0];
-
-      const memberData =
-        memberDoc.data();
-
-      memberId =
-        memberDoc.id;
-
-      memberRoles =
-        memberData.roles || [];
-
-      memberPermissions =
-        memberData.permissions || [];
-
-      console.log(
-        "✅ MEMBER FOUND"
-      );
-
-      console.log(
-        "ROLES:",
-        memberRoles
-      );
-
-      console.log(
-        "PERMISSIONS:",
-        memberPermissions
-      );
-    }
-  }
-
-} catch (e) {
-
-  console.log(
-    "❌ Member role load failed:",
-    e
-  );
-}
     }
 
     console.log("STEP 8 - Saving session");
 
-    await AsyncStorage.setItem(
-      "isLoggedIn",
-      "true"
+    // FIX: single call now handles both member-role lookup and writing
+    // both "currentUser" and "userRoles" — the missing "userRoles"
+    // write is what was hiding admin-only HomeScreen features.
+    const sessionUser = await persistSession(userData);
+
+    console.log(
+      "SESSION USER:",
+      JSON.stringify(sessionUser, null, 2)
     );
-
-  // ✅ Standard ChurchCare Session Object
-const sessionUser = {
-  ...userData,
-
-  memberId: memberId || null,
-
-  roles: Array.isArray(memberRoles)
-    ? memberRoles
-    : [],
-
-  permissions: Array.isArray(memberPermissions)
-    ? memberPermissions
-    : [],
-};
-
-
-console.log(
-  "SESSION USER:",
-  JSON.stringify(sessionUser, null, 2)
-);
-
-await AsyncStorage.setItem(
-  "currentUser",
-  JSON.stringify(sessionUser)
-);
 
 /* ---------------------------------- */
 /* PIN RESET FLOW */
@@ -573,23 +575,10 @@ console.log(
   "STEP 9 - Calling routeUser"
 );
 
-const keys = await AsyncStorage.getAllKeys();
-
-console.log(
-  "ASYNC STORAGE KEYS:",
-  keys
-);
-
-console.log(
-  "CURRENT USER:",
-  JSON.stringify(sessionUser, null, 2)
-);
-
 await routeUser(
   uid,
   sessionUser
 );
-
 
     console.log("STEP 10 - routeUser completed");
 
