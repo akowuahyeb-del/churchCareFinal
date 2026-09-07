@@ -91,6 +91,7 @@ import PastoralTeamManagementScreen from "./screens/PastoralTeamManagementScreen
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import MyProfileScreen from "./screens/MyProfileScreen";
+import { hasPermission } from "./constants/permissions";
 
 
 
@@ -129,6 +130,9 @@ function MainTabs() {
   const [userRoles, setUserRoles] =
     React.useState(["member"]);
 
+  const [userPermissions, setUserPermissions] =
+    React.useState([]);
+
   React.useEffect(() => {
     const loadRoles = async () => {
       try {
@@ -151,6 +155,12 @@ function MainTabs() {
             setUserRoles(
               currentUser.roles
             );
+setUserPermissions(
+  Array.isArray(currentUser.permissions)
+    ? currentUser.permissions
+    : []
+);
+
 
             console.log(
               "MAINTABS ROLES:",
@@ -162,17 +172,23 @@ function MainTabs() {
 
           // ✅ Backward compatibility
           if (currentUser?.role) {
-            setUserRoles([
-              currentUser.role,
-            ]);
+  setUserRoles([
+    currentUser.role,
+  ]);
 
-            console.log(
-              "MAINTABS ROLE:",
-              currentUser.role
-            );
+  setUserPermissions(
+    Array.isArray(currentUser.permissions)
+      ? currentUser.permissions
+      : []
+  );
 
-            return;
-          }
+  console.log(
+    "MAINTABS ROLE:",
+    currentUser.role
+  );
+
+  return;
+}
         }
 
         const stored =
@@ -214,12 +230,30 @@ function MainTabs() {
     loadRoles();
   }, []);
 
-  const isLeader =
-    userRoles.includes("admin") ||
-    userRoles.includes("pastor") ||
-    userRoles.includes("elders") ||
-    userRoles.includes("finance_officer") ||
-    userRoles.includes("usher");
+ const canSeeMembers =
+  hasPermission(
+    {
+      roles: userRoles,
+      permissions: userPermissions,
+    },
+    "manage_members"
+  );
+
+const canSeeAttendance =
+  hasPermission(
+    {
+      roles: userRoles,
+      permissions: userPermissions,
+    },
+    "manage_attendance"
+  );
+
+
+const canSeeProfile =
+  !canSeeMembers;
+
+const canSeeHelp =
+  !canSeeMembers;
 
   return (
     <Tab.Navigator
@@ -267,27 +301,28 @@ function MainTabs() {
   />
 
   {/* Ordinary Members Only */}
-  {!isLeader && (
-    <Tab.Screen
-      name="Profile"
-      component={MyProfileScreen}
-    />
-  )}
+  {canSeeProfile && (
+  <Tab.Screen
+    name="Profile"
+    component={MyProfileScreen}
+  />
+)}
 
   {/* Leaders Only */}
-  {isLeader && (
-    <Tab.Screen
-      name="Members"
-      component={MembersStack}
-    />
-  )}
+ {canSeeMembers && (
+  <Tab.Screen
+    name="Members"
+    component={MembersStack}
+  />
+)}
 
-  {isLeader && (
-    <Tab.Screen
-      name="Attendance"
-      component={AttendanceScreen}
-    />
-  )}
+
+  {canSeeAttendance && (
+  <Tab.Screen
+    name="Attendance"
+    component={AttendanceScreen}
+  />
+)}
 
   {/* Everyone */}
   <Tab.Screen
@@ -299,12 +334,13 @@ function MainTabs() {
   />
 
   {/* Members only */}
-  {!isLeader && (
-    <Tab.Screen
-      name="Help"
-      component={HelpScreen}
-    />
-  )}
+ {canSeeHelp && (
+  <Tab.Screen
+    name="Help"
+    component={HelpScreen}
+  />
+)}
+
 
   {/* Everyone */}
   <Tab.Screen

@@ -163,6 +163,14 @@ const [carouselIndex, setCarouselIndex] = useState(0);
   "CURRENT USER ROLES:",
   userRoles
 );
+
+console.log(
+  "CURRENT USER PERMISSIONS STATE:",
+  userPermissions
+);
+
+
+
   const [permission, requestPermission] =
   useCameraPermissions();
 
@@ -286,15 +294,26 @@ useEffect(() => {
        if (currentUser) {
 
   setUserRoles(
-    currentUser.roles ||
-    (currentUser.role
-      ? [currentUser.role]
-      : ["member"])
-  );
+  Array.isArray(currentUser.roles)
+    ? currentUser.roles
+    : (
+        currentUser.role
+          ? [currentUser.role]
+          : ["member"]
+      )
+);
 
-  setUserPermissions(
-    currentUser.permissions || []
-  );
+setUserPermissions(
+  Array.isArray(currentUser.permissions)
+    ? currentUser.permissions
+    : []
+);
+
+console.log(
+  "CURRENT USER PERMISSIONS:",
+  currentUser.permissions
+);
+
 
   return;
 }
@@ -1123,36 +1142,33 @@ return (
   <View style={styles.qaRow}>
 
     {[
-      (hasRole("admin") ||
- hasRole("usher")) && {
-  icon: "checkmark-circle-outline",
-  label: "Attendance",
-  onPress: () => navigation.navigate("MainTabs", {
-  screen: "Attendance",
-})
-},
+  can("manage_attendance") && {
+    icon: "checkmark-circle-outline",
+    label: "Attendance",
+    onPress: () =>
+  navigation.navigate("Attendance"),
 
-      hasRole("admin") && {
-  icon: "people-outline",
-  label: "Members",
-  onPress: () => navigation.navigate("Members")
-},
+  },
 
-(hasRole("admin") ||
- hasRole("elder") ||
- hasRole("pastor") ||
- hasRole("usher")) && {
+  hasRole("admin") && {
+    icon: "people-outline",
+    label: "Members",
+    onPress: () => navigation.navigate("Members")
+  },
+
+ can("manage_visitors") && {
   icon: "person-add-outline",
   label: "Visitors",
   onPress: () => navigation.navigate("Visitors")
 },
+
 {
   icon: "medkit-outline",
   label: "Pastoral",
   onPress: () => navigation.navigate("PastoralRequest")
 },
 
-hasRole("admin") && {
+can("view_reports") && {
   icon: "bar-chart-outline",
   label: "Reports",
   onPress: () => navigation.navigate("AdminDashboard")
