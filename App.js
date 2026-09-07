@@ -90,6 +90,7 @@ import PastoralTicketDetailScreen from "./screens/PastoralTicketDetailScreen";
 import PastoralTeamManagementScreen from "./screens/PastoralTeamManagementScreen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
+import MyProfileScreen from "./screens/MyProfileScreen";
 
 
 
@@ -103,12 +104,15 @@ const Stack = createNativeStackNavigator();
 
 // ── Tab config — single source of truth ──────────────────────────
 const TABS = [
-  { name: "Home",       label: "Home",       icon: "home",            component: null },
-  { name: "Members",    label: "Members",    icon: "people",          component: null },
-  { name: "Attendance", label: "Attendance", icon: "checkmark-circle",component: null },
-  { name: "Help",       label: "Help",       icon: "help-circle",     component: null },
-  { name: "More",       label: "More",       icon: "grid",            component: null },
+  { name: "Home", icon: "home" },
+  { name: "Profile", icon: "person" },
+  { name: "Members", icon: "people" },
+  { name: "Attendance", icon: "checkmark-circle" },
+  { name: "PastoralCare", icon: "heart" },
+  { name: "Help", icon: "help-circle" },
+  { name: "More", icon: "grid" },
 ];
+
 
 /* ── Members stack (keeps MemberProfile inside Members tab) ── */
 function MembersStack() {
@@ -156,89 +160,98 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: "#4B3F72",
-        tabBarInactiveTintColor: "#aaa",
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabLabel,
+  screenOptions={({ route }) => ({
+    headerShown: false,
+    tabBarActiveTintColor: "#4B3F72",
+    tabBarInactiveTintColor: "#aaa",
+    tabBarStyle: styles.tabBar,
+    tabBarLabelStyle: styles.tabLabel,
 
-        tabBarIcon: ({
-          focused,
-          color,
-        }) => {
-          const tab = TABS.find(
-            t => t.name === route.name
-          );
+    tabBarIcon: ({ focused, color }) => {
+      const tab = TABS.find(
+        t => t.name === route.name
+      );
 
-          const base =
-            tab?.icon || "ellipse";
+      const base =
+        tab?.icon || "ellipse";
 
-          return (
-            <View
-              style={[
-                styles.iconWrap,
-                focused &&
-                  styles.iconWrapActive,
-              ]}
-            >
-              <Ionicons
-                name={
-                  focused
-                    ? base
-                    : `${base}-outline`
-                }
-                size={20}
-                color={color}
-              />
-            </View>
-          );
-        },
-      })}
-    >
-      {/* Everyone */}
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-      />
+      return (
+        <View
+          style={[
+            styles.iconWrap,
+            focused &&
+              styles.iconWrapActive,
+          ]}
+        >
+          <Ionicons
+            name={
+              focused
+                ? base
+                : `${base}-outline`
+            }
+            size={20}
+            color={color}
+          />
+        </View>
+      );
+    },
+  })}
+>
+  {/* Everyone */}
+  <Tab.Screen
+    name="Home"
+    component={HomeScreen}
+  />
 
-      {/* Leaders only */}
-      {isLeader && (
-        <Tab.Screen
-          name="Members"
-          component={MembersStack}
-        />
-      )}
+  {/* Ordinary Members Only */}
+  {!isLeader && (
+    <Tab.Screen
+      name="Profile"
+      component={MyProfileScreen}
+    />
+  )}
 
-      {isLeader && (
-        <Tab.Screen
-          name="Attendance"
-          component={AttendanceScreen}
-        />
-      )}
+  {/* Leaders Only */}
+  {isLeader && (
+    <Tab.Screen
+      name="Members"
+      component={MembersStack}
+    />
+  )}
 
-      {/* Everyone */}
-      <Tab.Screen
-        name="PastoralCare"
-        component={PastoralRequestScreen}
-        options={{
-          title: "Care",
-        }}
-      />
+  {isLeader && (
+    <Tab.Screen
+      name="Attendance"
+      component={AttendanceScreen}
+    />
+  )}
 
-      <Tab.Screen
-        name="Help"
-        component={HelpScreen}
-      />
+  {/* Everyone */}
+  <Tab.Screen
+    name="PastoralCare"
+    component={PastoralRequestScreen}
+    options={{
+      title: "Care",
+    }}
+  />
 
-      <Tab.Screen
-        name="More"
-        component={MoreScreen}
-      />
-    </Tab.Navigator>
+  {/* Members only */}
+  {!isLeader && (
+    <Tab.Screen
+      name="Help"
+      component={HelpScreen}
+    />
+  )}
+
+  {/* Everyone */}
+  <Tab.Screen
+    name="More"
+    component={MoreScreen}
+  />
+</Tab.Navigator>
+
   );
 }
-
 
 
 /* ── Root stack ───────────────────────────────────────────────── */
@@ -327,7 +340,8 @@ function RootStack() {
        <Stack.Screen name="PastoralCareDashboard"component={PastoralCareDashboardScreen}/>
        <Stack.Screen name="PastoralTicketDetail" component={PastoralTicketDetailScreen}/>
        <Stack.Screen name="PastoralTeamManagement"component={PastoralTeamManagementScreen}/>
-       <Stack.Screen name="MemberProfile"component={MemberProfileScreen}/>
+       <Stack.Screen name="MyMemberProfile"component={MemberProfileScreen}/>
+       <Stack.Screen name="MyProfile"component={MyProfileScreen}/>
 
 
 

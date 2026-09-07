@@ -113,7 +113,17 @@ const PROFILE_FIELDS = [
 export default function MemberProfileScreen({ route, navigation }) {
 
  
-  const memberId = route?.params?.memberId;
+ const memberId =
+  route?.params?.memberId ||
+  route?.params?.viewerMemberId ||
+  null;
+
+
+  const passedOrganizationId =
+  route?.params?.organizationId;
+
+const passedEntityId =
+  route?.params?.entityId;
   const viewerUid =
   route?.params?.viewerUid || null;
 
@@ -132,8 +142,22 @@ const viewerName =
   const [viewerPermissions, setViewerPermissions] = useState(route?.params?.viewerPermissions || []);
 
   const [activeEntity, setActiveEntity] = useState(null);
-  const organizationId = activeEntity?.organizationId;
-  const entityId = activeEntity?.entityId;
+ const organizationId =
+  passedOrganizationId ||
+  activeEntity?.organizationId;
+
+const entityId =
+  passedEntityId ||
+  activeEntity?.entityId;
+
+  console.log(
+  "PROFILE IDS",
+  {
+    memberId,
+    organizationId,
+    entityId,
+  }
+);
 
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -942,9 +966,26 @@ try {
         <Text style={{ marginTop: 12, color: "#888", textAlign: "center" }}>
           This member's profile could not be loaded.
         </Text>
-        <TouchableOpacity style={[styles.modalSaveBtn, { marginTop: 16, paddingHorizontal: 24 }]} onPress={() => navigation?.goBack()}>
-          <Text style={styles.white}>Go Back</Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  style={[
+    styles.modalSaveBtn,
+    {
+      marginTop: 16,
+      paddingHorizontal: 24,
+    },
+  ]}
+  onPress={() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("Settings");
+    }
+  }}
+>
+  <Text style={styles.white}>
+    Go Back
+  </Text>
+</TouchableOpacity>
       </View>
     );
   }
@@ -958,7 +999,16 @@ try {
 
       {/* ── HEADER ── */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+  onPress={() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate("Settings");
+    }
+  }}
+  style={styles.backBtn}
+>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Member Profile</Text>

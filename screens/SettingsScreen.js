@@ -998,7 +998,7 @@ const handleRemovePin = () => {
   style={styles.profileCard}
   onPress={() => {
     if (linkedMember?.id) {
-      navigation.navigate("MemberProfile", {
+      navigation.navigate("MyMemberProfile", {
         memberId: linkedMember.id,
 
         viewerMemberId: linkedMember.id,
@@ -1046,8 +1046,8 @@ const handleRemovePin = () => {
     label="My Profile"
     sub="Attendance, giving, ministry and membership details"
     onPress={() =>
-      navigation.navigate("MemberProfile")
-    }
+  navigation.navigate("MyProfile")
+}
     color="#4B3F72"
   />
 
