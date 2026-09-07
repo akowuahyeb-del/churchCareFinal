@@ -265,19 +265,36 @@ useEffect(() => {
 useEffect(() => {
   const loadRoles = async () => {
     try {
-      const stored = await AsyncStorage.getItem("userRoles");
+      const currentUserRaw =
+        await AsyncStorage.getItem("currentUser");
+
+      if (currentUserRaw) {
+        const currentUser =
+          JSON.parse(currentUserRaw);
+
+        if (currentUser?.role) {
+          setUserRoles([currentUser.role]);
+          return;
+        }
+      }
+
+      const stored =
+        await AsyncStorage.getItem("userRoles");
 
       if (stored) {
         const parsed = JSON.parse(stored);
 
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (
+          Array.isArray(parsed) &&
+          parsed.length > 0
+        ) {
           setUserRoles(parsed);
-        } else {
-          setUserRoles(["member"]);
+          return;
         }
-      } else {
-        setUserRoles(["member"]);
       }
+
+      setUserRoles(["member"]);
+
     } catch (e) {
       console.log("❌ Load roles error:", e);
       setUserRoles(["member"]);

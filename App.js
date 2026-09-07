@@ -129,34 +129,57 @@ function MainTabs() {
   const [userRoles, setUserRoles] = React.useState(["member"]);
 
   React.useEffect(() => {
-    const loadRoles = async () => {
-      try {
-        const stored = await AsyncStorage.getItem("userRoles");
+  const loadRoles = async () => {
+    try {
+      const currentUserRaw =
+        await AsyncStorage.getItem("currentUser");
 
-        if (stored) {
-          const parsed = JSON.parse(stored);
+      if (currentUserRaw) {
+        const currentUser =
+          JSON.parse(currentUserRaw);
 
-          if (
-            Array.isArray(parsed) &&
-            parsed.length > 0
-          ) {
-            setUserRoles(parsed);
-          }
+        if (currentUser?.role) {
+          setUserRoles([currentUser.role]);
+          return;
         }
-      } catch (e) {
-        console.log("Load roles error:", e);
       }
-    };
 
-    loadRoles();
-  }, []);
+      const stored =
+        await AsyncStorage.getItem("userRoles");
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        if (
+          Array.isArray(parsed) &&
+          parsed.length > 0
+        ) {
+          setUserRoles(parsed);
+          return;
+        }
+      }
+
+      setUserRoles(["member"]);
+
+    } catch (e) {
+      console.log(
+        "Load roles error:",
+        e
+      );
+
+      setUserRoles(["member"]);
+    }
+  };
+
+  loadRoles();
+}, []);
 
   const isLeader =
-    userRoles.includes("admin") ||
-    userRoles.includes("elder") ||
-    userRoles.includes("pastor") ||
-    userRoles.includes("finance") ||
-    userRoles.includes("attendance_manager");
+  userRoles.includes("admin") ||
+  userRoles.includes("pastor") ||
+  userRoles.includes("elders") ||
+  userRoles.includes("finance_officer") ||
+  userRoles.includes("usher");
 
   return (
     <Tab.Navigator
@@ -342,6 +365,7 @@ function RootStack() {
        <Stack.Screen name="PastoralTeamManagement"component={PastoralTeamManagementScreen}/>
        <Stack.Screen name="MyMemberProfile"component={MemberProfileScreen}/>
        <Stack.Screen name="MyProfile"component={MyProfileScreen}/>
+       <Stack.Screen name="Help"component={HelpScreen}/>
 
 
 

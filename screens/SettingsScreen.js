@@ -175,14 +175,40 @@ export default function SettingsScreen({
   const [activeEntity, setActiveEntity] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [linkedMember, setLinkedMember] = useState(null);
- const isSuperAdmin = currentUser?.role === "super_admin";
- const USER_ROLE  = currentUser?.role || "member";
+
+ const isSuperAdmin =
+  currentUser?.role === "super_admin" ||
+  linkedMember?.roles?.includes("super_admin");
+
+const USER_ROLE =
+  currentUser?.role ||
+  linkedMember?.roles?.[0] ||
+  "member";
+
 const USER_NAME  = currentUser?.name || "Unknown User";
 const USER_EMAIL = currentUser?.email || "";
 
 
+const permissionContext =
+  currentUser?.role === "super_admin"
+    ? {
+        role: "super_admin",
+        roles: ["super_admin"],
+        permissions: ["*"],
+      }
+    : currentUser?.role === "admin"
+    ? {
+        role: "admin",
+        roles: ["admin"],
+        permissions: ["*"],
+      }
+    : linkedMember || currentUser;
+
 const canDo = (permission) =>
-  hasPermission(currentUser, permission);
+  hasPermission(
+    permissionContext,
+    permission
+  );
 
 useEffect(() => {
   const loadUser = async () => {
@@ -251,6 +277,25 @@ useEffect(() => {
         );
 
         setLinkedMember(match);
+
+// To be removed later
+
+console.log(
+  "LINKED MEMBER ROLES:",
+  JSON.stringify(match.roles, null, 2)
+);
+
+console.log(
+  "LINKED MEMBER PERMISSIONS:",
+  JSON.stringify(match.permissions, null, 2)
+);
+
+console.log(
+  "LINKED MEMBER FULL OBJECT:",
+  JSON.stringify(match, null, 2)
+);
+
+
       }
     } catch (e) {
       console.log(
@@ -989,7 +1034,16 @@ const handleRemovePin = () => {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
-      <AppHeader title="Settings" subtitle="App preferences & controls" onBack={() => navigation.goBack()} />
+      <AppHeader
+  title="Settings"
+  subtitle="App preferences & controls"
+  onBack={() =>
+    navigation.navigate("MainTabs", {
+      screen: "Home",
+    })
+  }
+/>
+
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
@@ -997,28 +1051,8 @@ const handleRemovePin = () => {
       <TouchableOpacity
   style={styles.profileCard}
   onPress={() => {
-    if (linkedMember?.id) {
-      navigation.navigate("MyMemberProfile", {
-        memberId: linkedMember.id,
-
-        viewerMemberId: linkedMember.id,
-
-        viewerUid: currentUser?.uid,
-
-        viewerName: currentUser?.name,
-
-        viewerPermissions:
-          currentUser?.permissions || [],
-      });
-
-      return;
-    }
-
-    Alert.alert(
-      "Profile Not Found",
-      "Your member profile could not be located."
-    );
-  }}
+  navigation.navigate("MyProfile");
+}}
 >
           {profilePhoto
             ? <Image source={{ uri: profilePhoto }} style={styles.avatarImg} />

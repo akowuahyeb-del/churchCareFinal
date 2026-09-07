@@ -1080,27 +1080,69 @@ try {
         </View>
 
         {/* Quick stats — derived from real loaded attendance/contributions */}
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.statPillValue}>{attendanceRate !== null ? `${attendanceRate}%` : "—"}</Text>
-            <Text style={styles.statPillLabel}>Attendance</Text>
-          </View>
-          <View style={styles.statPill}>
-            <Text style={styles.statPillValue}>₵{totalGiven.toLocaleString()}</Text>
-            <Text style={styles.statPillLabel}>Total Given</Text>
-          </View>
-          <View style={styles.statPill}>
-            <Text style={styles.statPillValue}>{absentCount}</Text>
-            <Text style={styles.statPillLabel}>Absences</Text>
-          </View>
-        </View>
+       {/* Quick stats — derived from real loaded attendance/contributions */}
+<View style={styles.statsRow}>
 
-        {member.memberCode && (canManageMembers || isSelf) && (
-          <TouchableOpacity style={styles.badgeBtn} onPress={() => setBadgeModalVisible(true)}>
-            <Ionicons name="qr-code-outline" size={14} color="#fff" />
-            <Text style={styles.badgeBtnText}>View Member Badge</Text>
-          </TouchableOpacity>
-        )}
+  <View style={styles.statPill}>
+    <Ionicons
+      name="checkmark-circle"
+      size={28}
+      color="#7CFFB2"
+    />
+    <Text style={styles.statPillValue}>
+      {attendanceRate !== null ? `${attendanceRate}%` : "—"}
+    </Text>
+    <Text style={styles.statPillLabel}>
+      Attendance
+    </Text>
+  </View>
+
+  <View style={styles.statPill}>
+    <Ionicons
+      name="wallet"
+      size={28}
+      color="#FFD166"
+    />
+    <Text style={styles.statPillValue}>
+      ₵{totalGiven.toLocaleString()}
+    </Text>
+    <Text style={styles.statPillLabel}>
+      Total Given
+    </Text>
+  </View>
+
+  <View style={styles.statPill}>
+    <Ionicons
+      name="alert-circle"
+      size={28}
+      color="#FF8A8A"
+    />
+    <Text style={styles.statPillValue}>
+      {absentCount}
+    </Text>
+    <Text style={styles.statPillLabel}>
+      Absences
+    </Text>
+  </View>
+
+</View>
+
+{member.memberCode && (canManageMembers || isSelf) && (
+  <TouchableOpacity
+    style={styles.badgeBtn}
+    onPress={() => setBadgeModalVisible(true)}
+  >
+    <Ionicons
+      name="qr-code-outline"
+      size={14}
+      color="#fff"
+    />
+    <Text style={styles.badgeBtnText}>
+      View Member Badge
+    </Text>
+  </TouchableOpacity>
+)}
+
       </View>
 
       {/* ── TABS ── */}
@@ -1629,9 +1671,26 @@ const styles = StyleSheet.create({
     width: 24, height: 24, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: "#fff"
   },
-  heroName: { color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 10 },
-  heroMinistry: { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 2 },
-  heroCode: { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 4, fontWeight: "600" },
+  heroName: {
+  color: "#FFFFFF",
+  fontSize: 32,
+  fontWeight: "800",
+  marginTop: 14,
+  textAlign: "center",
+},
+  heroMinistry: {
+  color: "rgba(255,255,255,0.85)",
+  fontSize: 15,
+  marginTop: 6,
+  textAlign: "center",
+},
+
+  heroCode: {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 13,
+  marginTop: 8,
+  fontWeight: "700",
+},
   statusBadge: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 5,
@@ -1641,16 +1700,75 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 12, fontWeight: "700" },
 
   statsRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  statPill: { backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" },
-  statPillValue: { color: "#fff", fontSize: 14, fontWeight: "800" },
-  statPillLabel: { color: "rgba(255,255,255,0.7)", fontSize: 9, marginTop: 2, fontWeight: "600" },
+ statPill: {
+  flex: 1,
+
+  backgroundColor: "#FFFFFF",
+
+  borderRadius: 20,
+
+  paddingVertical: 18,
+
+  alignItems: "center",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.12,
+  shadowRadius: 10,
+
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+
+  elevation: 6,
+},
+  statPillValue: {
+  color: "#1F2937",
+  fontSize: 24,
+  fontWeight: "800",
+  marginTop: 6,
+},
+  statPillLabel: {
+  color: "#6B7280",
+  fontSize: 11,
+  marginTop: 6,
+  fontWeight: "600",
+},
 
   badgeBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 7, marginTop: 14
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+
+  backgroundColor: "rgba(255,255,255,0.18)",
+
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.15)",
+
+  borderRadius: 30,
+
+  paddingHorizontal: 24,
+  paddingVertical: 12,
+
+  marginTop: 18,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.10,
+  shadowRadius: 8,
+
+  shadowOffset: {
+    width: 0,
+    height: 3,
   },
-  badgeBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+
+  elevation: 4,
+},
+  badgeBtnText: {
+  color: "#FFFFFF",
+  fontSize: 14,
+  fontWeight: "700",
+  marginLeft: 8,
+},
 
   tabRow: {
     flexDirection: "row", backgroundColor: "#fff",
@@ -1666,14 +1784,41 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 12, marginVertical: 6
   },
 
-  infoRow: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#fff", padding: 13,
-    marginVertical: 3, borderRadius: 10,
-    shadowColor: "#000", shadowOpacity: 0.03, shadowRadius: 4, elevation: 1
+ infoRow: {
+  flexDirection: "row",
+  alignItems: "center",
+
+  backgroundColor: "#FFFFFF",
+
+  paddingHorizontal: 18,
+  paddingVertical: 16,
+
+  marginVertical: 6,
+
+  borderRadius: 18,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.08,
+  shadowRadius: 8,
+  shadowOffset: {
+    width: 0,
+    height: 3,
   },
-  infoLabel: { fontSize: 10, color: "#aaa", fontWeight: "600", textTransform: "uppercase", marginBottom: 2 },
-  infoValue: { fontSize: 14, color: "#222", fontWeight: "500" },
+
+  elevation: 4,
+},
+  infoLabel: {
+  fontSize: 11,
+  color: "#8A8A8A",
+  fontWeight: "700",
+  textTransform: "uppercase",
+  marginBottom: 6,
+},
+  infoValue: {
+  fontSize: 16,
+  color: "#1F2937",
+  fontWeight: "600",
+},
   editIconBtn: { backgroundColor: "#f0edf9", borderRadius: 8, padding: 8, marginLeft: 8 },
   requestBtn: { backgroundColor: "#e8f0fe", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 },
   requestBtnText: { fontSize: 10, color: "#4B3F72", fontWeight: "600" },

@@ -462,6 +462,17 @@ console.log(
   "STEP 9 - Calling routeUser"
 );
 
+const keys = await AsyncStorage.getAllKeys();
+
+console.log(
+  "ASYNC STORAGE KEYS:",
+  keys
+);
+
+console.log(
+  "CURRENT USER:",
+  JSON.stringify(userData, null, 2)
+);
 await routeUser(
   uid,
   userData
