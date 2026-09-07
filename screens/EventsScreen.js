@@ -102,25 +102,38 @@ const emptyForm = () => ({
 
   const [permissions, setPermissions] = useState([]);
 
-const canDo = (permission) =>
-  hasPermission(
+const [role, setRole] = useState("");
+
+const canDo = (permission) => {
+
+  if (
+    role === "admin" ||
+    role === "super_admin"
+  ) {
+    return true;
+  }
+
+  return hasPermission(
     { permissions },
     permission
   );
+};
 
 
 useEffect(() => {
   const loadPermissions = async () => {
-    const storedUser =
-      await AsyncStorage.getItem("currentUser");
+   const storedUser =
+  await AsyncStorage.getItem("currentUser");
 
-    if (!storedUser) return;
+if (!storedUser) return;
 
-    const user = JSON.parse(storedUser);
+const user = JSON.parse(storedUser);
 
-    setPermissions(
-      user.permissions || []
-    );
+setRole(user.role || "member");
+
+setPermissions(
+  user.permissions || []
+);
   };
 
   loadPermissions();

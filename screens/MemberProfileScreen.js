@@ -669,7 +669,16 @@ const getElderThreshold = (action) => {
 
   /* ────────────── PERMISSIONS ────────────── */
   const isSelf = !!viewerMemberId && viewerMemberId === memberId;
-  const canManageMembers = hasPermission({ permissions: viewerPermissions }, "manage_members");
+  const isSuperAdmin =
+  route?.params?.viewerRole === "super_admin" ||
+  viewerPermissions?.includes("super_admin");
+
+const canManageMembers =
+  isSuperAdmin ||
+  hasPermission(
+    { permissions: viewerPermissions },
+    "manage_members"
+  );
   const isElder = hasPermission(
   { permissions: viewerPermissions },
   "elder_approval"
@@ -959,36 +968,82 @@ try {
     );
   }
 
-  if (!member) {
-    return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center", padding: 30 }]}>
-        <Ionicons name="person-remove-outline" size={48} color="#ccc" />
-        <Text style={{ marginTop: 12, color: "#888", textAlign: "center" }}>
-          This member's profile could not be loaded.
+  console.log("SUPER ADMIN DEBUG", {
+  viewerPermissions,
+  routePermissions:
+    route?.params?.viewerPermissions,
+});
+ if (!member) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+      }}
+    >
+      <Ionicons
+        name="shield-checkmark"
+        size={60}
+        color="#4B3F72"
+      />
+
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "700",
+          marginTop: 12,
+          marginBottom: 8,
+          textAlign: "center",
+        }}
+      >
+        Super Administrator
+      </Text>
+
+      <Text
+        style={{
+          textAlign: "center",
+          color: "#666",
+          lineHeight: 22,
+        }}
+      >
+        No member record found.
+      </Text>
+
+      <Text
+        style={{
+          textAlign: "center",
+          color: "#666",
+          lineHeight: 22,
+        }}
+      >
+        Platform administrators do not require a
+        linked member profile.
+      </Text>
+
+      <TouchableOpacity
+        style={{
+          marginTop: 20,
+          backgroundColor: "#4B3F72",
+          paddingHorizontal: 20,
+          paddingVertical: 12,
+          borderRadius: 10,
+        }}
+        onPress={() => navigation.goBack()}
+      >
+        <Text
+          style={{
+            color: "#fff",
+            fontWeight: "700",
+          }}
+        >
+          Back
         </Text>
-       <TouchableOpacity
-  style={[
-    styles.modalSaveBtn,
-    {
-      marginTop: 16,
-      paddingHorizontal: 24,
-    },
-  ]}
-  onPress={() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate("Settings");
-    }
-  }}
->
-  <Text style={styles.white}>
-    Go Back
-  </Text>
-</TouchableOpacity>
-      </View>
-    );
-  }
+      </TouchableOpacity>
+    </View>
+  );
+}
 
   const memberBadgeValue = member.memberCode
     ? JSON.stringify({ memberCode: member.memberCode, entityId })

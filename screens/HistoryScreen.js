@@ -127,13 +127,29 @@ export default function HistoryScreen() {
 useEffect(() => {
   const loadRoles = async () => {
     try {
-      const stored =
+      const storedUser =
         await AsyncStorage.getItem(
-          "userRoles"
+          "currentUser"
         );
 
-      if (stored) {
-        setUserRoles(JSON.parse(stored));
+      if (!storedUser) return;
+
+      const user =
+        JSON.parse(storedUser);
+
+      if (
+        user.role === "admin" ||
+        user.role === "super_admin"
+      ) {
+        setUserRoles(["admin"]);
+      } else if (
+        user.role === "pastor"
+      ) {
+        setUserRoles(["pastor"]);
+      } else if (
+        user.role === "elder"
+      ) {
+        setUserRoles(["elder"]);
       }
     } catch (e) {
       console.log(

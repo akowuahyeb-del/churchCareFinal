@@ -96,12 +96,20 @@ export default function MoreScreen() {
   const navigation = useNavigation();
   const [role, setRole] = useState("");
 const [permissions, setPermissions] = useState([]);
-const canDo = (permission) =>
-  hasPermission(
+const canDo = (permission) => {
+
+  if (
+    role === "admin" ||
+    role === "super_admin"
+  ) {
+    return true;
+  }
+
+  return hasPermission(
     { permissions },
     permission
   );
-
+};
 
   useEffect(() => {
     const loadRole = async () => {
@@ -111,7 +119,13 @@ const canDo = (permission) =>
 const storedUser =
   await AsyncStorage.getItem("currentUser");
 
-setRole(storedRole || "User");
+const effectiveRole =
+  storedRole ||
+  (storedUser
+    ? JSON.parse(storedUser).role
+    : "User");
+
+setRole(effectiveRole);
 
 if (storedUser) {
   const user = JSON.parse(storedUser);

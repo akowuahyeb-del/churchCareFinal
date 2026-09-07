@@ -48,6 +48,7 @@ import {
 } from "firebase/storage";
 import AppText from "../components/AppText";
 import { getAttendanceSummary } from "../utils/attendanceSummaryService";
+import { hasPermission } from "../constants/permissions";
 
 
 
@@ -77,7 +78,8 @@ export default function HomeScreen({ route }) {
   const [entities, setEntities] = useState([]);
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
-  const [userRoles, setUserRoles] = useState(["member"]);
+ const [userRoles, setUserRoles] = useState(["member"]);
+const [userPermissions, setUserPermissions] = useState([]);
   const currentUser = auth.currentUser;
 const [currentUserData, setCurrentUserData] = useState(null);
 
@@ -148,6 +150,15 @@ const [carouselIndex, setCarouselIndex] = useState(0);
   const [overview, setOverview] = useState(null);
 
   const hasRole = (role) => userRoles.includes(role);
+
+  const can = (permission) =>
+  hasPermission(
+    {
+      roles: userRoles,
+      permissions: userPermissions,
+    },
+    permission
+  );
   console.log(
   "CURRENT USER ROLES:",
   userRoles
@@ -272,10 +283,21 @@ useEffect(() => {
         const currentUser =
           JSON.parse(currentUserRaw);
 
-        if (currentUser?.role) {
-          setUserRoles([currentUser.role]);
-          return;
-        }
+       if (currentUser) {
+
+  setUserRoles(
+    currentUser.roles ||
+    (currentUser.role
+      ? [currentUser.role]
+      : ["member"])
+  );
+
+  setUserPermissions(
+    currentUser.permissions || []
+  );
+
+  return;
+}
       }
 
       const stored =
@@ -1101,11 +1123,14 @@ return (
   <View style={styles.qaRow}>
 
     {[
-      (hasRole("admin") || hasRole("usher")) && {
-        icon: "checkmark-circle-outline",
-        label: "Attendance",
-        onPress: () => navigation.navigate("Attendance")
-      },
+      (hasRole("admin") ||
+ hasRole("usher")) && {
+  icon: "checkmark-circle-outline",
+  label: "Attendance",
+  onPress: () => navigation.navigate("MainTabs", {
+  screen: "Attendance",
+})
+},
 
       hasRole("admin") && {
   icon: "people-outline",

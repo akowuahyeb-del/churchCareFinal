@@ -126,60 +126,100 @@ function MembersStack() {
 
 /* ── Main bottom tabs ─────────────────────────────────────────── */
 function MainTabs() {
-  const [userRoles, setUserRoles] = React.useState(["member"]);
+  const [userRoles, setUserRoles] =
+    React.useState(["member"]);
 
   React.useEffect(() => {
-  const loadRoles = async () => {
-    try {
-      const currentUserRaw =
-        await AsyncStorage.getItem("currentUser");
+    const loadRoles = async () => {
+      try {
+        const currentUserRaw =
+          await AsyncStorage.getItem(
+            "currentUser"
+          );
 
-      if (currentUserRaw) {
-        const currentUser =
-          JSON.parse(currentUserRaw);
+        if (currentUserRaw) {
+          const currentUser =
+            JSON.parse(currentUserRaw);
 
-        if (currentUser?.role) {
-          setUserRoles([currentUser.role]);
-          return;
+          // ✅ New architecture first
+          if (
+            Array.isArray(
+              currentUser?.roles
+            ) &&
+            currentUser.roles.length > 0
+          ) {
+            setUserRoles(
+              currentUser.roles
+            );
+
+            console.log(
+              "MAINTABS ROLES:",
+              currentUser.roles
+            );
+
+            return;
+          }
+
+          // ✅ Backward compatibility
+          if (currentUser?.role) {
+            setUserRoles([
+              currentUser.role,
+            ]);
+
+            console.log(
+              "MAINTABS ROLE:",
+              currentUser.role
+            );
+
+            return;
+          }
         }
-      }
 
-      const stored =
-        await AsyncStorage.getItem("userRoles");
+        const stored =
+          await AsyncStorage.getItem(
+            "userRoles"
+          );
 
-      if (stored) {
-        const parsed = JSON.parse(stored);
+        if (stored) {
+          const parsed =
+            JSON.parse(stored);
 
-        if (
-          Array.isArray(parsed) &&
-          parsed.length > 0
-        ) {
-          setUserRoles(parsed);
-          return;
+          if (
+            Array.isArray(parsed) &&
+            parsed.length > 0
+          ) {
+            setUserRoles(parsed);
+
+            console.log(
+              "STORED ROLES:",
+              parsed
+            );
+
+            return;
+          }
         }
+
+        setUserRoles(["member"]);
+
+      } catch (e) {
+        console.log(
+          "Load roles error:",
+          e
+        );
+
+        setUserRoles(["member"]);
       }
+    };
 
-      setUserRoles(["member"]);
-
-    } catch (e) {
-      console.log(
-        "Load roles error:",
-        e
-      );
-
-      setUserRoles(["member"]);
-    }
-  };
-
-  loadRoles();
-}, []);
+    loadRoles();
+  }, []);
 
   const isLeader =
-  userRoles.includes("admin") ||
-  userRoles.includes("pastor") ||
-  userRoles.includes("elders") ||
-  userRoles.includes("finance_officer") ||
-  userRoles.includes("usher");
+    userRoles.includes("admin") ||
+    userRoles.includes("pastor") ||
+    userRoles.includes("elders") ||
+    userRoles.includes("finance_officer") ||
+    userRoles.includes("usher");
 
   return (
     <Tab.Navigator

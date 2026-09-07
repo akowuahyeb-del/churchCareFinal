@@ -17,7 +17,15 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import AppButton from "../components/AppButton";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs
+} from "firebase/firestore";
 
 export default function LoginScreen({
   navigation,
@@ -58,6 +66,8 @@ export default function LoginScreen({
     navigation.replace("MainTabs");
     return;
   }
+
+  // To be removed later
 
   console.log("ROUTE 1 - Admin path");
   console.log("ROUTE 1A - ROLE:", userData?.role);
@@ -309,7 +319,12 @@ navigation.replace("MainTabs");
       // Re-fetch fresh user data (approval may have happened between sessions)
       try {
         const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-        const fresh = snap.exists() ? { ...snap.data(), uid: firebaseUser.uid } : JSON.parse(storedUser);
+        if (!storedUser) {
+  await AsyncStorage.setItem(
+    "currentUser",
+    JSON.stringify(fresh)
+  );
+}
         await AsyncStorage.setItem("currentUser", JSON.stringify(fresh));
         await routeUser(firebaseUser.uid, fresh);
       } catch (e) {
@@ -351,6 +366,9 @@ navigation.replace("MainTabs");
     console.log("STEP 5 - getDoc Success");
 
     let userData;
+    let memberRoles = [];
+let memberPermissions = [];
+let memberId = null;
 
     if (!userSnap.exists()) {
 
@@ -380,6 +398,78 @@ navigation.replace("MainTabs");
         ...userSnap.data(),
         uid,
       };
+
+      // --------------------------------------------------
+// Load Member Roles & Permissions
+// --------------------------------------------------
+
+
+
+try {
+
+  if (
+    userData.organizationId &&
+    userData.entityId
+  ) {
+
+    const membersRef = collection(
+      db,
+      "organizations",
+      userData.organizationId,
+      "entities",
+      userData.entityId,
+      "members"
+    );
+
+    const memberQuery = query(
+      membersRef,
+      where("uid", "==", uid)
+    );
+
+    const memberSnap = await getDocs(
+      memberQuery
+    );
+
+    if (!memberSnap.empty) {
+
+      const memberDoc =
+        memberSnap.docs[0];
+
+      const memberData =
+        memberDoc.data();
+
+      memberId =
+        memberDoc.id;
+
+      memberRoles =
+        memberData.roles || [];
+
+      memberPermissions =
+        memberData.permissions || [];
+
+      console.log(
+        "✅ MEMBER FOUND"
+      );
+
+      console.log(
+        "ROLES:",
+        memberRoles
+      );
+
+      console.log(
+        "PERMISSIONS:",
+        memberPermissions
+      );
+    }
+  }
+
+} catch (e) {
+
+  console.log(
+    "❌ Member role load failed:",
+    e
+  );
+}
     }
 
     console.log("STEP 8 - Saving session");
@@ -389,9 +479,30 @@ navigation.replace("MainTabs");
       "true"
     );
 
-   await AsyncStorage.setItem(
+  // ✅ Standard ChurchCare Session Object
+const sessionUser = {
+  ...userData,
+
+  memberId: memberId || null,
+
+  roles: Array.isArray(memberRoles)
+    ? memberRoles
+    : [],
+
+  permissions: Array.isArray(memberPermissions)
+    ? memberPermissions
+    : [],
+};
+
+
+console.log(
+  "SESSION USER:",
+  JSON.stringify(sessionUser, null, 2)
+);
+
+await AsyncStorage.setItem(
   "currentUser",
-  JSON.stringify(userData)
+  JSON.stringify(sessionUser)
 );
 
 /* ---------------------------------- */
@@ -471,12 +582,14 @@ console.log(
 
 console.log(
   "CURRENT USER:",
-  JSON.stringify(userData, null, 2)
+  JSON.stringify(sessionUser, null, 2)
 );
+
 await routeUser(
   uid,
-  userData
+  sessionUser
 );
+
 
     console.log("STEP 10 - routeUser completed");
 
