@@ -1156,7 +1156,8 @@ return (
     onPress: () => navigation.navigate("Members")
   },
 
- can("manage_visitors") && {
+ (hasRole("usher") ||
+ can("manage_visitors")) && {
   icon: "person-add-outline",
   label: "Visitors",
   onPress: () => navigation.navigate("Visitors")
