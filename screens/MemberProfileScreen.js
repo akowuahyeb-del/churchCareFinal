@@ -411,6 +411,39 @@ const inKindData = inKindSnap.docs
 
 
 
+/* const loadAssignedVisitors = async () => {
+  try {
+    const snap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "visitors"
+      )
+    );
+
+    const matches = snap.docs
+      .map(d => ({
+        id: d.id,
+        ...d.data(),
+      }))
+      .filter(
+        v =>
+          v.assignment?.id === memberId
+      );
+
+    setAssignedVisitors(matches);
+
+  } catch (e) {
+    console.log(
+      "LOAD ASSIGNED VISITORS",
+      e
+    );
+  }
+}; */
+
 const loadEldersCount = async () => {
   if (!organizationId || !entityId) return;
 
@@ -480,6 +513,116 @@ console.log(
   }
 );
 
+
+const loadServiceHistory =
+  useCallback(async () => {
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!stored) return;
+
+      const entity =
+        JSON.parse(stored);
+
+      const governanceSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            entity.organizationId,
+            "governanceMemberships"
+          )
+        );
+
+      const memberHistory =
+        governanceSnap.docs
+          .map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .filter(
+            (r) =>
+              r.memberId === member?.id
+          );
+
+      const active =
+        memberHistory
+          .filter(
+            (r) => r.status === "active"
+          )
+          .map((r) => ({
+            id: r.id,
+            role: r.membershipRole,
+            organization: r.governanceBodyName,
+            startDate: r.startDate,
+          }));
+
+      const previous =
+        memberHistory
+          .filter(
+            (r) => r.status === "inactive"
+          )
+          .map((r) => {
+            let duration = "Unknown";
+
+            if (
+              r.startDate &&
+              r.endDate
+            ) {
+              const months =
+                Math.floor(
+                  (
+                    new Date(r.endDate) -
+                    new Date(r.startDate)
+                  ) /
+                  (
+                    1000 *
+                    60 *
+                    60 *
+                    24 *
+                    30
+                  )
+                );
+
+              duration =
+                months < 1
+                  ? "Less than 1 month"
+                  : `${months} months`;
+            }
+
+            return {
+              id: r.id,
+              role: r.membershipRole,
+              organization:
+                r.governanceBodyName,
+              startDate: r.startDate,
+              endDate: r.endDate,
+              duration,
+            };
+          });
+
+      setActiveRoles(active);
+      setPreviousRoles(previous);
+
+    } catch (error) {
+
+      console.log(
+        "loadServiceHistory",
+        error
+      );
+
+    }
+
+  }, [member]);
+
+
+
+
 const handleInviteMember = async () => {
   navigation.navigate("InviteMember", {
     organizationId,
@@ -496,10 +639,10 @@ const handleInviteMember = async () => {
 useEffect(() => {
   if (!memberId || !organizationId || !entityId) return;
 
-  loadMember();
-  loadAttendance();
-  // loadAssignedVisitors();
-  loadTransferHistory();
+ loadMember();
+loadAttendance();
+// loadAssignedVisitors();
+loadTransferHistory();
 }, [
   memberId,
   organizationId,
@@ -512,13 +655,13 @@ useEffect(() => {
   }
 }, [member]);
 
-/* useEffect(() => {
+useEffect(() => {
 
   if (!member?.id) return;
 
   loadServiceHistory();
 
-}, [member]); */
+}, [member]);
 
 
   useEffect(() => {
