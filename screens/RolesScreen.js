@@ -83,35 +83,53 @@ export default function RolesScreen() {
   let hasUpdates = false;
 
   DEFAULT_ROLES.forEach(defaultRole => {
-    const existingDoc = snap.docs.find(
-      d => d.id === defaultRole.id
+  const existingDoc = snap.docs.find(
+    d => d.id === defaultRole.id
+  );
+
+  // ✅ Create missing built-in roles
+  if (!existingDoc) {
+    hasUpdates = true;
+
+    batch.set(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "roles",
+        defaultRole.id
+      ),
+      defaultRole
     );
 
-    if (!existingDoc) return;
+    return;
+  }
 
-    const current = existingDoc.data();
+  const current = existingDoc.data();
 
-    if (
-      current.protected !== defaultRole.protected ||
-      current.officeType !== defaultRole.officeType
-    ) {
-      hasUpdates = true;
+  // ✅ Sync metadata
+  if (
+    current.protected !== defaultRole.protected ||
+    current.officeType !== defaultRole.officeType
+  ) {
+    hasUpdates = true;
 
-      batch.update(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "roles",
-          defaultRole.id
-        ),
-        {
-          protected: !!defaultRole.protected,
-          officeType: defaultRole.officeType || null,
-        }
-      );
-    }
-  });
+    batch.update(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "roles",
+        defaultRole.id
+      ),
+      {
+        protected: !!defaultRole.protected,
+        officeType: defaultRole.officeType || null,
+      }
+    );
+  }
+});
+
 
   if (hasUpdates) {
     await batch.commit();
@@ -129,8 +147,18 @@ export default function RolesScreen() {
     }))
     .filter(role => role.id !== "super_admin");
 
-  setRoles(list);
-  setLoading(false);
+  console.log(
+  "ROLES",
+  list.map(r => ({
+    id: r.id,
+    label: r.label,
+    officeType: r.officeType,
+    protected: r.protected,
+  }))
+);
+
+setRoles(list);
+setLoading(false);
 });
 
     return () => unsub();

@@ -238,9 +238,9 @@ export const DEFAULT_ROLES = [
 {
   id: "governance_officer",
   label: "Governance Officer",
+  officeType: "governance",
   permissions: [
-    "governance_authority",
-    "assign_governance_roles"
+    "governance_authority"
   ],
   protected: true,
   active: true
@@ -248,6 +248,7 @@ export const DEFAULT_ROLES = [
 {
   id: "bootable_admin",
   label: "Bootable Admin",
+  officeType: "system",
   permissions: [],
   protected: true,
   active: true
