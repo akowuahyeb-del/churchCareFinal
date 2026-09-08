@@ -39,11 +39,16 @@ const PROTECTED_FINANCIAL_ROLES = [
   "financial_secretary",
 ];
 
+const GOVERNANCE_FINANCE_ASSIGN_PERMISSION =
+  "assign_finance_roles";
+
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
   const user = route.params?.user || {};
   const viewerMemberId =
   route?.params?.viewerMemberId || null;
+  const viewerPermissions =
+  route?.params?.viewerPermissions || [];
 
 
   const [organizationId, setOrganizationId] = useState(null);
@@ -145,6 +150,24 @@ const assigningProtectedFinancePermission =
   effectivePermissions.some(permission =>
     PROTECTED_FINANCIAL_PERMISSIONS.includes(permission)
   );
+  const canAssignFinanceRoles =
+  viewerPermissions.includes(
+    GOVERNANCE_FINANCE_ASSIGN_PERMISSION
+  );
+
+if (
+  assigningProtectedFinancialRole &&
+  !canAssignFinanceRoles
+) {
+  Alert.alert(
+    "Governance Restriction",
+    "You do not have authority to appoint financial officers."
+  );
+
+  setSaving(false);
+  return;
+}
+
 
 if (
   selfAssignment &&
