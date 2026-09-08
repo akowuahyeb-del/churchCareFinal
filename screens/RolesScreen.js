@@ -84,13 +84,34 @@ export default function RolesScreen() {
     return () => unsub();
   }, [organizationId]);
 
-  const protectedRoles = roles.filter(
+const protectedRoles = roles.filter(
   r => r.active !== false && r.protected === true
 );
 
 const operationalRoles = roles.filter(
   r => r.active !== false && !r.protected
 );
+
+const governanceRoles = protectedRoles.filter(
+  r => r.officeType === "governance"
+);
+
+const spiritualRoles = protectedRoles.filter(
+  r => r.officeType === "spiritual"
+);
+
+const financeRoles = protectedRoles.filter(
+  r => r.officeType === "finance"
+);
+
+const auditRoles = protectedRoles.filter(
+  r => r.officeType === "audit"
+);
+
+const systemRoles = protectedRoles.filter(
+  r => r.officeType === "system"
+);
+
   const inactiveRoles = roles.filter(r => r.active === false);
 
   const saveRole = async (roleData) => {
@@ -179,11 +200,11 @@ const operationalRoles = roles.filter(
   />
 ))}
 
-<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
-  Protected Offices
+<Text style={styles.sectionLabel}>
+  Governance Offices
 </Text>
 
-{protectedRoles.map(role => (
+{governanceRoles.map(role => (
   <RoleRow
     key={role.id}
     role={role}
@@ -193,6 +214,68 @@ const operationalRoles = roles.filter(
     }}
   />
 ))}
+
+<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+  Spiritual Offices
+</Text>
+
+{spiritualRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+  Finance Offices
+</Text>
+
+{financeRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+  Audit Offices
+</Text>
+
+{auditRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+  System Offices
+</Text>
+
+{systemRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+
 
 {inactiveRoles.length > 0 && (
             <>
