@@ -55,31 +55,83 @@ export default function RolesScreen() {
 
     const rolesRef = collection(db, "organizations", organizationId, "roles");
 
-    const unsub = onSnapshot(rolesRef, async snap => {
-      if (snap.empty && !seedingRef.current) {
-        seedingRef.current = true;
-        try {
-          const batch = writeBatch(db);
-          DEFAULT_ROLES.forEach(role => {
-            batch.set(doc(rolesRef, role.id), role);
-          });
-          await batch.commit();
-        } catch (e) {
-          console.log("Seed roles error:", e);
-        }
-        seedingRef.current = false;
-        return; // the listener fires again once the seed write lands
-      }
+   const unsub = onSnapshot(rolesRef, async snap => {
+  if (snap.empty && !seedingRef.current) {
+    seedingRef.current = true;
+    try {
+      const batch = writeBatch(db);
+      DEFAULT_ROLES.forEach(role => {
+        batch.set(doc(rolesRef, role.id), role);
+      });
+    if (!batch._mutations || batch._mutations.length === 0) {
+  // nothing to update
+} else {
+  await batch.commit();
+}
 
-      const list = snap.docs
-  .map(d => ({
-    id: d.id,
-    ...d.data()
-  }))
-  .filter(role => role.id !== "super_admin");
-      setRoles(list);
-      setLoading(false);
-    });
+    } catch (e) {
+      console.log("Seed roles error:", e);
+    }
+    seedingRef.current = false;
+    return;
+  }
+
+  // 👇 PASTE HERE
+
+ try {
+  const batch = writeBatch(db);
+  let hasUpdates = false;
+
+  DEFAULT_ROLES.forEach(defaultRole => {
+    const existingDoc = snap.docs.find(
+      d => d.id === defaultRole.id
+    );
+
+    if (!existingDoc) return;
+
+    const current = existingDoc.data();
+
+    if (
+      current.protected !== defaultRole.protected ||
+      current.officeType !== defaultRole.officeType
+    ) {
+      hasUpdates = true;
+
+      batch.update(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "roles",
+          defaultRole.id
+        ),
+        {
+          protected: !!defaultRole.protected,
+          officeType: defaultRole.officeType || null,
+        }
+      );
+    }
+  });
+
+  if (hasUpdates) {
+    await batch.commit();
+  }
+} catch (e) {
+  console.log("Role metadata sync error:", e);
+}
+
+  // 👇 EXISTING CODE CONTINUES
+
+  const list = snap.docs
+    .map(d => ({
+      id: d.id,
+      ...d.data()
+    }))
+    .filter(role => role.id !== "super_admin");
+
+  setRoles(list);
+  setLoading(false);
+});
 
     return () => unsub();
   }, [organizationId]);
