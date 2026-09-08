@@ -20,9 +20,10 @@ export default function RoleEditorModal({
   onDelete,
   initialData = {}
 }) {
-  const [label, setLabel] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
-  const [error, setError] = useState("");
+ const [label, setLabel] = useState("");
+const [description, setDescription] = useState("");
+const [selectedPermissions, setSelectedPermissions] = useState([]);
+const [error, setError] = useState("");
 
   const isProtected = !!initialData?.protected;
   const isDefaultRole = !!initialData?.isDefault;
@@ -32,8 +33,9 @@ export default function RoleEditorModal({
   useEffect(() => {
     if (!visible) return;
     setLabel(initialData?.label || "");
-    setSelectedPermissions(initialData?.permissions || []);
-    setError("");
+setDescription(initialData?.description || "");
+setSelectedPermissions(initialData?.permissions || []);
+setError("");
   }, [visible, initialData]);
 
   const togglePermission = (key) => {
@@ -49,15 +51,23 @@ export default function RoleEditorModal({
       return;
     }
 
-    onSave({
-      id: initialData?.id || label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"),
-      label: label.trim(),
-      description: initialData?.description || "",
-      permissions: isProtected ? initialData.permissions : selectedPermissions,
-      protected: isProtected,
-      isDefault: isDefaultRole,
-      active: initialData?.active !== false
-    });
+   onSave({
+  id: initialData?.id || label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_"),
+  label: label.trim(),
+  description: description.trim(),
+
+  // ✅ Protected offices keep their permissions
+  permissions: isProtected
+    ? (initialData.permissions || [])
+    : selectedPermissions,
+
+  // ✅ Preserve governance metadata
+  protected: !!initialData?.protected,
+  officeType: initialData?.officeType || null,
+
+  isDefault: !!initialData?.isDefault,
+  active: initialData?.active !== false,
+});
   };
 
   const handleDeactivateToggle = () => {
@@ -89,13 +99,12 @@ export default function RoleEditorModal({
             <Text style={styles.title}>
               {isEditing ? "Edit Role" : "New Role"}
             </Text>
-
-           {isProtected && (
+{isProtected && (
   <View style={styles.noticeBox}>
     <Text style={styles.noticeText}>
-      This is a protected office. Protected offices are governed
-      by church governance rules and cannot be renamed,
-      re-permissioned, deactivated or deleted from this screen.
+      This is a protected office. The office title may be renamed
+      to suit a denomination, but its permissions, activation,
+      deletion and appointment process remain protected.
     </Text>
   </View>
 )}
@@ -111,15 +120,24 @@ export default function RoleEditorModal({
               </View>
             )}
 
-            <Text style={styles.label}>Role Name</Text>
-            <TextInput
-              style={styles.input}
-              value={label}
-              onChangeText={setLabel}
-              editable={!isProtected}
-              placeholder="e.g. Choir Director"
-            />
+           <TextInput
+  style={styles.input}
+  value={label}
+  onChangeText={setLabel}
+  editable={true}
+  placeholder="e.g. Choir Director"
+/>
 
+
+<Text style={styles.label}>Description</Text>
+
+<TextInput
+  style={styles.input}
+  value={description}
+  onChangeText={setDescription}
+  editable={true}
+  placeholder="Describe this office or role"
+/>
             <Text style={styles.label}>Permissions</Text>
 
             {PERMISSION_GROUPS.map(group => (
