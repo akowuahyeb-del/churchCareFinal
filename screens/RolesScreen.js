@@ -84,7 +84,13 @@ export default function RolesScreen() {
     return () => unsub();
   }, [organizationId]);
 
-  const activeRoles = roles.filter(r => r.active !== false);
+  const protectedRoles = roles.filter(
+  r => r.active !== false && r.protected === true
+);
+
+const operationalRoles = roles.filter(
+  r => r.active !== false && !r.protected
+);
   const inactiveRoles = roles.filter(r => r.active === false);
 
   const saveRole = async (roleData) => {
@@ -158,19 +164,37 @@ export default function RolesScreen() {
             <Text style={styles.addBtnText}>Define New Role</Text>
           </TouchableOpacity>
 
-          <Text style={styles.sectionLabel}>Active Roles</Text>
-          {activeRoles.map(role => (
-            <RoleRow
-              key={role.id}
-              role={role}
-              onPress={() => {
-                setEditingRole(role);
-                setModalVisible(true);
-              }}
-            />
-          ))}
+          <Text style={styles.sectionLabel}>
+  Operational Roles
+</Text>
 
-          {inactiveRoles.length > 0 && (
+{operationalRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+<Text style={[styles.sectionLabel, { marginTop: 20 }]}>
+  Protected Offices
+</Text>
+
+{protectedRoles.map(role => (
+  <RoleRow
+    key={role.id}
+    role={role}
+    onPress={() => {
+      setEditingRole(role);
+      setModalVisible(true);
+    }}
+  />
+))}
+
+{inactiveRoles.length > 0 && (
             <>
               <Text style={[styles.sectionLabel, { marginTop: 20 }]}>
                 Inactive Roles

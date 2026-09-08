@@ -26,29 +26,32 @@ const ADMIN_PERMISSIONS = [
   "manage_finance",
 ];
 
-const PROTECTED_FINANCIAL_PERMISSIONS = [
-  "manage_finance",
-  "approve_donations",
-  "audit_finances",
-  "assign_finance_roles",
-];
-const PROTECTED_FINANCIAL_ROLES = [
-  "treasurer",
+const PROTECTED_ROLES = [
+  // Governance
+  "bootable_admin",
+  "elders",
+  "pastor",
+  "governance_officer",
+
+  // Finance
   "finance_officer",
   "auditor",
+  "treasurer",
   "financial_secretary",
+
+  // Leadership offices
+  "session_clerk",
+  "senior_presbyter",
 ];
 
-const GOVERNANCE_FINANCE_ASSIGN_PERMISSION =
-  "assign_finance_roles";
+
+
 
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
   const user = route.params?.user || {};
-  const viewerMemberId =
-  route?.params?.viewerMemberId || null;
-  const viewerPermissions =
-  route?.params?.viewerPermissions || [];
+ 
+  
 
 
   const [organizationId, setOrganizationId] = useState(null);
@@ -88,8 +91,10 @@ export default function AssignMemberRolesScreen({ route }) {
  const assignableRoles = roles.filter(
   r =>
     r.id !== "super_admin" &&
+    !PROTECTED_ROLES.includes(r.id) &&
     (r.active !== false || selectedRoleIds.includes(r.id))
 );
+
 
  const toggleRole = (role) => {
   // 🚫 Super Admin is not assignable from this screen
@@ -137,71 +142,14 @@ const selectedRoleObjects = roles.filter(r =>
 
 
 
-
-
-
 const effectivePermissions = mergePermissions(selectedRoleObjects);
 
-const selfAssignment =
-  viewerMemberId &&
-  user?.id === viewerMemberId;
-
-const assigningProtectedFinancePermission =
+const isAdminLevelUser =
   effectivePermissions.some(permission =>
-    PROTECTED_FINANCIAL_PERMISSIONS.includes(permission)
-  );
-  const canAssignFinanceRoles =
-  viewerPermissions.includes(
-    GOVERNANCE_FINANCE_ASSIGN_PERMISSION
-  );
-
-if (
-  assigningProtectedFinancialRole &&
-  !canAssignFinanceRoles
-) {
-  Alert.alert(
-    "Governance Restriction",
-    "You do not have authority to appoint financial officers."
-  );
-
-  setSaving(false);
-  return;
-}
-
-
-if (
-  selfAssignment &&
-  assigningProtectedFinancePermission
-) {
-  Alert.alert(
-    "Governance Restriction",
-    "You cannot assign protected financial permissions to yourself."
-  );
-
-  setSaving(false);
-  return;
-}
-
-const isAdminLevelUser = effectivePermissions.some(permission =>
-  ADMIN_PERMISSIONS.includes(permission)
-);
-
-// ✅ DEBUG
-const currentlyAdmin =
-  (user.permissions || []).some(permission =>
     ADMIN_PERMISSIONS.includes(permission)
   );
 
-const becomingAdmin = isAdminLevelUser;
 
-console.log("ADMIN DEBUG", {
-  currentlyAdmin,
-  becomingAdmin,
-  adminsLimit,
-  effectivePermissions,
-  selectedRoleIds,
-  userName: user.name,
-});
 
 if (isAdminLevelUser && adminsLimit.isAtLimit) {
   Alert.alert(

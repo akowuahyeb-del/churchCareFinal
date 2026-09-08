@@ -23,7 +23,24 @@ export const PERMISSION_GROUPS = [
         key: "manage_church_settings",
         label: "Manage Church Settings",
         description: "Switch the active church and edit organization/entity settings."
-      }
+      },
+      {
+  key: "governance_authority",
+  label: "Governance Authority",
+  category: "governance",
+},
+
+{
+  key: "assign_governance_roles",
+  label: "Assign Governance Roles",
+  category: "governance",
+},
+
+{
+  key: "assign_finance_roles",
+  label: "Assign Financial Offices",
+  category: "governance",
+},
     ]
   },
 
@@ -134,6 +151,15 @@ export const findPermission = (key) =>
     .find(p => p.key === key) || null;
 
 
+export const PROTECTED_ROLE_IDS = [
+  "bootable_admin",
+  "elders",
+  "pastor",
+  "finance_officer",
+  "auditor",
+  "governance_officer",
+];
+
 // ✅ DEFAULT ROLES
 export const DEFAULT_ROLES = [
 
@@ -158,7 +184,7 @@ export const DEFAULT_ROLES = [
       "elder_approval",
       "view_reports"
     ],
-    protected: false,
+    protected: true,
     isDefault: false,
     active: true
   },
@@ -173,7 +199,7 @@ export const DEFAULT_ROLES = [
       "view_reports",
       "view_finance_reports"
     ],
-    protected: false,
+    protected: true,
     isDefault: false,
     active: true
   },
@@ -186,9 +212,38 @@ export const DEFAULT_ROLES = [
       "view_finance_reports",
       "manage_donations"
     ],
-    protected: false,
+    protected: true,
     active: true
   },
+
+  {
+  id: "auditor",
+  label: "Auditor",
+  permissions: [
+    "view_finance_reports"
+  ],
+  protected: true,
+  active: true
+},
+
+{
+  id: "governance_officer",
+  label: "Governance Officer",
+  permissions: [
+    "governance_authority",
+    "assign_governance_roles"
+  ],
+  protected: true,
+  active: true
+},
+{
+  id: "bootable_admin",
+  label: "Bootable Admin",
+  permissions: [],
+  protected: true,
+  active: true
+},
+
 
   {
   id: "usher",

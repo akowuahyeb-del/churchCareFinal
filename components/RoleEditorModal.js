@@ -90,14 +90,16 @@ export default function RoleEditorModal({
               {isEditing ? "Edit Role" : "New Role"}
             </Text>
 
-            {isProtected && (
-              <View style={styles.noticeBox}>
-                <Text style={styles.noticeText}>
-                  Super Admin is a protected role with full access by design.
-                  It can't be renamed, re-permissioned, deactivated, or deleted.
-                </Text>
-              </View>
-            )}
+           {isProtected && (
+  <View style={styles.noticeBox}>
+    <Text style={styles.noticeText}>
+      This is a protected office. Protected offices are governed
+      by church governance rules and cannot be renamed,
+      re-permissioned, deactivated or deleted from this screen.
+    </Text>
+  </View>
+)}
+
 
             {isDefaultRole && !isProtected && (
               <View style={styles.noticeBox}>
