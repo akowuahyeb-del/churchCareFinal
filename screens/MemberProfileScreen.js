@@ -411,8 +411,14 @@ const inKindData = inKindSnap.docs
 
 
 
-/* const loadAssignedVisitors = async () => {
+const loadAssignedVisitors = async () => {
+
+  if (!organizationId || !entityId || !memberId) {
+    return;
+  }
+
   try {
+
     const snap = await getDocs(
       collection(
         db,
@@ -424,25 +430,30 @@ const inKindData = inKindSnap.docs
       )
     );
 
-    const matches = snap.docs
-      .map(d => ({
-        id: d.id,
-        ...d.data(),
-      }))
-      .filter(
-        v =>
-          v.assignment?.id === memberId
-      );
+    const matches =
+      snap.docs
+        .map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }))
+        .filter(
+          (v) =>
+            v.assignment?.id ===
+            memberId
+        );
 
     setAssignedVisitors(matches);
 
   } catch (e) {
+
     console.log(
       "LOAD ASSIGNED VISITORS",
       e
     );
+
   }
-}; */
+
+};
 
 const loadEldersCount = async () => {
   if (!organizationId || !entityId) return;
@@ -639,9 +650,13 @@ const handleInviteMember = async () => {
 useEffect(() => {
   if (!memberId || !organizationId || !entityId) return;
 
- loadMember();
+loadMember();
 loadAttendance();
-// loadAssignedVisitors();
+
+setTimeout(() => {
+  loadAssignedVisitors();
+}, 500);
+
 loadTransferHistory();
 }, [
   memberId,
