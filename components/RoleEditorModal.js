@@ -120,22 +120,34 @@ setError("");
               </View>
             )}
 
-           <TextInput
+     <Text style={styles.label}>Role Name</Text>
+
+<TextInput
   style={styles.input}
   value={label}
   onChangeText={setLabel}
-  editable={true}
+  editable
   placeholder="e.g. Choir Director"
 />
 
 
 <Text style={styles.label}>Description</Text>
 
+<Text style={styles.label}>Description</Text>
+
 <TextInput
-  style={styles.input}
+  style={[
+    styles.input,
+    {
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+  ]}
   value={description}
   onChangeText={setDescription}
-  editable={true}
+  editable
+  multiline
+  numberOfLines={4}
   placeholder="Describe this office or role"
 />
             <Text style={styles.label}>Permissions</Text>
