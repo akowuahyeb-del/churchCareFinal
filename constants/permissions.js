@@ -164,67 +164,76 @@ export const PROTECTED_ROLE_IDS = [
 export const DEFAULT_ROLES = [
 
 
-  {
-    id: "admin",
-    label: "Administrator",
-    description: "Day-to-day admin access",
-    permissions: ALL_PERMISSION_KEYS.filter(k => k !== "manage_roles"),
-    protected: false,
-    isDefault: false,
-    active: true
-  },
+ {
+  id: "admin",
+  label: "Administrator",
+  officeType: "administrative",
+  description: "Day-to-day administration of ChurchCare",
+  permissions: ALL_PERMISSION_KEYS.filter(
+    k => k !== "manage_roles"
+  ),
+  protected: false,
+  isDefault: false,
+  active: true
+},
 
   // ✅ FIXED ELDER ROLE ✅
   {
-    id: "elders",
-    label: "Elders",
-    description: "Governance authority for disciplinary decisions",
-    permissions: [
-      "manage_members",
-      "elder_approval",
-      "view_reports"
-    ],
-    protected: true,
-    isDefault: false,
-    active: true
-  },
+  id: "elders",
+  label: "Elders",
+  officeType: "governance",
+  description: "Governance authority for disciplinary decisions",
+  permissions: [
+    "elder_approval",
+    "view_reports"
+  ],
+  protected: true,
+  isDefault: false,
+  active: true
+},
+
+ {
+  id: "pastor",
+  label: "Pastor",
+  officeType: "spiritual",
+  description: "Spiritual leadership office",
+  permissions: [
+    "manage_program",
+    "manage_preachers",
+    "manage_pastor_message",
+    "view_reports"
+  ],
+  protected: true,
+  isDefault: false,
+  active: true
+},
+
 
   {
-    id: "pastor",
-    label: "Pastor",
-    permissions: [
-      "manage_program",
-      "manage_preachers",
-      "manage_pastor_message",
-      "view_reports",
-      "view_finance_reports"
-    ],
-    protected: true,
-    isDefault: false,
-    active: true
-  },
+  id: "finance_officer",
+  label: "Finance Officer",
+  officeType: "finance",
+  description: "Financial operations office",
+  permissions: [
+    "manage_finance",
+    "manage_donations"
+  ],
+  protected: true,
+  active: true
+},
 
-  {
-    id: "finance_officer",
-    label: "Finance Officer",
-    permissions: [
-      "manage_finance",
-      "view_finance_reports",
-      "manage_donations"
-    ],
-    protected: true,
-    active: true
-  },
-
-  {
+ {
   id: "auditor",
   label: "Auditor",
+  officeType: "audit",
+  description: "Independent financial oversight",
   permissions: [
     "view_finance_reports"
   ],
   protected: true,
   active: true
 },
+
 
 {
   id: "governance_officer",

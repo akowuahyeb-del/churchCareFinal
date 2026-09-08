@@ -26,23 +26,7 @@ const ADMIN_PERMISSIONS = [
   "manage_finance",
 ];
 
-const PROTECTED_ROLES = [
-  // Governance
-  "bootable_admin",
-  "elders",
-  "pastor",
-  "governance_officer",
 
-  // Finance
-  "finance_officer",
-  "auditor",
-  "treasurer",
-  "financial_secretary",
-
-  // Leadership offices
-  "session_clerk",
-  "senior_presbyter",
-];
 
 
 
@@ -88,10 +72,10 @@ export default function AssignMemberRolesScreen({ route }) {
 
   // ✅ Show every active role, PLUS any inactive role this member already
   // happens to hold — visible so it can be removed, but not re-addable.
- const assignableRoles = roles.filter(
+const assignableRoles = roles.filter(
   r =>
     r.id !== "super_admin" &&
-    !PROTECTED_ROLES.includes(r.id) &&
+    !r.protected &&
     (r.active !== false || selectedRoleIds.includes(r.id))
 );
 
