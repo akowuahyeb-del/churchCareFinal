@@ -11,7 +11,14 @@ import {
 } from "firebase/firestore";
 
 export default function ApproveDonationsScreen({ route, navigation }) {
-  const { organizationId, entityId, viewerName } = route.params || {};
+  const {
+  organizationId,
+  entityId,
+  viewerName,
+  viewerUid,
+  viewerRole,
+} = route.params || {};
+
 
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState([]);
@@ -97,18 +104,35 @@ useEffect(() => {
           "contributions",
           item.id
         ),
-        {
-          status: "acknowledged",
-          acknowledgedByName: viewerName || "Admin",
-          acknowledgedAt: new Date().toISOString(),
-        }
+     {
+  status: "acknowledged",
+
+  acknowledgedByUid: viewerUid || null,
+
+  acknowledgedByName:
+    viewerName || "Unknown",
+
+  acknowledgedByRole:
+    viewerRole || "Authorized Officer",
+
+  acknowledgedAt:
+    new Date().toISOString(),
+}
       );
 
       Alert.alert("✅ Approved", "Donation acknowledged successfully");
 
     } catch (e) {
-      Alert.alert("Error", "Could not approve donation");
-    }
+  console.log(
+    "APPROVE DONATION ERROR",
+    JSON.stringify(e, null, 2)
+  );
+
+  Alert.alert(
+    "Error",
+    e?.message || "Could not approve donation"
+  );
+}
   };
 const approveInKindDonation = async (item) => {
   try {
@@ -122,11 +146,20 @@ const approveInKindDonation = async (item) => {
         "inkind_donations",
         item.id
       ),
-      {
-        status: "acknowledged",
-        acknowledgedByName: viewerName || "Admin",
-        acknowledgedAt: new Date().toISOString(),
-      }
+    {
+  status: "acknowledged",
+
+  acknowledgedByUid: viewerUid || null,
+
+  acknowledgedByName:
+    viewerName || "Unknown",
+
+  acknowledgedByRole:
+    viewerRole || "Authorized Officer",
+
+  acknowledgedAt:
+    new Date().toISOString(),
+}
     );
 
     Alert.alert(
@@ -135,11 +168,17 @@ const approveInKindDonation = async (item) => {
     );
 
   } catch (e) {
-    Alert.alert(
-      "Error",
+  console.log(
+    "APPROVE INKIND ERROR",
+    JSON.stringify(e, null, 2)
+  );
+
+  Alert.alert(
+    "Error",
+    e?.message ||
       "Could not approve in-kind donation"
-    );
-  }
+  );
+}
 };
 
 

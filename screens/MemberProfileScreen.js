@@ -316,219 +316,98 @@ const _sendIndividualNotification =
   // ✅ FIXED: same bug, was collection(db, "contributions") — the real
   // path (fixed several turns ago in DonateScreen.js) is nested under
   // organizations/{orgId}/entities/{entityId}/contributions.
-  const loadContributions = async () => {
-    if (!organizationId || !entityId) return;
-    try {
-      const q = query(
-        collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
-        where("memberId", "==", memberId)
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      setContributions(data);
-    } catch (e) {
-      console.log("❌ Load contributions error:", e);
-    }
-  };
+const loadContributions = async () => {
+  if (!organizationId || !entityId || !member?.name) {
+    return;
+  }
 
+  try {
+    // CASH DONATIONS
 
-const loadServiceHistory =
-  useCallback(async () => {
-
-    try {
-
-      const stored =
-        await AsyncStorage.getItem(
-          "activeEntity"
-        );
-
-      if (!stored) return;
-
-      const entity =
-        JSON.parse(stored);
-
-      const governanceSnap =
-        await getDocs(
-          collection(
-            db,
-            "organizations",
-            entity.organizationId,
-            "governanceMemberships"
-          )
-        );
-
-      const memberHistory =
-        governanceSnap.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
-          .filter(
-  (r) =>
-    r.memberId === member?.id
-)
-;
-
-
-
-
-
-const governanceHistory =
-  memberHistory.map((r) => ({
-    id: r.id,
-    role: r.membershipRole,
-    organization:
-      r.governanceBodyName,
-    organizationType:
-      "governance",
-    status: r.status,
-    appointmentType:
-      r.appointmentType ||
-      "current",
-    historical:
-      r.historical || false,
-    startDate:
-      r.startDate,
-    endDate:
-      r.endDate,
-  }));
-
-
-
-  const ministrySnap =
-  await getDocs(
-    collection(
-      db,
-      "organizations",
-      entity.organizationId,
-      "leadershipAssignments"
-    )
-  );
-
-const ministryHistory =
-  ministrySnap.docs
-    .map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }))
-    .filter(
-      (r) =>
-        r.memberId === member?.id
-    )
-    .map((r) => ({
-      id: r.id,
-      role:
-        r.roleName ||
-        r.role,
-      organization:
-        r.ministryName,
-      organizationType:
-        "ministry",
-      status:
-        r.status ||
-        "active",
-      appointmentType:
-        r.appointmentType ||
-        "current",
-      historical:
-        r.historical || false,
-      startDate:
-        r.startDate,
-      endDate:
-        r.endDate,
-    }));
-
-
-// Merge everything
-
-const combinedHistory = [
-
-  ...governanceHistory,
-
-  ...ministryHistory,
-
-];
-
-combinedHistory.sort(
-  (a, b) =>
-    new Date(
-      b.startDate || 0
-    ) -
-    new Date(
-      a.startDate || 0
-    )
+   const cashSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  )
 );
 
-const active =
-  combinedHistory.filter(
-    (r) =>
-      r.status === "active"
+const cashData = cashSnap.docs
+  .map(d => ({
+    id: d.id,
+    donationType: "cash",
+    ...d.data(),
+  }))
+  .filter(d =>
+    d.memberId === memberId ||
+    d.memberName === member?.name
   );
 
-const previous =
-  combinedHistory.filter(
-    (r) =>
-      r.status !== "active"
-  );
 
-setActiveRoles(active);
-setPreviousRoles(previous);
+    // IN-KIND DONATIONS
 
-    } catch (error) {
+    const inKindSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "inkind_donations"
+  )
+);
 
-      console.log(
-        "loadServiceHistory",
-        error
-      );
+const inKindData = inKindSnap.docs
+  .map(d => ({
+    id: d.id,
+    donationType: "inkind",
+    ...d.data(),
+  }))
+  .filter(d => {
 
+    if (d.memberId === memberId) {
+      return true;
     }
 
-  }, [member]);
+    if (d.memberName === member?.name) {
+      return true;
+    }
 
-const loadAssignedVisitors =
-  async () => {
+    if (
+      Array.isArray(d.donors) &&
+      d.donors.some(
+        donor =>
+          donor?.id === memberId ||
+          donor?.name === member?.name
+      )
+    ) {
+      return true;
+    }
 
-    try {
+    return false;
+  });
 
-      const snap = await getDocs(
-        collection(
-          db,
-          "organizations",
-          organizationId,
-          "entities",
-          entityId,
-          "visitors"
+    const combined = [
+      ...cashData,
+      ...inKindData,
+    ].sort(
+      (a, b) =>
+        (b.date || "").localeCompare(
+          a.date || ""
         )
-      );
+    );
 
-      const matches =
-        snap.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
-          .filter(
-            (v) =>
-              v.assignment?.id ===
-              memberId
-          );
-
-      setAssignedVisitors(
-        matches
-      );
-
-    } catch (e) {
-
-      console.log(
-        "❌ LOAD ASSIGNED VISITORS",
-        e
-      );
-
-    }
-
-  };
+    setContributions(combined);
+  } catch (e) {
+    console.log(
+      "❌ Load contributions error",
+      e
+    );
+  }
+};
 
 
 
@@ -619,10 +498,8 @@ useEffect(() => {
 
   loadMember();
   loadAttendance();
-  loadContributions();
-  loadAssignedVisitors();
+  // loadAssignedVisitors();
   loadTransferHistory();
-
 }, [
   memberId,
   organizationId,
@@ -630,12 +507,18 @@ useEffect(() => {
 ]);
 
 useEffect(() => {
+  if (member?.id) {
+    loadContributions();
+  }
+}, [member]);
+
+/* useEffect(() => {
 
   if (!member?.id) return;
 
   loadServiceHistory();
 
-}, [member]);
+}, [member]); */
 
 
   useEffect(() => {
@@ -652,6 +535,8 @@ useEffect(() => {
     : null;
   const lastAttended = attendanceHistory.find(a => a.status === "present");
   const totalGiven = contributions.reduce((s, c) => s + (c.amount || 0), 0);
+  const contributionCount =
+  contributions.length;
 
 
 /* ────────────── ELDER THRESHOLD LOGIC ────────────── */
@@ -1145,7 +1030,9 @@ try {
       color="#7CFFB2"
     />
     <Text style={styles.statPillValue}>
-      {attendanceRate !== null ? `${attendanceRate}%` : "—"}
+      {attendanceRate !== null
+        ? `${attendanceRate}%`
+        : "—"}
     </Text>
     <Text style={styles.statPillLabel}>
       Attendance
@@ -1165,6 +1052,7 @@ try {
       Total Given
     </Text>
   </View>
+
 
   <View style={styles.statPill}>
     <Ionicons
@@ -1394,10 +1282,49 @@ console.log("INVITE DEBUG", {
                 {contributions.map(c => (
                   <View key={c.id} style={styles.recordRow}>
                     <View>
-                      <Text style={styles.recordTitle}>{c.type || "Offering"}</Text>
-                      <Text style={styles.recordSub}>{c.date}</Text>
+                      <Text style={styles.recordTitle}>
+
+  {c.donationType === "inkind"
+    ? c.itemName ||
+      c.categoryLabel ||
+      "In-Kind Donation"
+    : c.type || "Offering"}
+
+</Text>
+                      <Text style={styles.recordSub}>
+  {c.date}
+</Text>
+
+{c.acknowledgedByName && (
+  <Text style={styles.recordSub}>
+    ✅ Approved by {c.acknowledgedByName}
+  </Text>
+)}
+
+{c.acknowledgedByRole && (
+  <Text style={styles.recordSub}>
+    Role: {c.acknowledgedByRole}
+  </Text>
+)}
+
+{c.acknowledgedAt && (
+  <Text style={styles.recordSub}>
+    {new Date(c.acknowledgedAt)
+      .toLocaleString()}
+  </Text>
+)}
+
                     </View>
-                    <Text style={styles.contribAmount}>GH₵ {(c.amount || 0).toLocaleString()}</Text>
+                    <Text style={styles.contribAmount}>
+
+  {c.donationType === "inkind"
+    ? `${c.quantity || 0} ${
+        c.unit || ""
+      }`
+    : `GH₵ ${(c.amount || 0)
+        .toLocaleString()}`}
+
+</Text>
                   </View>
                 ))}
               </>

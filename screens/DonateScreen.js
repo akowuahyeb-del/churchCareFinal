@@ -52,12 +52,23 @@ console.log("viewerName:", viewerName);
 const [viewerPermissions] = useState(
   route?.params?.viewerPermissions || []
 );
-  const canAcknowledge = hasPermission({ permissions: viewerPermissions }, "manage_donations");
-  const canViewAllDonations =
+
+const isAdmin =
+  Array.isArray(viewerPermissions) &&
+  viewerPermissions.includes("admin");
+
+const canAcknowledge =
+  isAdmin ||
   hasPermission(
-    { permissions: viewerPermissions },
+    {
+      permissions: viewerPermissions,
+      roles: viewerPermissions,
+    },
     "manage_donations"
   );
+
+// ✅ Add this line
+const canViewAllDonations = canAcknowledge;
 
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId || null;
@@ -196,18 +207,16 @@ useEffect(() => {
     "contributions"
   );
 
-const q =
-  !canViewAllDonations && memberId
-    ? query(
-        contributionsRef,
-        where("memberId", "==", memberId)
-      )
-    : canViewAllDonations
-      ? query(contributionsRef)
-      : query(
-          contributionsRef,
-          where("memberId", "==", "__NO_MATCH__")
-        );
+let q;
+
+if (memberId) {
+  q = query(
+    contributionsRef,
+    where("memberId", "==", memberId)
+  );
+} else {
+  q = query(contributionsRef);
+}
 
   const unsubscribe = onSnapshot(
     q,
@@ -280,8 +289,8 @@ const q =
       const acknowledged = canAcknowledge && selfAcknowledge;
       const now = new Date();
       const payload = {
-        memberId:   memberId   || "anonymous",
-        memberName: memberName || "Anonymous",
+       memberId: memberId || null,
+memberName: memberName || "Anonymous",
         amount:     Number(finalAmount),
         type:       selectedCategory,
         note:       note.trim(),
@@ -308,6 +317,11 @@ const q =
         }),
       };
     
+      console.log("DONATION PAYLOAD", {
+  memberId,
+  memberName,
+});
+
 
      const docRef = await addDoc(
   collection(db, "organizations", organizationId, "entities", entityId, "contributions"),
@@ -343,13 +357,39 @@ if (
       setSelectedAmount(""); setCustomAmount(""); setNote("");
       resetPaymentFields();
       loadHistory();
-    } catch (e) {
-      Alert.alert("Error", "Could not save donation. Please try again.");
-      console.log(e);
-    } finally {
+    }catch (e) {
+  console.log(
+    "DONATION SAVE ERROR",
+    JSON.stringify(e, null, 2)
+  );
+
+  Alert.alert(
+    "Error",
+    e?.message ||
+      "Could not save donation. Please try again."
+  );
+} finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+  if (!organizationId || !entityId) return;
+
+  const unsubscribe = loadHistory();
+
+  return () => {
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  };
+}, [
+  organizationId,
+  entityId,
+  memberId,
+  canViewAllDonations,
+]);
+
 
  const acknowledgeDonation = async (item) => {
   // ✅ Subscription check
@@ -382,10 +422,23 @@ if (
         item.id
       ),
       {
-        status: "acknowledged",
-        acknowledgedByName: viewerName,
-        acknowledgedAt: new Date().toISOString()
-      }
+  status: "acknowledged",
+
+  acknowledgedByUid: viewerUid,
+
+  acknowledgedByName: viewerName,
+
+  acknowledgedByRole:
+    viewerPermissions?.includes("admin")
+      ? "Admin"
+      : viewerPermissions?.includes("finance")
+      ? "Finance Officer"
+      : "Authorized Officer",
+
+  acknowledgedAt:
+    new Date().toISOString(),
+}
+
     );
 
     Alert.alert(
@@ -487,12 +540,22 @@ if (
         pendingCount > 0 && styles.actionItemAlert,
       ]}
       onPress={() =>
-        navigation.navigate("ApproveDonations", {
-          organizationId,
-          entityId,
-          viewerName,
-        })
-      }
+ 
+navigation.navigate("ApproveDonations", {
+  organizationId,
+  entityId,
+  viewerName,
+  viewerUid,
+
+  viewerRole:
+    viewerPermissions?.includes("admin")
+      ? "Admin"
+      : viewerPermissions?.includes("finance")
+      ? "Finance Officer"
+      : "Authorized Officer",
+})
+
+}
     >
       <View style={styles.actionLeft}>
         <Ionicons
@@ -593,7 +656,9 @@ console.log("viewerPermissions =", viewerPermissions);
 console.log("memberId =", memberId);
 console.log("memberName =", memberName);
 
-    navigation.navigate("InKindDonation", {
+   navigation.navigate("InKindDonation", {
+  memberId,
+  memberName,
   viewerUid,
   viewerName,
   viewerPermissions,
@@ -894,6 +959,8 @@ console.log("memberName =", memberName);
                       <Text style={styles.historyDate}>
                         {item.date}{item.note ? ` · ${item.note}` : ""}
                       </Text>
+                      
+
                       <View style={styles.historyMethodRow}>
                         <Ionicons name={methodInfo.icon} size={11} color={methodInfo.color} />
                         <Text style={[styles.historyMethodText, { color: methodInfo.color }]}>
@@ -904,6 +971,26 @@ console.log("memberName =", memberName);
                       {!memberName && item.memberName !== "Anonymous" && (
                         <Text style={styles.historyMember}>{item.memberName}</Text>
                       )}
+                      {item.acknowledgedByName && (
+  <Text style={styles.historyMember}>
+    ✓ Acknowledged by {item.acknowledgedByName}
+  </Text>
+)}
+
+{item.acknowledgedByRole && (
+  <Text style={styles.historyDate}>
+    Role: {item.acknowledgedByRole}
+  </Text>
+)}
+
+{item.acknowledgedAt && (
+  <Text style={styles.historyDate}>
+    {new Date(
+      item.acknowledgedAt
+    ).toLocaleString()}
+  </Text>
+)}
+      
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 6 }}>
                       <Text style={[styles.historyAmt, { color: cat.color }]}>GH₵ {item.amount?.toLocaleString()}</Text>
