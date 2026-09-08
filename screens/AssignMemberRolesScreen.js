@@ -26,9 +26,25 @@ const ADMIN_PERMISSIONS = [
   "manage_finance",
 ];
 
+const PROTECTED_FINANCIAL_PERMISSIONS = [
+  "manage_finance",
+  "approve_donations",
+  "audit_finances",
+  "assign_finance_roles",
+];
+const PROTECTED_FINANCIAL_ROLES = [
+  "treasurer",
+  "finance_officer",
+  "auditor",
+  "financial_secretary",
+];
+
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
   const user = route.params?.user || {};
+  const viewerMemberId =
+  route?.params?.viewerMemberId || null;
+
 
   const [organizationId, setOrganizationId] = useState(null);
   const [entityId, setEntityId] = useState(null);
@@ -114,7 +130,34 @@ const selectedRoleObjects = roles.filter(r =>
   safeRoleIds.includes(r.id)
 );
 
+
+
+
+
+
 const effectivePermissions = mergePermissions(selectedRoleObjects);
+
+const selfAssignment =
+  viewerMemberId &&
+  user?.id === viewerMemberId;
+
+const assigningProtectedFinancePermission =
+  effectivePermissions.some(permission =>
+    PROTECTED_FINANCIAL_PERMISSIONS.includes(permission)
+  );
+
+if (
+  selfAssignment &&
+  assigningProtectedFinancePermission
+) {
+  Alert.alert(
+    "Governance Restriction",
+    "You cannot assign protected financial permissions to yourself."
+  );
+
+  setSaving(false);
+  return;
+}
 
 const isAdminLevelUser = effectivePermissions.some(permission =>
   ADMIN_PERMISSIONS.includes(permission)
