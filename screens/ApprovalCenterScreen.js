@@ -6,6 +6,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
@@ -32,6 +33,10 @@ export default function ApprovalCenterScreen({
 
   const [pendingItems, setPendingItems] =
     useState([]);
+    const [
+  selectedCategory,
+  setSelectedCategory,
+] = useState(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -77,34 +82,26 @@ export default function ApprovalCenterScreen({
       setLoading(true);
 
       try {
-        const snap =
-          await getDocs(
-            collection(
-              db,
-              "organizations",
-              organizationId,
-              "entities",
-              entityId,
-              "members"
-            )
-          );
+       const snap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "approvalRequests"
+    )
+  );
+const results =
+  snap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      (r) => r.status === "pending"
+    );
 
-        const results =
-          snap.docs
-            .map((d) => ({
-              id: d.id,
-              ...d.data(),
-            }))
-            .filter((m) => {
-              const pending =
-                m.pendingApprovals || {};
-
-              return (
-                Object.keys(
-                  pending
-                ).length > 0
-              );
-            });
+setPendingItems(results);
 
         setPendingItems(results);
       } catch (e) {
@@ -116,67 +113,75 @@ export default function ApprovalCenterScreen({
         setLoading(false);
       }
     };
+const categories = [
 
+  {
+    key: "governance",
+    label: "Governance",
+  },
+
+  {
+    key: "disciplinary",
+    label: "Disciplinary",
+  },
+
+  {
+    key: "finance",
+    label: "Finance",
+  },
+
+  {
+    key: "transfers",
+    label: "Transfers",
+  },
+
+];
+ 
   const renderItem = ({ item }) => {
-    const pending =
-      item.pendingApprovals || {};
 
-    const actions =
-      Object.keys(pending);
-
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() =>
-          navigation.navigate(
-            "MemberProfile",
-            {
-              memberId: item.id,
-              viewerMemberId,
-              initialTab: "status",
-            }
-          )
-        }
-      >
-        <Text style={styles.name}>
-          {item.name || "Unnamed Member"}
-        </Text>
-
-        {actions.map((action) => (
-          <View
-            key={action}
-            style={styles.approvalRow}
-          >
-            <Text style={styles.action}>
-              {action}
-            </Text>
-
-            <Text style={styles.count}>
-              {
-                pending[action]
-                  ?.length || 0
-              } approvals
-            </Text>
-          </View>
-        ))}
-
-        <Text style={styles.link}>
-          View Request →
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator
-          size="large"
-          color="#4B3F72"
-        />
-      </View>
-    );
+  return (
+    <TouchableOpacity
+  style={styles.card}
+  onPress={() =>
+    console.log(
+      "OPEN REQUEST",
+      item
+    )
   }
+>
+      <Text style={styles.name}>
+        {item.memberName || "Unknown Member"}
+      </Text>
+
+     <Text style={styles.action}>
+  {item.type === "governance"
+    ? item.nominationType === "leadership"
+      ? "Leadership Nomination"
+      : "Membership Nomination"
+    : item.type}
+</Text>
+
+     <Text style={styles.count}>
+  {item.governanceBodyName || "Unknown Body"}
+</Text>
+
+      <Text style={styles.link}>
+        Pending Approval
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+if (loading) {
+  return (
+    <View style={styles.center}>
+      <ActivityIndicator
+        size="large"
+        color="#4B3F72"
+      />
+    </View>
+  );
+}
 
   return (
     <View style={styles.container}>
@@ -186,50 +191,104 @@ export default function ApprovalCenterScreen({
     onBack={() => navigation.goBack()}
   />
 
-  <FlatList
-  data={pendingItems}
-  keyExtractor={(item) => item.id}
-  renderItem={renderItem}
-  contentContainerStyle={{
-    padding: 16,
-    paddingBottom: 100,
-    flexGrow: 1,
-  }}
-  ListHeaderComponent={
-    <View
+  {!selectedCategory ? (
+
+  <ScrollView
+    contentContainerStyle={{
+      padding: 16,
+      paddingBottom: 100,
+    }}
+  >
+
+    <Text
       style={{
-        marginBottom: 12,
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#4B3F72",
+        marginBottom: 16,
       }}
     >
-      <Text
-        style={{
-          fontSize: 14,
-          fontWeight: "700",
-          color: "#4B3F72",
-        }}
-      >
-        Pending Approvals ({pendingItems.length})
-      </Text>
-    </View>
-  }
-  ListEmptyComponent={
-    <View style={styles.empty}>
-      <Text style={styles.emptyText}>
-        ✅ No pending approvals
-      </Text>
+      Approval Categories
+    </Text>
 
-      <Text
+    {categories.map((category) => {
+
+  const count =
+    pendingItems.filter(
+      (item) =>
+        item.type === category.key
+    ).length;
+
+  return (
+
+    <TouchableOpacity
+      key={category.key}
+      style={styles.card}
+      onPress={() =>
+        setSelectedCategory(
+          category.key
+        )
+      }
+    >
+
+          <Text style={styles.name}>
+            {category.label}
+          </Text>
+
+          <Text style={styles.count}>
+            {count} Pending
+          </Text>
+
+        </TouchableOpacity>
+
+      );
+
+    })}
+
+  </ScrollView>
+
+) : (
+
+  <FlatList
+    data={pendingItems.filter(
+      (item) =>
+        item.type === selectedCategory
+    )}
+    keyExtractor={(item) => item.id}
+    renderItem={renderItem}
+    contentContainerStyle={{
+      padding: 16,
+      paddingBottom: 100,
+    }}
+    ListHeaderComponent={
+      <TouchableOpacity
+        onPress={() =>
+          setSelectedCategory(null)
+        }
         style={{
-          marginTop: 8,
-          color: "#999",
-          textAlign: "center",
+          marginBottom: 16,
         }}
       >
-        All disciplinary requests have been resolved.
-      </Text>
-    </View>
-  }
-/>
+        <Text
+          style={{
+            color: "#4B3F72",
+            fontWeight: "700",
+          }}
+        >
+          ← Back to Categories
+        </Text>
+      </TouchableOpacity>
+    }
+    ListEmptyComponent={
+      <View style={styles.empty}>
+        <Text style={styles.emptyText}>
+          No pending requests
+        </Text>
+      </View>
+    }
+  />
+
+)}
 </View>
   );
 }

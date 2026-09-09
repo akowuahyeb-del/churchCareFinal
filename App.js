@@ -92,6 +92,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState, useEffect } from "react";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import { hasPermission } from "./constants/permissions";
+import ApprovalRequestDetailScreen from "./screens/ApprovalRequestDetailScreen";
 
 
 
@@ -442,6 +443,7 @@ function RootStack() {
        <Stack.Screen name="MyMemberProfile"component={MemberProfileScreen}/>
        <Stack.Screen name="MyProfile"component={MyProfileScreen}/>
        <Stack.Screen name="Help"component={HelpScreen}/>
+       <Stack.Screen name="ApprovalRequestDetail"component={ApprovalRequestDetailScreen}/>
 
 
 

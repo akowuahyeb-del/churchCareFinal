@@ -50,6 +50,15 @@ const MORE_ITEMS = [
 },
 
 {
+  key: "ApprovalCenter",
+  label: "Approval Centre",
+  icon: "shield-checkmark-outline",
+  color: "#7C3AED",
+  bg: "#F3E8FF",
+  desc: "Governance and disciplinary approvals",
+},
+
+{
   key: "PastoralDashboard",
   label: "Pastoral Dashboard",
   icon: "clipboard-outline",
@@ -174,6 +183,8 @@ if (storedUser) {
 
     case "Departments":
       return canDo("manage_members");
+      case "ApprovalCenter":
+  return canDo("manage_approvals");
 
     default:
       return true;
@@ -185,6 +196,7 @@ if (storedUser) {
          const routes = {
   Settings: "Settings",
   Finance: "Finance",
+  ApprovalCenter: "ApprovalCenter",
   Help: "Help",
   Departments: "Departments",
   Events: "Events",

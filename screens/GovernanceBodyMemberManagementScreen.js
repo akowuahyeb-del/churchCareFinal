@@ -261,7 +261,6 @@ await addDoc(
 
     approvals: [],
 
-    requiredApprovals: null,
 
     requestedAt:
       new Date().toISOString(),
@@ -272,15 +271,12 @@ Alert.alert(
   "Nomination Sent",
   `${selectedMember.name} has been submitted for governance approval.`
 );
-
 setSelectedMember(null);
+setSelectedMembership(null);
+setEditing(false);
 setShowAddModal(false);
 
 return;
-
-   
-
-    await loadGovernanceMembers();
 
   } catch (error) {
 

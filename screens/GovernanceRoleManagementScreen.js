@@ -43,7 +43,7 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
         collection(db, "organizations", entity.organizationId, "governanceMemberships")
       );
 
-      const existingHolders = existingSnap.docs.filter((d) => {
+     /*  const existingHolders = existingSnap.docs.filter((d) => {
         const data = d.data();
         return (
           data.governanceBodyId === governanceBody.id &&
@@ -57,7 +57,7 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
           doc(db, "organizations", entity.organizationId, "governanceMemberships", holder.id),
           { status: "inactive", endDate: new Date().toISOString() }
         );
-      }
+      } */
 
    await addDoc(
   collection(

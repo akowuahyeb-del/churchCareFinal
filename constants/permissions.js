@@ -20,7 +20,11 @@ export const PERMISSION_GROUPS = [
         label: "Manage Church Settings",
         description: "Switch the active church and edit organization/entity settings."
       },
-    
+    {
+  key: "manage_approvals",
+  label: "Manage Approvals",
+  description: "Review and process governance and disciplinary approval requests."
+},
 
     ]
   },
@@ -176,13 +180,14 @@ export const DEFAULT_ROLES = [
 },
 
   // ✅ FIXED ELDER ROLE ✅
-  {
+ {
   id: "elders",
-  
   label: "Elders",
   officeType: "governance",
   description: "Governance office awaiting appointment workflow",
-  permissions: [],
+  permissions: [
+    "manage_approvals"
+  ],
   protected: true,
   isDefault: false,
   active: true
@@ -236,11 +241,12 @@ export const DEFAULT_ROLES = [
 
 {
   id: "governance_officer",
-  
   label: "Governance Officer",
   officeType: "governance",
   description: "Governance office awaiting appointment workflow",
-  permissions: [],
+  permissions: [
+    "manage_approvals"
+  ],
   protected: true,
   active: true
 },
