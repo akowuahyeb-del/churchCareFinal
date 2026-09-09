@@ -237,34 +237,46 @@ await addDoc(
     "approvalRequests"
   ),
   {
-    type: "governance",
+  type: "governance",
 
-    category: category,
+  organizationId:
+    entity.organizationId,
 
-    governanceBodyId:
-      governanceBody.id,
+  requestedBy:
+    entity.memberId || null,
 
-    governanceBodyName:
-      governanceBody.name,
+  requestedByName:
+    entity.memberName || "Unknown",
 
-    memberId:
-      selectedMember.id,
+  category:
+    category,
 
-    memberName:
-      selectedMember.name,
+  governanceBodyId:
+    governanceBody.id,
 
-    nominationType:
-      "membership",
+  governanceBodyName:
+    governanceBody.name,
 
-    status:
-      "pending",
+  memberId:
+    selectedMember.id,
 
-    approvals: [],
+  memberName:
+    selectedMember.name,
 
+  nominationType:
+    "membership",
 
-    requestedAt:
-      new Date().toISOString(),
-  }
+  status:
+    "pending",
+
+  approvedBy: [],
+
+  rejectedBy: [],
+
+  requestedAt:
+    new Date().toISOString(),
+}
+
 );
 
 Alert.alert(

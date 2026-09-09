@@ -14,6 +14,12 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+  doc,
+  updateDoc,
+  arrayUnion,
+} from "firebase/firestore";
+
+import {
   collection,
   getDocs,
 } from "firebase/firestore";
@@ -66,16 +72,16 @@ export default function ApprovalCenterScreen({
   /* ──────────────────────────
      LOAD APPROVALS
   ────────────────────────── */
-  useEffect(() => {
-    if (!organizationId || !entityId) {
-      return;
-    }
+ useEffect(() => {
+  if (!organizationId) {
+    return;
+  }
 
-    loadPendingApprovals();
-  }, [
-    organizationId,
-    entityId,
-  ]);
+  loadPendingApprovals();
+}, [
+  organizationId,
+]);
+
 
   const loadPendingApprovals =
     async () => {
@@ -100,10 +106,7 @@ const results =
     .filter(
       (r) => r.status === "pending"
     );
-
 setPendingItems(results);
-
-        setPendingItems(results);
       } catch (e) {
         console.log(
           "❌ approval centre:",
@@ -137,36 +140,36 @@ const categories = [
 
 ];
  
-  const renderItem = ({ item }) => {
+const renderItem = ({ item }) => {
 
   return (
     <TouchableOpacity
-  style={styles.card}
-  onPress={() =>
-    console.log(
-      "OPEN REQUEST",
-      item
-    )
-  }
->
+      style={styles.card}
+      onPress={() =>
+        navigation.navigate(
+          "ApprovalRequestDetail",
+          {
+            request: item,
+          }
+        )
+      }
+    >
       <Text style={styles.name}>
         {item.memberName || "Unknown Member"}
       </Text>
 
-     <Text style={styles.action}>
-  {item.type === "governance"
-    ? item.nominationType === "leadership"
-      ? "Leadership Nomination"
-      : "Membership Nomination"
-    : item.type}
-</Text>
+      <Text style={styles.action}>
+        {item.nominationType === "leadership"
+          ? "Leadership Nomination"
+          : "Membership Nomination"}
+      </Text>
 
-     <Text style={styles.count}>
-  {item.governanceBodyName || "Unknown Body"}
-</Text>
+      <Text style={styles.count}>
+        {item.governanceBodyName}
+      </Text>
 
       <Text style={styles.link}>
-        Pending Approval
+        View Request →
       </Text>
     </TouchableOpacity>
   );
@@ -213,11 +216,13 @@ if (loading) {
 
     {categories.map((category) => {
 
-  const count =
-    pendingItems.filter(
-      (item) =>
-        item.type === category.key
-    ).length;
+ const count =
+  pendingItems.filter(
+    (item) =>
+      (item.type || "").toLowerCase() ===
+      category.key.toLowerCase()
+  ).length;
+
 
   return (
 

@@ -67,37 +67,48 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
     "approvalRequests"
   ),
   {
-    type: "governance",
+  type: "governance",
 
-    nominationType:
-      "leadership",
+  organizationId:
+    entity.organizationId,
 
-    governanceBodyId:
-      governanceBody.id,
+  requestedBy:
+    entity.memberId || null,
 
-    governanceBodyName:
-      governanceBody.name,
+  requestedByName:
+    entity.memberName || "Unknown",
 
-    memberId:
-      selectedMember.id,
+  nominationType:
+    "leadership",
 
-    memberName:
-      selectedMember.name,
+  governanceBodyId:
+    governanceBody.id,
 
-    leadershipRole:
-      governanceBody.leadershipRole,
+  governanceBodyName:
+    governanceBody.name,
 
-    category:
-      "leadership",
+  memberId:
+    selectedMember.id,
 
-    status:
-      "pending",
+  memberName:
+    selectedMember.name,
 
-    approvedBy: [],
+  leadershipRole:
+    governanceBody.leadershipRole,
 
-    requestedAt:
-      new Date().toISOString(),
-  }
+  category:
+    "leadership",
+
+  status:
+    "pending",
+
+  approvedBy: [],
+
+  rejectedBy: [],
+
+  requestedAt:
+    new Date().toISOString(),
+}
 );
 
 Alert.alert(
