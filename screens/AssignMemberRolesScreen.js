@@ -15,7 +15,11 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
 import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { findPermission, mergePermissions } from "../constants/permissions";
+import {
+  findPermission,
+  mergePermissions,
+  PROTECTED_ROLE_IDS,
+} from "../constants/permissions";
 import { useSubscription } from "../utils/subscription";
 
 
@@ -120,9 +124,25 @@ const assignableRoles = roles.filter(
   id => id !== "super_admin"
 );
 
+const protectedSelections =
+  safeRoleIds.filter(roleId =>
+    PROTECTED_ROLE_IDS.includes(roleId)
+  );
+
 const selectedRoleObjects = roles.filter(r =>
   safeRoleIds.includes(r.id)
 );
+if (protectedSelections.length > 0) {
+
+  Alert.alert(
+    "Protected Office",
+    "Protected offices cannot be assigned directly."
+  );
+
+  setSaving(false);
+
+  return;
+}
 
 
 

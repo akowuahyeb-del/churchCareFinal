@@ -14,33 +14,14 @@ export const PERMISSION_GROUPS = [
         label: "Manage Members",
         description: "Add, edit, and remove member records."
       },
-      {
-        key: "elder_approval",
-        label: "Elder Approval Authority",
-        description: "Allows participation in high-level disciplinary approvals (2/3 governance rule)."
-      },
+     
       {
         key: "manage_church_settings",
         label: "Manage Church Settings",
         description: "Switch the active church and edit organization/entity settings."
       },
-      {
-  key: "governance_authority",
-  label: "Governance Authority",
-  category: "governance",
-},
+    
 
-{
-  key: "assign_governance_roles",
-  label: "Assign Governance Roles",
-  category: "governance",
-},
-
-{
-  key: "assign_finance_roles",
-  label: "Assign Financial Offices",
-  category: "governance",
-},
     ]
   },
 
@@ -160,6 +141,15 @@ export const PROTECTED_ROLE_IDS = [
   "governance_officer",
 ];
 
+
+export const GOVERNANCE_CONFIG = {
+  
+
+  allowSelfNomination: false,
+
+  allowSelfApproval: false,
+};
+
 // ✅ DEFAULT ROLES
 export const DEFAULT_ROLES = [
 
@@ -169,9 +159,17 @@ export const DEFAULT_ROLES = [
   label: "Administrator",
   officeType: "administrative",
   description: "Day-to-day administration of ChurchCare",
-  permissions: ALL_PERMISSION_KEYS.filter(
-    k => k !== "manage_roles"
-  ),
+  permissions: [
+    "manage_members",
+    "manage_church_settings",
+    "manage_events",
+    "manage_attendance",
+    "start_session",
+    "end_session",
+    "unlock_session",
+    "manage_visitors",
+    "view_reports"
+  ],
   protected: false,
   isDefault: false,
   active: true
@@ -180,13 +178,11 @@ export const DEFAULT_ROLES = [
   // ✅ FIXED ELDER ROLE ✅
   {
   id: "elders",
+  
   label: "Elders",
   officeType: "governance",
-  description: "Governance authority for disciplinary decisions",
-  permissions: [
-    "elder_approval",
-    "view_reports"
-  ],
+  description: "Governance office awaiting appointment workflow",
+  permissions: [],
   protected: true,
   isDefault: false,
   active: true
@@ -194,6 +190,7 @@ export const DEFAULT_ROLES = [
 
  {
   id: "pastor",
+
   label: "Pastor",
   officeType: "spiritual",
   description: "Spiritual leadership office",
@@ -211,6 +208,7 @@ export const DEFAULT_ROLES = [
 
   {
   id: "finance_officer",
+  
   label: "Finance Officer",
   officeType: "finance",
   description: "Financial operations office",
@@ -224,6 +222,7 @@ export const DEFAULT_ROLES = [
 
  {
   id: "auditor",
+  
   label: "Auditor",
   officeType: "audit",
   description: "Independent financial oversight",
@@ -237,11 +236,11 @@ export const DEFAULT_ROLES = [
 
 {
   id: "governance_officer",
+  
   label: "Governance Officer",
   officeType: "governance",
-  permissions: [
-    "governance_authority"
-  ],
+  description: "Governance office awaiting appointment workflow",
+  permissions: [],
   protected: true,
   active: true
 },
@@ -292,12 +291,7 @@ export const hasPermission = (member, key) => {
     return true;
   }
 
-  if (
-    member?.role === "admin" ||
-    member?.roles?.includes("admin")
-  ) {
-    return true;
-  }
+
 
   if (member?.permissions?.includes("*")) {
     return true;

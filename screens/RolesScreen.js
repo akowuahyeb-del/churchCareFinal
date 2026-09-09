@@ -108,25 +108,28 @@ export default function RolesScreen() {
   const current = existingDoc.data();
 
   // ✅ Sync metadata
-  if (
-    current.protected !== defaultRole.protected ||
-    current.officeType !== defaultRole.officeType
-  ) {
-    hasUpdates = true;
+ if (
+  current.protected !== defaultRole.protected ||
+  current.officeType !== defaultRole.officeType ||
+  JSON.stringify(current.permissions || []) !==
+    JSON.stringify(defaultRole.permissions || [])
+) {
+  hasUpdates = true;
 
-    batch.update(
-      doc(
-        db,
-        "organizations",
-        organizationId,
-        "roles",
-        defaultRole.id
-      ),
-      {
-        protected: !!defaultRole.protected,
-        officeType: defaultRole.officeType || null,
-      }
-    );
+  batch.update(
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "roles",
+      defaultRole.id
+    ),
+    {
+      protected: !!defaultRole.protected,
+      officeType: defaultRole.officeType || null,
+      permissions: defaultRole.permissions || [],
+    }
+  );
   }
 });
 

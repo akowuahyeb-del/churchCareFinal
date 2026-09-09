@@ -54,10 +54,15 @@ const ACTION_CONFIG = {
     label: "Demote Member", color: "#8e44ad", icon: "arrow-down-circle-outline", threshold: 2,
     description: "Demotes the member's standing. Requires 2 separate approvals."
   },
+  
 };
 
 
-const SERIOUS_ACTIONS = ["expel", "investigation"];
+const SERIOUS_ACTIONS = [
+  "expel",
+  "investigation",
+];
+
 
 
 
@@ -849,6 +854,7 @@ const canManageMembers =
   }
 
   if (!viewerMemberId) {
+  
     Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
     return;
   }
@@ -937,6 +943,11 @@ if (updated.length === 1) {
       // The original screen wrote member.status === "suspended" instead,
       // a field MembersScreen never looks at — the two screens could
       // disagree about whether someone was actually suspended.
+
+     
+
+  
+
       await updateDoc(memberRef(), {
         disciplinaryStatus: action,
         disciplinaryNote: actionNote || "",
@@ -1550,8 +1561,10 @@ console.log("INVITE DEBUG", {
                     <Text style={styles.white}>Reinstate Member</Text>
                   </TouchableOpacity>
                 )}
+{!isDisciplined &&
+  Object.entries(ACTION_CONFIG).map(
 
-                {!isDisciplined && Object.entries(ACTION_CONFIG).map(([action, cfg]) => (
+([action, cfg]) => (
                   <ActionBlock
                     key={action}
                     title={cfg.label}
@@ -1573,6 +1586,8 @@ console.log("INVITE DEBUG", {
                 </TouchableOpacity>
               </>
             )}
+
+
 {canManageMembers && !isSelf && !isDeceased && (
   <TouchableOpacity
     style={styles.transferBtn}

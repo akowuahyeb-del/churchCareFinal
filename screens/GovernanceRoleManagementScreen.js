@@ -59,24 +59,56 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
         );
       }
 
-      await addDoc(
-        collection(db, "organizations", entity.organizationId, "governanceMemberships"),
-        {
-          governanceBodyId: governanceBody.id,
-          governanceBodyName: governanceBody.name,
-          memberId: selectedMember.id,
-          memberName: selectedMember.name,
-          membershipRole: governanceBody.leadershipRole,
-          category: "leadership",
-          status: "active",
-          startDate: new Date().toISOString(),
-          endDate: null,
-          createdAt: new Date().toISOString(),
-        }
-      );
+   await addDoc(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "approvalRequests"
+  ),
+  {
+    type: "governance",
 
-      Alert.alert("Success", `${selectedMember.name} assigned as ${governanceBody.leadershipRole}.`);
-      navigation.goBack();
+    nominationType:
+      "leadership",
+
+    governanceBodyId:
+      governanceBody.id,
+
+    governanceBodyName:
+      governanceBody.name,
+
+    memberId:
+      selectedMember.id,
+
+    memberName:
+      selectedMember.name,
+
+    leadershipRole:
+      governanceBody.leadershipRole,
+
+    category:
+      "leadership",
+
+    status:
+      "pending",
+
+    approvedBy: [],
+
+    requestedAt:
+      new Date().toISOString(),
+  }
+);
+
+Alert.alert(
+  "Nomination Sent",
+  `${selectedMember.name} has been nominated for ${governanceBody.leadershipRole}.`
+);
+
+navigation.goBack();
+
+return;
+
     } catch (error) {
       Alert.alert("Error", error.message);
     } finally {

@@ -111,7 +111,6 @@ const [loadingMembers,
     const [governanceMembers, setGovernanceMembers] =
   useState([]);
 
-
 const saveMember = async () => {
 
   if (!selectedMember) {
@@ -139,6 +138,41 @@ const saveMember = async () => {
 
     const entity =
       JSON.parse(stored);
+      const requestSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "approvalRequests"
+    )
+  );
+
+const existingRequest =
+  requestSnap.docs.find((d) => {
+
+    const data = d.data();
+
+    return (
+      data.type === "governance" &&
+      data.nominationType === "membership" &&
+      data.status === "pending" &&
+      data.governanceBodyId === governanceBody.id &&
+      data.memberId === selectedMember.id &&
+      data.category === category
+    );
+
+  });
+
+if (existingRequest) {
+
+  Alert.alert(
+    "Pending Nomination",
+    `${selectedMember.name} already has a pending governance nomination.`
+  );
+
+  return;
+}
 
     const existingSnap =
       await getDocs(
@@ -195,68 +229,56 @@ const saveMember = async () => {
 
     }
 
-    await addDoc(
+await addDoc(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "approvalRequests"
+  ),
+  {
+    type: "governance",
 
-      collection(
-        db,
-        "organizations",
-        entity.organizationId,
-        "governanceMemberships"
-      ),
+    category: category,
 
-      {
-  governanceBodyId:
-    governanceBody.id,
+    governanceBodyId:
+      governanceBody.id,
 
-  governanceBodyName:
-    governanceBody.name,
+    governanceBodyName:
+      governanceBody.name,
 
-  memberId:
-    selectedMember.id,
+    memberId:
+      selectedMember.id,
 
-  memberName:
-    selectedMember.name,
+    memberName:
+      selectedMember.name,
 
-  membershipRole:
-    roleLabel,
+    nominationType:
+      "membership",
 
-  category:
-    category,
+    status:
+      "pending",
 
-  status:
-    "active",
+    approvals: [],
 
-  appointmentType:
-    "current",
+    requiredApprovals: null,
 
-  historical:
-    false,
+    requestedAt:
+      new Date().toISOString(),
+  }
+);
 
-  startDate:
-    new Date().toISOString(),
+Alert.alert(
+  "Nomination Sent",
+  `${selectedMember.name} has been submitted for governance approval.`
+);
 
-  endDate:
-    null,
+setSelectedMember(null);
+setShowAddModal(false);
 
-  createdAt:
-    new Date().toISOString(),
-}
+return;
 
-     
-
-    );
-
-    
-
-    Alert.alert(
-      "Success",
-      `${selectedMember.name} added to ${governanceBody.name}.`
-    );
-
-    setSelectedMember(null);
-    setSelectedMembership(null);
-    setEditing(false);
-    setShowAddModal(false);
+   
 
     await loadGovernanceMembers();
 
@@ -682,8 +704,7 @@ setInactiveGovernanceMembers(
     category,
   ]);
 
-
- useEffect(() => {
+useEffect(() => {
 
   loadChurchMembers();
   loadGovernanceMembers();
@@ -776,6 +797,8 @@ setInactiveGovernanceMembers(
           ))
 
         )}
+
+       
 {inactiveGovernanceMembers.length > 0 && (
 
   <View style={{ marginTop: 24 }}>
