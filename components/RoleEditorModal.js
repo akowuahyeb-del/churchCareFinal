@@ -39,7 +39,6 @@ setError("");
   }, [visible, initialData]);
 
   const togglePermission = (key) => {
-    if (isProtected) return; // Super Admin always has everything, by design
     setSelectedPermissions(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
@@ -57,9 +56,8 @@ setError("");
   description: description.trim(),
 
   // ✅ Protected offices keep their permissions
-  permissions: isProtected
-    ? (initialData.permissions || [])
-    : selectedPermissions,
+  permissions: selectedPermissions,
+
 
   // ✅ Preserve governance metadata
   protected: !!initialData?.protected,
@@ -133,7 +131,6 @@ setError("");
 
 <Text style={styles.label}>Description</Text>
 
-<Text style={styles.label}>Description</Text>
 
 <TextInput
   style={[
@@ -156,15 +153,13 @@ setError("");
               <View key={group.group} style={styles.group}>
                 <Text style={styles.groupTitle}>{group.group}</Text>
                 {group.permissions.map(p => {
-                  const checked = isProtected
-                    ? true
-                    : selectedPermissions.includes(p.key);
+                  const checked = selectedPermissions.includes(p.key);
                   return (
                     <TouchableOpacity
                       key={p.key}
                       style={styles.permRow}
                       onPress={() => togglePermission(p.key)}
-                      disabled={isProtected}
+                      disabled={false}
                     >
                       <View style={[styles.checkbox, checked && styles.checkboxActive]}>
                         {checked && <Text style={styles.checkmark}>✓</Text>}
