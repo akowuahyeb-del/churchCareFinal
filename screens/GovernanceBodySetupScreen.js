@@ -97,7 +97,9 @@ export default function GovernanceBodySetupScreen({
 
             exOfficioLabel,
 
-            active: true,
+            membershipApprovalThreshold: 2,
+           leadershipApprovalThreshold: 2,
+             active: true,
 
             createdAt:
               new Date()

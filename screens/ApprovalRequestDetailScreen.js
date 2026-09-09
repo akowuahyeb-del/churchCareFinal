@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import {
   doc,
+  getDoc,
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
@@ -25,8 +26,7 @@ export default function ApprovalRequestDetailScreen({
 
   const request =
     route?.params?.request || {};
-
-  const handleApprove = async () => {
+const handleApprove = async () => {
 
   try {
 
@@ -66,10 +66,68 @@ export default function ApprovalRequestDetailScreen({
       }
     );
 
-    Alert.alert(
-      "Approved",
-      "Approval recorded."
-    );
+    const governanceBodyRef =
+      doc(
+        db,
+        "organizations",
+        entity.organizationId,
+        "governanceBodies",
+        request.governanceBodyId
+      );
+
+    const governanceBodySnap =
+      await getDoc(
+        governanceBodyRef
+      );
+
+    if (
+      !governanceBodySnap.exists()
+    ) {
+
+      Alert.alert(
+        "Error",
+        "Governance body configuration not found."
+      );
+
+      return;
+    }
+
+    const governanceBody =
+      governanceBodySnap.data();
+
+    const approvalCount =
+      (request.approvals || [])
+        .length + 1;
+
+    const threshold =
+      request.nominationType ===
+      "leadership"
+        ? (
+            governanceBody
+              .leadershipApprovalThreshold || 1
+          )
+        : (
+            governanceBody
+              .membershipApprovalThreshold || 1
+          );
+
+    if (
+      approvalCount >= threshold
+    ) {
+
+      Alert.alert(
+        "Threshold Reached",
+        `${approvalCount} of ${threshold} approvals reached.`
+      );
+
+    } else {
+
+      Alert.alert(
+        "Approval Recorded",
+        `${approvalCount} of ${threshold} approvals recorded.`
+      );
+
+    }
 
   } catch (error) {
 
@@ -159,13 +217,11 @@ export default function ApprovalRequestDetailScreen({
           {request.status}
         </Text>
 
-        <Text
-          style={{
-            marginTop: 16,
-          }}
-        >
-          Approvals:
-        </Text>
+        <Text>
+  {(request.approvals || []).length}
+  {" / "}
+  {request.requiredApprovals || 1}
+</Text>
 
         <Text>
           {(request.approvedBy || []).length}

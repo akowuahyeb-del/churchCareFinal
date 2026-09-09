@@ -170,6 +170,25 @@ setLeaderName(
           <Text style={styles.sectionLabel}>
             {(governanceBody.exOfficioLabel || "Ex-Officio Members").toUpperCase()}
           </Text>
+          <View style={styles.card}>
+
+  <Text style={styles.sectionLabel}>
+    APPROVAL RULES
+  </Text>
+
+  <Text style={styles.infoText}>
+    Membership Threshold:
+    {" "}
+    {governanceBody.membershipApprovalThreshold || 2}
+  </Text>
+
+  <Text style={styles.infoText}>
+    Leadership Threshold:
+    {" "}
+    {governanceBody.leadershipApprovalThreshold || 2}
+  </Text>
+
+</View>
           <Text style={styles.countText}>
   {agentCount} Active
 </Text>

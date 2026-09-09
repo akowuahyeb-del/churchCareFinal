@@ -86,6 +86,8 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
 
   governanceBodyName:
     governanceBody.name,
+    requiredApprovals:
+  governanceBody.requiredApprovals || 1,
 
   memberId:
     selectedMember.id,

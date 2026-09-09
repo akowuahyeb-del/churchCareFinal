@@ -256,6 +256,9 @@ await addDoc(
 
   governanceBodyName:
     governanceBody.name,
+    requiredApprovals:
+  governanceBody.requiredApprovals || 1,
+
 
   memberId:
     selectedMember.id,
