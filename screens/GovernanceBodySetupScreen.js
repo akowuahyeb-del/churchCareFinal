@@ -43,6 +43,20 @@ export default function GovernanceBodySetupScreen({
   const [saving,
     setSaving] =
     useState(false);
+    const [
+  membershipMode,
+  setMembershipMode,
+] = useState("variable");
+
+const [
+  maxMembers,
+  setMaxMembers,
+] = useState("");
+
+const [
+  requiredApprovals,
+  setRequiredApprovals,
+] = useState("3");
 
   const saveGovernanceBody =
     async () => {
@@ -96,10 +110,21 @@ export default function GovernanceBodySetupScreen({
             memberLabel,
 
             exOfficioLabel,
+membershipApprovalThreshold:
+  Number(requiredApprovals),
 
-            membershipApprovalThreshold: 2,
-           leadershipApprovalThreshold: 2,
-             active: true,
+leadershipApprovalThreshold:
+  Number(requiredApprovals),
+
+
+membershipMode,
+
+maxMembers:
+  membershipMode === "fixed"
+    ? Number(maxMembers)
+    : null,
+
+active: true,
 
             createdAt:
               new Date()
@@ -192,6 +217,82 @@ export default function GovernanceBodySetupScreen({
           placeholder="Agents"
         />
 
+
+<Text style={styles.label}>
+  Membership Type
+</Text>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    membershipMode === "variable" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setMembershipMode("variable")
+  }
+>
+ <Text>
+  Variable Membership
+  (No Maximum Limit)
+</Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    membershipMode === "fixed" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setMembershipMode("fixed")
+  }
+>
+  <Text>
+  Fixed Membership
+  (Capacity Controlled)
+</Text>
+</TouchableOpacity>
+
+{membershipMode === "fixed" && (
+
+  <>
+    <Text style={styles.label}>
+  Membership Capacity
+</Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={maxMembers}
+      onChangeText={setMaxMembers}
+      placeholder="15"
+    />
+  </>
+
+)}
+<Text style={styles.label}>
+  Required Approvals
+</Text>
+<Text
+  style={{
+    color: "#666",
+    marginBottom: 8,
+  }}
+>
+  Number of approvals required before a nomination is executed.
+</Text>
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={requiredApprovals}
+  onChangeText={
+    setRequiredApprovals
+  }
+  placeholder="3"
+/>
+
+
         <TouchableOpacity
           style={styles.saveBtn}
           onPress={
@@ -248,5 +349,14 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "700",
   },
+optionButton: {
+  backgroundColor: "#EEE",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 8,
+},
 
+optionSelected: {
+  backgroundColor: "#DDE3FF",
+},
 });

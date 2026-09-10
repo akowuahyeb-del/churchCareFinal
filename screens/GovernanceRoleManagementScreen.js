@@ -43,21 +43,24 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
         collection(db, "organizations", entity.organizationId, "governanceMemberships")
       );
 
-     /*  const existingHolders = existingSnap.docs.filter((d) => {
-        const data = d.data();
-        return (
-          data.governanceBodyId === governanceBody.id &&
-          (data.category || "member") === "leadership" &&
-          data.status === "active"
-        );
-      });
+     const existingHolders =
+  existingSnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      (m) =>
+        m.governanceBodyId ===
+          governanceBody.id &&
+        (m.category || "member") ===
+          "leadership" &&
+        m.status === "active"
+    );
 
-      for (const holder of existingHolders) {
-        await updateDoc(
-          doc(db, "organizations", entity.organizationId, "governanceMemberships", holder.id),
-          { status: "inactive", endDate: new Date().toISOString() }
-        );
-      } */
+const hasCurrentHolder =
+  existingHolders.length > 0;
+
 
    await addDoc(
   collection(
@@ -78,16 +81,20 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
   requestedByName:
     entity.memberName || "Unknown",
 
-  nominationType:
-    "leadership",
+ nominationType:
+  "leadership",
+
+actionType:
+  hasCurrentHolder
+    ? "replace"
+    : "fill_vacancy",
 
   governanceBodyId:
     governanceBody.id,
 
   governanceBodyName:
     governanceBody.name,
-    requiredApprovals:
-  governanceBody.requiredApprovals || 1,
+    
 
   memberId:
     selectedMember.id,
@@ -95,14 +102,24 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
   memberName:
     selectedMember.name,
 
-  leadershipRole:
-    governanceBody.leadershipRole,
+ leadershipRole:
+  governanceBody.leadershipRole,
 
-  category:
-    "leadership",
+replacingMemberId:
+  hasCurrentHolder
+    ? existingHolders[0].memberId
+    : null,
 
-  status:
-    "pending",
+replacingMemberName:
+  hasCurrentHolder
+    ? existingHolders[0].memberName
+    : null,
+
+category:
+  "leadership",
+
+status:
+  "pending",
 
   approvedBy: [],
 

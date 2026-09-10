@@ -92,11 +92,12 @@ const [
 
     const category =
   route?.params?.category || "member";
-
 const roleLabel =
   category === "ex_officio"
     ? (governanceBody.exOfficioLabel || "Agents")
     : governanceBody.memberLabel;
+  
+
   const [search, setSearch] =
     useState("");
 
@@ -110,6 +111,26 @@ const [loadingMembers,
     useState(false);
     const [governanceMembers, setGovernanceMembers] =
   useState([]);
+
+ const activeMemberCount =
+  (governanceMembers || []).length;
+
+const membershipCapacity =
+  governanceBody?.maxMembers || 0;
+
+
+const isFixedMembership =
+  governanceBody?.membershipMode ===
+  "fixed";
+
+const vacancies =
+  isFixedMembership
+    ? Math.max(
+        0,
+        membershipCapacity -
+          activeMemberCount
+      )
+    : null;
 
 const saveMember = async () => {
 
@@ -256,8 +277,7 @@ await addDoc(
 
   governanceBodyName:
     governanceBody.name,
-    requiredApprovals:
-  governanceBody.requiredApprovals || 1,
+   
 
 
   memberId:
@@ -266,8 +286,13 @@ await addDoc(
   memberName:
     selectedMember.name,
 
-  nominationType:
-    "membership",
+ nominationType:
+  "membership",
+
+actionType:
+  editing
+    ? "replace"
+    : "add",
 
   status:
     "pending",
@@ -741,7 +766,60 @@ useEffect(() => {
           padding: 16,
         }}
       >
+<View
+  style={{
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  }}
+>
 
+  <Text
+    style={{
+      fontSize: 18,
+      fontWeight: "700",
+    }}
+  >
+    Governance Capacity
+  </Text>
+
+  <Text
+    style={{
+      marginTop: 8,
+    }}
+  >
+    Current Members:
+    {" "}
+    {activeMemberCount}
+  </Text>
+
+  {isFixedMembership ? (
+
+    <>
+      <Text>
+        Capacity:
+        {" "}
+        {membershipCapacity}
+      </Text>
+
+      <Text>
+        Vacancies:
+        {" "}
+        {vacancies}
+      </Text>
+    </>
+
+  ) : (
+
+    <Text>
+      Capacity:
+      Unlimited
+    </Text>
+
+  )}
+
+</View>
         <TextInput
           style={styles.search}
           placeholder={`Search ${roleLabel}`}
@@ -929,15 +1007,33 @@ useEffect(() => {
 
     <View style={styles.actionRow}>
 
-  <TouchableOpacity
-    style={styles.addBtn}
-    onPress={() =>
-      setShowAddModal(true)
+ <TouchableOpacity
+  style={styles.addBtn}
+  onPress={() => {
+
+    if (
+      isFixedMembership &&
+      vacancies <= 0
+    ) {
+
+      Alert.alert(
+        "Capacity Reached",
+        "This governance body is full. Use Replace Member instead."
+      );
+
+      return;
     }
-  >
-    <Text style={styles.addBtnText}>
-      Add {roleLabel}
-    </Text>
+
+    setShowAddModal(true);
+
+  }}
+>
+   <Text style={styles.addBtnText}>
+  {isFixedMembership &&
+   vacancies <= 0
+    ? `Replace ${roleLabel}`
+    : `Add ${roleLabel}`}
+</Text>
   </TouchableOpacity>
 
   <TouchableOpacity
@@ -975,8 +1071,39 @@ useEffect(() => {
     >
 
       <Text style={styles.modalLabel}>
-        Select Church Member
-      </Text>
+  {editing
+    ? `Select Replacement ${roleLabel}`
+    : `Select ${roleLabel}`}
+</Text>
+{editing && selectedMembership && (
+
+  <View
+    style={{
+      backgroundColor: "#FFF4E5",
+      padding: 12,
+      borderRadius: 10,
+      marginBottom: 16,
+    }}
+  >
+
+    <Text
+      style={{
+        fontWeight: "700",
+        color: "#B45309",
+      }}
+    >
+      Replacement Nomination
+    </Text>
+
+    <Text>
+      Replacing:
+      {" "}
+      {selectedMembership.memberName}
+    </Text>
+
+  </View>
+
+)}
 
       {churchMembers.map(
         (member) => (

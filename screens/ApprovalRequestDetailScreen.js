@@ -14,6 +14,8 @@ import {
   getDoc,
   updateDoc,
   arrayUnion,
+  addDoc,
+  collection,
 } from "firebase/firestore";
 
 
@@ -26,6 +28,60 @@ export default function ApprovalRequestDetailScreen({
 
   const request =
     route?.params?.request || {};
+
+const executeGovernanceRequest = async (
+  request,
+  organizationId
+) => {
+
+  if (!request) return;
+
+  // ADD MEMBER
+  if (
+    request.nominationType === "membership" &&
+    request.actionType === "add"
+  ) {
+
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "governanceMemberships"
+      ),
+      {
+        governanceBodyId:
+          request.governanceBodyId,
+
+        governanceBodyName:
+          request.governanceBodyName,
+
+        memberId:
+          request.memberId,
+
+        memberName:
+          request.memberName,
+
+        category:
+          request.category || "member",
+
+        status: "active",
+
+        startDate:
+          new Date().toISOString(),
+
+        createdAt:
+          new Date().toISOString(),
+      }
+    );
+
+  }
+
+};
+
+
+
+
 const handleApprove = async () => {
 
   try {
@@ -61,10 +117,11 @@ const handleApprove = async () => {
       requestRef,
       {
         approvals: arrayUnion(
-          "manual-test"
-        ),
+  "manual-approval"
+),
       }
     );
+
 
     const governanceBodyRef =
       doc(
@@ -110,17 +167,31 @@ const handleApprove = async () => {
             governanceBody
               .membershipApprovalThreshold || 1
           );
+if (
+  approvalCount >= threshold
+) {
 
-    if (
-      approvalCount >= threshold
-    ) {
+  await updateDoc(
+    requestRef,
+    {
+      status: "approved",
+      approvedAt:
+        new Date().toISOString(),
+    }
+  );
 
-      Alert.alert(
-        "Threshold Reached",
-        `${approvalCount} of ${threshold} approvals reached.`
-      );
+  await executeGovernanceRequest(
+    request,
+    entity.organizationId
+  );
 
-    } else {
+  Alert.alert(
+    "Approved",
+    "Governance request executed."
+  );
+
+}
+ else {
 
       Alert.alert(
         "Approval Recorded",
@@ -216,11 +287,8 @@ const handleApprove = async () => {
         <Text>
           {request.status}
         </Text>
-
-        <Text>
+<Text>
   {(request.approvals || []).length}
-  {" / "}
-  {request.requiredApprovals || 1}
 </Text>
 
         <Text>
