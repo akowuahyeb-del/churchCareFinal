@@ -172,10 +172,115 @@ const executeGovernanceRequest = async (
       }
     );
 
+      return;
+  }
+
+  //
+  // REMOVE MEMBER
+  //
+  if (
+    request.nominationType === "membership" &&
+    request.actionType === "remove"
+  ) {
+
+    const snap =
+      await getDocs(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "governanceMemberships"
+        )
+      );
+
+    const member =
+      snap.docs.find((d) => {
+
+        const data = d.data();
+
+        return (
+          data.memberId ===
+            request.memberId &&
+          data.governanceBodyId ===
+            request.governanceBodyId &&
+          data.status === "active"
+        );
+
+      });
+
+    if (member) {
+
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "governanceMemberships",
+          member.id
+        ),
+        {
+          status: "inactive",
+          endDate:
+            new Date().toISOString(),
+        }
+      );
+
+    }
+
+    return;
+  }
+
+  //
+  // RESTORE MEMBER
+  //
+  if (
+    request.nominationType === "membership" &&
+    request.actionType === "restore"
+  ) {
+
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "governanceMemberships"
+      ),
+      {
+        governanceBodyId:
+          request.governanceBodyId,
+
+        governanceBodyName:
+          request.governanceBodyName,
+
+        memberId:
+          request.memberId,
+
+        memberName:
+          request.memberName,
+
+        category:
+          request.category || "member",
+
+        status: "active",
+
+        historical: false,
+
+        appointmentType:
+          "restored",
+
+        startDate:
+          new Date().toISOString(),
+
+        createdAt:
+          new Date().toISOString(),
+      }
+    );
+
     return;
   }
 
 };
+
 
 
 
@@ -282,6 +387,39 @@ if (
     request,
     entity.organizationId
   );
+  await addDoc(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "governanceAudit"
+  ),
+  {
+    actionType:
+      request.actionType,
+
+    nominationType:
+      request.nominationType,
+
+    governanceBodyId:
+      request.governanceBodyId,
+
+    governanceBodyName:
+      request.governanceBodyName,
+
+    memberId:
+      request.memberId,
+
+    memberName:
+      request.memberName,
+
+    approvalRequestId:
+      request.id,
+
+    executedAt:
+      new Date().toISOString(),
+  }
+);
 
   Alert.alert(
     "Approved",

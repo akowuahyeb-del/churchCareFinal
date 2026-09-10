@@ -100,6 +100,10 @@ const roleLabel =
 
   const [search, setSearch] =
     useState("");
+    const [
+  viewMode,
+  setViewMode,
+] = useState("active");
 
 
   const [churchMembers,
@@ -131,6 +135,26 @@ const vacancies =
           activeMemberCount
       )
     : null;
+const filteredActiveMembers =
+  governanceMembers.filter(
+    (member) =>
+      (member.memberName || "")
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+  );
+
+const filteredFormerMembers =
+  inactiveGovernanceMembers.filter(
+    (member) =>
+      (member.memberName || "")
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+  );
+
 
 const saveMember = async () => {
 
@@ -821,74 +845,118 @@ useEffect(() => {
 
 </View>
         <TextInput
-          style={styles.search}
-          placeholder={`Search ${roleLabel}`}
-          value={search}
-          onChangeText={setSearch}
-        />
+  style={styles.search}
+  placeholder={`Search ${roleLabel}`}
+  placeholderTextColor="#888"
+  value={search}
+  onChangeText={setSearch}
+/>
 
-        {churchMembers.length === 0 ? (
+<View style={styles.filterRow}>
 
-          <View style={styles.emptyCard}>
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      viewMode === "active" &&
+        styles.filterChipSelected,
+    ]}
+    onPress={() =>
+      setViewMode("active")
+    }
+  >
+    <Text>Active</Text>
+  </TouchableOpacity>
 
-            <Text style={styles.emptyTitle}>
-              No Members Added
-            </Text>
-
-            <Text style={styles.emptyText}>
-              Start building the governance
-              body membership register.
-            </Text>
-
-          </View>
-
-        ) : (
-
-          governanceMembers.map((member) => (
-
-            <View
-  key={member.id}
-  style={styles.card}
->
-
-  <Text style={styles.name}>
-    {member.memberName}
-  </Text>
-
-  <View style={styles.actions}>
-
-    <TouchableOpacity
-      style={styles.replaceBtn}
-      onPress={() =>
-        replaceMember(member)
-      }
-    >
-      <Text style={styles.btnLabel}>
-        Replace
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity
-      style={styles.removeBtn}
-      onPress={() =>
-        removeMember(member)
-      }
-    >
-      <Text style={styles.btnLabel}>
-        Remove
-      </Text>
-    </TouchableOpacity>
-
-  </View>
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      viewMode === "former" &&
+        styles.filterChipSelected,
+    ]}
+    onPress={() =>
+      setViewMode("former")
+    }
+  >
+    <Text>Former</Text>
+  </TouchableOpacity>
 
 </View>
+        {churchMembers.length === 0 ? (
 
-          ))
+  <View style={styles.emptyCard}>
+    <Text style={styles.emptyTitle}>
+      No Members Added
+    </Text>
 
-        )}
+    <Text style={styles.emptyText}>
+      Start building the governance body membership register.
+    </Text>
+  </View>
+
+) : viewMode === "active" ? (
+
+  filteredActiveMembers.length === 0 ? (
+
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyTitle}>
+        No Members Found
+      </Text>
+
+      <Text style={styles.emptyText}>
+        No matching governance members.
+      </Text>
+    </View>
+
+  ) : (
+
+    filteredActiveMembers.map((member) => (
+
+      <View
+        key={member.id}
+        style={styles.card}
+      >
+
+        <Text style={styles.name}>
+          {member.memberName}
+        </Text>
+
+        <View style={styles.actions}>
+
+          <TouchableOpacity
+            style={styles.replaceBtn}
+            onPress={() =>
+              replaceMember(member)
+            }
+          >
+            <Text style={styles.btnLabel}>
+              Replace
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.removeBtn}
+            onPress={() =>
+              removeMember(member)
+            }
+          >
+            <Text style={styles.btnLabel}>
+              Remove
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+
+      </View>
+
+    ))
+
+  )
+
+) : null}
 
        
-{inactiveGovernanceMembers.length > 0 && (
+{viewMode === "former" &&
+ inactiveGovernanceMembers.length > 0 && (
 
   <View style={{ marginTop: 24 }}>
 
@@ -896,8 +964,15 @@ useEffect(() => {
       Former {roleLabel}
     </Text>
 
-    {inactiveGovernanceMembers.map(
-      (member) => (
+  {inactiveGovernanceMembers
+  .filter((member) =>
+    (member.memberName || "")
+      .toLowerCase()
+      .includes(
+        search.toLowerCase()
+      )
+  )
+  .map((member) => (
 
         <View
           key={member.id}
@@ -1388,13 +1463,31 @@ useEffect(() => {
 
 const styles = StyleSheet.create({
 
-  search: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
+ search: {
+  backgroundColor: "#FFF",
+  borderWidth: 1,
+  borderColor: "#DDD",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 16,
+},
 
+filterRow: {
+  flexDirection: "row",
+  marginBottom: 16,
+},
+
+filterChip: {
+  backgroundColor: "#EEE",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+  marginRight: 8,
+},
+
+filterChipSelected: {
+  backgroundColor: "#DDE3FF",
+},
   emptyCard: {
     backgroundColor: "#FFF",
     borderRadius: 16,

@@ -9,7 +9,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
+
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -37,12 +39,22 @@ export default function ApprovalCenterScreen({
   const [activeEntity, setActiveEntity] =
     useState(null);
 
-  const [pendingItems, setPendingItems] =
-    useState([]);
+ const [approvalItems, setApprovalItems] =
+  useState([]);
     const [
   selectedCategory,
   setSelectedCategory,
 ] = useState(null);
+const [
+  search,
+  setSearch,
+] = useState("");
+
+const [
+  statusFilter,
+  setStatusFilter,
+] = useState("pending");
+
 
   const [loading, setLoading] =
     useState(true);
@@ -98,15 +110,13 @@ export default function ApprovalCenterScreen({
     )
   );
 const results =
-  snap.docs
-    .map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }))
-    .filter(
-      (r) => r.status === "pending"
-    );
-setPendingItems(results);
+  snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+
+setApprovalItems(results);
+
       } catch (e) {
         console.log(
           "❌ approval centre:",
@@ -217,7 +227,7 @@ if (loading) {
     {categories.map((category) => {
 
  const count =
-  pendingItems.filter(
+  approvalItems.filter(
     (item) =>
       (item.type || "").toLowerCase() ===
       category.key.toLowerCase()
@@ -240,9 +250,18 @@ if (loading) {
             {category.label}
           </Text>
 
-          <Text style={styles.count}>
-            {count} Pending
-          </Text>
+         <Text style={styles.count}>
+  {
+    approvalItems.filter(
+      (item) =>
+        (item.type || "").toLowerCase() ===
+          category.key.toLowerCase() &&
+        item.status === "pending"
+    ).length
+  }
+  {" "}
+  Pending
+</Text>
 
         </TouchableOpacity>
 
@@ -254,11 +273,82 @@ if (loading) {
 
 ) : (
 
+  
+
+  <View style={{ flex: 1 }}>
+
+  <TextInput
+    style={styles.search}
+    placeholder="Search requests..."
+    placeholderTextColor="#888"
+    value={search}
+    onChangeText={setSearch}
+  />
+
+  <View style={styles.filterRow}>
+
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        statusFilter === "pending" &&
+        styles.filterChipSelected,
+      ]}
+      onPress={() =>
+        setStatusFilter("pending")
+      }
+    >
+      <Text>Pending</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        statusFilter === "approved" &&
+        styles.filterChipSelected,
+      ]}
+      onPress={() =>
+        setStatusFilter("approved")
+      }
+    >
+      <Text>Approved</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        statusFilter === "rejected" &&
+        styles.filterChipSelected,
+      ]}
+      onPress={() =>
+        setStatusFilter("rejected")
+      }
+    >
+      <Text>Rejected</Text>
+    </TouchableOpacity>
+
+  </View>
+
   <FlatList
-    data={pendingItems.filter(
-      (item) =>
-        item.type === selectedCategory
-    )}
+    data={approvalItems
+      .filter(
+        (item) =>
+          item.type === selectedCategory
+      )
+      .filter(
+        (item) =>
+          item.status === statusFilter
+      )
+      .filter(
+        (item) =>
+          (
+            item.memberName || ""
+          )
+            .toLowerCase()
+            .includes(
+              search.toLowerCase()
+            )
+      )
+    }
     keyExtractor={(item) => item.id}
     renderItem={renderItem}
     contentContainerStyle={{
@@ -287,12 +377,12 @@ if (loading) {
     ListEmptyComponent={
       <View style={styles.empty}>
         <Text style={styles.emptyText}>
-          No pending requests
+          No matching requests
         </Text>
       </View>
     }
   />
-
+</View>
 )}
 </View>
   );
@@ -365,4 +455,27 @@ const styles = StyleSheet.create({
     color: "#999",
     fontSize: 14,
   },
+  search: {
+  backgroundColor: "#FFF",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 16,
+},
+
+filterRow: {
+  flexDirection: "row",
+  marginBottom: 16,
+},
+
+filterChip: {
+  backgroundColor: "#EEE",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+  marginRight: 8,
+},
+
+filterChipSelected: {
+  backgroundColor: "#DDE3FF",
+},
 });
