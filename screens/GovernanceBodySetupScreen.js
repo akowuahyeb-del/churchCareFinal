@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, {
+  useState,
+  useEffect,
+} from "react";
 import {
   View,
   Text,
@@ -14,6 +17,8 @@ import AsyncStorage
 import {
   collection,
   addDoc,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -23,7 +28,9 @@ import AppHeader
 
 export default function GovernanceBodySetupScreen({
   navigation,
+  route,
 }) {
+
 
   const [name, setName] =
     useState("");
@@ -57,6 +64,58 @@ const [
   requiredApprovals,
   setRequiredApprovals,
 ] = useState("3");
+
+const editingBody =
+  route?.params?.governanceBody || null;
+
+const isEditing =
+  !!editingBody;
+
+useEffect(() => {
+
+  if (!editingBody) {
+    return;
+  }
+
+  setName(
+    editingBody.name || ""
+  );
+
+  setLeadershipRole(
+    editingBody.leadershipRole || ""
+  );
+
+  setMemberLabel(
+    editingBody.memberLabel || ""
+  );
+
+  setExOfficioLabel(
+    editingBody.exOfficioLabel || ""
+  );
+
+  setMembershipMode(
+    editingBody.membershipMode ||
+    "variable"
+  );
+
+  setMaxMembers(
+    editingBody.maxMembers
+      ? String(
+          editingBody.maxMembers
+        )
+      : ""
+  );
+
+  setRequiredApprovals(
+    String(
+      editingBody
+        .membershipApprovalThreshold || 3
+    )
+  );
+
+}, [editingBody]);
+
+
 
   const saveGovernanceBody =
     async () => {
@@ -95,49 +154,73 @@ const [
         const entity =
           JSON.parse(stored);
 
-        await addDoc(
-          collection(
-            db,
-            "organizations",
-            entity.organizationId,
-            "governanceBodies"
-          ),
-          {
-            name,
+        const payload = {
+  name,
 
-            leadershipRole,
+  leadershipRole,
 
-            memberLabel,
+  memberLabel,
 
-            exOfficioLabel,
-membershipApprovalThreshold:
-  Number(requiredApprovals),
+  exOfficioLabel,
 
-leadershipApprovalThreshold:
-  Number(requiredApprovals),
+  membershipApprovalThreshold:
+    Number(requiredApprovals),
 
+  leadershipApprovalThreshold:
+    Number(requiredApprovals),
 
-membershipMode,
+  membershipMode,
 
-maxMembers:
-  membershipMode === "fixed"
-    ? Number(maxMembers)
-    : null,
+  maxMembers:
+    membershipMode === "fixed"
+      ? Number(maxMembers)
+      : null,
 
-active: true,
+  active: true,
+};
 
-            createdAt:
-              new Date()
-                .toISOString(),
-          }
-        );
+if (isEditing) {
 
-        Alert.alert(
-          "Success",
-          "Governance body created."
-        );
+  await updateDoc(
+    doc(
+      db,
+      "organizations",
+      entity.organizationId,
+      "governanceBodies",
+      editingBody.id
+    ),
+    payload
+  );
 
-        navigation.goBack();
+  Alert.alert(
+    "Success",
+    "Governance body updated."
+  );
+
+} else {
+
+  await addDoc(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "governanceBodies"
+    ),
+    {
+      ...payload,
+      createdAt:
+        new Date().toISOString(),
+    }
+  );
+
+  Alert.alert(
+    "Success",
+    "Governance body created."
+  );
+
+}
+
+navigation.goBack();
 
       } catch (error) {
 
@@ -158,7 +241,11 @@ active: true,
     <View style={{ flex: 1 }}>
 
       <AppHeader
-        title="Governance Body"
+        title={
+  isEditing
+    ? "Edit Governance Body"
+    : "Governance Body"
+}
         subtitle="Create Governance Structure"
         onBack={() =>
           navigation.goBack()
@@ -171,12 +258,14 @@ active: true,
           Body Name *
         </Text>
 
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Session"
-        />
+       <TextInput
+  style={styles.input}
+  value={name}
+  onChangeText={setName}
+  placeholder="e.g. Session"
+  placeholderTextColor="#888"
+/>
+
 
         <Text style={styles.label}>
           Leadership Role *
@@ -188,7 +277,8 @@ active: true,
           onChangeText={
             setLeadershipRole
           }
-          placeholder="Senior Presbyter"
+          placeholder="e.g. Senior Presbyter"
+          placeholderTextColor="#888"
         />
 
         <Text style={styles.label}>
@@ -201,7 +291,8 @@ active: true,
           onChangeText={
             setMemberLabel
           }
-          placeholder="Session Members"
+          placeholder="e.g. Session Members"
+           placeholderTextColor="#888"
         />
 
         <Text style={styles.label}>
@@ -214,7 +305,9 @@ active: true,
           onChangeText={
             setExOfficioLabel
           }
-          placeholder="Agents"
+          placeholder=" e.g. Catchist"
+           placeholderTextColor="#888"
+
         />
 
 
@@ -266,7 +359,9 @@ active: true,
       keyboardType="numeric"
       value={maxMembers}
       onChangeText={setMaxMembers}
-      placeholder="15"
+      placeholder="e.g. 15"
+           placeholderTextColor="#888"
+
     />
   </>
 
@@ -289,9 +384,22 @@ active: true,
   onChangeText={
     setRequiredApprovals
   }
-  placeholder="3"
+  placeholder="e.g. 3"
+  placeholderTextColor="#888"
 />
 
+<TouchableOpacity
+  style={styles.cancelBtn}
+  onPress={() =>
+    navigation.goBack()
+  }
+>
+  <Text
+    style={styles.cancelText}
+  >
+    Cancel
+  </Text>
+</TouchableOpacity>
 
         <TouchableOpacity
           style={styles.saveBtn}
@@ -305,8 +413,10 @@ active: true,
             style={styles.saveText}
           >
             {saving
-              ? "Saving..."
-              : "Create Governance Body"}
+  ? "Saving..."
+  : isEditing
+      ? "Save Changes"
+      : "Create Governance Body"}
           </Text>
 
         </TouchableOpacity>
@@ -358,5 +468,17 @@ optionButton: {
 
 optionSelected: {
   backgroundColor: "#DDE3FF",
+},
+cancelBtn: {
+  backgroundColor: "#DDD",
+  padding: 16,
+  borderRadius: 12,
+  marginTop: 24,
+  alignItems: "center",
+},
+
+cancelText: {
+  fontWeight: "700",
+  color: "#333",
 },
 });

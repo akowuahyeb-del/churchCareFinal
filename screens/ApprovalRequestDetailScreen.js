@@ -12,6 +12,7 @@ import {
 import {
   doc,
   getDoc,
+  getDocs,
   updateDoc,
   arrayUnion,
   addDoc,
@@ -36,7 +37,9 @@ const executeGovernanceRequest = async (
 
   if (!request) return;
 
+  //
   // ADD MEMBER
+  //
   if (
     request.nominationType === "membership" &&
     request.actionType === "add"
@@ -62,6 +65,9 @@ const executeGovernanceRequest = async (
         memberName:
           request.memberName,
 
+        membershipRole:
+          request.governanceBodyName,
+
         category:
           request.category || "member",
 
@@ -75,6 +81,98 @@ const executeGovernanceRequest = async (
       }
     );
 
+    return;
+  }
+
+  //
+  // REPLACE MEMBER
+  //
+  if (
+    request.nominationType === "membership" &&
+    request.actionType === "replace"
+  ) {
+
+    const snap =
+      await getDocs(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "governanceMemberships"
+        )
+      );
+
+    const outgoing =
+      snap.docs.find((d) => {
+
+        const data = d.data();
+
+        return (
+          data.memberId ===
+            request.replacingMemberId &&
+          data.governanceBodyId ===
+            request.governanceBodyId &&
+          data.status === "active"
+        );
+
+      });
+
+    if (outgoing) {
+
+      await updateDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "governanceMemberships",
+          outgoing.id
+        ),
+        {
+          status: "inactive",
+          endDate:
+            new Date().toISOString(),
+        }
+      );
+
+    }
+
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "governanceMemberships"
+      ),
+      {
+        governanceBodyId:
+          request.governanceBodyId,
+
+        governanceBodyName:
+          request.governanceBodyName,
+
+        memberId:
+          request.memberId,
+
+        memberName:
+          request.memberName,
+
+        membershipRole:
+          request.governanceBodyName,
+
+        category:
+          request.category || "member",
+
+        status: "active",
+
+        startDate:
+          new Date().toISOString(),
+
+        createdAt:
+          new Date().toISOString(),
+      }
+    );
+
+    return;
   }
 
 };
