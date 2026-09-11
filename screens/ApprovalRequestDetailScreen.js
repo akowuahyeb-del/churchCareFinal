@@ -310,8 +310,6 @@ const executeGovernanceRequest = async (
 
 
 
-
-
 const handleApprove = async () => {
 
   try {
@@ -334,22 +332,18 @@ const handleApprove = async () => {
     const entity =
       JSON.parse(stored);
 
-      console.log(
-  "ACTIVE ENTITY:",
-  entity
-);
-      const approverId =
-  entity.memberId;
+    const approverId =
+      entity.memberId;
 
-if (!approverId) {
+    if (!approverId) {
 
-  Alert.alert(
-    "Error",
-    "Approver identity not found."
-  );
+      Alert.alert(
+        "Error",
+        "Approver identity not found."
+      );
 
-  return;
-}
+      return;
+    }
 
     const requestRef =
       doc(
@@ -360,28 +354,61 @@ if (!approverId) {
         request.id
       );
 
+    if (
+      (request.approvals || [])
+        .includes(approverId)
+    ) {
+
+      Alert.alert(
+        "Already Approved",
+        "You have already approved this request."
+      );
+
+      return;
+    }
+
+
+    // =================================================
+    // DISCIPLINARY APPROVAL
+    // =================================================
+
    if (
-  (request.approvals || [])
-    .includes(approverId)
+  request.type === "disciplinary"
 ) {
 
+  await updateDoc(
+    requestRef,
+    {
+      approvals: arrayUnion(
+        approverId
+      ),
+
+      status: "approved",
+
+      approvedAt:
+        new Date().toISOString(),
+    }
+  );
+
   Alert.alert(
-    "Already Approved",
-    "You have already approved this request."
+    "Approved",
+    "Disciplinary request approved.",
+    [
+      {
+        text: "OK",
+        onPress: () =>
+          navigation.goBack(),
+      },
+    ]
   );
 
   return;
 }
 
-await updateDoc(
-  requestRef,
-  {
-    approvals: arrayUnion(
-      approverId
-    ),
-  }
-);
 
+    // =================================================
+    // GOVERNANCE APPROVAL
+    // =================================================
 
     const governanceBodyRef =
       doc(
@@ -413,11 +440,11 @@ await updateDoc(
       governanceBodySnap.data();
 
     const approvalCount =
-  (
-    request.approvals || []
-  ).filter(
-    (id) => id !== approverId
-  ).length + 1;
+      (
+        request.approvals || []
+      ).filter(
+        (id) => id !== approverId
+      ).length + 1;
 
     const threshold =
       request.nominationType ===
@@ -431,129 +458,130 @@ await updateDoc(
               .membershipApprovalThreshold || 1
           );
 
-          const decisionModel =
-  governanceBody?.decisionModel ||
-  "threshold";
+    const decisionModel =
+      governanceBody?.decisionModel ||
+      "threshold";
 
-const rejectionThreshold =
-  governanceBody?.rejectionThreshold ||
-  1;
+    const rejections =
+      request.rejections || [];
 
-const approvals =
-  request.approvals || [];
+    let approved = false;
 
-const rejections =
-  request.rejections || [];
-let approved = false;
+    if (
+      decisionModel === "threshold"
+    ) {
 
-if (
-  decisionModel === "threshold"
-) {
+      approved =
+        approvalCount >= threshold;
 
-  approved =
-    approvalCount >= threshold;
+    } else if (
+      decisionModel === "majority"
+    ) {
 
-} else if (
-  decisionModel === "majority"
-) {
+      approved =
+        approvalCount >
+        rejections.length;
 
-  approved =
-    approvalCount >
-    rejections.length;
+    } else if (
+      decisionModel === "consensus"
+    ) {
 
-} else if (
-  decisionModel === "consensus"
-) {
+      approved =
+        rejections.length === 0 &&
+        approvalCount >= threshold;
 
-  approved =
-    rejections.length === 0 &&
-    approvalCount >= threshold;
+    } else if (
+      decisionModel === "unanimous"
+    ) {
 
-} else if (
-  decisionModel === "unanimous"
-) {
-
-  approved =
-    rejections.length === 0 &&
-    approvalCount >= threshold;
-
-}
-
-if (approved) {
-
-
-  await updateDoc(
-    requestRef,
-    {
-      status: "approved",
-      approvedAt:
-        new Date().toISOString(),
+      approved =
+        rejections.length === 0 &&
+        approvalCount >= threshold;
     }
-  );
 
-  await executeGovernanceRequest(
-    request,
-    entity.organizationId
-  );
-  await addDoc(
-  collection(
-    db,
-    "organizations",
-    entity.organizationId,
-    "governanceAudit"
-  ),
-  {
-    actionType:
-      request.actionType || "unknown",
+    if (approved) {
 
+      await updateDoc(
+        requestRef,
+        {
+          status: "approved",
 
-    nominationType:
-      request.nominationType,
+          approvedAt:
+            new Date().toISOString(),
+        }
+      );
 
-    governanceBodyId:
-      request.governanceBodyId,
+      await executeGovernanceRequest(
+        request,
+        entity.organizationId
+      );
 
-    governanceBodyName:
-      request.governanceBodyName,
+      await addDoc(
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "governanceAudit"
+        ),
+        {
+          actionType:
+            request.actionType || "unknown",
 
-    memberId:
-      request.memberId,
+          nominationType:
+            request.nominationType,
 
-    memberName:
-      request.memberName,
+          governanceBodyId:
+            request.governanceBodyId,
 
-    approvalRequestId:
-      request.id,
+          governanceBodyName:
+            request.governanceBodyName,
 
-    executedAt:
-      new Date().toISOString(),
-  }
-);
+          memberId:
+            request.memberId,
 
-  Alert.alert(
-    "Approved",
-    "Governance request executed."
-  );
+          memberName:
+            request.memberName,
 
-} else {
+          approvalRequestId:
+            request.id,
 
-  Alert.alert(
-    "Rejection Recorded",
-    `${rejectionCount} of ${rejectionThreshold} rejections recorded.`
-  );
+          executedAt:
+            new Date().toISOString(),
+        }
+      );
 
-}
+      Alert.alert(
+        "Approved",
+        "Governance request executed."
+      );
+
+    } else {
+
+      Alert.alert(
+        "Approval Recorded",
+        `${approvalCount} of ${threshold} approvals recorded.`
+      );
+
+    }
 
   } catch (error) {
 
+    console.log(
+      "APPROVE ERROR",
+      error
+    );
+
     Alert.alert(
       "Error",
-      error.message
+      error?.message ||
+        "Approval failed."
     );
 
   }
 
 };
+
+
 
 const handleReject = async () => {
 
@@ -580,15 +608,15 @@ const handleReject = async () => {
     const rejectorId =
       entity.memberId;
 
-    if (!rejectorId) {
+   if (!rejectorId) {
 
-      Alert.alert(
-        "Error",
-        "Rejector identity not found."
-      );
+  Alert.alert(
+    "Error",
+    "Rejector identity not found."
+  );
 
-      return;
-    }
+  return;
+}
 
     const requestRef =
       doc(
@@ -599,18 +627,39 @@ const handleReject = async () => {
         request.id
       );
 
-    if (
-      (request.rejections || [])
-        .includes(rejectorId)
-    ) {
+if (request.type === "disciplinary") {
 
-      Alert.alert(
-        "Already Rejected",
-        "You have already rejected this request."
-      );
+  await updateDoc(
+    requestRef,
+    {
+      rejections: arrayUnion(
+        rejectorId
+      ),
 
-      return;
+      status: "rejected",
+
+      rejectedAt:
+        new Date().toISOString(),
+
+      rejectionNote:
+        rejectionNote.trim() || null,
     }
+  );
+
+  Alert.alert(
+    "Rejected",
+    "Disciplinary request rejected.",
+    [
+      {
+        text: "OK",
+        onPress: () =>
+          navigation.goBack(),
+      },
+    ]
+  );
+
+  return;
+}
 
     await updateDoc(
       requestRef,
@@ -802,9 +851,11 @@ const handleReject = async () => {
       Governance Body:
     </Text>
 
-    <Text>
-      {request.governanceBodyName}
-    </Text>
+   <Text>
+  {request.type === "disciplinary"
+    ? request.actionType
+    : request.governanceBodyName}
+</Text>
   </>
 )}
 
@@ -834,8 +885,10 @@ const handleReject = async () => {
         </Text>
 
         <Text>
-          {request.nominationType}
-        </Text>
+  {request.type === "disciplinary"
+    ? `Disciplinary: ${request.actionType}`
+    : request.nominationType}
+</Text>
 
         <Text
           style={{

@@ -459,16 +459,83 @@ const editMember = (item) => {
     return required.includes(viewerRole) || viewerRole === "admin";
   };
 
-  const openApproval = (m, action) => {
-    if (!canApproveAction(action)) {
-      Alert.alert("Access denied", `Requires: ${ACTIONS[action].required.join(" or ")}`);
-      return;
-    }
-    setApprovalTarget(m);
-    setApprovalAction(action);
-    setApprovalNote("");
-    setApprovalModal(true);
-  };
+const openApproval = async (m, action) => {
+
+  try {
+
+    const now = new Date().toISOString();
+
+    const disciplinaryRef = await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "disciplinaryRequests"
+      ),
+      {
+        type: "disciplinary",
+
+        memberId: m.id,
+        memberName: m.name,
+
+        actionType: action,
+
+        entityId,
+        organizationId,
+
+        requestedBy: adminMemberId,
+
+        requestedAt: now,
+
+        status: "pending",
+      }
+    );
+
+    await addDoc(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "approvalRequests"
+      ),
+      {
+        type: "disciplinary",
+
+        disciplinaryId: disciplinaryRef.id,
+
+        memberId: m.id,
+        memberName: m.name,
+
+        actionType: action,
+
+        status: "pending",
+
+        requestedAt: now,
+
+        organizationId,
+      }
+    );
+
+    Alert.alert(
+      "Success",
+      `${action} request submitted for approval`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "DISCIPLINARY ERROR",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      e.message
+    );
+  }
+};
+
+
 
   const grantApproval = () => {
   if (!approvalAction || !approvalTarget) return;

@@ -86,6 +86,25 @@ export default function TransferManagementScreen({ route }) {
     setProcessing(true);
     try {
       const now = new Date().toISOString();
+      if (!transfer.toEntityId) {
+
+  Alert.alert(
+    "Missing Destination",
+    "This transfer request has no destination congregation. It cannot be approved."
+  );
+
+  return;
+}
+
+if (!transfer.toEntityName) {
+
+  Alert.alert(
+    "Missing Destination",
+    "Destination congregation information is incomplete."
+  );
+
+  return;
+}
 
       // 1. Load the member's full record from the source entity
       const memberRef = doc(

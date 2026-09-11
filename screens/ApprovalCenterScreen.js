@@ -20,11 +20,12 @@ import {
   updateDoc,
   arrayUnion,
 } from "firebase/firestore";
-
 import {
   collection,
   getDocs,
+  deleteDoc,
 } from "firebase/firestore";
+
 
 import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
@@ -166,6 +167,8 @@ const categories = [
   },
 
 ];
+
+
  
 const renderItem = ({ item }) => {
 
@@ -185,13 +188,31 @@ const renderItem = ({ item }) => {
         {item.memberName || "Unknown Member"}
       </Text>
 
-      <Text style={styles.action}>
-  {item.nominationType || "Governance Request"}
+     <Text style={styles.action}>
+  {item.type === "disciplinary"
+    ? `Disciplinary: ${item.actionType}`
+
+    : item.type === "transfer"
+    ? "Transfer Request"
+
+    : item.nominationType ||
+      "Governance Request"}
 </Text>
 
-      <Text style={styles.count}>
-        {item.governanceBodyName}
-      </Text>
+
+    <Text style={styles.count}>
+
+  {item.type === "disciplinary"
+    ? item.memberName
+
+    : item.type === "transfer"
+    ? `${item.fromEntityName} → ${
+        item.toEntityName || "Unknown"
+      }`
+
+    : item.governanceBodyName}
+
+</Text>
 
       <Text style={styles.link}>
         View Request →
@@ -284,6 +305,8 @@ if (loading) {
       );
 
     })}
+
+
 
   </ScrollView>
 
