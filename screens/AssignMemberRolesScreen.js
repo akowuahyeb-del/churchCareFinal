@@ -80,7 +80,11 @@ const assignableRoles = roles.filter(
   r =>
     r.id !== "super_admin" &&
     !r.protected &&
-    (r.active !== false || selectedRoleIds.includes(r.id))
+    !PROTECTED_ROLE_IDS.includes(r.id) &&
+    (
+      r.active !== false ||
+      selectedRoleIds.includes(r.id)
+    )
 );
 
 

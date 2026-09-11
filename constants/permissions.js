@@ -137,6 +137,7 @@ export const findPermission = (key) =>
 
 
 export const PROTECTED_ROLE_IDS = [
+  "admin",
   "bootable_admin",
   "elders",
   "pastor",
@@ -174,7 +175,7 @@ export const DEFAULT_ROLES = [
     "manage_visitors",
     "view_reports"
   ],
-  protected: false,
+  protected: true,
   isDefault: false,
   active: true
 },

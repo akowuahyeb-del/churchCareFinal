@@ -165,52 +165,59 @@ setLeaderName(
           </TouchableOpacity>
         </View>
 
-        {/* Ex-Officio Members */}
-        <View style={styles.card}>
-          <Text style={styles.sectionLabel}>
-            {(governanceBody.exOfficioLabel || "Ex-Officio Members").toUpperCase()}
-          </Text>
-          <View style={styles.card}>
+{/* Ex-Officio Members */}
+<View style={styles.card}>
+
+  <Text style={styles.sectionLabel}>
+    {(governanceBody.exOfficioLabel || "Ex-Officio Members").toUpperCase()}
+  </Text>
+
+  <Text style={styles.countText}>
+    {agentCount} Active
+  </Text>
+
+  <Text style={styles.infoText}>
+    {historicalAgentCount} Historical
+  </Text>
+
+  <TouchableOpacity
+    style={styles.actionBtn}
+    onPress={() =>
+      navigation.navigate(
+        "GovernanceBodyMembers",
+        {
+          governanceBody,
+          category: "ex_officio",
+        }
+      )
+    }
+  >
+    <Text style={styles.actionText}>
+      Manage Ex-Officio Members
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+{/* Approval Rules */}
+<View style={styles.card}>
 
   <Text style={styles.sectionLabel}>
     APPROVAL RULES
   </Text>
 
   <Text style={styles.infoText}>
-    Membership Threshold:
-    {" "}
-    {governanceBody.membershipApprovalThreshold || 2}
+    Membership Threshold:{" "}
+    {governanceBody.membershipApprovalThreshold || 1}
   </Text>
 
   <Text style={styles.infoText}>
-    Leadership Threshold:
-    {" "}
-    {governanceBody.leadershipApprovalThreshold || 2}
+    Leadership Threshold:{" "}
+    {governanceBody.leadershipApprovalThreshold || 1}
   </Text>
 
 </View>
-          <Text style={styles.countText}>
-  {agentCount} Active
-</Text>
 
-<Text style={styles.infoText}>
-  {historicalAgentCount} Historical
-</Text>
-
-          {/* FIX: wired to the same member-management screen, tagged
-              as ex_officio so it doesn't mix with ordinary members */}
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() =>
-              navigation.navigate("GovernanceBodyMembers", {
-                governanceBody,
-                category: "ex_officio",
-              })
-            }
-          >
-            <Text style={styles.actionText}>Manage {governanceBody.exOfficioLabel}</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </View>
   );

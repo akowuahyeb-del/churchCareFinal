@@ -207,8 +207,34 @@ export default function GovernanceBodyScreen({ navigation }) {
               <Text style={styles.label}>Leadership Role</Text>
               <Text style={styles.value}>{body.leadershipRole}</Text>
 
-              <Text style={styles.label}>Members</Text>
-              <Text style={styles.value}>{body.memberCount}</Text>
+              <Text style={styles.label}>
+  Membership
+</Text>
+
+<Text style={styles.value}>
+  {body.memberCount}
+  {body.membershipMode === "fixed"
+    ? ` / ${body.maxMembers}`
+    : " (Unlimited)"}
+</Text>
+
+<Text style={styles.label}>
+  Approval Threshold
+</Text>
+
+<Text style={styles.value}>
+  Membership:
+  {" "}
+  {body.membershipApprovalThreshold || 1}
+</Text>
+
+<Text style={styles.value}>
+  Leadership:
+  {" "}
+  {body.leadershipApprovalThreshold || 1}
+</Text>
+
+
               <Text style={styles.label}>
   Status
 </Text>
@@ -219,6 +245,14 @@ export default function GovernanceBodyScreen({ navigation }) {
     : "Archived"}
 </Text>
 
+<Text
+  style={{
+    marginTop: 12,
+    fontWeight: "700",
+  }}
+>
+  Quick Actions
+</Text>
 
              <TouchableOpacity
   style={styles.btn}

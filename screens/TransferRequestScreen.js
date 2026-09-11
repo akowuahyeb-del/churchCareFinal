@@ -101,7 +101,6 @@ export default function TransferRequestScreen({ route }) {
 
   const handleSubmit = async () => {
     if (!selectedMember) { Alert.alert("Required", "Select a member."); return; }
-    if (!destinationEntity) { Alert.alert("Required", "Select the destination congregation."); return; }
     if (!reason.trim()) { Alert.alert("Required", "Please give a reason for this transfer."); return; }
     if (!organizationId || !entityId) return;
 
@@ -115,8 +114,16 @@ export default function TransferRequestScreen({ route }) {
         memberMinistry:     selectedMember.ministry || "",
         fromEntityId:       entityId,
         fromEntityName:     entityName,
-        toEntityId:         destinationEntity.id,
-        toEntityName:       destinationEntity.name,
+       transferMode:
+  destinationEntity
+    ? "directed"
+    : "unassigned",
+
+toEntityId:
+  destinationEntity?.id || null,
+
+toEntityName:
+  destinationEntity?.name || null,
         requestedByUid:     viewerUid || "unknown",
         requestedByName:    viewerName,
         requestedByRole:    isAdminInitiated ? "admin" : "member",
@@ -141,39 +148,122 @@ export default function TransferRequestScreen({ route }) {
         collection(db, "organizations", organizationId, "transfers"),
         transferPayload
       );
+      console.log(
+  "TRANSFER CREATED:",
+  transferRef.id
+);
+      await addDoc(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "approvalRequests"
+  ),
+  {
+    type: "transfer",
+
+    sourceCollection:
+      "transfers",
+
+    sourceId:
+      transferRef.id,
+
+    transferId:
+      transferRef.id,
+
+    memberId:
+      selectedMember.id,
+
+    memberName:
+      selectedMember.name,
+
+    fromEntityId:
+      entityId,
+
+    fromEntityName:
+      entityName,
+
+  transferDestinationStatus:
+  destinationEntity
+    ? "known"
+    : "unknown",
+
+toEntityId:
+  destinationEntity?.id || null,
+
+toEntityName:
+  destinationEntity?.name || null,
+
+    requestedBy:
+      viewerUid || null,
+
+    requestedByName:
+      viewerName,
+
+    status:
+      "pending",
+
+    approvals: [],
+
+    rejections: [],
+
+    requestedAt:
+      new Date().toISOString(),
+
+    organizationId,
+  }
+);
+console.log(
+  "TRANSFER APPROVAL REQUEST CREATED"
+);
 
       // ✅ Notify every manage_members holder in the org
-      await notifyApprovers(organizationId, entityId, {
-        transferId: transferRef.id,
-        memberName: selectedMember.name,
-        fromEntityName: entityName,
-        toEntityName: destinationEntity.name,
-        reason: reason.trim(),
-        requestedByName: viewerName,
-      });
+    await notifyApprovers(
+  organizationId,
+  entityId,
+  {
+    transferId: transferRef.id,
+    memberName: selectedMember.name,
+    fromEntityName: entityName,
+
+    toEntityName:
+      destinationEntity?.name ||
+      "Unknown",
+
+    reason: reason.trim(),
+
+    requestedByName:
+      viewerName,
+  }
+);
 
       // ✅ Notify the member themselves (so they can track status)
       if (!isAdminInitiated && viewerUid) {
         await createMemberNotification(organizationId, viewerUid, {
           type: "transfer_submitted",
           title: "Transfer Request Submitted",
-          body: `Your request to transfer to ${destinationEntity.name} has been submitted and is awaiting approval.`,
-          transferId: transferRef.id,
+          body: destinationEntity
+  ? `Your request to transfer to ${destinationEntity?.name} has been submitted and is awaiting approval.`
+  : `Your transfer request has been submitted and is awaiting destination assignment and approval.`,
         });
       } else {
         // Admin initiated — still notify the member
         await createMemberNotification(organizationId, selectedMember.id, {
           type: "transfer_initiated",
           title: "Transfer Request Initiated",
-          body: `${viewerName} has submitted a transfer request on your behalf to ${destinationEntity.name}.`,
-          transferId: transferRef.id,
+          body: destinationEntity
+  ? `${viewerName} has submitted a transfer request on your behalf to ${destinationEntity?.name}.`
+  : `${viewerName} has submitted a transfer request on your behalf. Destination will be assigned during review.`,
         });
       }
 
-      Alert.alert(
-        "✅ Transfer Request Submitted",
-        `The request to transfer ${selectedMember.name} to ${destinationEntity.name} has been submitted. Approvers have been notified.`
-      );
+     Alert.alert(
+  "✅ Transfer Request Submitted",
+  destinationEntity
+    ? `The request to transfer ${selectedMember.name} to ${destinationEntity?.name} has been submitted. Approvers have been notified.`
+    : `The transfer request for ${selectedMember.name} has been submitted. Destination assignment will occur during review.`
+);
+
       navigation.goBack();
 
     } catch (e) {
@@ -228,23 +318,68 @@ export default function TransferRequestScreen({ route }) {
             <Ionicons name="arrow-forward" size={16} color="#4B3F72" />
           </View>
 
-          <TouchableOpacity
-            style={styles.routeNode}
-            onPress={() => setEntityPickerModal(true)}
-          >
+         <TouchableOpacity
+  style={styles.routeNode}
+  onPress={() => {
+
+    if (
+  allEntities.length === 0
+) {
+  return;
+}
+
+    setEntityPickerModal(true);
+
+  }}
+>
             <View style={[styles.routeDot, { backgroundColor: destinationEntity ? "#27ae60" : "#ccc" }]} />
             <View style={{ flex: 1 }}>
               <Text style={styles.routeNodeLabel}>To</Text>
-              {destinationEntity ? (
-                <>
-                  <Text style={styles.routeNodeName}>{destinationEntity.name}</Text>
-                  <Text style={[styles.routeNodeSub, { color: "#27ae60" }]}>Tap to change</Text>
-                </>
-              ) : (
-                <Text style={[styles.routeNodeName, { color: "#aaa" }]}>Tap to select destination</Text>
+            {destinationEntity ? (
+  <>
+    <Text style={styles.routeNodeName}>
+      {destinationEntity?.name}
+    </Text>
+
+    <Text
+      style={[
+        styles.routeNodeSub,
+        { color: "#27ae60" }
+      ]}
+    >
+      Destination Selected
+    </Text>
+  </>
+) : (
+  <>
+    <Text
+      style={[
+        styles.routeNodeName,
+        { color: "#aaa" }
+      ]}
+    >
+      Unknown / To Be Determined
+    </Text>
+
+    <Text
+      style={[
+        styles.routeNodeSub,
+        { color: "#888" }
+      ]}
+    >
+      Destination may be assigned later
+    </Text>
+  </>
+
               )}
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#4B3F72" />
+            {allEntities.length > 0 && (
+  <Ionicons
+    name="chevron-forward"
+    size={16}
+    color="#4B3F72"
+  />
+)}
           </TouchableOpacity>
         </View>
 
@@ -314,14 +449,22 @@ export default function TransferRequestScreen({ route }) {
       </ScrollView>
 
       {/* ENTITY PICKER MODAL */}
-      <Modal visible={entityPickerModal} transparent animationType="slide">
+      <Modal
+  visible={
+    entityPickerModal &&
+    allEntities.length > 0
+  } transparent animationType="slide">
         <View style={styles.overlay}>
           <View style={[styles.modalBox, { maxHeight: "70%" }]}>
-            <Text style={styles.modalTitle}>Select Destination Congregation</Text>
+            <Text style={styles.modalTitle}>
+  Available Destination Congregations
+</Text>
             {entitiesLoading ? (
               <ActivityIndicator color="#4B3F72" style={{ marginVertical: 20 }} />
             ) : allEntities.length === 0 ? (
-              <Text style={styles.emptyText}>No other active congregations found in this organization.</Text>
+              <Text style={styles.emptyText}>Destination congregation not yet known.
+Transfer requests may be submitted without a destination.
+Reviewers can determine the receiving congregation later..</Text>
             ) : (
               <ScrollView>
                 {allEntities.map(e => (

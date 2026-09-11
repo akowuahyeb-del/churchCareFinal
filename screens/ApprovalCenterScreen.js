@@ -110,10 +110,27 @@ const [
     )
   );
 const results =
-  snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-  }));
+  snap.docs.map((d) => {
+
+    console.log(
+      "APPROVAL ITEM",
+      JSON.stringify(
+        d.data(),
+        null,
+        2
+      )
+    );
+
+    return {
+      id: d.id,
+      ...d.data(),
+    };
+  });
+
+console.log(
+  "ALL APPROVALS",
+  results.length
+);
 
 setApprovalItems(results);
 
@@ -144,7 +161,7 @@ const categories = [
   },
 
   {
-    key: "transfers",
+    key: "transfer",
     label: "Transfers",
   },
 
@@ -169,10 +186,8 @@ const renderItem = ({ item }) => {
       </Text>
 
       <Text style={styles.action}>
-        {item.nominationType === "leadership"
-          ? "Leadership Nomination"
-          : "Membership Nomination"}
-      </Text>
+  {item.nominationType || "Governance Request"}
+</Text>
 
       <Text style={styles.count}>
         {item.governanceBodyName}
@@ -230,7 +245,8 @@ if (loading) {
   approvalItems.filter(
     (item) =>
       (item.type || "").toLowerCase() ===
-      category.key.toLowerCase()
+      category.key.toLowerCase() &&
+      item.status === statusFilter
   ).length;
 
 
@@ -327,6 +343,29 @@ if (loading) {
     </TouchableOpacity>
 
   </View>
+
+  <Text>
+  Category: {selectedCategory}
+</Text>
+
+<Text>
+  Status: {statusFilter}
+</Text>
+
+<Text>
+  Matching:
+  {
+    approvalItems
+      .filter(
+        (item) =>
+          item.type === selectedCategory
+      )
+      .filter(
+        (item) =>
+          item.status === statusFilter
+      ).length
+  }
+</Text>
 
   <FlatList
     data={approvalItems

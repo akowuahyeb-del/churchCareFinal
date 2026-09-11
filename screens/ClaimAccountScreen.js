@@ -132,8 +132,13 @@ await AsyncStorage.setItem(
     organizationId: result.organizationId,
     entityId: result.entityId,
     name: result.entityName || "Church",
+
+    memberId: result.memberId,
+    memberName: result.memberName,
+    uid: auth.currentUser?.uid || null,
   })
 );
+
 
   Alert.alert(
     "Success",
@@ -172,14 +177,38 @@ setStep("account");
       const result = await completeMemberClaim({ claimToken: verified.claimToken });
 
 await AsyncStorage.setItem(
-  "user",
+  "currentUser",
   JSON.stringify({
     uid: auth.currentUser?.uid,
-    name: verified.memberName,
+
+    memberId:
+      result.memberId || null,
+
+    name:
+      verified.memberName,
+
+    memberName:
+      verified.memberName,
+
     email: email.trim(),
-    organizationId: result.organizationId,
-    entityId: result.entityId,
+
+    organizationId:
+      result.organizationId,
+
+    entityId:
+      result.entityId,
+
+    entityName:
+      result.entityName || "Church",
   })
+);
+ console.log(
+  "SAVED CURRENT USER",
+  {
+    memberId: result.memberId,
+    memberName: verified.memberName,
+    uid: auth.currentUser?.uid,
+  }
 );
 
       await AsyncStorage.setItem("isLoggedIn", "true");

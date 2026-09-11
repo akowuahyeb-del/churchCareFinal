@@ -221,6 +221,38 @@ export default function TransferManagementScreen({ route }) {
         body:       `Your transfer request to ${transfer.toEntityName} was not approved. Reason: ${rejectReason.trim()}. Please speak to your church administrator for more information.`,
         transferId: transfer.id,
       });
+      const approvalSnap =
+  await getDocs(
+    query(
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "approvalRequests"
+      ),
+      where(
+        "transferId",
+        "==",
+        transfer.id
+      )
+    )
+  );
+
+for (const approvalDoc of approvalSnap.docs) {
+
+  await updateDoc(
+    approvalDoc.ref,
+    {
+      status: "rejected",
+
+      rejectedAt: now,
+
+      rejectionReason:
+        rejectReason.trim(),
+    }
+  );
+
+}
 
       setDetailModal(false);
       setRejectReason("");

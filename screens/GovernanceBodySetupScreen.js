@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  ScrollView,
   StyleSheet,
   Alert,
 } from "react-native";
@@ -65,12 +66,17 @@ const [
   setRequiredApprovals,
 ] = useState("3");
 
+const [decisionModel, setDecisionModel] =
+  useState("threshold");
+
+const [rejectionThreshold, setRejectionThreshold] =
+  useState(1);
+
 const editingBody =
   route?.params?.governanceBody || null;
 
 const isEditing =
   !!editingBody;
-
 useEffect(() => {
 
   if (!editingBody) {
@@ -112,7 +118,17 @@ useEffect(() => {
         .membershipApprovalThreshold || 3
     )
   );
+setDecisionModel(
+  editingBody.decisionModel ||
+  "threshold"
+);
 
+setRejectionThreshold(
+  editingBody.rejectionThreshold ||
+  1
+);
+
+  
 }, [editingBody]);
 
 
@@ -153,8 +169,7 @@ useEffect(() => {
 
         const entity =
           JSON.parse(stored);
-
-        const payload = {
+const payload = {
   name,
 
   leadershipRole,
@@ -168,6 +183,11 @@ useEffect(() => {
 
   leadershipApprovalThreshold:
     Number(requiredApprovals),
+
+  decisionModel,
+
+  rejectionThreshold:
+    Number(rejectionThreshold),
 
   membershipMode,
 
@@ -252,7 +272,14 @@ navigation.goBack();
         }
       />
 
-      <View style={styles.container}>
+     <ScrollView
+  contentContainerStyle={[
+    styles.container,
+    {
+      paddingBottom: 120,
+    },
+  ]}
+>
 
         <Text style={styles.label}>
           Body Name *
@@ -351,8 +378,8 @@ navigation.goBack();
 
   <>
     <Text style={styles.label}>
-  Membership Capacity
-</Text>
+      Membership Capacity
+    </Text>
 
     <TextInput
       style={styles.input}
@@ -360,12 +387,101 @@ navigation.goBack();
       value={maxMembers}
       onChangeText={setMaxMembers}
       placeholder="e.g. 15"
-           placeholderTextColor="#888"
-
+      placeholderTextColor="#888"
     />
+    <Text style={styles.label}>
+  Decision Model
+</Text>
+
+<Text style={styles.infoText}>
+  Determines how governance decisions are reached.
+</Text>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    decisionModel === "threshold" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setDecisionModel("threshold")
+  }
+>
+  <Text>
+    Threshold
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    decisionModel === "majority" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setDecisionModel("majority")
+  }
+>
+  <Text>
+    Majority
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    decisionModel === "consensus" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setDecisionModel("consensus")
+  }
+>
+  <Text>
+    Consensus
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.optionButton,
+    decisionModel === "unanimous" &&
+      styles.optionSelected,
+  ]}
+  onPress={() =>
+    setDecisionModel("unanimous")
+  }
+>
+  <Text>
+    Unanimous
+  </Text>
+</TouchableOpacity>
+
+<Text style={styles.label}>
+  Rejection Threshold
+</Text>
+
+<Text style={styles.infoText}>
+  Number of rejections required before a nomination is rejected.
+</Text>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={String(rejectionThreshold)}
+  onChangeText={(value) =>
+    setRejectionThreshold(
+      Number(value || 1)
+    )
+  }
+  placeholder="e.g. 2"
+  placeholderTextColor="#888"
+/>
   </>
 
 )}
+
+
 <Text style={styles.label}>
   Required Approvals
 </Text>
@@ -421,11 +537,11 @@ navigation.goBack();
 
         </TouchableOpacity>
 
-      </View>
+      </ScrollView>
 
     </View>
-  );
-}
+  )
+};
 
 const styles = StyleSheet.create({
 
@@ -480,5 +596,9 @@ cancelBtn: {
 cancelText: {
   fontWeight: "700",
   color: "#333",
+},
+infoText: {
+  color: "#666",
+  marginBottom: 8,
 },
 });

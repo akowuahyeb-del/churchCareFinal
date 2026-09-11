@@ -257,9 +257,39 @@ useEffect(() => {
           );
 
         if (storedActive) {
-          const parsed =
-            JSON.parse(storedActive);
+          let parsed =
+  JSON.parse(storedActive);
 
+const currentUserRaw =
+  await AsyncStorage.getItem(
+    "currentUser"
+  );
+
+const currentUser =
+  currentUserRaw
+    ? JSON.parse(currentUserRaw)
+    : null;
+
+parsed = {
+  ...parsed,
+
+  memberId:
+    parsed.memberId ||
+    currentUser?.memberId,
+
+  memberName:
+    parsed.memberName ||
+    currentUser?.name,
+
+  uid:
+    parsed.uid ||
+    currentUser?.uid,
+};
+
+await AsyncStorage.setItem(
+  "activeEntity",
+  JSON.stringify(parsed)
+);
           console.log(
             "✅ REFRESHED ACTIVE ENTITY:",
             parsed
@@ -876,10 +906,39 @@ const handleSelectChurch = async (entity) => {
   try {
     setActiveEntity(entity);
 
-    await AsyncStorage.setItem(
-      "activeEntity",
-      JSON.stringify(entity)
-    );
+   const currentUserRaw =
+  await AsyncStorage.getItem(
+    "currentUser"
+  );
+
+const currentUser =
+  currentUserRaw
+    ? JSON.parse(currentUserRaw)
+    : null;
+
+const enrichedEntity = {
+  ...entity,
+
+  memberId:
+    currentUser?.memberId || null,
+
+  memberName:
+    currentUser?.name || null,
+
+  uid:
+    currentUser?.uid || null,
+};
+
+await AsyncStorage.setItem(
+  "activeEntity",
+  JSON.stringify(
+    enrichedEntity
+  )
+);
+
+setActiveEntity(
+  enrichedEntity
+);
 
     console.log(
       "✅ Active church changed:",

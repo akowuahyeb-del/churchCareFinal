@@ -183,6 +183,28 @@ const saveMember = async () => {
 
     const entity =
       JSON.parse(stored);
+      const memberSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "entities",
+      entity.entityId,
+      "members"
+    )
+  );
+
+const currentMember =
+  memberSnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .find(
+      (m) =>
+        m.id === entity.memberId
+    );
       const requestSnap =
   await getDocs(
     collection(
@@ -287,11 +309,12 @@ await addDoc(
   organizationId:
     entity.organizationId,
 
-  requestedBy:
-    entity.memberId || null,
+requestedBy:
+  entity.memberId || null,
 
-  requestedByName:
-    entity.memberName || "Unknown",
+requestedByName:
+  currentMember?.name ||
+  "Unknown",
 
   category:
     category,
@@ -403,6 +426,10 @@ const saveHistoricalService =
 
       const entity =
         JSON.parse(stored);
+        console.log(
+  "ACTIVE ENTITY (NOMINATION):",
+  entity
+);
 
       await addDoc(
 

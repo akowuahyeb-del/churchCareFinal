@@ -36,11 +36,44 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
 
     setSaving(true);
     try {
-      const stored = await AsyncStorage.getItem("activeEntity");
-      const entity = JSON.parse(stored);
+     const stored = await AsyncStorage.getItem("activeEntity");
+const entity = JSON.parse(stored);
+
+const memberSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      entity.organizationId,
+      "entities",
+      entity.entityId,
+      "members"
+    )
+  );
+
+const currentMember =
+console.log(
+  "CURRENT MEMBER:",
+  currentMember
+);
+  memberSnap.docs
+    .map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .find(
+      (m) =>
+        m.id === entity.memberId
+    );
+
 
       const existingSnap = await getDocs(
-        collection(db, "organizations", entity.organizationId, "governanceMemberships")
+        collection(
+  db,
+  "organizations",
+  entity.organizationId,
+  "governanceLeadership"
+)
       );
 
      const existingHolders =
@@ -49,14 +82,14 @@ export default function GovernanceRoleManagementScreen({ navigation, route }) {
       id: d.id,
       ...d.data(),
     }))
-    .filter(
-      (m) =>
-        m.governanceBodyId ===
-          governanceBody.id &&
-        (m.category || "member") ===
-          "leadership" &&
-        m.status === "active"
-    );
+   .filter(
+  (m) =>
+    m.governanceBodyId ===
+      governanceBody.id &&
+    m.role ===
+      governanceBody.leadershipRole &&
+    m.status === "active"
+);
 
 const hasCurrentHolder =
   existingHolders.length > 0;
@@ -78,15 +111,16 @@ const hasCurrentHolder =
   requestedBy:
     entity.memberId || null,
 
-  requestedByName:
-    entity.memberName || "Unknown",
+ requestedByName:
+  currentMember?.name ||
+  "Unknown",
 
  nominationType:
   "leadership",
 
 actionType:
   hasCurrentHolder
-    ? "replace"
+    ? "replace_leader"
     : "fill_vacancy",
 
   governanceBodyId:
@@ -104,6 +138,9 @@ actionType:
 
  leadershipRole:
   governanceBody.leadershipRole,
+  role:
+  governanceBody.leadershipRole,
+
 
 replacingMemberId:
   hasCurrentHolder
@@ -154,7 +191,12 @@ return;
         onBack={() => navigation.goBack()}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+  contentContainerStyle={{
+    padding: 16,
+    paddingBottom: 120,
+  }}
+>
         <Text style={styles.label}>Select Member</Text>
         {churchMembers.map((member) => (
           <TouchableOpacity
