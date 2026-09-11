@@ -25,7 +25,7 @@ import AppHeader from "../components/AppHeader";
 import { hasPermission } from "../constants/permissions";
 import { ALL_PERMISSION_KEYS } from "../constants/permissions";
 import { useSubscription } from "../utils/subscription";
-
+import { useFocusEffect } from "@react-navigation/native";
 // ── Constants ─────────────────────────────────────────────────────
 const MEMBERS_CACHE_KEY = "members_cache_v1";
 const ROLE_LEVEL = { admin: 5, pastor: 4, elder: 3, deacon: 2, member: 1 };
@@ -159,7 +159,13 @@ export default function MembersScreen({ navigation }) {
     loadMembers();
   }
 }, [activeEntity, loadMembers]);
+useFocusEffect(
+  React.useCallback(() => {
 
+    loadMembers();
+
+  }, [loadMembers])
+);
 
   // ── UI toggles ──
   const [showActions,  setShowActions]  = useState(true);

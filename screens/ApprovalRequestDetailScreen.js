@@ -1,7 +1,6 @@
 import React from "react";
 import { db } from "../firebase";
-import AsyncStorage
-  from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -21,605 +20,188 @@ import {
   collection,
 } from "firebase/firestore";
 
-
 import AppHeader from "../components/AppHeader";
+
+// FIX: mirrors MemberProfileScreen's ACTION_CONFIG thresholds so a
+// single approver here can't unilaterally suspend or demote someone —
+// previously this branch executed on the very first approval with no
+// threshold check at all. "delete" wasn't part of the original
+// ACTION_CONFIG; treated as at least as serious as suspend/demote (2)
+// as a conservative default — flag if that should differ.
+// TODO: this duplicates MemberProfileScreen's ACTION_CONFIG thresholds.
+// Worth extracting both into one shared constants file so they can't
+// drift out of sync again the way disciplinaryStatus/status already did.
+const DISCIPLINARY_THRESHOLDS = {
+  suspend: 2,
+  reprimand: 1,
+  demote: 2,
+  delete: 2,
+};
 
 export default function ApprovalRequestDetailScreen({
   navigation,
   route,
 }) {
 
+  const [showRejectModal, setShowRejectModal] = React.useState(false);
+  const [rejectionNote, setRejectionNote] = React.useState("");
 
-const [showRejectModal,
-  setShowRejectModal] =
-  React.useState(false);
+  // FIX: held in state so the screen reflects new approvals/rejections
+  // immediately, instead of staying frozen at whatever was passed via
+  // route.params until the user navigates away and back.
+  const [request, setRequest] = React.useState(route?.params?.request || {});
 
-const [rejectionNote,
-  setRejectionNote] =
-  React.useState("");
+  const isTransferRequest = request?.type === "transfer";
 
-  const request =
-    route?.params?.request || {};
-    const isTransferRequest =
-  request?.type === "transfer";
-
-    React.useEffect(() => {
-
-  if (
-    request?.type === "transfer"
-  ) {
-
-    navigation.replace(
-      "TransferManagement"
-    );
-
-  }
-
-}, []);
-
-const executeGovernanceRequest = async (
-  request,
-  organizationId
-) => {
-
-  if (!request) return;
-
-  //
-  // ADD MEMBER
-  //
-  if (
-    request.nominationType === "membership" &&
-    request.actionType === "add"
-  ) {
-
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "governanceMemberships"
-      ),
-      {
-        governanceBodyId:
-          request.governanceBodyId,
-
-        governanceBodyName:
-          request.governanceBodyName,
-
-        memberId:
-          request.memberId,
-
-        memberName:
-          request.memberName,
-
-        membershipRole:
-          request.governanceBodyName,
-
-        category:
-          request.category || "member",
-
-        status: "active",
-
-        startDate:
-          new Date().toISOString(),
-
-        createdAt:
-          new Date().toISOString(),
-      }
-    );
-
-    return;
-  }
-
-  //
-  // REPLACE MEMBER
-  //
-  if (
-    request.nominationType === "membership" &&
-    request.actionType === "replace"
-  ) {
-
-    const snap =
-      await getDocs(
-        collection(
-          db,
-          "organizations",
-          organizationId,
-          "governanceMemberships"
-        )
-      );
-
-    const outgoing =
-      snap.docs.find((d) => {
-
-        const data = d.data();
-
-        return (
-          data.memberId ===
-            request.replacingMemberId &&
-          data.governanceBodyId ===
-            request.governanceBodyId &&
-          data.status === "active"
-        );
-
-      });
-
-    if (outgoing) {
-
-      await updateDoc(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "governanceMemberships",
-          outgoing.id
-        ),
-        {
-          status: "inactive",
-          endDate:
-            new Date().toISOString(),
-        }
-      );
-
+  React.useEffect(() => {
+    if (request?.type === "transfer") {
+      navigation.replace("TransferManagement");
     }
+  }, []);
 
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "governanceMemberships"
-      ),
-      {
-        governanceBodyId:
-          request.governanceBodyId,
+  const executeGovernanceRequest = async (request, organizationId) => {
 
-        governanceBodyName:
-          request.governanceBodyName,
+    if (!request) return;
 
-        memberId:
-          request.memberId,
-
-        memberName:
-          request.memberName,
-
-        membershipRole:
-          request.governanceBodyName,
-
-        category:
-          request.category || "member",
-
-        status: "active",
-
-        startDate:
-          new Date().toISOString(),
-
-        createdAt:
-          new Date().toISOString(),
-      }
-    );
-
-      return;
-  }
-
-  //
-  // REMOVE MEMBER
-  //
-  if (
-    request.nominationType === "membership" &&
-    request.actionType === "remove"
-  ) {
-
-    const snap =
-      await getDocs(
-        collection(
-          db,
-          "organizations",
-          organizationId,
-          "governanceMemberships"
-        )
-      );
-
-    const member =
-      snap.docs.find((d) => {
-
-        const data = d.data();
-
-        return (
-          data.memberId ===
-            request.memberId &&
-          data.governanceBodyId ===
-            request.governanceBodyId &&
-          data.status === "active"
-        );
-
-      });
-
-    if (member) {
-
-      await updateDoc(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "governanceMemberships",
-          member.id
-        ),
-        {
-          status: "inactive",
-          endDate:
-            new Date().toISOString(),
-        }
-      );
-
-    }
-
-    return;
-  }
-
-  //
-  // RESTORE MEMBER
-  //
-  if (
-    request.nominationType === "membership" &&
-    request.actionType === "restore"
-  ) {
-
-    await addDoc(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "governanceMemberships"
-      ),
-      {
-        governanceBodyId:
-          request.governanceBodyId,
-
-        governanceBodyName:
-          request.governanceBodyName,
-
-        memberId:
-          request.memberId,
-
-        memberName:
-          request.memberName,
-
-        category:
-          request.category || "member",
-
-        status: "active",
-
-        historical: false,
-
-        appointmentType:
-          "restored",
-
-        startDate:
-          new Date().toISOString(),
-
-        createdAt:
-          new Date().toISOString(),
-      }
-    );
-
-    return;
-  }
-
-};
-
-
-
-const handleApprove = async () => {
-
-  try {
-
-    const stored =
-      await AsyncStorage.getItem(
-        "activeEntity"
-      );
-
-    if (!stored) {
-
-      Alert.alert(
-        "Error",
-        "No active church selected."
-      );
-
-      return;
-    }
-
-    const entity =
-      JSON.parse(stored);
-
-    const approverId =
-      entity.memberId;
-
-    if (!approverId) {
-
-      Alert.alert(
-        "Error",
-        "Approver identity not found."
-      );
-
-      return;
-    }
-
-    const requestRef =
-      doc(
-        db,
-        "organizations",
-        entity.organizationId,
-        "approvalRequests",
-        request.id
-      );
-
-    if (
-      (request.approvals || [])
-        .includes(approverId)
-    ) {
-
-      Alert.alert(
-        "Already Approved",
-        "You have already approved this request."
-      );
-
-      return;
-    }
-
-
-    // =================================================
-    // DISCIPLINARY APPROVAL
-    // =================================================
-
-   if (
-  request.type === "disciplinary"
-) {
-
-  await updateDoc(
-    requestRef,
-    {
-      approvals: arrayUnion(
-        approverId
-      ),
-
-      status: "approved",
-
-      approvedAt:
-        new Date().toISOString(),
-    }
-  );
-
-  Alert.alert(
-    "Approved",
-    "Disciplinary request approved.",
-    [
-      {
-        text: "OK",
-        onPress: () =>
-          navigation.goBack(),
-      },
-    ]
-  );
-
-  return;
-}
-
-
-    // =================================================
-    // GOVERNANCE APPROVAL
-    // =================================================
-
-    const governanceBodyRef =
-      doc(
-        db,
-        "organizations",
-        entity.organizationId,
-        "governanceBodies",
-        request.governanceBodyId
-      );
-
-    const governanceBodySnap =
-      await getDoc(
-        governanceBodyRef
-      );
-
-    if (
-      !governanceBodySnap.exists()
-    ) {
-
-      Alert.alert(
-        "Error",
-        "Governance body configuration not found."
-      );
-
-      return;
-    }
-
-    const governanceBody =
-      governanceBodySnap.data();
-
-    const approvalCount =
-      (
-        request.approvals || []
-      ).filter(
-        (id) => id !== approverId
-      ).length + 1;
-
-    const threshold =
-      request.nominationType ===
-      "leadership"
-        ? (
-            governanceBody
-              .leadershipApprovalThreshold || 1
-          )
-        : (
-            governanceBody
-              .membershipApprovalThreshold || 1
-          );
-
-    const decisionModel =
-      governanceBody?.decisionModel ||
-      "threshold";
-
-    const rejections =
-      request.rejections || [];
-
-    let approved = false;
-
-    if (
-      decisionModel === "threshold"
-    ) {
-
-      approved =
-        approvalCount >= threshold;
-
-    } else if (
-      decisionModel === "majority"
-    ) {
-
-      approved =
-        approvalCount >
-        rejections.length;
-
-    } else if (
-      decisionModel === "consensus"
-    ) {
-
-      approved =
-        rejections.length === 0 &&
-        approvalCount >= threshold;
-
-    } else if (
-      decisionModel === "unanimous"
-    ) {
-
-      approved =
-        rejections.length === 0 &&
-        approvalCount >= threshold;
-    }
-
-    if (approved) {
-
-      await updateDoc(
-        requestRef,
-        {
-          status: "approved",
-
-          approvedAt:
-            new Date().toISOString(),
-        }
-      );
-
-      await executeGovernanceRequest(
-        request,
-        entity.organizationId
-      );
+    //
+    // ADD MEMBER
+    //
+    if (request.nominationType === "membership" && request.actionType === "add") {
 
       await addDoc(
-        collection(
-          db,
-          "organizations",
-          entity.organizationId,
-          "governanceAudit"
-        ),
+        collection(db, "organizations", organizationId, "governanceMemberships"),
         {
-          actionType:
-            request.actionType || "unknown",
-
-          nominationType:
-            request.nominationType,
-
-          governanceBodyId:
-            request.governanceBodyId,
-
-          governanceBodyName:
-            request.governanceBodyName,
-
-          memberId:
-            request.memberId,
-
-          memberName:
-            request.memberName,
-
-          approvalRequestId:
-            request.id,
-
-          executedAt:
-            new Date().toISOString(),
+          governanceBodyId: request.governanceBodyId,
+          governanceBodyName: request.governanceBodyName,
+          memberId: request.memberId,
+          memberName: request.memberName,
+          membershipRole: request.governanceBodyName,
+          category: request.category || "member",
+          status: "active",
+          startDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
         }
-      );
-
-      Alert.alert(
-        "Approved",
-        "Governance request executed."
-      );
-
-    } else {
-
-      Alert.alert(
-        "Approval Recorded",
-        `${approvalCount} of ${threshold} approvals recorded.`
-      );
-
-    }
-
-  } catch (error) {
-
-    console.log(
-      "APPROVE ERROR",
-      error
-    );
-
-    Alert.alert(
-      "Error",
-      error?.message ||
-        "Approval failed."
-    );
-
-  }
-
-};
-
-
-
-const handleReject = async () => {
-
-  try {
-
-    const stored =
-      await AsyncStorage.getItem(
-        "activeEntity"
-      );
-
-    if (!stored) {
-
-      Alert.alert(
-        "Error",
-        "No active church selected."
       );
 
       return;
     }
 
-    const entity =
-      JSON.parse(stored);
+    //
+    // REPLACE MEMBER
+    //
+    if (request.nominationType === "membership" && request.actionType === "replace") {
 
-    const rejectorId =
-      entity.memberId;
+      const snap = await getDocs(
+        collection(db, "organizations", organizationId, "governanceMemberships")
+      );
 
-   if (!rejectorId) {
+      const outgoing = snap.docs.find((d) => {
+        const data = d.data();
+        return (
+          data.memberId === request.replacingMemberId &&
+          data.governanceBodyId === request.governanceBodyId &&
+          data.status === "active"
+        );
+      });
 
-  Alert.alert(
-    "Error",
-    "Rejector identity not found."
-  );
+      if (outgoing) {
+        await updateDoc(
+          doc(db, "organizations", organizationId, "governanceMemberships", outgoing.id),
+          { status: "inactive", endDate: new Date().toISOString() }
+        );
+      }
 
-  return;
-}
+      await addDoc(
+        collection(db, "organizations", organizationId, "governanceMemberships"),
+        {
+          governanceBodyId: request.governanceBodyId,
+          governanceBodyName: request.governanceBodyName,
+          memberId: request.memberId,
+          memberName: request.memberName,
+          membershipRole: request.governanceBodyName,
+          category: request.category || "member",
+          status: "active",
+          startDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        }
+      );
 
-    const requestRef =
-      doc(
+      return;
+    }
+
+    //
+    // REMOVE MEMBER
+    //
+    if (request.nominationType === "membership" && request.actionType === "remove") {
+
+      const snap = await getDocs(
+        collection(db, "organizations", organizationId, "governanceMemberships")
+      );
+
+      const member = snap.docs.find((d) => {
+        const data = d.data();
+        return (
+          data.memberId === request.memberId &&
+          data.governanceBodyId === request.governanceBodyId &&
+          data.status === "active"
+        );
+      });
+
+      if (member) {
+        await updateDoc(
+          doc(db, "organizations", organizationId, "governanceMemberships", member.id),
+          { status: "inactive", endDate: new Date().toISOString() }
+        );
+      }
+
+      return;
+    }
+
+    //
+    // RESTORE MEMBER
+    //
+    if (request.nominationType === "membership" && request.actionType === "restore") {
+
+      await addDoc(
+        collection(db, "organizations", organizationId, "governanceMemberships"),
+        {
+          governanceBodyId: request.governanceBodyId,
+          governanceBodyName: request.governanceBodyName,
+          memberId: request.memberId,
+          memberName: request.memberName,
+          category: request.category || "member",
+          status: "active",
+          historical: false,
+          appointmentType: "restored",
+          startDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        }
+      );
+
+      return;
+    }
+  };
+
+  const handleApprove = async () => {
+
+    try {
+
+      const stored = await AsyncStorage.getItem("activeEntity");
+
+      if (!stored) {
+        Alert.alert("Error", "No active church selected.");
+        return;
+      }
+
+      const entity = JSON.parse(stored);
+      const approverId = entity.memberId;
+
+      if (!approverId) {
+        Alert.alert("Error", "Approver identity not found.");
+        return;
+      }
+
+      const requestRef = doc(
         db,
         "organizations",
         entity.organizationId,
@@ -627,74 +209,135 @@ const handleReject = async () => {
         request.id
       );
 
-if (request.type === "disciplinary") {
-
-  await updateDoc(
-    requestRef,
-    {
-      rejections: arrayUnion(
-        rejectorId
-      ),
-
-      status: "rejected",
-
-      rejectedAt:
-        new Date().toISOString(),
-
-      rejectionNote:
-        rejectionNote.trim() || null,
-    }
-  );
-
-  Alert.alert(
-    "Rejected",
-    "Disciplinary request rejected.",
-    [
-      {
-        text: "OK",
-        onPress: () =>
-          navigation.goBack(),
-      },
-    ]
-  );
-
-  return;
-}
-
-    await updateDoc(
-      requestRef,
-      {
-        rejections: arrayUnion(
-          rejectorId
-        ),
-
-        rejectionHistory:
-          arrayUnion({
-            memberId:
-              rejectorId,
-
-            memberName:
-              entity.memberName ||
-              "Unknown",
-
-            note:
-              rejectionNote.trim() ||
-              null,
-
-            rejectedAt:
-              new Date()
-                .toISOString(),
-          }),
+      if ((request.approvals || []).includes(approverId)) {
+        Alert.alert("Already Approved", "You have already approved this request.");
+        return;
       }
-    );
 
-    const rejectionCount =
-      (
-        request.rejections || []
-      ).length + 1;
+      // =================================================
+      // DISCIPLINARY APPROVAL
+      // =================================================
+      if (request.type === "disciplinary") {
 
-    const governanceBodyRef =
-      doc(
+        const now = new Date().toISOString();
+
+        // FIX: validate the action type up front instead of letting an
+        // unrecognized value fall through unhandled.
+        if (!DISCIPLINARY_THRESHOLDS[request.actionType]) {
+          Alert.alert("Error", "Unknown disciplinary action.");
+          return;
+        }
+
+        // FIX: count approvals BEFORE writing, same pattern as the
+        // governance branch below, so a threshold can actually gate
+        // execution instead of firing on the first approval.
+        const existingApprovals = request.approvals || [];
+        const approvalCount = existingApprovals.filter((id) => id !== approverId).length + 1;
+        const threshold = DISCIPLINARY_THRESHOLDS[request.actionType];
+        const updatedApprovals = [...existingApprovals, approverId];
+
+        if (approvalCount >= threshold) {
+
+          const disciplinarySnap = await getDoc(
+            doc(
+              db,
+              "organizations",
+              entity.organizationId,
+              "disciplinaryRequests",
+              request.disciplinaryId
+            )
+          );
+
+          const disciplinary = disciplinarySnap.data();
+
+          const memberRef = doc(
+            db,
+            "organizations",
+            entity.organizationId,
+            "entities",
+            disciplinary.entityId,
+            "members",
+            disciplinary.memberId
+          );
+
+          console.log("DISCIPLINARY MEMBER REF", disciplinary.entityId, disciplinary.memberId);
+
+          const memberSnap = await getDoc(memberRef);
+          console.log(
+            "MEMBER BEFORE UPDATE",
+            memberSnap.exists() ? memberSnap.data() : "NOT FOUND"
+          );
+
+          // FIX: write disciplinaryStatus/disciplinaryNote/disciplinaryDate
+          // — the exact fields MemberProfileScreen and MembersScreen read
+          // to compute isDisciplined and render the "⚠️ SUSPENDED" badge.
+          // Previously wrote `status` and `disciplinaryAction`, fields
+          // neither screen looks at, so nothing visibly changed. Also
+          // stopped overwriting `status`, since that field is separately
+          // reserved for the deceased flag elsewhere in the app.
+          await updateDoc(memberRef, {
+            disciplinaryStatus: request.actionType,
+            disciplinaryNote: disciplinary?.note || request.note || "",
+            disciplinaryDate: now,
+          });
+
+          const updatedSnap = await getDoc(memberRef);
+          console.log(
+            "MEMBER AFTER UPDATE",
+            updatedSnap.exists() ? updatedSnap.data() : "NOT FOUND"
+          );
+
+          await updateDoc(requestRef, {
+            approvals: arrayUnion(approverId),
+            status: "approved",
+            approvedAt: now,
+          });
+
+          await updateDoc(
+            doc(
+              db,
+              "organizations",
+              entity.organizationId,
+              "disciplinaryRequests",
+              request.disciplinaryId
+            ),
+            { status: "approved", approvedAt: now }
+          );
+
+          setRequest((prev) => ({
+            ...prev,
+            approvals: updatedApprovals,
+            status: "approved",
+            approvedAt: now,
+          }));
+
+          Alert.alert("Approved", `${request.actionType} executed.`);
+          navigation.goBack();
+          return;
+
+        } else {
+
+          // Threshold not yet met — record the approval without
+          // executing anything against the member record.
+          await updateDoc(requestRef, {
+            approvals: arrayUnion(approverId),
+          });
+
+          setRequest((prev) => ({ ...prev, approvals: updatedApprovals }));
+
+          Alert.alert(
+            "Approval Recorded",
+            `${approvalCount} of ${threshold} approvals recorded.`
+          );
+          return;
+        }
+      }
+
+      // =================================================
+      // GOVERNANCE APPROVAL
+      // =================================================
+
+      const governanceBodyRef = doc(
         db,
         "organizations",
         entity.organizationId,
@@ -702,222 +345,276 @@ if (request.type === "disciplinary") {
         request.governanceBodyId
       );
 
-    const governanceBodySnap =
-      await getDoc(
-        governanceBodyRef
-      );
+      const governanceBodySnap = await getDoc(governanceBodyRef);
 
-    if (
-      !governanceBodySnap.exists()
-    ) {
+      if (!governanceBodySnap.exists()) {
+        Alert.alert("Error", "Governance body configuration not found.");
+        return;
+      }
 
-      Alert.alert(
-        "Error",
-        "Governance body configuration not found."
-      );
+      const governanceBody = governanceBodySnap.data();
 
-      return;
-    }
+      const approvalCount =
+        (request.approvals || []).filter((id) => id !== approverId).length + 1;
 
-    const governanceBody =
-      governanceBodySnap.data();
+      const threshold =
+        request.nominationType === "leadership"
+          ? governanceBody.leadershipApprovalThreshold || 1
+          : governanceBody.membershipApprovalThreshold || 1;
 
-    const rejectionThreshold =
-      governanceBody
-        ?.rejectionThreshold || 1;
+      const decisionModel = governanceBody?.decisionModel || "threshold";
+      const rejections = request.rejections || [];
 
-    if (
-      rejectionCount >=
-      rejectionThreshold
-    ) {
+      let approved = false;
 
-      await updateDoc(
-        requestRef,
-        {
-          status: "rejected",
+      if (decisionModel === "threshold") {
+        approved = approvalCount >= threshold;
+      } else if (decisionModel === "majority") {
+        approved = approvalCount > rejections.length;
+      } else if (decisionModel === "consensus") {
+        approved = rejections.length === 0 && approvalCount >= threshold;
+      } else if (decisionModel === "unanimous") {
+        approved = rejections.length === 0 && approvalCount >= threshold;
+      }
 
-          rejectedAt:
-            new Date()
-              .toISOString(),
+      const updatedApprovals = [...(request.approvals || []), approverId];
 
-          rejectionNote:
-            rejectionNote.trim() ||
-            null,
-        }
-      );
+      if (approved) {
 
-      setShowRejectModal(false);
+        await updateDoc(requestRef, {
+          approvals: arrayUnion(approverId),
+          status: "approved",
+          approvedAt: new Date().toISOString(),
+        });
 
-      Alert.alert(
-        "Rejected",
-        "Request rejected.",
-        [
+        await executeGovernanceRequest(request, entity.organizationId);
+
+        await addDoc(
+          collection(db, "organizations", entity.organizationId, "governanceAudit"),
           {
-            text: "OK",
-            onPress: () =>
-              navigation.goBack(),
-          },
-        ]
-      );
+            actionType: request.actionType || "unknown",
+            nominationType: request.nominationType,
+            governanceBodyId: request.governanceBodyId,
+            governanceBodyName: request.governanceBodyName,
+            memberId: request.memberId,
+            memberName: request.memberName,
+            approvalRequestId: request.id,
+            executedAt: new Date().toISOString(),
+          }
+        );
 
-    } else {
+        setRequest((prev) => ({
+          ...prev,
+          approvals: updatedApprovals,
+          status: "approved",
+        }));
 
-      setShowRejectModal(false);
+        Alert.alert("Approved", "Governance request executed.");
 
-      Alert.alert(
-        "Rejection Recorded",
-        `${rejectionCount} of ${rejectionThreshold} rejections recorded.`
-      );
+      } else {
 
+        await updateDoc(requestRef, {
+          approvals: arrayUnion(approverId),
+        });
+
+        setRequest((prev) => ({ ...prev, approvals: updatedApprovals }));
+
+        Alert.alert(
+          "Approval Recorded",
+          `${approvalCount} of ${threshold} approvals recorded.`
+        );
+      }
+
+    } catch (error) {
+      console.log("APPROVE ERROR", error);
+      Alert.alert("Error", error?.message || "Approval failed.");
     }
+  };
 
-  } catch (error) {
+  const handleReject = async () => {
 
-    Alert.alert(
-      "Error",
-      error.message
-    );
+    try {
 
-  }
+      const stored = await AsyncStorage.getItem("activeEntity");
 
-};
+      if (!stored) {
+        Alert.alert("Error", "No active church selected.");
+        return;
+      }
+
+      const entity = JSON.parse(stored);
+      const rejectorId = entity.memberId;
+
+      if (!rejectorId) {
+        Alert.alert("Error", "Rejector identity not found.");
+        return;
+      }
+
+      const requestRef = doc(
+        db,
+        "organizations",
+        entity.organizationId,
+        "approvalRequests",
+        request.id
+      );
+
+      if (request.type === "disciplinary") {
+
+        const now = new Date().toISOString();
+
+        await updateDoc(requestRef, {
+          rejections: arrayUnion(rejectorId),
+          status: "rejected",
+          rejectedAt: now,
+          rejectionNote: rejectionNote.trim() || null,
+        });
+
+        await updateDoc(
+          doc(
+            db,
+            "organizations",
+            entity.organizationId,
+            "disciplinaryRequests",
+            request.disciplinaryId
+          ),
+          {
+            status: "rejected",
+            rejectedAt: now,
+            rejectionNote: rejectionNote.trim() || null,
+          }
+        );
+
+        setRequest((prev) => ({
+          ...prev,
+          rejections: [...(prev.rejections || []), rejectorId],
+          status: "rejected",
+        }));
+
+        Alert.alert("Rejected", "Disciplinary request rejected.");
+        navigation.goBack();
+        return;
+      }
+
+      await updateDoc(requestRef, {
+        rejections: arrayUnion(rejectorId),
+        rejectionHistory: arrayUnion({
+          memberId: rejectorId,
+          memberName: entity.memberName || "Unknown",
+          note: rejectionNote.trim() || null,
+          rejectedAt: new Date().toISOString(),
+        }),
+      });
+
+      const rejectionCount = (request.rejections || []).length + 1;
+
+      const governanceBodyRef = doc(
+        db,
+        "organizations",
+        entity.organizationId,
+        "governanceBodies",
+        request.governanceBodyId
+      );
+
+      const governanceBodySnap = await getDoc(governanceBodyRef);
+
+      if (!governanceBodySnap.exists()) {
+        Alert.alert("Error", "Governance body configuration not found.");
+        return;
+      }
+
+      const governanceBody = governanceBodySnap.data();
+      const rejectionThreshold = governanceBody?.rejectionThreshold || 1;
+      const updatedRejections = [...(request.rejections || []), rejectorId];
+
+      if (rejectionCount >= rejectionThreshold) {
+
+        await updateDoc(requestRef, {
+          status: "rejected",
+          rejectedAt: new Date().toISOString(),
+          rejectionNote: rejectionNote.trim() || null,
+        });
+
+        setRequest((prev) => ({
+          ...prev,
+          rejections: updatedRejections,
+          status: "rejected",
+        }));
+
+        setShowRejectModal(false);
+
+        Alert.alert("Rejected", "Request rejected.", [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
+
+      } else {
+
+        setRequest((prev) => ({ ...prev, rejections: updatedRejections }));
+
+        setShowRejectModal(false);
+
+        Alert.alert(
+          "Rejection Recorded",
+          `${rejectionCount} of ${rejectionThreshold} rejections recorded.`
+        );
+      }
+
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
 
       <AppHeader
-  title={
-    isTransferRequest
-      ? "Transfer Request"
-      : "Approval Request"
-  }
-        subtitle={
-          request.nominationType ||
-          "Request"
-        }
-        onBack={() =>
-          navigation.goBack()
-        }
+        title={isTransferRequest ? "Transfer Request" : "Approval Request"}
+        subtitle={request.nominationType || "Request"}
+        onBack={() => navigation.goBack()}
       />
 
-      <ScrollView
-        contentContainerStyle={{
-          padding: 16,
-        }}
-      >
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
 
+        <Text>Member:</Text>
+        <Text>{request.memberName}</Text>
+
+        {isTransferRequest ? (
+          <>
+            <Text style={{ marginTop: 16 }}>From:</Text>
+            <Text>{request.fromEntityName}</Text>
+
+            <Text style={{ marginTop: 16 }}>To:</Text>
+            <Text>{request.toEntityName || "Unknown / To Be Determined"}</Text>
+          </>
+        ) : (
+          <>
+            <Text style={{ marginTop: 16 }}>Governance Body:</Text>
+            <Text>
+              {request.type === "disciplinary" ? request.actionType : request.governanceBodyName}
+            </Text>
+          </>
+        )}
+
+        <Text style={{ marginTop: 16 }}>Requested By:</Text>
+        <Text>{request.requestedByName || "Unknown"}</Text>
+
+        <Text style={{ marginTop: 16 }}>Request Type:</Text>
         <Text>
-          Member:
+          {request.type === "disciplinary"
+            ? `Disciplinary: ${request.actionType}`
+            : request.nominationType}
         </Text>
 
-        <Text>
-          {request.memberName}
+        <Text style={{ marginTop: 16 }}>Status:</Text>
+        <Text>{request.status}</Text>
+
+        <Text style={{ marginTop: 8 }}>
+          Approvals Recorded: {(request.approvals || []).length}
+          {request.type === "disciplinary" && DISCIPLINARY_THRESHOLDS[request.actionType]
+            ? ` of ${DISCIPLINARY_THRESHOLDS[request.actionType]}`
+            : ""}
         </Text>
 
-       {isTransferRequest ? (
-  <>
-    <Text
-      style={{
-        marginTop: 16,
-      }}
-    >
-      From:
-    </Text>
-
-    <Text>
-      {request.fromEntityName}
-    </Text>
-
-    <Text
-      style={{
-        marginTop: 16,
-      }}
-    >
-      To:
-    </Text>
-
-    <Text>
-      {request.toEntityName ||
-        "Unknown / To Be Determined"}
-    </Text>
-  </>
-) : (
-  <>
-    <Text
-      style={{
-        marginTop: 16,
-      }}
-    >
-      Governance Body:
-    </Text>
-
-   <Text>
-  {request.type === "disciplinary"
-    ? request.actionType
-    : request.governanceBodyName}
-</Text>
-  </>
-)}
-
-        <Text>
-          {request.governanceBodyName}
-        </Text>
-
-        <Text
-          style={{
-            marginTop: 16,
-          }}
-        >
-          Requested By:
-        </Text>
-
-        <Text>
-          {request.requestedByName ||
-            "Unknown"}
-        </Text>
-
-        <Text
-          style={{
-            marginTop: 16,
-          }}
-        >
-          Request Type:
-        </Text>
-
-        <Text>
-  {request.type === "disciplinary"
-    ? `Disciplinary: ${request.actionType}`
-    : request.nominationType}
-</Text>
-
-        <Text
-          style={{
-            marginTop: 16,
-          }}
-        >
-          Status:
-        </Text>
-
-        <Text>
-          {request.status}
-        </Text>
-
-
-<Text
-  style={{
-    marginTop: 8,
-  }}
->
-  Approvals Recorded:
-  {" "}
-  {(request.approvals || []).length}
-</Text>
-
-<Text>
- Rejections Recorded:
-{" "}
-{(request.rejections || []).length}
-</Text>
+        <Text>Rejections Recorded: {(request.rejections || []).length}</Text>
 
         <TouchableOpacity
           style={{
@@ -929,149 +626,84 @@ if (request.type === "disciplinary") {
           }}
           onPress={handleApprove}
         >
-          <Text
-            style={{
-              color: "#FFF",
-              fontWeight: "700",
-            }}
-          >
-            Approve
-          </Text>
+          <Text style={{ color: "#FFF", fontWeight: "700" }}>Approve</Text>
         </TouchableOpacity>
 
-       <TouchableOpacity
-  style={{
-    backgroundColor: "#B00020",
-    padding: 14,
-    borderRadius: 10,
-    marginTop: 12,
-    alignItems: "center",
-  }}
-  onPress={() =>
-  setShowRejectModal(true)
-}
->
-          <Text
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#B00020",
+            padding: 14,
+            borderRadius: 10,
+            marginTop: 12,
+            alignItems: "center",
+          }}
+          onPress={() => setShowRejectModal(true)}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700" }}>Reject</Text>
+        </TouchableOpacity>
+
+        <Modal visible={showRejectModal} transparent={true} animationType="slide">
+          <View
             style={{
-              color: "#FFF",
-              fontWeight: "700",
+              flex: 1,
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.5)",
+              padding: 20,
             }}
           >
-            Reject
-          </Text>
-        </TouchableOpacity>
-        <Modal
-  visible={showRejectModal}
-  transparent={true}
-  animationType="slide"
->
+            <View style={{ backgroundColor: "#FFF", borderRadius: 12, padding: 20 }}>
 
-  <View
-    style={{
-      flex: 1,
-      justifyContent: "center",
-      backgroundColor:
-        "rgba(0,0,0,0.5)",
-      padding: 20,
-    }}
-  >
+              <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+                Reject Request
+              </Text>
 
-    <View
-      style={{
-        backgroundColor: "#FFF",
-        borderRadius: 12,
-        padding: 20,
-      }}
-    >
+              <Text style={{ marginBottom: 10 }}>Internal Note (Optional)</Text>
 
-      <Text
-        style={{
-          fontSize: 18,
-          fontWeight: "700",
-          marginBottom: 12,
-        }}
-      >
-        Reject Request
-      </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#DDD",
+                  borderRadius: 10,
+                  padding: 12,
+                  minHeight: 100,
+                  textAlignVertical: "top",
+                }}
+                multiline
+                value={rejectionNote}
+                onChangeText={setRejectionNote}
+                placeholder="Reason for rejection..."
+              />
 
-      <Text
-        style={{
-          marginBottom: 10,
-        }}
-      >
-        Internal Note (Optional)
-      </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#B00020",
+                  padding: 14,
+                  borderRadius: 10,
+                  marginTop: 16,
+                }}
+                onPress={async () => {
+                  setShowRejectModal(false);
+                  await handleReject();
+                }}
+              >
+                <Text style={{ color: "#FFF", fontWeight: "700", textAlign: "center" }}>
+                  Reject
+                </Text>
+              </TouchableOpacity>
 
-      <TextInput
-        style={{
-          borderWidth: 1,
-          borderColor: "#DDD",
-          borderRadius: 10,
-          padding: 12,
-          minHeight: 100,
-          textAlignVertical: "top",
-        }}
-        multiline
-        value={rejectionNote}
-        onChangeText={
-          setRejectionNote
-        }
-        placeholder="Reason for rejection..."
-      />
+              <TouchableOpacity
+                style={{ marginTop: 12 }}
+                onPress={() => {
+                  setShowRejectModal(false);
+                  setRejectionNote("");
+                }}
+              >
+                <Text style={{ textAlign: "center" }}>Cancel</Text>
+              </TouchableOpacity>
 
-      <TouchableOpacity
-        style={{
-          backgroundColor: "#B00020",
-          padding: 14,
-          borderRadius: 10,
-          marginTop: 16,
-        }}
-        onPress={async () => {
-
-          setShowRejectModal(false);
-
-          await handleReject();
-
-
-        }}
-      >
-        <Text
-          style={{
-            color: "#FFF",
-            fontWeight: "700",
-            textAlign: "center",
-          }}
-        >
-          Reject
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={{
-          marginTop: 12,
-        }}
-        onPress={() => {
-
-          setShowRejectModal(false);
-
-          setRejectionNote("");
-
-        }}
-      >
-        <Text
-          style={{
-            textAlign: "center",
-          }}
-        >
-          Cancel
-        </Text>
-      </TouchableOpacity>
-
-    </View>
-
-  </View>
-
-</Modal>
+            </View>
+          </View>
+        </Modal>
 
       </ScrollView>
 
