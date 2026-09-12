@@ -342,7 +342,10 @@ if (!behaviour.countAbsence && !behaviour.resetOnPresence) {
   return;
 }
 
-   const windowId = resolveWindowId(data);
+   const mapping = resolveWindowMapping(data);
+
+const windowId = mapping.windowId;
+
 
 const key =
   category === "revival"
