@@ -485,6 +485,7 @@ export default function AttendanceScreen() {
 
   sessionCategory: normalizeCategory(sessionCategory),
 windowType: normalizeCategory(sessionCategory),
+windowId: currentTrack,
 
   attendanceTrack: currentTrack,
 
@@ -797,6 +798,7 @@ windowType: normalizeCategory(sessionCategory),
     sessionCategory: normalizeCategory(sessionCategory),
     
 windowType: normalizeCategory(sessionCategory),
+windowId: currentTrack,
 
 attendanceTrack: currentTrack,
 
