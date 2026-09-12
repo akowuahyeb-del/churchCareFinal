@@ -342,10 +342,12 @@ if (!behaviour.countAbsence && !behaviour.resetOnPresence) {
   return;
 }
 
-      const key =
-        category === "revival"
-          ? `revival:${data.seriesId || data.sessionId}`
-          : `${category}:${data.attendanceTrack || track}:${data.date}`;
+   const windowId = resolveWindowId(data);
+
+const key =
+  category === "revival"
+    ? `revival:${data.seriesId || data.sessionId}`
+    : `${category}:${windowId}:${data.date}`;
 
       const existing = occurrenceMap.get(key) || {
         key,
