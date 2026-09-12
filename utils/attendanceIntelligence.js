@@ -181,11 +181,18 @@ export async function getMemberOccurrences({
   const ingest = (docs) => {
     docs.forEach((d) => {
       const data = d.data();
-      const category = data.sessionCategory || "regular";
+      const category = data.sessionCategory || "worship";
 
       // Special events never enter the streak at all, regardless of
       // how many "absent" records exist for them.
-      if (category === "special") return;
+      const behaviour =
+  WINDOW_BEHAVIOURS[category] ||
+  WINDOW_BEHAVIOURS.worship;
+
+// Categories that never contribute to attendance intelligence
+if (!behaviour.countAbsence && !behaviour.resetOnPresence) {
+  return;
+}
 
       const key =
         category === "revival"
