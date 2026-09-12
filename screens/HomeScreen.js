@@ -39,8 +39,10 @@ import {
   deleteDoc,
   setDoc,
   query,
-  orderBy
+  orderBy,
+  getDocs
 } from "firebase/firestore";
+
 import {
   ref,
   uploadBytes,
@@ -48,7 +50,11 @@ import {
 } from "firebase/storage";
 import AppText from "../components/AppText";
 import { getAttendanceSummary } from "../utils/attendanceSummaryService";
-import { hasPermission } from "../constants/permissions";
+import {
+  hasPermission,
+  DEFAULT_ROLES,
+  mergePermissions,
+} from "../constants/permissions";
 
 
 
@@ -323,20 +329,69 @@ useEffect(() => {
 
        if (currentUser) {
 
-  setUserRoles(
+ const baseRoles =
   Array.isArray(currentUser.roles)
     ? currentUser.roles
     : (
         currentUser.role
           ? [currentUser.role]
           : ["member"]
-      )
+      );
+
+const appointmentsSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      currentUser.organizationId,
+      "officeAppointments"
+    )
+  );
+
+const activeOfficeRoles =
+  appointmentsSnap.docs
+    .map(d => d.data())
+    .filter(
+      a =>
+        a.memberId === currentUser.memberId &&
+        a.status === "active"
+    )
+    .map(
+      a => a.officeId
+    );
+
+const effectiveRoles =
+  Array.from(
+    new Set([
+      ...baseRoles,
+      ...activeOfficeRoles,
+    ])
+  );
+
+const effectivePermissions =
+  mergePermissions(
+    DEFAULT_ROLES.filter(
+      r =>
+        effectiveRoles.includes(r.id)
+    )
+  );
+
+setUserRoles(
+  effectiveRoles
 );
 
 setUserPermissions(
-  Array.isArray(currentUser.permissions)
-    ? currentUser.permissions
-    : []
+  effectivePermissions
+);
+
+console.log(
+  "EFFECTIVE ROLES:",
+  effectiveRoles
+);
+
+console.log(
+  "EFFECTIVE PERMISSIONS:",
+  effectivePermissions
 );
 
 console.log(

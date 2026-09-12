@@ -180,6 +180,50 @@ export default function ApprovalRequestDetailScreen({
 
       return;
     }
+    //
+// PROTECTED OFFICE APPOINTMENT
+//
+if (
+  request.nominationType ===
+  "protected_office"
+) {
+
+  await addDoc(
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "officeAppointments"
+    ),
+    {
+      officeId:
+        request.protectedOffice,
+
+      officeName:
+        request.protectedOfficeName,
+
+      memberId:
+        request.memberId,
+
+      memberName:
+        request.memberName,
+
+      appointmentType:
+        request.actionType,
+
+      status:
+        "active",
+
+      appointedAt:
+        new Date().toISOString(),
+
+      createdAt:
+        new Date().toISOString(),
+    }
+  );
+
+  return;
+}
   };
 
   const handleApprove = async () => {
@@ -332,6 +376,48 @@ export default function ApprovalRequestDetailScreen({
           return;
         }
       }
+
+
+// =================================================
+// PROTECTED OFFICE APPROVAL
+// =================================================
+if (
+  request.nominationType ===
+  "protected_office"
+) {
+
+  const now =
+    new Date().toISOString();
+
+  await updateDoc(
+    requestRef,
+    {
+      approvals: arrayUnion(
+        approverId
+      ),
+
+      status: "approved",
+
+      approvedAt: now,
+    }
+  );
+
+  await executeGovernanceRequest(
+    request,
+    entity.organizationId
+  );
+
+  Alert.alert(
+    "Approved",
+    `${request.protectedOfficeName} appointment approved.`
+  );
+
+  navigation.goBack();
+
+  return;
+}
+
+
 
       // =================================================
       // GOVERNANCE APPROVAL

@@ -14,7 +14,13 @@ import AppHeader from "../components/AppHeader";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../firebase";
-import { collection, doc, onSnapshot, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  updateDoc,
+  addDoc
+} from "firebase/firestore";
 import {
   findPermission,
   mergePermissions,
@@ -38,6 +44,23 @@ const ADMIN_PERMISSIONS = [
 export default function AssignMemberRolesScreen({ route }) {
   const navigation = useNavigation();
   const user = route.params?.user || {};
+
+
+  // remove after debugging
+  console.log(
+  "ROLE SCREEN USER",
+  JSON.stringify(user, null, 2)
+);
+
+console.log(
+  "USER ROLES",
+  user?.roles
+);
+
+console.log(
+  "USER ROLE TYPE",
+  typeof user?.roles
+);
  
   
 
@@ -49,7 +72,12 @@ export default function AssignMemberRolesScreen({ route }) {
 
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRoleIds, setSelectedRoleIds] = useState(user.roles || []);
+  const [selectedRoleIds, setSelectedRoleIds] =
+  useState(
+    Array.isArray(user?.roles)
+      ? user.roles
+      : []
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -102,7 +130,9 @@ const protectedRoles = roles.filter(
     return;
   }
 
-  const alreadySelected = selectedRoleIds.includes(role.id);
+  const alreadySelected =
+  Array.isArray(selectedRoleIds) &&
+  selectedRoleIds.includes(role.id);
 
   setSelectedRoleIds(prev =>
     alreadySelected
@@ -232,7 +262,11 @@ const openProtectedOfficeNomination =
   return;
 }
     try {
-   const safeRoleIds = selectedRoleIds.filter(
+   const safeRoleIds =
+  (Array.isArray(selectedRoleIds)
+    ? selectedRoleIds
+    : []
+  ).filter(
   id => id !== "super_admin"
 );
 
@@ -335,7 +369,10 @@ Upgrade your plan to assign additional administrative roles.`,
             permissions are the combination of all selected roles.
           </Text>
 
-<Text
+
+
+
+         <Text
   style={{
     fontSize: 16,
     fontWeight: "800",
@@ -353,124 +390,140 @@ Upgrade your plan to assign additional administrative roles.`,
     marginBottom: 12,
   }}
 >
-  Operational roles are assigned directly and become effective immediately.
+  Roles assigned directly without governance approval.
 </Text>
-          {assignableRoles.map(role => {
-            const selected = selectedRoleIds.includes(role.id);
-            const inactive = role.active === false;
 
-            return (
-              <TouchableOpacity
-                key={role.id}
-                style={styles.row}
-                onPress={() => toggleRole(role)}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.roleLabel}>
-                    {role.label}{inactive ? "  (inactive — remove only)" : ""}
-                  </Text>
-                  <View style={styles.chipsRow}>
-                    {(role.permissions || []).slice(0, 4).map(key => {
-                      const perm = findPermission(key);
-                      return (
-                        <View key={key} style={styles.chip}>
-                          <Text style={styles.chipText}>{perm?.label || key}</Text>
-                        </View>
-                      );
-                    })}
-                    {(role.permissions || []).length > 4 && (
-                      <Text style={styles.moreText}>
-                        +{role.permissions.length - 4} more
-                      </Text>
-                    )}
-                    {(role.permissions || []).length === 0 && (
-                      <Text style={styles.moreText}>No special permissions</Text>
-                    )}
-                  </View>
-                </View>
-
-                <Ionicons
-                  name={selected ? "checkbox" : "square-outline"}
-                  size={22}
-                  color={selected ? "#4B3F72" : "#999"}
-                />
-              </TouchableOpacity>
-            );
-          })}
-
-<Text
+<View
   style={{
-    fontSize: 16,
-    fontWeight: "800",
-    marginTop: 20,
-    marginBottom: 10,
-    color: "#B8860B",
+    backgroundColor: "#F7F7FA",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
   }}
 >
-  Protected Offices
-</Text>
+  {assignableRoles.map(role => {
 
-<Text
+    const selected =
+  Array.isArray(selectedRoleIds) &&
+  selectedRoleIds.includes(role.id);
+
+    const inactive =
+      role.active === false;
+
+    return (
+      <TouchableOpacity
+        key={role.id}
+        style={styles.row}
+        onPress={() => toggleRole(role)}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.roleLabel}>
+            {role.label}
+            {inactive
+              ? " (inactive — remove only)"
+              : ""}
+          </Text>
+        </View>
+
+        <Ionicons
+          name={
+            selected
+              ? "checkbox"
+              : "square-outline"
+          }
+          size={22}
+          color={
+            selected
+              ? "#4B3F72"
+              : "#999"
+          }
+        />
+      </TouchableOpacity>
+    );
+
+  })}
+</View>
+
+<View
   style={{
-    fontSize: 12,
-    color: "#777",
-    marginBottom: 12,
+    backgroundColor: "#FFFBEA",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#B8860B",
+    marginBottom: 20,
   }}
 >
-  Protected offices cannot be assigned directly.
-  Any nomination will be routed through
-  Governance Approval.
-</Text>
-
-{protectedRoles.map(role => (
-
-  <TouchableOpacity
-    key={role.id}
-    style={[
-      styles.row,
-      {
-        borderWidth: 1,
-        borderColor: "#B8860B",
-        backgroundColor: "#FFFBEA",
-      },
-    ]}
-    onPress={() =>
-      openProtectedOfficeNomination(role)
-    }
+  <Text
+    style={{
+      fontSize: 16,
+      fontWeight: "800",
+      marginBottom: 10,
+      color: "#B8860B",
+    }}
   >
+    Protected Offices
+  </Text>
 
-    <View style={{ flex: 1 }}>
+  <Text
+    style={{
+      fontSize: 12,
+      color: "#777",
+      marginBottom: 12,
+    }}
+  >
+    Protected offices require governance approval.
+  </Text>
 
-      <Text
-        style={[
-          styles.roleLabel,
-          { color: "#B8860B" }
-        ]}
-      >
-        🔒 {role.label}
-      </Text>
+  {protectedRoles.map(role => (
 
-      <Text
-        style={{
-          fontSize: 11,
-          color: "#666",
-        }}
-      >
-        Governance approval required
-      </Text>
+    <TouchableOpacity
+      key={role.id}
+      style={[
+        styles.row,
+        {
+          backgroundColor: "#FFF",
+        },
+      ]}
+      onPress={() =>
+        openProtectedOfficeNomination(role)
+      }
+    >
 
-    </View>
+      <View style={{ flex: 1 }}>
 
-    <Ionicons
-      name="lock-closed"
-      size={20}
-      color="#B8860B"
-    />
+        <Text
+          style={[
+            styles.roleLabel,
+            {
+              color: "#B8860B",
+            },
+          ]}
+        >
+          🔒 {role.label}
+        </Text>
 
-  </TouchableOpacity>
+        <Text
+          style={{
+            fontSize: 11,
+            color: "#666",
+          }}
+        >
+          Governance approval required
+        </Text>
 
-))}
+      </View>
 
+      <Ionicons
+        name="lock-closed"
+        size={20}
+        color="#B8860B"
+      />
+
+    </TouchableOpacity>
+
+  ))}
+</View>
 
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
