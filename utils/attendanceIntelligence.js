@@ -127,6 +127,28 @@ export const WINDOW_BEHAVIOURS = {
   },
 };
 
+
+export const CATEGORY_MIGRATION_MAP = {
+  regular: "worship",
+  celebration: "special_worship",
+  special: "one_off",
+
+  worship: "worship",
+  special_worship: "special_worship",
+  revival: "revival",
+  ministry: "ministry",
+  administrative: "administrative",
+  one_off: "one_off",
+};
+
+export function normalizeCategory(category) {
+  return (
+    CATEGORY_MIGRATION_MAP[category] ||
+    "worship"
+  );
+}
+
+
 // Fallback track derivation: group by the service name itself, so
 // "Sunday" First/Second Service collapse together even on records
 // written before attendanceTrack was explicitly set.
@@ -181,7 +203,9 @@ export async function getMemberOccurrences({
   const ingest = (docs) => {
     docs.forEach((d) => {
       const data = d.data();
-      const category = data.sessionCategory || "worship";
+      const category = normalizeCategory(
+  data.sessionCategory || "worship"
+);
 
       // Special events never enter the streak at all, regardless of
       // how many "absent" records exist for them.
@@ -234,9 +258,11 @@ export function computeStreakFromOccurrences(occurrences) {
   let streak = 0;
 
   for (const occ of occurrences) {
-    const behaviour =
-      WINDOW_BEHAVIOURS[occ.category] ||
-      WINDOW_BEHAVIOURS.worship;
+   const category = normalizeCategory(occ.category);
+
+const behaviour =
+  WINDOW_BEHAVIOURS[category] ||
+  WINDOW_BEHAVIOURS.worship;
 
     // Presence that should reset the streak
     if (occ.status === "present" && behaviour.resetOnPresence) {
