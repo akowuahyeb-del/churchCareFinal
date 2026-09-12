@@ -484,6 +484,7 @@ export default function AttendanceScreen() {
   organizationId,
 
   sessionCategory: normalizeCategory(sessionCategory),
+windowType: normalizeCategory(sessionCategory),
 
   attendanceTrack: currentTrack,
 
@@ -794,6 +795,8 @@ export default function AttendanceScreen() {
     // intelligence layer can query by track/category/series directly
     // without joining back to the session document each time.
     sessionCategory: normalizeCategory(sessionCategory),
+    
+windowType: normalizeCategory(sessionCategory),
 
 attendanceTrack: currentTrack,
 
