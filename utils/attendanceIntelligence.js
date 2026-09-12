@@ -213,6 +213,40 @@ export function resolveWindowId(session) {
   });
 }
 
+export function resolveParticipationWindow(session) {
+  const category = normalizeCategory(
+    session?.windowType ||
+    session?.sessionCategory ||
+    "worship"
+  );
+
+  const windowId =
+    resolveWindowId(session);
+
+  return {
+    id: windowId,
+    type: category,
+    policy:
+      DEFAULT_ATTENDANCE_POLICY[
+        category
+      ] || null,
+  };
+}
+
+export function getAttendanceThreshold(
+  category,
+  threshold = "warningThreshold"
+) {
+  const normalized =
+    normalizeCategory(category);
+
+  return (
+    DEFAULT_ATTENDANCE_POLICY[
+      normalized
+    ]?.[threshold] ?? null
+  );
+}
+
 
     
 
