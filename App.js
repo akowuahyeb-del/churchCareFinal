@@ -183,10 +183,6 @@ setUserPermissions(
       : []
   );
 
-  console.log(
-    "MAINTABS ROLE:",
-    currentUser.role
-  );
 
   return;
 }
@@ -231,21 +227,18 @@ setUserPermissions(
     loadRoles();
   }, []);
 
+ 
+
  const canSeeMembers =
-  hasPermission(
-    {
-      roles: userRoles,
-      permissions: userPermissions,
-    },
+  userRoles.includes("admin") ||
+  userPermissions.includes(
     "manage_members"
   );
 
+
 const canSeeAttendance =
-  hasPermission(
-    {
-      roles: userRoles,
-      permissions: userPermissions,
-    },
+  userRoles.includes("admin") ||
+  userPermissions.includes(
     "manage_attendance"
   );
 
@@ -310,12 +303,10 @@ const canSeeHelp =
 )}
 
   {/* Leaders Only */}
- {canSeeMembers && (
-  <Tab.Screen
-    name="Members"
-    component={MembersStack}
-  />
-)}
+ <Tab.Screen
+  name="Members"
+  component={MembersStack}
+/>
 
 
   {canSeeAttendance && (

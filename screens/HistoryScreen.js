@@ -10,12 +10,26 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { db, storage } from "../firebase";
 import {
-  collection, addDoc, getDocs, doc,
-  updateDoc, deleteDoc, query, where, orderBy
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
 } from "firebase/firestore";
+
+import {
+  DEFAULT_ROLES,
+  mergePermissions,
+} from "../constants/permissions";
+
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AppHeader from "../components/AppHeader";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "../firebase";
 
 const { width: W } = Dimensions.get("window");
 
@@ -121,9 +135,19 @@ export default function HistoryScreen() {
   // Image fullscreen
   const [fullscreenImg,  setFullscreenImg]  = useState(null);
   const [userRoles, setUserRoles] = useState([]);
+  const [assignedAdmins, setAssignedAdmins] =
+  useState([]);
 
-  /* ══════════ LOAD ══════════ */
-  useEffect(() => { loadAll(); }, []);
+
+ /* ══════════ LOAD ══════════ */
+useEffect(() => {
+
+  loadAll();
+
+  loadAssignedAdmins();
+
+}, []);
+
 useEffect(() => {
   const loadRoles = async () => {
     try {
@@ -137,30 +161,63 @@ useEffect(() => {
       const user =
         JSON.parse(storedUser);
 
-      if (
-        user.role === "admin" ||
-        user.role === "super_admin"
-      ) {
-        setUserRoles(["admin"]);
-      } else if (
-        user.role === "pastor"
-      ) {
-        setUserRoles(["pastor"]);
-      } else if (
-        user.role === "elder"
-      ) {
-        setUserRoles(["elder"]);
-      }
-    } catch (e) {
+      const baseRoles =
+        Array.isArray(user.roles)
+          ? user.roles
+          : user.role
+          ? [user.role]
+          : ["member"];
+
+      const appointmentsSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            user.organizationId,
+            "officeAppointments"
+          )
+        );
+
+      const officeRoles =
+        appointmentsSnap.docs
+          .map(d => d.data())
+          .filter(
+            a =>
+              a.memberId === user.memberId &&
+              a.status === "active"
+          )
+          .map(a => a.officeId);
+
+      const effectiveRoles =
+        Array.from(
+          new Set([
+            ...baseRoles,
+            ...officeRoles,
+          ])
+        );
+
+      setUserRoles(
+        effectiveRoles
+      );
+
       console.log(
-        "Role load error:",
+        "HISTORY EFFECTIVE ROLES:",
+        effectiveRoles
+      );
+
+    } catch (e) {
+
+      console.log(
+        "History role load error:",
         e
       );
+
     }
   };
 
   loadRoles();
 }, []);
+
 
 const CAN_EDIT =
   userRoles.includes("admin") ||
@@ -172,10 +229,31 @@ const CAN_DELETE =
 const CAN_ADD =
   userRoles.includes("admin") ||
   userRoles.includes("pastor");
-  const CAN_VIEW_SENSITIVE =
+
+const CAN_VIEW_SENSITIVE =
   userRoles.includes("admin") ||
   userRoles.includes("pastor") ||
   userRoles.includes("elder");
+
+console.log(
+  "HISTORY SCREEN ROLES:",
+  userRoles
+);
+
+console.log(
+  "CAN_EDIT:",
+  CAN_EDIT
+);
+
+console.log(
+  "CAN_DELETE:",
+  CAN_DELETE
+);
+
+console.log(
+  "CAN_ADD:",
+  CAN_ADD
+);
 
 
   const loadAll = async () => {
@@ -202,6 +280,35 @@ const CAN_ADD =
     finally { setLoading(false); }
   };
 
+  const loadAssignedAdmins = async () => {
+
+  try {
+
+    const snap =
+      await getDocs(
+        collection(
+          db,
+          "history_admins"
+        )
+      );
+
+    setAssignedAdmins(
+      snap.docs.map(
+        d => d.data().memberId
+      )
+    );
+
+  } catch (e) {
+
+    console.log(
+      "History admins error:",
+      e
+    );
+
+  }
+
+};
+
   /* ══════════ PHOTO UPLOAD ══════════ */
   const pickPhoto = async (folder) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -223,6 +330,16 @@ const CAN_ADD =
         xhr.send(null);
       });
       const storageRef = ref(storage, `${folder}/${Date.now()}.jpg`);
+
+      console.log(
+  "AUTH UID:",
+  auth.currentUser?.uid
+);
+
+console.log(
+  "STORAGE PATH:",
+  storageRef.fullPath
+);
       await uploadBytes(storageRef, blob);
       blob.close && blob.close();
       return await getDownloadURL(storageRef);
@@ -575,8 +692,8 @@ const CAN_ADD =
   subtitle="Records & Heritage"
   onBack={() => navigation.goBack()}
 
-  rightContent={
-    typeof ROLE !== "undefined" && (
+ rightContent={
+  userRoles.length > 0 && (
       <View
         style={{
           backgroundColor: CAN_EDIT

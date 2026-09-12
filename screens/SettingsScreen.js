@@ -180,10 +180,19 @@ export default function SettingsScreen({
   currentUser?.role === "super_admin" ||
   linkedMember?.roles?.includes("super_admin");
 
+const effectiveRoles =
+  linkedMember?.effectiveRoles ||
+  linkedMember?.roles ||
+  [];
+
 const USER_ROLE =
-  currentUser?.role ||
-  linkedMember?.roles?.[0] ||
-  "member";
+  effectiveRoles.includes("admin")
+    ? "admin"
+    : effectiveRoles.includes("pastor")
+    ? "pastor"
+    : effectiveRoles.includes("elders")
+    ? "elders"
+    : effectiveRoles[0] || "member";
 
 const USER_NAME  = currentUser?.name || "Unknown User";
 const USER_EMAIL = currentUser?.email || "";
@@ -202,7 +211,13 @@ const permissionContext =
         roles: ["admin"],
         permissions: ["*"],
       }
-    : linkedMember || currentUser;
+    : {
+    ...linkedMember,
+    roles:
+      linkedMember?.effectiveRoles ||
+      linkedMember?.roles ||
+      [],
+  };
 
 const canDo = (permission) =>
   hasPermission(
@@ -277,6 +292,40 @@ useEffect(() => {
         );
 
         setLinkedMember(match);
+        const appointmentsSnap =
+  await getDocs(
+    collection(
+      db,
+      "organizations",
+      organizationId,
+      "officeAppointments"
+    )
+  );
+
+const activeOfficeRoles =
+  appointmentsSnap.docs
+    .map(d => d.data())
+    .filter(
+      a =>
+        a.memberId === match.id &&
+        a.status === "active"
+    )
+    .map(
+      a => a.officeId
+    );
+
+const effectiveRoles =
+  Array.from(
+    new Set([
+      ...(match.roles || []),
+      ...activeOfficeRoles,
+    ])
+  );
+
+setLinkedMember({
+  ...match,
+  effectiveRoles,
+});
 
 // To be removed later
 
@@ -1352,7 +1401,7 @@ const handleRemovePin = () => {
 
 
         {/* ── ADMIN CONTROLS ── */}
-        {canDo("admin") && (
+        {effectiveRoles.includes("admin") && (
           <>
             <SectionHeader title="Admin Controls" />
             <View style={styles.card}>
@@ -1430,7 +1479,8 @@ const handleRemovePin = () => {
         <SectionHeader title="Data Management" />
         <View style={styles.card}>
           <TapRow icon="download-outline"        label="Export My Data"      sub="Download personal records"    onPress={() => setDataExportModal(true)} color="#0984E3" />
-          {canDo("admin") && (
+          {effectiveRoles.includes("admin") && (
+
             <TapRow icon="cloud-download-outline" label="Backup Church Data" sub="Export full church database"  onPress={() => Alert.alert("Backup", "Backup initiated. Download link will be emailed.")} color="#00B894" />
           )}
           <TapRow icon="trash-outline"           label="Clear Local Cache"   sub="Remove offline device data"  onPress={() => setClearDataModal(true)} color="#e74c3c" />

@@ -1264,11 +1264,12 @@ return (
 
   },
 
-  hasRole("admin") && {
-    icon: "people-outline",
-    label: "Members",
-    onPress: () => navigation.navigate("Members")
-  },
+ hasRole("admin") && {
+  icon: "people-outline",
+  label: "Members",
+  onPress: () =>
+  navigation.navigate("Members")
+},
 
  (hasRole("usher") ||
  can("manage_visitors")) && {

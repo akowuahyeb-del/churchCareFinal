@@ -11,10 +11,19 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  collection,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "../firebase";
 
 import AppHeader from "../components/AppHeader";
 import LogoutButton from "../components/LogoutButton";
-import { hasPermission } from "../constants/permissions";
+import {
+  hasPermission,
+  DEFAULT_ROLES,
+  mergePermissions,
+} from "../constants/permissions";
 const MORE_ITEMS = [
   {
     key: "Departments",
@@ -104,46 +113,144 @@ const MORE_ITEMS = [
 export default function MoreScreen() {
   const navigation = useNavigation();
   const [role, setRole] = useState("");
+const [roles, setRoles] = useState([]);
 const [permissions, setPermissions] = useState([]);
-const canDo = (permission) => {
 
-  if (
-    role === "admin" ||
-    role === "super_admin"
-  ) {
-    return true;
-  }
-
-  return hasPermission(
-    { permissions },
+const canDo = (permission) =>
+  hasPermission(
+    {
+      roles,
+      permissions,
+    },
     permission
   );
-};
+
 
   useEffect(() => {
     const loadRole = async () => {
-      const storedRole =
-  await AsyncStorage.getItem("role");
 
-const storedUser =
-  await AsyncStorage.getItem("currentUser");
+  try {
 
-const effectiveRole =
-  storedRole ||
-  (storedUser
-    ? JSON.parse(storedUser).role
-    : "User");
+    const userRaw =
+      await AsyncStorage.getItem(
+        "currentUser"
+      );
 
-setRole(effectiveRole);
+    if (!userRaw) {
+      return;
+    }
 
-if (storedUser) {
-  const user = JSON.parse(storedUser);
+    const user =
+      JSON.parse(userRaw);
 
-  setPermissions(
-    user.permissions || []
-  );
-}
-    };
+    const baseRoles =
+      Array.isArray(user.roles)
+        ? user.roles
+        : (
+            user.role
+              ? [user.role]
+              : ["member"]
+          );
+
+    const appointmentsSnap =
+      await getDocs(
+        collection(
+          db,
+          "organizations",
+          user.organizationId,
+          "officeAppointments"
+        )
+      );
+
+    const activeOfficeRoles =
+      appointmentsSnap.docs
+        .map(d => d.data())
+        .filter(
+          a =>
+            a.memberId ===
+              user.memberId &&
+            a.status === "active"
+        )
+        .map(
+          a => a.officeId
+        );
+
+    const effectiveRoles =
+      Array.from(
+        new Set([
+          ...baseRoles,
+          ...activeOfficeRoles,
+        ])
+      );
+
+    const effectivePermissions =
+      mergePermissions(
+        DEFAULT_ROLES.filter(
+          r =>
+            effectiveRoles.includes(
+              r.id
+            )
+        )
+      );
+
+    setRoles(
+      effectiveRoles
+    );
+
+    setPermissions(
+      effectivePermissions
+    );
+
+    if (
+      effectiveRoles.includes(
+        "admin"
+      )
+    ) {
+
+      setRole("admin");
+
+    } else if (
+      effectiveRoles.includes(
+        "pastor"
+      )
+    ) {
+
+      setRole("pastor");
+
+    } else if (
+      effectiveRoles.includes(
+        "elders"
+      )
+    ) {
+
+      setRole("elders");
+
+    } else {
+
+      setRole(
+        effectiveRoles[0] ||
+        "member"
+      );
+
+    }
+
+    console.log(
+      "MORE EFFECTIVE ROLES:",
+      effectiveRoles
+    );
+
+  } catch (e) {
+
+    console.log(
+      "LOAD ROLE ERROR:",
+      e
+    );
+
+  }
+};
+
+console.log("MORE ROLES:", roles);
+console.log("MORE PERMISSIONS:", permissions);
 
     loadRole();
   }, []);
@@ -176,15 +283,26 @@ if (storedUser) {
       );
 
     case "PastoralDashboard":
-      return canDo("manage_members");
+  return (
+    roles.includes("admin") ||
+    roles.includes("pastor") ||
+    roles.includes("elders")
+  );
 
-    case "PastoralTeam":
-      return canDo("manage_members");
+case "PastoralTeam":
+  return (
+    roles.includes("admin") ||
+    roles.includes("pastor") ||
+    roles.includes("elders")
+  );
 
-    case "Departments":
-      return canDo("manage_members");
-      case "ApprovalCenter":
-  return canDo("manage_approvals");
+case "ApprovalCenter":
+  return (
+    roles.includes("admin") ||
+    roles.includes("governance_officer") ||
+    canDo("manage_approvals")
+  );
+
 
     default:
       return true;

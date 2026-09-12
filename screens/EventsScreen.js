@@ -12,8 +12,16 @@ import * as ImagePicker from "expo-image-picker";
 import { db, storage } from "../firebase";
 import AppHeader from "../components/AppHeader";
 import {
-  collection, addDoc, onSnapshot, deleteDoc,
-  doc, updateDoc, query, orderBy, where
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc,
+  query,
+  orderBy,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,7 +29,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import QRCodeDisplay from "../components/QRCodeDisplay";
 import { buildEventLink } from "../utils/qrLinks";
 import { buildEventQR } from "../utils/qrLinks";
-import { hasPermission } from "../constants/permissions";
+import {
+  hasPermission,
+  DEFAULT_ROLES,
+  mergePermissions,
+} from "../constants/permissions";
 
 
 const { width: W } = Dimensions.get("window");
@@ -100,40 +112,117 @@ const emptyForm = () => ({
   const [eventQR, setEventQR] = useState(null);
   const [eventQRVisible, setEventQRVisible] = useState(false);
 
-  const [permissions, setPermissions] = useState([]);
-
+ const [permissions, setPermissions] = useState([]);
+const [roles, setRoles] = useState([]);
 const [role, setRole] = useState("");
 
-const canDo = (permission) => {
 
-  if (
-    role === "admin" ||
-    role === "super_admin"
-  ) {
-    return true;
-  }
-
-  return hasPermission(
-    { permissions },
+const canDo = (permission) =>
+  hasPermission(
+    {
+      roles,
+      permissions,
+    },
     permission
   );
-};
 
 
 useEffect(() => {
   const loadPermissions = async () => {
-   const storedUser =
-  await AsyncStorage.getItem("currentUser");
+    try {
+      const storedUser =
+        await AsyncStorage.getItem(
+          "currentUser"
+        );
 
-if (!storedUser) return;
+      if (!storedUser) return;
 
-const user = JSON.parse(storedUser);
+      const user =
+        JSON.parse(storedUser);
 
-setRole(user.role || "member");
+      const baseRoles =
+        Array.isArray(user.roles)
+          ? user.roles
+          : (
+              user.role
+                ? [user.role]
+                : ["member"]
+            );
 
-setPermissions(
-  user.permissions || []
-);
+      const appointmentsSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            user.organizationId,
+            "officeAppointments"
+          )
+        );
+
+      const officeRoles =
+        appointmentsSnap.docs
+          .map(d => d.data())
+          .filter(
+            a =>
+              a.memberId ===
+                user.memberId &&
+              a.status ===
+                "active"
+          )
+          .map(
+            a => a.officeId
+          );
+
+      const effectiveRoles =
+        Array.from(
+          new Set([
+            ...baseRoles,
+            ...officeRoles,
+          ])
+        );
+
+      const effectivePermissions =
+        mergePermissions(
+          DEFAULT_ROLES.filter(
+            r =>
+              effectiveRoles.includes(
+                r.id
+              )
+          )
+        );
+
+      setRoles(
+        effectiveRoles
+      );
+
+      setPermissions(
+        effectivePermissions
+      );
+
+      setRole(
+        effectiveRoles.includes(
+          "admin"
+        )
+          ? "admin"
+          : effectiveRoles[0]
+      );
+
+      console.log(
+        "EVENTS ROLES:",
+        effectiveRoles
+      );
+
+      console.log(
+        "EVENTS PERMISSIONS:",
+        effectivePermissions
+      );
+
+    } catch (e) {
+      console.log(
+        "EVENTS ROLE LOAD ERROR:",
+        e
+      );
+    }
   };
 
   loadPermissions();
@@ -523,26 +612,21 @@ const toggleFeatured = async (event) => {
   title="Events"
   subtitle={`${filtered.length} event${filtered.length !== 1 ? "s" : ""}`}
   onBack={() => navigation.goBack()}
-  actions={[
-    {
-      icon: "search-outline",
-      onPress: () => setShowSearch(p => !p),
-    },
+ actions={[
+  {
+    icon: "search-outline",
+  },
 
-    ...VIEWS.map(v => ({
-      icon: v.icon,
-      onPress: () => setViewMode(v.key),
-    })),
+  ...VIEWS.map(v => ({
+    icon: v.icon,
+    onPress: () => setViewMode(v.key),
+  })),
 
-    ...(canDo("manage_events")
-      ? [
-          {
-            icon: "add",
-            onPress: openCreate,
-          },
-        ]
-      : []),
-  ]}
+  {
+    icon: "add",
+    onPress: openCreate,
+  },
+]}
 />
 
       {/* ── SEARCH BAR ── */}
