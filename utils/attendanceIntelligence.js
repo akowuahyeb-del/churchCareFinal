@@ -43,7 +43,13 @@ export const SESSION_CATEGORIES = [
   { key: "ministry", label: "Ministry Activity" },
   { key: "administrative", label: "Administrative Meeting" },
   { key: "one_off", label: "One-Off Event" },
+
+  // Legacy categories (keep for migration)
+  { key: "regular", label: "Regular Service (Legacy)" },
+  { key: "celebration", label: "Celebration (Legacy)" },
+  { key: "special", label: "Special Event (Legacy)" },
 ];
+
 
 export const WINDOW_BEHAVIOURS = {
   // NEW MODEL
