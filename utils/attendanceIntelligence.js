@@ -186,6 +186,12 @@ export const DEFAULT_ATTENDANCE_POLICY = {
     criticalThreshold: 8,
   },
 
+  revival: {
+    warningThreshold: 2,
+    concernThreshold: 4,
+    criticalThreshold: 8,
+  },
+
   ministry: {
     warningThreshold: 3,
     concernThreshold: 6,
