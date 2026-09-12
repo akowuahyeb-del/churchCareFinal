@@ -192,6 +192,7 @@ export function normalizeCategory(category) {
 }
 
 
+
 // Fallback track derivation: group by the service name itself, so
 // "Sunday" First/Second Service collapse together even on records
 // written before attendanceTrack was explicitly set.
@@ -201,6 +202,19 @@ export const resolveAttendanceTrack = (session) =>
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "-");
+
+export function resolveWindowId(session) {
+  if (session?.windowId) {
+    return session.windowId;
+  }
+
+  return resolveAttendanceTrack({
+    service: session?.service,
+  });
+}
+
+
+    
 
 // Fetch every attendance record for a member relevant to a track,
 // then collapse into "occurrences" per the category rules above.
