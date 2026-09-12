@@ -37,11 +37,89 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 
 export const SESSION_CATEGORIES = [
-  { key: "regular", label: "Regular Service" },
-  { key: "celebration", label: "Celebration (Easter, Christmas...)" },
-  { key: "revival", label: "Revival / Multi-Day Series" },
-  { key: "special", label: "Special Event (Wedding, Funeral...)" },
+  { key: "worship", label: "Worship" },
+  { key: "special_worship", label: "Special Worship" },
+  { key: "revival", label: "Revival / Conference" },
+  { key: "ministry", label: "Ministry Activity" },
+  { key: "administrative", label: "Administrative Meeting" },
+  { key: "one_off", label: "One-Off Event" },
 ];
+
+export const WINDOW_BEHAVIOURS = {
+  // NEW MODEL
+  worship: {
+    resetOnPresence: true,
+    countAbsence: true,
+    affectsChurchAttendance: true,
+    affectsPastoralCare: true,
+    affectsInactiveReview: true,
+  },
+
+  special_worship: {
+    resetOnPresence: true,
+    countAbsence: false,
+    affectsChurchAttendance: true,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+
+  revival: {
+    resetOnPresence: true,
+    countAbsence: true,
+    affectsChurchAttendance: true,
+    affectsPastoralCare: true,
+    affectsInactiveReview: false,
+  },
+
+  ministry: {
+    resetOnPresence: false,
+    countAbsence: true,
+    affectsChurchAttendance: false,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+
+  administrative: {
+    resetOnPresence: false,
+    countAbsence: false,
+    affectsChurchAttendance: false,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+
+  one_off: {
+    resetOnPresence: false,
+    countAbsence: false,
+    affectsChurchAttendance: false,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+
+  // BACKWARD COMPATIBILITY
+  regular: {
+    resetOnPresence: true,
+    countAbsence: true,
+    affectsChurchAttendance: true,
+    affectsPastoralCare: true,
+    affectsInactiveReview: true,
+  },
+
+  celebration: {
+    resetOnPresence: true,
+    countAbsence: false,
+    affectsChurchAttendance: true,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+
+  special: {
+    resetOnPresence: false,
+    countAbsence: false,
+    affectsChurchAttendance: false,
+    affectsPastoralCare: false,
+    affectsInactiveReview: false,
+  },
+};
 
 // Fallback track derivation: group by the service name itself, so
 // "Sunday" First/Second Service collapse together even on records
@@ -143,18 +221,21 @@ export function computeStreakFromOccurrences(occurrences) {
   let streak = 0;
 
   for (const occ of occurrences) {
-    if (occ.status === "present") {
-      // Presence of any kind is evidence the person isn't estranged —
-      // stop counting immediately.
+    const behaviour =
+      WINDOW_BEHAVIOURS[occ.category] ||
+      WINDOW_BEHAVIOURS.worship;
+
+    // Presence that should reset the streak
+    if (occ.status === "present" && behaviour.resetOnPresence) {
       break;
     }
 
-    if (occ.category === "celebration") {
-      // Missing a celebration doesn't count against them — skip
-      // without breaking or extending the streak.
+    // Ignore categories that should not contribute to absence
+    if (!behaviour.countAbsence) {
       continue;
     }
 
+    // Count qualifying absence
     streak += 1;
   }
 

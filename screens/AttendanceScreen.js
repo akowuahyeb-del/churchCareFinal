@@ -1,11 +1,4 @@
 // screens/AttendanceScreen.js
-// ✅ Complete rewrite incorporating:
-//   — All bug fixes from conversation (double-tap, presentCount,
-//     listener leak, checkAbsenceStreak, handleBarCodeScanned,
-//     session restoration, Hermes URL crash)
-//   — 7 intelligence features: predictive missing panel, session health
-//     score, first-time visitor badge, streak display, vs-last-week
-//     comparison, offline write queue, real geo implementation
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -37,19 +30,19 @@ import {
 import { verifyPin } from "../utils/verifyPin";
 import { hashPin } from "../utils/pinHash";
 import PinPad from "../components/PinPad";
+import {
+  SESSION_CATEGORIES,
+  resolveAttendanceTrack,
+  computeAbsenceStreak,
+} from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
-/* // ─────────────────────────────────────────────────────────────────
-const SERVICES   = ["Sunday", "Wednesday", "Friday", "Special"];
-const TYPES      = ["First Service", "Second Service", "Third Service", "Evening Service", "Youth", "Children", "Prayer"]; */
-const EVENTS     = ["None", "Easter", "Christmas", "Harvest", "Founders Day", "Convention"];
-const METHODS    = ["manual", "qr", "selfqr", "geo"];
-
+const EVENTS  = ["None", "Easter", "Christmas", "Harvest", "Founders Day", "Convention"];
+const METHODS = ["manual", "qr", "selfqr", "geo"];
 
 // ─────────────────────────────────────────────────────────────────
 // HELPERS
-// ─────────────────────────────────────────────────────────────────
 const today = () => new Date().toISOString().split("T")[0];
 
 const haversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -72,43 +65,40 @@ const fmtTime = () =>
 // ─────────────────────────────────────────────────────────────────
 export default function AttendanceScreen() {
 
-const navigation = useNavigation();
-const route = useRoute();
+  const navigation = useNavigation();
+  const route = useRoute();
+
   // ── ENTITY CONTEXT ──
   const [activeEntity, setActiveEntity] = useState(null);
   const [attendanceAreas, setAttendanceAreas] = useState([]);
-const [selectedAttendanceArea, setSelectedAttendanceArea] =
-  useState(null);
-
-const [currentUser, setCurrentUser] =
-  useState(null);
+  const [selectedAttendanceArea, setSelectedAttendanceArea] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
 
-const {
-  settings: attendanceSettings,
-  loaded: settingsLoaded,
-} = useAttendanceSettings(
-  organizationId,
-  entityId
-);
+  const {
+    settings: attendanceSettings,
+    loaded: settingsLoaded,
+  } = useAttendanceSettings(organizationId, entityId);
 
   // ── SESSION STATE ──
-const [selectedService, setSelectedService] = useState("");
-const [selectedType, setSelectedType] = useState("");
-  const [selectedEvent,   setSelectedEvent]   = useState("None");
-  const [selectedTemplate, setSelectedTemplate] =
-  useState(null);
-  const [startTime,       setStartTime]       = useState("");
-  const [endTime,         setEndTime]         = useState("");
-  const [sessionId,       setSessionId]       = useState(null);
-  const [sessionStatus,   setSessionStatus]   = useState(null); // open/extended/ended/null
-  const [sessionQR,       setSessionQR]       = useState(null);
-  
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState("None");
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [sessionId, setSessionId] = useState(null);
+  const [sessionStatus, setSessionStatus] = useState(null); // open/extended/ended/null
+  const [sessionQR, setSessionQR] = useState(null);
 
+  // ── SESSION CATEGORY / REVIVAL SERIES ──
+  const [sessionCategory, setSessionCategory] = useState("regular");
+  const [revivalSeriesId, setRevivalSeriesId] = useState(null);
+  const [existingRevivalSeries, setExistingRevivalSeries] = useState(null);
 
   // ── MEMBERS & ATTENDANCE ──
-  const [members,    setMembers]    = useState([]);
+  const [members, setMembers] = useState([]);
   const [attendance, setAttendance] = useState({}); // { memberId: { id, status, name, time } }
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all/present/absent/unmarked
@@ -117,62 +107,56 @@ const [selectedType, setSelectedType] = useState("");
   const [mode, setMode] = useState("manual"); // manual/qr/selfqr/geo
 
   // ── UI STATE ──
-  const [sessionModal,    setSessionModal]    = useState(false);
+  const [sessionModal, setSessionModal] = useState(false);
   const [endServiceModal, setEndServiceModal] = useState(false);
-  const [extendModal,     setExtendModal]     = useState(false);
-  const [extendMinutes,   setExtendMinutes]   = useState("30");
-  const [logVisible,      setLogVisible]      = useState(false);
-  const [logData,         setLogData]         = useState([]);
-  const [transferModal,   setTransferModal]   = useState(false);
-  const [selectedMember,  setSelectedMember]  = useState(null);
+  const [extendModal, setExtendModal] = useState(false);
+  const [extendMinutes, setExtendMinutes] = useState("30");
+  const [logVisible, setLogVisible] = useState(false);
+  const [logData, setLogData] = useState([]);
+  const [transferModal, setTransferModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
   const [transferService, setTransferService] = useState("Sunday");
-  const [transferType,    setTransferType]    = useState("First Service");
-  const [redFlagModal,    setRedFlagModal]    = useState(false);
-  const [redFlagMember,   setRedFlagMember]   = useState(null);
-  const [redFlagCount,    setRedFlagCount]    = useState(0);
-  const [contactModal,    setContactModal]    = useState(false);
-  const [contactMember,   setContactMember]   = useState(null);
-  const [qrModalVisible,  setQrModalVisible]  = useState(false);
-  const [scanFeedback,    setScanFeedback]    = useState("");
+  const [transferType, setTransferType] = useState("First Service");
+  const [redFlagModal, setRedFlagModal] = useState(false);
+  const [redFlagMember, setRedFlagMember] = useState(null);
+  const [redFlagCount, setRedFlagCount] = useState(0);
+  const [contactModal, setContactModal] = useState(false);
+  const [contactMember, setContactMember] = useState(null);
+  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState("");
 
-
-const [enteredPin, setEnteredPin] =
-  useState("");
-  const [verifyingPin, setVerifyingPin] =
-  useState(false);
-  const [pinModalVisible, setPinModalVisible] =
-  useState(false);
+  const [enteredPin, setEnteredPin] = useState("");
+  const [verifyingPin, setVerifyingPin] = useState(false);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
   const [undoMap, setUndoMap] = useState({});
 
   // ── GEO ──
   const [locationPermission, requestLocationPermission] = useState(null);
-  const [geoActive,  setGeoActive]  = useState(false);
+  const [geoActive, setGeoActive] = useState(false);
   const [memberGeoCode, setMemberGeoCode] = useState("");
   const geoWatchRef = useRef(null);
 
   // ── INTELLIGENCE STATE ──
-  const [lastWeekSession,  setLastWeekSession]  = useState(null);
-  const [lastWeekPresent,  setLastWeekPresent]  = useState(0);
+  const [lastWeekSession, setLastWeekSession] = useState(null);
+  const [lastWeekPresent, setLastWeekPresent] = useState(0);
   const [predictedMissing, setPredictedMissing] = useState([]);
-  const [firstTimers,      setFirstTimers]      = useState(new Set());
-  const [memberStreaks,    setMemberStreaks]     = useState({});
-  const [showIntelPanel,   setShowIntelPanel]   = useState(true);
-  const [intelLoading,     setIntelLoading]     = useState(false);
-  const [lastSession,      setLastSession]      = useState(null); // ended session snapshot
+  const [firstTimers, setFirstTimers] = useState(new Set());
+  const [memberStreaks, setMemberStreaks] = useState({});
+  const [showIntelPanel, setShowIntelPanel] = useState(true);
+  const [intelLoading, setIntelLoading] = useState(false);
+  const [lastSession, setLastSession] = useState(null); // ended session snapshot
 
   // ── PERMISSIONS ──
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const userRole = "admin"; // ⚠️ placeholder — replace with real auth
   const isSessionLocked = sessionStatus === "ended";
 
-  // ── DOUBLE-TAP GUARD (ref = synchronous, no re-render lag) ──
+  // ── DOUBLE-TAP GUARD ──
   const pendingToggleRef = useRef(new Set());
-  const scanLockRef      = useRef(false);
+  const scanLockRef = useRef(false);
 
   // ── OFFLINE WRITE QUEUE ──
-  // Writes land here first, then sync to Firestore when online.
-  // ✅ Prevents silent data loss when church signal is poor mid-service.
-  const offlineQueueRef  = useRef([]);
+  const offlineQueueRef = useRef([]);
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -181,78 +165,45 @@ const [enteredPin, setEnteredPin] =
   const sessionUnsubRef = useRef(null);
   const attendanceStateUnsubRef = useRef(null);
 
+  // ── DERIVED: current attendance track for this session ──
+  const currentTrack = resolveAttendanceTrack({ service: selectedService });
+
   // ─────────────────────────────────────────────────────────────────
   // BOOTSTRAP
   // ─────────────────────────────────────────────────────────────────
- useEffect(() => {
-  const bootstrap = async () => {
-    const storedEntity =
-      await AsyncStorage.getItem(
-        "activeEntity"
-      );
+  useEffect(() => {
+    const bootstrap = async () => {
+      const storedEntity = await AsyncStorage.getItem("activeEntity");
+      if (storedEntity) {
+        try { setActiveEntity(JSON.parse(storedEntity)); } catch (_) {}
+      }
 
-    if (storedEntity) {
-      try {
-        setActiveEntity(
-          JSON.parse(storedEntity)
-        );
-      } catch (_) {}
-    }
+      const storedUser = await AsyncStorage.getItem("currentUser");
+      if (storedUser) {
+        try { setCurrentUser(JSON.parse(storedUser)); } catch (_) {}
+      }
+    };
 
-    const storedUser =
-      await AsyncStorage.getItem(
-        "currentUser"
-      );
+    bootstrap();
+  }, []);
 
-    if (storedUser) {
-      try {
-        setCurrentUser(
-          JSON.parse(storedUser)
-        );
-      } catch (_) {}
-    }
-  };
+  useEffect(() => {
+    if (!organizationId || !entityId) return;
 
-  bootstrap();
-}, []);
-
-
- useEffect(() => {
-  if (!organizationId || !entityId)
-    return;
-
-  loadMembers();
-
-  loadAttendanceAreas();
-
-  restoreSession();
-}, [
-  organizationId,
-  entityId,
-  currentUser,
-]);
+    loadMembers();
+    loadAttendanceAreas();
+    restoreSession();
+  }, [organizationId, entityId, currentUser]);
 
   // Sync defaults from Attendance Settings
-useEffect(() => {
-  if (!settingsLoaded || !attendanceSettings) return;
+  useEffect(() => {
+    if (!settingsLoaded || !attendanceSettings) return;
 
-  setSelectedService(
-    attendanceSettings.defaultService || ""
-  );
-
-  setSelectedType(
-    attendanceSettings.defaultType || ""
-  );
-
-  setStartTime(
-    attendanceSettings.defaultStartTime || ""
-  );
-
-  setSelectedEvent(
-    attendanceSettings.defaultEvent || "None"
-  );
-}, [attendanceSettings, settingsLoaded]);
-
+    setSelectedService(attendanceSettings.defaultService || "");
+    setSelectedType(attendanceSettings.defaultType || "");
+    setStartTime(attendanceSettings.defaultStartTime || "");
+    setSelectedEvent(attendanceSettings.defaultEvent || "None");
+  }, [attendanceSettings, settingsLoaded]);
 
   // ── ROUTE PARAMS (resume from QR scan) ──
   useEffect(() => {
@@ -274,10 +225,11 @@ useEffect(() => {
   }, [organizationId, entityId]);
 
   useEffect(() => {
-  if (enteredPin.length === 6) {
-    confirmEndSession();
-  }
-}, [enteredPin]);
+    if (enteredPin.length === 6) {
+      confirmEndSession();
+    }
+  }, [enteredPin]);
+
   // ─────────────────────────────────────────────────────────────────
   // LOAD MEMBERS
   // ─────────────────────────────────────────────────────────────────
@@ -287,73 +239,33 @@ useEffect(() => {
       const snap = await getDocs(
         collection(db, "organizations", organizationId, "entities", entityId, "members")
       );
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setMembers(list);
+      setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.log("❌ loadMembers:", e);
     }
   };
 
-  const loadAttendanceAreas =
-  async () => {
+  const loadAttendanceAreas = async () => {
+    if (!organizationId || !currentUser?.uid) return;
 
-    if (
-      !organizationId ||
-      !currentUser?.uid
-    ) {
-      return;
-    }
-
-    const assignmentsSnap =
-      await getDocs(
-        query(
-          collection(
-            db,
-            "organizations",
-            organizationId,
-            "leadershipAssignments"
-          ),
-          where(
-            "memberId",
-            "==",
-            currentUser.uid
-          ),
-          where(
-            "canTakeAttendance",
-            "==",
-            true
-          ),
-          where(
-            "status",
-            "==",
-            "active"
-          )
-        )
-      );
-
-    const areas =
-      assignmentsSnap.docs.map(
-        (d) => ({
-          id: d.id,
-          ...d.data(),
-        })
-      );
-
-    setAttendanceAreas(
-      areas
+    const assignmentsSnap = await getDocs(
+      query(
+        collection(db, "organizations", organizationId, "leadershipAssignments"),
+        where("memberId", "==", currentUser.uid),
+        where("canTakeAttendance", "==", true),
+        where("status", "==", "active")
+      )
     );
+
+    setAttendanceAreas(assignmentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
   };
 
   // ─────────────────────────────────────────────────────────────────
   // LOAD ATTENDANCE — real-time listener with proper cleanup
-  // ✅ FIXED: was creating a new listener on every service/type change
-  // without unsubscribing the previous one, accumulating ghost listeners
-  // that each called setAttendance independently.
   // ─────────────────────────────────────────────────────────────────
   const loadAttendance = useCallback(() => {
     if (!organizationId || !entityId || !sessionId) return;
 
-    // Kill the previous listener before creating a new one
     if (attendanceUnsubRef.current) {
       attendanceUnsubRef.current();
       attendanceUnsubRef.current = null;
@@ -368,8 +280,6 @@ useEffect(() => {
       const map = {};
       snap.docs.forEach(d => {
         const x = d.data();
-        // ✅ Dedupe by memberId — keeps the newest record if duplicates
-        // exist from a prior double-tap bug
         const existing = map[x.memberId];
         if (!existing || (x.timestamp || "") > (existing.time || "")) {
           map[x.memberId] = { id: d.id, status: x.status, name: x.name, time: x.timestamp };
@@ -389,54 +299,40 @@ useEffect(() => {
   }, [loadAttendance]);
 
   useEffect(() => {
-  subscribeToSession();
+    subscribeToSession();
+    return () => {
+      if (sessionUnsubRef.current) {
+        sessionUnsubRef.current();
+        sessionUnsubRef.current = null;
+      }
+    };
+  }, [subscribeToSession]);
 
-  return () => {
-    if (sessionUnsubRef.current) {
-      sessionUnsubRef.current();
-      sessionUnsubRef.current = null;
-    }
-  };
-}, [subscribeToSession]);
-
-useEffect(() => {
-  subscribeToAttendanceState();
-
-  return () => {
-    if (
-      attendanceStateUnsubRef.current
-    ) {
-      attendanceStateUnsubRef.current();
-    }
-  };
-}, [
-  subscribeToAttendanceState
-]);
-
-
+  useEffect(() => {
+    subscribeToAttendanceState();
+    return () => {
+      if (attendanceStateUnsubRef.current) {
+        attendanceStateUnsubRef.current();
+      }
+    };
+  }, [subscribeToAttendanceState]);
 
   // ─────────────────────────────────────────────────────────────────
   // DERIVED STATS
-  // ✅ FIXED: presentCount was useState, which meant it had to be
-  // manually incremented/decremented and could drift out of sync.
-  // Now derived from the attendance map, bounded by the real roster,
-  // so it's mathematically impossible to go negative or exceed
-  // members.length.
   // ─────────────────────────────────────────────────────────────────
-  // ✅ MOBILITY-AWARE STATS
-const todayDate = new Date().toISOString().split("T")[0];
-const localMembers = trueLocalMembers(members, todayDate);
+  const todayDate = new Date().toISOString().split("T")[0];
+  const localMembers = trueLocalMembers(members, todayDate);
 
-const presentCount = members.filter(
-  m => attendance[m.id]?.status === "present"
-).length;
+  const presentCount = members.filter(
+    m => attendance[m.id]?.status === "present"
+  ).length;
 
-const absentCount = localMembers.length - presentCount;
+  const absentCount = localMembers.length - presentCount;
 
-const attendanceRate =
-  localMembers.length > 0
-    ? Math.round((presentCount / localMembers.length) * 100)
-    : 0;
+  const attendanceRate =
+    localMembers.length > 0
+      ? Math.round((presentCount / localMembers.length) * 100)
+      : 0;
 
   // ─────────────────────────────────────────────────────────────────
   // SESSION RESTORATION
@@ -444,7 +340,7 @@ const attendanceRate =
   const restoreSession = async () => {
     try {
       const stored = await AsyncStorage.getItem("activeSession");
-      const status  = await AsyncStorage.getItem("sessionStatus");
+      const status = await AsyncStorage.getItem("sessionStatus");
       if (stored && status !== "ended") {
         await applySessionData(stored);
       }
@@ -453,8 +349,6 @@ const attendanceRate =
     }
   };
 
-  // ✅ Single source of truth for "load a session and apply it" —
-  // used by QR scan, route param resume, and restoreSession.
   const applySessionData = async (targetSessionId) => {
     if (!organizationId || !entityId || !targetSessionId) return false;
     try {
@@ -462,11 +356,7 @@ const attendanceRate =
         doc(db, "organizations", organizationId, "entities", entityId, "sessions", targetSessionId)
       );
 
-  
-      if (!snap.exists()) {
-
-  return false;
-}
+      if (!snap.exists()) return false;
 
       const data = snap.data();
 
@@ -479,21 +369,64 @@ const attendanceRate =
       setSessionId(targetSessionId);
       setSessionQR(data.qrPayload || null);
 
-      await AsyncStorage.setItem(
-  "activeSession",
-  targetSessionId
-);
+      // FIX: restore category/series so any device that resumes or
+      // joins this session keeps writing attendance records tagged
+      // consistently with how the session was actually started.
+      setSessionCategory(data.sessionCategory || "regular");
+      setRevivalSeriesId(data.seriesId || null);
 
-await AsyncStorage.setItem(
-  "sessionStatus",
-  data.status || "open"
-);
+      await AsyncStorage.setItem("activeSession", targetSessionId);
+      await AsyncStorage.setItem("sessionStatus", data.status || "open");
 
-
-return true;
+      return true;
     } catch (e) {
       console.log("❌ applySessionData:", e);
       return false;
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // REVIVAL SERIES DETECTION
+  // ─────────────────────────────────────────────────────────────────
+  const checkForOngoingRevival = async () => {
+    if (!organizationId || !entityId) return null;
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "organizations", organizationId, "entities", entityId, "sessions"),
+          where("sessionCategory", "==", "revival")
+        )
+      );
+
+      const recent = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.seriesId)
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+
+      if (!recent) return null;
+
+      // Only offer "continue" within a 10-day window — otherwise this
+      // is a new revival, not a continuation of an old one.
+      const daysSince = (Date.now() - new Date(recent.date).getTime()) / 86400000;
+      if (daysSince > 10) return null;
+
+      return recent;
+    } catch (e) {
+      console.log("❌ checkForOngoingRevival:", e);
+      return null;
+    }
+  };
+
+  const selectSessionCategory = async (categoryKey) => {
+    setSessionCategory(categoryKey);
+
+    if (categoryKey === "revival") {
+      const ongoing = await checkForOngoingRevival();
+      setExistingRevivalSeries(ongoing);
+      setRevivalSeriesId(ongoing ? ongoing.seriesId : `revival_${Date.now()}`);
+    } else {
+      setRevivalSeriesId(null);
+      setExistingRevivalSeries(null);
     }
   };
 
@@ -506,55 +439,30 @@ return true;
       Alert.alert("No Church", "Select a church first.");
       return;
     }
-const existingSession =
-  await findOpenSession(
-    organizationId,
-    entityId
-  );
 
-if (existingSession) {
-  Alert.alert(
-  "Session Already Active",
-  `${existingSession.service || ""}
-${existingSession.type || ""}
+    const existingSession = await findOpenSession(organizationId, entityId);
 
-An attendance session is already running.
-
-Do you want to resume it?`,
-  [
-    {
-      text: "Cancel",
-      style: "cancel",
-    },
-    {
-      text: "Resume",
-      onPress: async () => {
-        
-
-        const restored =
-          await applySessionData(
-            existingSession.id
-          );
-
-        if (restored) {
-  setSessionModal(false);
-
-  // Force close all setup UI
-  setSelectedTemplate(null);
-
-  Alert.alert(
-    "Session Restored",
-    "You have joined the active attendance session."
-  );
-}
-      },
-    },
-  ]
-);
-
-
-  return;
-}
+    if (existingSession) {
+      Alert.alert(
+        "Session Already Active",
+        `${existingSession.service || ""}\n${existingSession.type || ""}\n\nAn attendance session is already running.\n\nDo you want to resume it?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Resume",
+            onPress: async () => {
+              const restored = await applySessionData(existingSession.id);
+              if (restored) {
+                setSessionModal(false);
+                setSelectedTemplate(null);
+                Alert.alert("Session Restored", "You have joined the active attendance session.");
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
 
     try {
       const ref = await addDoc(
@@ -569,11 +477,15 @@ Do you want to resume it?`,
           status: "open",
           entityId,
           organizationId,
+          // FIX: session categorization + track/series, the backbone
+          // of the category-aware absence intelligence.
+          sessionCategory,
+          attendanceTrack: currentTrack,
+          seriesId: sessionCategory === "revival" ? revivalSeriesId : null,
           createdAt: serverTimestamp(),
         }
       );
 
-      // ✅ Generate QR using real qrLinks.js builders (URL format)
       const qrLink = await buildAttendanceSessionLink(ref.id, organizationId, entityId);
       await updateDoc(
         doc(db, "organizations", organizationId, "entities", entityId, "sessions", ref.id),
@@ -581,32 +493,24 @@ Do you want to resume it?`,
       );
 
       setSessionId(ref.id);
+
       await setDoc(
-  doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "attendanceState",
-    "active"
-  ),
-  {
-    activeSessionId: ref.id,
-    status: "open",
-    updatedAt: serverTimestamp(),
-  }
-);
+        doc(db, "organizations", organizationId, "entities", entityId, "attendanceState", "active"),
+        {
+          activeSessionId: ref.id,
+          status: "open",
+          updatedAt: serverTimestamp(),
+        }
+      );
+
       setSessionQR(qrLink);
       setSessionStatus("open");
-     
       setSessionModal(false);
       setAttendance({});
 
       await AsyncStorage.setItem("activeSession", ref.id);
       await AsyncStorage.setItem("sessionStatus", "open");
 
-      // Load intelligence data for this service type
       loadIntelligence(selectedService, selectedType);
 
     } catch (e) {
@@ -615,178 +519,158 @@ Do you want to resume it?`,
     }
   };
 
-
   const subscribeToSession = useCallback(() => {
-  if (!organizationId || !entityId || !sessionId)
-    return;
+    if (!organizationId || !entityId || !sessionId) return;
 
-  if (sessionUnsubRef.current) {
-    sessionUnsubRef.current();
-    sessionUnsubRef.current = null;
-  }
-
-  sessionUnsubRef.current = onSnapshot(
-    doc(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "sessions",
-      sessionId
-    ),
-    async (snap) => {
-      if (!snap.exists()) return;
-
-      const data = snap.data();
-
-      const newStatus =
-        data.status || "open";
-
-      if (
-        newStatus !== sessionStatus
-      ) {
-        setSessionStatus(newStatus);
-      }
-
-     if (newStatus === "ended") {
-
-  setSessionStatus("ended");
-
-  setSessionId(null);
-  setSessionQR(null);
-  setAttendance({});
-  setPredictedMissing([]);
-
-  await AsyncStorage.setItem(
-    "sessionStatus",
-    "ended"
-  );
-
-  await AsyncStorage.removeItem(
-    "activeSession"
-  );
-
-  Alert.alert(
-    "Session Ended",
-    "Attendance was closed on another device."
-  );
-}
-    },
-    (error) => {
-      console.log(
-        "❌ session listener:",
-        error
-      );
+    if (sessionUnsubRef.current) {
+      sessionUnsubRef.current();
+      sessionUnsubRef.current = null;
     }
-  );
-}, [
-  organizationId,
-  entityId,
-  sessionId,
-  sessionStatus,
-]);
 
-const subscribeToAttendanceState =
-  useCallback(() => {
+    sessionUnsubRef.current = onSnapshot(
+      doc(db, "organizations", organizationId, "entities", entityId, "sessions", sessionId),
+      async (snap) => {
+        if (!snap.exists()) return;
 
-    if (!organizationId || !entityId)
-      return;
+        const data = snap.data();
+        const newStatus = data.status || "open";
 
-    if (
-      attendanceStateUnsubRef.current
-    ) {
+        if (newStatus !== sessionStatus) {
+          setSessionStatus(newStatus);
+        }
+
+        if (newStatus === "ended") {
+          setSessionStatus("ended");
+          setSessionId(null);
+          setSessionQR(null);
+          setAttendance({});
+          setPredictedMissing([]);
+
+          await AsyncStorage.setItem("sessionStatus", "ended");
+          await AsyncStorage.removeItem("activeSession");
+
+          Alert.alert("Session Ended", "Attendance was closed on another device.");
+        }
+      },
+      (error) => {
+        console.log("❌ session listener:", error);
+      }
+    );
+  }, [organizationId, entityId, sessionId, sessionStatus]);
+
+  const subscribeToAttendanceState = useCallback(() => {
+    if (!organizationId || !entityId) return;
+
+    if (attendanceStateUnsubRef.current) {
       attendanceStateUnsubRef.current();
     }
 
-    attendanceStateUnsubRef.current =
-      onSnapshot(
-        doc(
-          db,
-          "organizations",
-          organizationId,
-          "entities",
-          entityId,
-          "attendanceState",
-          "active"
-        ),
-        async (snap) => {
-          if (!snap.exists()) return;
+    attendanceStateUnsubRef.current = onSnapshot(
+      doc(db, "organizations", organizationId, "entities", entityId, "attendanceState", "active"),
+      async (snap) => {
+        if (!snap.exists()) return;
 
-          const state = snap.data();
+        const state = snap.data();
 
-          if (
-            state.activeSessionId &&
-            state.activeSessionId !== sessionId
-          ) {
-            await applySessionData(
-              state.activeSessionId
-            );
-          }
-if (state.status === "ended") {
-  setSessionStatus("ended");
-  setSessionId(null);
-  setAttendance({});
-  setSessionQR(null);
-  setPredictedMissing([]);
-
-  await AsyncStorage.removeItem(
-    "activeSession"
-  );
-
-  await AsyncStorage.setItem(
-    "sessionStatus",
-    "ended"
-  );
-}
+        if (state.activeSessionId && state.activeSessionId !== sessionId) {
+          await applySessionData(state.activeSessionId);
         }
-      );
 
- }, [
-  organizationId,
-  entityId,
-]);
+        if (state.status === "ended") {
+          setSessionStatus("ended");
+          setSessionId(null);
+          setAttendance({});
+          setSessionQR(null);
+          setPredictedMissing([]);
 
-const confirmEndSession = async () => {
-  if (verifyingPin) return;
-
-  setVerifyingPin(true);
-
-  try {
-    const valid = await verifyPin(
-      enteredPin
+          await AsyncStorage.removeItem("activeSession");
+          await AsyncStorage.setItem("sessionStatus", "ended");
+        }
+      }
     );
+  }, [organizationId, entityId]);
 
-    if (!valid) {
-      Alert.alert(
-  "Invalid Attendance PIN",
-  "The Attendance PIN entered is incorrect."
-);
+  const confirmEndSession = async () => {
+    if (verifyingPin) return;
+    setVerifyingPin(true);
 
+    try {
+      const valid = await verifyPin(enteredPin);
+
+      if (!valid) {
+        Alert.alert("Invalid Attendance PIN", "The Attendance PIN entered is incorrect.");
+        setEnteredPin("");
+        return;
+      }
+
+      setPinModalVisible(false);
       setEnteredPin("");
-      return;
+
+      await endSession();
+    } finally {
+      setVerifyingPin(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // AUTO-MARK ABSENTEES (runs at session end)
+  // ─────────────────────────────────────────────────────────────────
+  // FIX: previously nobody was ever marked absent unless an usher
+  // explicitly tapped it — so the "2 continuous absences" pastoral
+  // threshold had almost no real data to count against. Now, when a
+  // session ends, every "local" member (not away/visiting) with no
+  // attendance record gets an implicit absence written — across every
+  // session category, per your call — while the streak calculation
+  // itself (computeAbsenceStreak) separately decides which categories
+  // actually count toward the pastoral alert.
+  const autoMarkAbsentees = async () => {
+    const local = trueLocalMembers(members, todayDate);
+    const flagged = [];
+
+    for (const member of local) {
+      if (attendance[member.id]) continue; // already has a record
+
+      const record = {
+        ...buildRecord(member, "absent"),
+        method: "auto",
+        autoMarked: true,
+      };
+
+      await writeUpsert(record);
+
+      try {
+        const streak = await computeAbsenceStreak({
+          organizationId,
+          entityId,
+          memberId: member.id,
+          track: currentTrack,
+        });
+
+        if (streak >= ABSENCE_WARNING) {
+          flagged.push(`${member.name} (${streak})`);
+        }
+      } catch (e) {
+        console.log("❌ post-session streak check:", e);
+      }
     }
 
-    setPinModalVisible(false);
-    setEnteredPin("");
-
-    await endSession();
-
-  } finally {
-    setVerifyingPin(false);
-  }
-};
+    if (flagged.length > 0) {
+      Alert.alert(
+        "Pastoral Follow-Up Needed",
+        `${flagged.length} member(s) have reached the absence threshold:\n\n${flagged.join("\n")}`
+      );
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────────
   // END SESSION
   // ─────────────────────────────────────────────────────────────────
   const endSession = async () => {
     try {
-      // ✅ Derived counts — can't be inflated by stale state
       const currentPresent = members.filter(m => attendance[m.id]?.status === "present").length;
-      const currentAbsent  = members.length - currentPresent;
-      const currentTotal   = members.length;
-      const currentRate    = currentTotal > 0 ? Math.round((currentPresent / currentTotal) * 100) : 0;
+      const currentAbsent = members.length - currentPresent;
+      const currentTotal = members.length;
+      const currentRate = currentTotal > 0 ? Math.round((currentPresent / currentTotal) * 100) : 0;
 
       const snapshot = {
         service: selectedService,
@@ -798,6 +682,11 @@ const confirmEndSession = async () => {
         endedAt: fmtTime(),
       };
       setLastSession(snapshot);
+
+      // FIX: write implicit absences (and check pastoral thresholds)
+      // BEFORE the session/attendance state is torn down below, while
+      // sessionId/organizationId/entityId are still valid.
+      await autoMarkAbsentees();
 
       if (sessionId && organizationId && entityId) {
         await updateDoc(
@@ -812,29 +701,22 @@ const confirmEndSession = async () => {
             finalRate: currentRate,
           }
         );
+
         await setDoc(
-  doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "attendanceState",
-    "active"
-  ),
-  {
-    activeSessionId: null,
-    status: "ended",
-    updatedAt: serverTimestamp(),
-  }
-);
+          doc(db, "organizations", organizationId, "entities", entityId, "attendanceState", "active"),
+          {
+            activeSessionId: null,
+            status: "ended",
+            updatedAt: serverTimestamp(),
+          }
+        );
       }
 
-      // Clean up
       if (attendanceUnsubRef.current) {
         attendanceUnsubRef.current();
         attendanceUnsubRef.current = null;
       }
+
       setAttendance({});
       setSessionId(null);
       setSessionQR(null);
@@ -843,6 +725,11 @@ const confirmEndSession = async () => {
       setSessionStatus("ended");
       setPredictedMissing([]);
       setGeoActive(false);
+      // FIX: reset category/series so the next session setup doesn't
+      // silently inherit "revival" (or any other category) by default.
+      setSessionCategory("regular");
+      setRevivalSeriesId(null);
+      setExistingRevivalSeries(null);
       if (geoWatchRef.current) { geoWatchRef.current.remove(); geoWatchRef.current = null; }
 
       await AsyncStorage.setItem("sessionStatus", "ended");
@@ -875,10 +762,7 @@ const confirmEndSession = async () => {
   };
 
   // ─────────────────────────────────────────────────────────────────
-  // TOGGLE ATTENDANCE
-  // ✅ FIXED: double-tap now blocked at two layers:
-  //   1. pendingToggleRef (synchronous, no batching delay)
-  //   2. re-tapping the same status is a no-op (not a delete)
+  // ATTENDANCE WRITE PATH — deterministic IDs (multi-device safe)
   // ─────────────────────────────────────────────────────────────────
   const buildRecord = (member, status) => ({
     memberId: member.id,
@@ -895,88 +779,83 @@ const confirmEndSession = async () => {
     date: today(),
     status,
     method: mode,
+    // FIX: denormalized onto every attendance record so the
+    // intelligence layer can query by track/category/series directly
+    // without joining back to the session document each time.
+    sessionCategory,
+    attendanceTrack: currentTrack,
+    seriesId: sessionCategory === "revival" ? revivalSeriesId : null,
     timestamp: new Date().toISOString(),
   });
-const attendanceDocId = (
-  sessId,
-  memberId
-) => `${sessId}_${memberId}`;
 
-  const writeAdd = async (record) => {
-    // ✅ OFFLINE QUEUE: if Firestore write fails, queue locally
+  const attendanceDocId = (sessId, memberId) => `${sessId}_${memberId}`;
+
+  // FIX: this was declared but never actually used — writeAdd/
+  // writeDelete still used addDoc/deleteDoc with random IDs, which is
+  // exactly what let two devices create duplicate records for the same
+  // member in the same session. Wired in properly now: same deterministic
+  // doc ID always resolves to the same document, so upserting is safe
+  // to call from multiple devices without ever producing a duplicate.
+  const writeUpsert = async (record) => {
+    const docId = attendanceDocId(record.sessionId, record.memberId);
     try {
-      const ref = await addDoc(
-        collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
+      await setDoc(
+        doc(db, "organizations", organizationId, "entities", entityId, "attendance", docId),
         record
       );
-      return ref.id;
+      return docId;
     } catch (e) {
-      const localId = `local_${Date.now()}_${record.memberId}`;
-      offlineQueueRef.current.push({ ...record, _localId: localId });
+      offlineQueueRef.current = offlineQueueRef.current.filter(r => r._docId !== docId);
+      offlineQueueRef.current.push({ ...record, _docId: docId });
       setPendingCount(offlineQueueRef.current.length);
-      return localId;
+      return docId;
     }
   };
 
-  const writeDelete = async (docId) => {
-    if (!docId || docId.startsWith("local_")) {
-      offlineQueueRef.current = offlineQueueRef.current.filter(r => r._localId !== docId);
-      setPendingCount(offlineQueueRef.current.length);
-      return;
-    }
+  const writeRemove = async (docId) => {
+    offlineQueueRef.current = offlineQueueRef.current.filter(r => r._docId !== docId);
+    setPendingCount(offlineQueueRef.current.length);
     try {
       await deleteDoc(
         doc(db, "organizations", organizationId, "entities", entityId, "attendance", docId)
       );
     } catch (e) {
-      console.log("❌ writeDelete:", e);
+      console.log("❌ writeRemove:", e);
     }
   };
 
-const confirmAwayAttendance = (member, status) => {
-  const activePeriod = (member.awayPeriods || []).find((p) => {
-    const from = String(p.from || "").replace(/-/g, "");
-    const to = String(p.to || "").replace(/-/g, "");
-    const today = todayDate.replace(/-/g, "");
+  const confirmAwayAttendance = (member, status) => {
+    const activePeriod = (member.awayPeriods || []).find((p) => {
+      const from = String(p.from || "").replace(/-/g, "");
+      const to = String(p.to || "").replace(/-/g, "");
+      const t = todayDate.replace(/-/g, "");
+      return from <= t && t <= to;
+    });
 
-    return from <= today && today <= to;
-  });
-
-  return new Promise((resolve) => {
-    Alert.alert(
-      "Away Member",
-      `${member.name} is currently marked as Away${
-        member.schoolName ? ` (${member.schoolName})` : ""
-      }${
-        activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
-      }.\n\nDo you still want to record attendance?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-          onPress: () => resolve(false),
-        },
-        {
-          text:
-            status === "present"
-              ? "Mark Present"
-              : "Mark Absent",
-          onPress: () => resolve(true),
-        },
-      ]
-    );
-  });
-};
-
+    return new Promise((resolve) => {
+      Alert.alert(
+        "Away Member",
+        `${member.name} is currently marked as Away${
+          member.schoolName ? ` (${member.schoolName})` : ""
+        }${
+          activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
+        }.\n\nDo you still want to record attendance?`,
+        [
+          { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+          {
+            text: status === "present" ? "Mark Present" : "Mark Absent",
+            onPress: () => resolve(true),
+          },
+        ]
+      );
+    });
+  };
 
   const toggleAttendance = async (member, status) => {
     if (sessionStatus === "ended") {
-  Alert.alert(
-    "Locked",
-    "This attendance session has been closed."
-  );
-  return;
-}
+      Alert.alert("Locked", "This attendance session has been closed.");
+      return;
+    }
     if (isSessionLocked && userRole !== "admin") {
       Alert.alert("Locked", "Service has ended. Contact admin to make changes.");
       return;
@@ -986,59 +865,48 @@ const confirmAwayAttendance = (member, status) => {
       return;
     }
 
-// ✅ Confirm attendance for away members
-if (isMemberAway(member, todayDate)) {
-  const proceed = await confirmAwayAttendance(
-    member,
-    status
-  );
+    if (isMemberAway(member, todayDate)) {
+      const proceed = await confirmAwayAttendance(member, status);
+      if (!proceed) return;
+    }
 
-  if (!proceed) {
-    return;
-  }
-}
+    if (isMemberAway(member, todayDate)) {
+      const activePeriod = (member.awayPeriods || []).find((p) => {
+        const from = String(p.from || "").replace(/-/g, "");
+        const to = String(p.to || "").replace(/-/g, "");
+        const t = todayDate.replace(/-/g, "");
+        return from <= t && t <= to;
+      });
 
-    // ✅ Mobility warning (does not block attendance)
-if (isMemberAway(member, todayDate)) {
-  const activePeriod = (member.awayPeriods || []).find((p) => {
-    const from = String(p.from || "").replace(/-/g, "");
-    const to = String(p.to || "").replace(/-/g, "");
-    const today = todayDate.replace(/-/g, "");
+      Alert.alert(
+        "Away Member",
+        `${member.name} is currently marked as Away${
+          member.schoolName ? ` (${member.schoolName})` : ""
+        }${
+          activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
+        }.\n\nAttendance can still be recorded if they are physically present.`
+      );
+    }
 
-    return from <= today && today <= to;
-  });
-
-  Alert.alert(
-    "Away Member",
-    `${member.name} is currently marked as Away${
-      member.schoolName ? ` (${member.schoolName})` : ""
-    }${
-      activePeriod?.to ? `.\n\nExpected return: ${activePeriod.to}` : ""
-    }.\n\nAttendance can still be recorded if they are physically present.`
-  );
-}
-
-    // ✅ Layer 1: synchronous pending guard
     if (pendingToggleRef.current.has(member.id)) return;
     pendingToggleRef.current.add(member.id);
 
     try {
       const existing = attendance[member.id];
-
-      // ✅ Layer 2: re-tapping same status is a no-op
       if (existing?.status === status) return;
 
       setUndoMap(prev => ({ ...prev, [member.id]: existing || null }));
 
-      if (existing) await writeDelete(existing.id);
-      const newId = await writeAdd(buildRecord(member, status));
+      // FIX: single upsert overwriting the same deterministic doc,
+      // instead of delete-then-add — no flicker on other devices, no
+      // window where the record briefly doesn't exist.
+      const newId = await writeUpsert(buildRecord(member, status));
 
       setAttendance(prev => ({
         ...prev,
         [member.id]: { id: newId, status, name: member.name, time: new Date().toISOString() }
       }));
 
-      // ✅ INTELLIGENCE: first-timer alert
       if (status === "present" && firstTimers.has(member.id)) {
         Alert.alert(
           "👋 First Visit",
@@ -1046,7 +914,6 @@ if (isMemberAway(member, todayDate)) {
         );
       }
 
-      // ✅ INTELLIGENCE: positive streak notification
       const streak = memberStreaks[member.id];
       if (status === "present" && streak && streak >= 4 && streak % 4 === 0) {
         Alert.alert(
@@ -1055,7 +922,13 @@ if (isMemberAway(member, todayDate)) {
         );
       }
 
-      if (status === "absent") checkAbsenceStreak(member);
+      // Only worth checking the pastoral streak for categories that
+      // actually feed it — computeAbsenceStreak already filters
+      // "special" internally, but skip the query entirely for a
+      // wedding/funeral tap rather than firing it needlessly.
+      if (status === "absent" && sessionCategory !== "special") {
+        checkAbsenceStreak(member);
+      }
 
     } finally {
       pendingToggleRef.current.delete(member.id);
@@ -1067,53 +940,53 @@ if (isMemberAway(member, todayDate)) {
   // ─────────────────────────────────────────────────────────────────
   const undoMember = async (member) => {
     const snap = undoMap[member.id];
-    const current = attendance[member.id];
-    if (current) await writeDelete(current.id);
 
     if (snap) {
-      const newId = await writeAdd(buildRecord(member, snap.status));
+      const newId = await writeUpsert(buildRecord(member, snap.status));
       setAttendance(prev => ({ ...prev, [member.id]: { id: newId, status: snap.status } }));
     } else {
+      await writeRemove(attendanceDocId(sessionId, member.id));
       setAttendance(prev => { const n = { ...prev }; delete n[member.id]; return n; });
     }
+
     setUndoMap(prev => { const n = { ...prev }; delete n[member.id]; return n; });
   };
 
   // ─────────────────────────────────────────────────────────────────
   // ABSENCE STREAK CHECK
-  // ✅ FIXED: was `catch {}` — bare catch silently swallowed a Firestore
-  // composite-index error, making this feature appear to not exist.
-  // Now logs properly so the index link shows up in Metro console.
+  // FIX: replaced the exact-service-and-type-only, explicit-status-
+  // only query with the category/track-aware calculation from
+  // utils/attendanceIntelligence — so alternating First/Second Service
+  // doesn't fracture the streak, revival nights collapse to one
+  // occurrence, celebration misses don't count against a member, and
+  // special events never enter the calculation.
   // ─────────────────────────────────────────────────────────────────
   const checkAbsenceStreak = async (member) => {
-    // ✅ Skip absence alerts for members who are officially away
-  
-
-  
+    // FIX: was `&` (bitwise, required both conditions) — should be
+    // `||`, since either alone is a valid reason to skip.
     if (
-    isMemberAway(member, todayDate) &
-    EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
-  ) {
-    return;
-  }
-    if (!organizationId || !entityId) return;
-    try {
-      const q = query(
-        collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
-        where("memberId", "==", member.id),
-        where("status", "==", "absent")
-      );
-      const snap = await getDocs(q);
-      const count = snap.docs.length;
-if (count >= ABSENCE_FLAG) {
-  setRedFlagMember(member); setRedFlagCount(count); setRedFlagModal(true);
-} else if (count >= ABSENCE_WARNING) {
-  setContactMember(member); setContactModal(true);
-}
+      isMemberAway(member, todayDate) ||
+      EXCLUDED_FROM_ABSENCE_ALERTS.includes(member.mobilityStatus)
+    ) {
+      return;
+    }
 
+    if (!organizationId || !entityId) return;
+
+    try {
+      const streak = await computeAbsenceStreak({
+        organizationId,
+        entityId,
+        memberId: member.id,
+        track: currentTrack,
+      });
+
+      if (streak >= ABSENCE_FLAG) {
+        setRedFlagMember(member); setRedFlagCount(streak); setRedFlagModal(true);
+      } else if (streak >= ABSENCE_WARNING) {
+        setContactMember(member); setContactModal(true);
+      }
     } catch (e) {
-      // ✅ If this logs a Firestore index URL, click it to create the
-      // index — that's all that's needed to restore this feature.
       console.log("❌ checkAbsenceStreak error (check for missing Firestore index):", e);
     }
   };
@@ -1124,9 +997,6 @@ if (count >= ABSENCE_FLAG) {
   const submitTransfer = async () => {
     if (!selectedMember || !organizationId || !entityId) return;
     try {
-      const existing = attendance[selectedMember.id];
-      if (existing) await writeDelete(existing.id);
-
       const transferRecord = {
         ...buildRecord(selectedMember, "present"),
         service: transferService,
@@ -1135,7 +1005,8 @@ if (count >= ABSENCE_FLAG) {
         originalService: selectedService,
         originalType: selectedType,
       };
-      await writeAdd(transferRecord);
+
+      await writeUpsert(transferRecord);
 
       setAttendance(prev => { const n = { ...prev }; delete n[selectedMember.id]; return n; });
       setTransferModal(false);
@@ -1157,7 +1028,6 @@ if (count >= ABSENCE_FLAG) {
       );
       const snap = await getDocs(q);
 
-      // Dedupe by memberId, keep latest
       const byMember = {};
       snap.docs.forEach(d => {
         const data = { docId: d.id, ...d.data() };
@@ -1175,7 +1045,6 @@ if (count >= ABSENCE_FLAG) {
 
   // ─────────────────────────────────────────────────────────────────
   // OFFLINE QUEUE DRAIN
-  // ✅ Runs every 10 seconds — retries queued writes when signal returns
   // ─────────────────────────────────────────────────────────────────
   const drainOfflineQueue = async () => {
     if (!organizationId || !entityId || offlineQueueRef.current.length === 0) return;
@@ -1183,13 +1052,13 @@ if (count >= ABSENCE_FLAG) {
     const remaining = [];
     for (const record of offlineQueueRef.current) {
       try {
-        const { _localId, ...clean } = record;
-        await addDoc(
-          collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
+        const { _docId, ...clean } = record;
+        await setDoc(
+          doc(db, "organizations", organizationId, "entities", entityId, "attendance", _docId),
           clean
         );
       } catch (e) {
-        remaining.push(record); // keep failed ones
+        remaining.push(record);
       }
     }
     offlineQueueRef.current = remaining;
@@ -1204,12 +1073,10 @@ if (count >= ABSENCE_FLAG) {
     if (!organizationId || !entityId) return;
     setIntelLoading(true);
     try {
-      const dateStr = today();
       const lastWeekDate = new Date();
       lastWeekDate.setDate(lastWeekDate.getDate() - 7);
       const lastWeekStr = lastWeekDate.toISOString().split("T")[0];
 
-      // 1. Last week's same session
       const lastWeekQ = query(
         collection(db, "organizations", organizationId, "entities", entityId, "sessions"),
         where("date", "==", lastWeekStr),
@@ -1224,7 +1091,6 @@ if (count >= ABSENCE_FLAG) {
         setLastWeekPresent(lwSession.finalPresent || 0);
       }
 
-      // 2. Who attended the last 3 sessions of this type?
       const recentSessionsQ = query(
         collection(db, "organizations", organizationId, "entities", entityId, "sessions"),
         where("service", "==", service),
@@ -1238,7 +1104,6 @@ if (count >= ABSENCE_FLAG) {
         .slice(0, 3);
 
       if (recentSessions.length >= 2) {
-        // Members present in ALL recent sessions
         const recentAttendance = await Promise.all(
           recentSessions.map(s =>
             getDocs(query(
@@ -1251,7 +1116,6 @@ if (count >= ABSENCE_FLAG) {
         const presentSets = recentAttendance.map(
           snap => new Set(snap.docs.map(d => d.data().memberId))
         );
-        // Intersection — present in all recent sessions
         const alwaysPresent = presentSets.length > 0
           ? [...presentSets[0]].filter(id => presentSets.every(s => s.has(id)))
           : [];
@@ -1260,7 +1124,6 @@ if (count >= ABSENCE_FLAG) {
         setPredictedMissing(missing);
       }
 
-      // 3. First-timers — joined in last 30 days or no prior attendance
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const thirtyStr = thirtyDaysAgo.toISOString().split("T")[0];
@@ -1280,7 +1143,6 @@ if (count >= ABSENCE_FLAG) {
       }
       setFirstTimers(firstTimerSet);
 
-      // 4. Consecutive streaks per member
       const streaks = {};
       for (const member of members) {
         const allQ = query(
@@ -1312,7 +1174,6 @@ if (count >= ABSENCE_FLAG) {
 
   // ─────────────────────────────────────────────────────────────────
   // GEO MODE
-  // ✅ IMPLEMENTED: was previously stubbed with no actual location check
   // ─────────────────────────────────────────────────────────────────
   const startGeoWatch = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -1329,9 +1190,6 @@ if (count >= ABSENCE_FLAG) {
           CHURCH_COORDS.latitude, CHURCH_COORDS.longitude
         );
         if (dist <= GEO_RADIUS_METERS) {
-          // User is within the church perimeter — could auto-mark if
-          // their member record is linked to their device. For now,
-          // show a prompt so staff can confirm.
           setScanFeedback(`📍 Within range (${Math.round(dist)}m from church)`);
         }
       }
@@ -1353,7 +1211,6 @@ if (count >= ABSENCE_FLAG) {
     if (!member) { Alert.alert("Not Found"); return; }
     if (attendance[member.id]) { Alert.alert("Already Marked", `${member.name} already recorded.`); return; }
 
-    // Verify they're actually in range
     try {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const dist = haversineDistance(
@@ -1375,8 +1232,6 @@ if (count >= ABSENCE_FLAG) {
 
   // ─────────────────────────────────────────────────────────────────
   // QR SCAN
-  // ✅ FIXED: was calling markMemberAttendance (doesn't exist here),
-  // using new URL() (Hermes crash), and not deduping properly.
   // ─────────────────────────────────────────────────────────────────
   const handleBarCodeScanned = async ({ data: raw }) => {
     if (!organizationId || !entityId) return;
@@ -1390,7 +1245,6 @@ if (count >= ABSENCE_FLAG) {
       }, delay);
     };
 
-    // Case 1: Attendance session QR
     if (raw.startsWith("churchcare://attendance")) {
       const qs = raw.includes("?") ? raw.split("?")[1] : "";
       const params = {};
@@ -1408,7 +1262,6 @@ if (count >= ABSENCE_FLAG) {
       release(2500); return;
     }
 
-    // Case 2: Member badge JSON
     try {
       const parsed = JSON.parse(raw);
       if (parsed?.memberCode) {
@@ -1424,7 +1277,6 @@ if (count >= ABSENCE_FLAG) {
       }
     } catch (_) {}
 
-    // Case 3: Legacy plain text ID
     const member = members.find(m => m.id === raw || m.memberCode === raw);
     if (!member) { setScanFeedback("❌ Not found"); release(); return; }
     if (!sessionId) { Alert.alert("No Session", "Start a session first."); scanLockRef.current = false; return; }
@@ -1447,64 +1299,34 @@ if (count >= ABSENCE_FLAG) {
       filterStatus === "all" ? true :
       filterStatus === "present" ? s === "present" :
       filterStatus === "absent" ? s === "absent" :
-      !s; // unmarked
+      !s;
     return matchSearch && matchFilter;
   });
 
-const ABSENCE_WARNING =
-  attendanceSettings?.absenceWarningCount ?? 2;
+  const ABSENCE_WARNING = attendanceSettings?.absenceWarningCount ?? 2;
+  const ABSENCE_FLAG = attendanceSettings?.absenceFlagCount ?? 3;
 
-const ABSENCE_FLAG =
-  attendanceSettings?.absenceFlagCount ?? 3;
+  const CHURCH_COORDS = {
+    latitude: attendanceSettings?.geoLatitude ?? 5.6037,
+    longitude: attendanceSettings?.geoLongitude ?? -0.1870,
+  };
 
-const CHURCH_COORDS = {
-  latitude: attendanceSettings?.geoLatitude ?? 5.6037,
-  longitude: attendanceSettings?.geoLongitude ?? -0.1870,
-};
+  const GEO_RADIUS_METERS = attendanceSettings?.geoRadiusMeters ?? 150;
 
-const GEO_RADIUS_METERS =
-  attendanceSettings?.geoRadiusMeters ?? 150;
+  const modeTabs = [
+    { key: "manual", label: "Manual", icon: "pencil-outline" },
+    { key: "qr", label: "QR Scan", icon: "qr-code-outline" },
+    ...(attendanceSettings?.allowSelfCheckin
+      ? [{ key: "selfqr", label: "Self QR", icon: "phone-portrait-outline" }]
+      : []),
+    { key: "geo", label: "Geo", icon: "location-outline" },
+  ];
 
-const modeTabs = [
-  {
-    key: "manual",
-    label: "Manual",
-    icon: "pencil-outline",
-  },
-  {
-    key: "qr",
-    label: "QR Scan",
-    icon: "qr-code-outline",
-  },
+  const SERVICES = attendanceSettings?.serviceOptions || [];
+  const TYPES = attendanceSettings?.typeOptions || [];
+  const TIMES = attendanceSettings?.timeOptions || [];
+  const TEMPLATES = attendanceSettings?.sessionTemplates || [];
 
-  ...(attendanceSettings?.allowSelfCheckin
-    ? [{
-        key: "selfqr",
-        label: "Self QR",
-        icon: "phone-portrait-outline",
-      }]
-    : []),
-
-  {
-    key: "geo",
-    label: "Geo",
-    icon: "location-outline",
-  },
-];
-
-const SERVICES =
-  attendanceSettings?.serviceOptions || [];
-
-const TYPES =
-  attendanceSettings?.typeOptions || [];
-
-const TIMES =
-  attendanceSettings?.timeOptions || [];
-
-  const TEMPLATES =
-  attendanceSettings?.sessionTemplates || [];
-
-  
   // ─────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────
@@ -1514,12 +1336,7 @@ const TIMES =
       {/* ── HEADER ── */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text
-  numberOfLines={1}
-  style={styles.headerTitle}
->
-  Attendance
-</Text>
+          <Text numberOfLines={1} style={styles.headerTitle}>Attendance</Text>
           {sessionId && (
             <Text style={styles.headerSub} numberOfLines={1}>
               Session ID: {sessionId}
@@ -1527,17 +1344,14 @@ const TIMES =
           )}
         </View>
 
-
-<TouchableOpacity
-  style={styles.headerBtn}
-  onPress={() => navigation.navigate("AttendanceSettings")}
->
-  <Ionicons name="settings-outline" size={18} color="#fff" />
-</TouchableOpacity>
-
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.navigate("AttendanceSettings")}
+        >
+          <Ionicons name="settings-outline" size={18} color="#fff" />
+        </TouchableOpacity>
 
         <View style={styles.headerRight}>
-          {/* Live / offline badge */}
           {pendingCount > 0 && (
             <View style={styles.offlineBadge}>
               {syncing
@@ -1552,85 +1366,39 @@ const TIMES =
             </View>
           )}
           {sessionId && (
-  <TouchableOpacity
-    style={styles.headerBtn}
-    onPress={() => setSessionModal(true)}
-  >
-    <Ionicons
-      name="add-circle-outline"
-      size={18}
-      color="#fff"
-    />
-  </TouchableOpacity>
-)}
-
-{sessionId && (
-  <TouchableOpacity
-    style={styles.headerBtn}
-    onPress={() => navigation.navigate("ConcurrentSessions")}
-  >
-    <Ionicons
-      name="layers-outline"
-      size={18}
-      color="#fff"
-    />
-  </TouchableOpacity>
-)}
-
-<TouchableOpacity
-  style={styles.headerBtn}
-  onPress={() => navigation.navigate("GroupAttendance")}
->
-  <Ionicons
-    name="people-outline"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-<TouchableOpacity
-  style={styles.headerBtn}
-  onPress={() => navigation.navigate("AttendanceSummary")}
->
-  <Ionicons
-    name="stats-chart-outline"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-
-<TouchableOpacity
-  style={styles.headerBtn}
-  onPress={() => navigation.navigate("AttendanceHistory")}
->
-  <Ionicons
-    name="time-outline"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-
-<TouchableOpacity
-  style={styles.headerBtn}
-  onPress={openLog}
->
-  <Ionicons
-    name="list-outline"
-    size={18}
-    color="#fff"
-  />
-</TouchableOpacity>
-
-
-</View>
-</View>
-
+            <TouchableOpacity style={styles.headerBtn} onPress={() => setSessionModal(true)}>
+              <Ionicons name="add-circle-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {sessionId && (
+            <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("ConcurrentSessions")}>
+              <Ionicons name="layers-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("GroupAttendance")}>
+            <Ionicons name="people-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("AttendanceSummary")}>
+            <Ionicons name="stats-chart-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("AttendanceHistory")}>
+            <Ionicons name="time-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={openLog}>
+            <Ionicons name="list-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* ── SESSION STATUS BAR ── */}
       {sessionId && (sessionStatus === "open" || sessionStatus === "extended") && (
         <View style={styles.sessionBar}>
           <View style={styles.sessionBarLeft}>
             <View style={[styles.sessionDot, { backgroundColor: sessionStatus === "extended" ? "#e67e22" : "#27ae60" }]} />
-            <Text style={styles.sessionBarText}>In Progress · {startTime}</Text>
+            <Text style={styles.sessionBarText}>
+              In Progress · {startTime}
+              {sessionCategory !== "regular" ? ` · ${SESSION_CATEGORIES.find(c => c.key === sessionCategory)?.label}` : ""}
+            </Text>
           </View>
           <View style={styles.sessionBarActions}>
             <TouchableOpacity style={styles.qrBtn} onPress={() => setQrModalVisible(true)}>
@@ -1687,58 +1455,30 @@ const TIMES =
         </View>
       )}
 
-{attendanceAreas.length > 0 && (
-  <View
-    style={{
-      backgroundColor: "#fff",
-      margin: 12,
-      padding: 12,
-      borderRadius: 12,
-    }}
-  >
-    <Text
-      style={{
-        fontWeight: "700",
-        marginBottom: 10,
-      }}
-    >
-      Attendance Area
-    </Text>
-
-    {attendanceAreas.map(
-      (area) => (
-        <TouchableOpacity
-          key={area.id}
-          style={[
-            styles.chip,
-            selectedAttendanceArea
-              ?.entityId ===
-              area.entityId &&
-              styles.chipActive,
-          ]}
-          onPress={() =>
-            setSelectedAttendanceArea(
-              area
-            )
-          }
-        >
-          <Text
-            style={[
-              styles.chipText,
-              selectedAttendanceArea
-                ?.entityId ===
-                area.entityId &&
-                styles.chipTextActive,
-            ]}
-          >
-            {area.entityName}
-          </Text>
-        </TouchableOpacity>
-      )
-    )}
-  </View>
-)}
-
+      {attendanceAreas.length > 0 && (
+        <View style={{ backgroundColor: "#fff", margin: 12, padding: 12, borderRadius: 12 }}>
+          <Text style={{ fontWeight: "700", marginBottom: 10 }}>Attendance Area</Text>
+          {attendanceAreas.map((area) => (
+            <TouchableOpacity
+              key={area.id}
+              style={[
+                styles.chip,
+                selectedAttendanceArea?.entityId === area.entityId && styles.chipActive,
+              ]}
+              onPress={() => setSelectedAttendanceArea(area)}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  selectedAttendanceArea?.entityId === area.entityId && styles.chipTextActive,
+                ]}
+              >
+                {area.entityName}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* ── START SESSION BUTTON ── */}
       {!sessionId && (
@@ -1750,10 +1490,7 @@ const TIMES =
 
       {/* ── INTELLIGENCE PANEL ── */}
       {sessionId && (predictedMissing.length > 0 || intelLoading) && (
-        <TouchableOpacity
-          style={styles.intelHeader}
-          onPress={() => setShowIntelPanel(p => !p)}
-        >
+        <TouchableOpacity style={styles.intelHeader} onPress={() => setShowIntelPanel(p => !p)}>
           <Ionicons name="bulb-outline" size={14} color="#4B3F72" />
           <Text style={styles.intelHeaderText}>
             {intelLoading ? "Loading intelligence..." : `${predictedMissing.length} regular${predictedMissing.length === 1 ? "" : "s"} not yet checked in`}
@@ -1775,10 +1512,7 @@ const TIMES =
                 <Text style={styles.intelName}>{m.name}</Text>
                 <Text style={styles.intelSub}>{m.phone || m.ministry || ""}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.intelMarkBtn}
-                onPress={() => toggleAttendance(m, "present")}
-              >
+              <TouchableOpacity style={styles.intelMarkBtn} onPress={() => toggleAttendance(m, "present")}>
                 <Text style={styles.intelMarkBtnText}>Mark Present</Text>
               </TouchableOpacity>
             </View>
@@ -1786,34 +1520,19 @@ const TIMES =
         </View>
       )}
 
-     {/* ── MODE TABS ── */}
-<View style={styles.modeTabs}>
-  {modeTabs.map((m) => (
-    <TouchableOpacity
-      key={m.key}
-      style={[
-        styles.modeTab,
-        mode === m.key && styles.modeTabActive
-      ]}
-      onPress={() => setMode(m.key)}
-    >
-      <Ionicons
-        name={m.icon}
-        size={13}
-        color={mode === m.key ? "#fff" : "#777"}
-      />
-
-      <Text
-        style={[
-          styles.modeTabText,
-          mode === m.key && styles.modeTabTextActive
-        ]}
-      >
-        {m.label}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+      {/* ── MODE TABS ── */}
+      <View style={styles.modeTabs}>
+        {modeTabs.map((m) => (
+          <TouchableOpacity
+            key={m.key}
+            style={[styles.modeTab, mode === m.key && styles.modeTabActive]}
+            onPress={() => setMode(m.key)}
+          >
+            <Ionicons name={m.icon} size={13} color={mode === m.key ? "#fff" : "#777"} />
+            <Text style={[styles.modeTabText, mode === m.key && styles.modeTabTextActive]}>{m.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* ── SEARCH + FILTER ── */}
       {mode === "manual" && (
@@ -1857,17 +1576,16 @@ const TIMES =
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 80 }}
           renderItem={({ item }) => {
-            const status  = attendance[item.id]?.status;
+            const status = attendance[item.id]?.status;
             const isFirst = firstTimers.has(item.id);
-            const streak  = memberStreaks[item.id];
+            const streak = memberStreaks[item.id];
             const isPending = pendingToggleRef.current.has(item.id);
-
 
             return (
               <View style={[
                 styles.memberRow,
                 status === "present" && styles.memberRowPresent,
-                status === "absent"  && styles.memberRowAbsent,
+                status === "absent" && styles.memberRowAbsent,
                 isSessionLocked && { opacity: 0.7 }
               ]}>
                 <View style={styles.memberAvatar}>
@@ -1876,51 +1594,39 @@ const TIMES =
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-  <View style={styles.memberNameRow}>
-    <Text style={styles.memberName}>{item.name}</Text>
+                  <View style={styles.memberNameRow}>
+                    <Text style={styles.memberName}>{item.name}</Text>
 
-    {isFirst && (
-      <View style={styles.firstTimerBadge}>
-        <Text style={styles.firstTimerBadgeText}>
-          First Visit 👋
-        </Text>
-      </View>
-    )}
+                    {isFirst && (
+                      <View style={styles.firstTimerBadge}>
+                        <Text style={styles.firstTimerBadgeText}>First Visit 👋</Text>
+                      </View>
+                    )}
 
-    {streak >= 4 && !isFirst && (
-      <View style={styles.streakBadge}>
-        <Text style={styles.streakBadgeText}>
-          🔥{streak}
-        </Text>
-      </View>
-    )}
+                    {streak >= 4 && !isFirst && (
+                      <View style={styles.streakBadge}>
+                        <Text style={styles.streakBadgeText}>🔥{streak}</Text>
+                      </View>
+                    )}
 
+                    {isMemberAway(item, todayDate) && (
+                      <View style={styles.awayMemberBadge}>
+                        <Text style={styles.awayMemberBadgeText}>
+                          {item.schoolName ? `Away • ${item.schoolName}` : "Away"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
+                  <Text style={styles.memberSub}>{item.ministry || item.phone || ""}</Text>
+                </View>
 
-    {isMemberAway(item, todayDate) && (
-  <View style={styles.awayMemberBadge}>
-    <Text style={styles.awayMemberBadgeText}>
-      {item.schoolName
-        ? `Away • ${item.schoolName}`
-        : "Away"}
-    </Text>
-  </View>
-)}
-  </View>
-
-  <Text style={styles.memberSub}>
-    {item.ministry || item.phone || ""}
-  </Text>
-</View>
-
-                {/* UNDO if marked this session */}
                 {undoMap[item.id] !== undefined && (
                   <TouchableOpacity style={styles.undoBtn} onPress={() => undoMember(item)}>
                     <Ionicons name="arrow-undo" size={14} color="#4B3F72" />
                   </TouchableOpacity>
                 )}
 
-                {/* TRANSFER */}
                 <TouchableOpacity
                   style={styles.transferBtn}
                   onPress={() => { setSelectedMember(item); setTransferModal(true); }}
@@ -1928,7 +1634,6 @@ const TIMES =
                   <Ionicons name="swap-horizontal" size={16} color="#4B3F72" />
                 </TouchableOpacity>
 
-                {/* PRESENT */}
                 <TouchableOpacity
                   disabled={isPending || isSessionLocked}
                   style={[
@@ -1943,7 +1648,6 @@ const TIMES =
                     : <Ionicons name="checkmark" size={16} color="#fff" />}
                 </TouchableOpacity>
 
-                {/* ABSENT */}
                 <TouchableOpacity
                   disabled={isPending || isSessionLocked}
                   style={[
@@ -2089,47 +1793,72 @@ const TIMES =
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>New Session</Text>
 
-<Text style={styles.fieldLabel}>
-  Session Template
-</Text>
+            {/* FIX: session category selector — drives all downstream
+                absence intelligence. Independent of Service/Type below:
+                for Easter or Christmas, still pick "Sunday" as usual,
+                just tag the category here. */}
+            <Text style={styles.fieldLabel}>Session Category</Text>
+            <View style={styles.chipRow}>
+              {SESSION_CATEGORIES.map(cat => (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.chip, sessionCategory === cat.key && styles.chipActive]}
+                  onPress={() => selectSessionCategory(cat.key)}
+                >
+                  <Text style={[styles.chipText, sessionCategory === cat.key && styles.chipTextActive]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.hintText}>
+              This doesn't change the Service you pick below — it just tells
+              the system how to weigh attendance for pastoral follow-up.
+            </Text>
 
-<View style={styles.chipRow}>
-  {TEMPLATES.map(template => (
-    <TouchableOpacity
-      key={template.id}
-      style={[
-        styles.chip,
-        selectedTemplate === template.id &&
-          styles.chipActive
-      ]}
-      onPress={() => {
-        setSelectedTemplate(template.id);
+            {sessionCategory === "revival" && (
+              <View style={{ marginTop: 8, marginBottom: 10 }}>
+                {existingRevivalSeries ? (
+                  <>
+                    <Text style={styles.hintText}>
+                      Continuing the revival series started {existingRevivalSeries.date}.
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setExistingRevivalSeries(null);
+                        setRevivalSeriesId(`revival_${Date.now()}`);
+                      }}
+                    >
+                      <Text style={{ color: "#4B3F72", fontWeight: "700", marginTop: 4 }}>
+                        Start a new revival series instead
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.hintText}>Starting a new revival series.</Text>
+                )}
+              </View>
+            )}
 
-        setSelectedService(
-          template.service
-        );
-
-        setSelectedType(
-          template.type
-        );
-
-        setStartTime(
-          template.startTime
-        );
-      }}
-    >
-      <Text
-        style={[
-          styles.chipText,
-          selectedTemplate === template.id &&
-            styles.chipTextActive
-        ]}
-      >
-        {template.name}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+            <Text style={styles.fieldLabel}>Session Template</Text>
+            <View style={styles.chipRow}>
+              {TEMPLATES.map(template => (
+                <TouchableOpacity
+                  key={template.id}
+                  style={[styles.chip, selectedTemplate === template.id && styles.chipActive]}
+                  onPress={() => {
+                    setSelectedTemplate(template.id);
+                    setSelectedService(template.service);
+                    setSelectedType(template.type);
+                    setStartTime(template.startTime);
+                  }}
+                >
+                  <Text style={[styles.chipText, selectedTemplate === template.id && styles.chipTextActive]}>
+                    {template.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={styles.fieldLabel}>Service</Text>
             <View style={styles.chipRow}>
@@ -2173,28 +1902,17 @@ const TIMES =
             </View>
 
             <Text style={styles.fieldLabel}>Start Time</Text>
-
-<View style={styles.chipRow}>
-  {TIMES.map(time => (
-    <TouchableOpacity
-      key={time}
-      style={[
-        styles.chip,
-        startTime === time && styles.chipActive
-      ]}
-      onPress={() => setStartTime(time)}
-    >
-      <Text
-        style={[
-          styles.chipText,
-          startTime === time && styles.chipTextActive
-        ]}
-      >
-        {time}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+            <View style={styles.chipRow}>
+              {TIMES.map(time => (
+                <TouchableOpacity
+                  key={time}
+                  style={[styles.chip, startTime === time && styles.chipActive]}
+                  onPress={() => setStartTime(time)}
+                >
+                  <Text style={[styles.chipText, startTime === time && styles.chipTextActive]}>{time}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={styles.fieldLabel}>Expected End Time</Text>
             <TextInput
@@ -2223,31 +1941,26 @@ const TIMES =
             <Ionicons name="stop-circle" size={40} color="#e74c3c" style={{ alignSelf: "center" }} />
             <Text style={styles.modalTitle}>End Service?</Text>
             <Text style={styles.modalSub}>
-  ⚠ You are about to end this attendance session.
-
-  {"\n\n"}Present: {presentCount}
-  {"\n"}Absent: {absentCount}
-  {"\n"}Attendance Rate: {attendanceRate}%
-
-  {"\n\n"}This action will:
-
-  {"\n"}• Lock attendance entry
-  {"\n"}• Disable QR check-in
-  {"\n"}• Notify connected devices
-  {"\n"}• Prevent further changes
-
-  {"\n\n"}PIN verification will be required.
-</Text>
+              ⚠ You are about to end this attendance session.
+              {"\n\n"}Present: {presentCount}
+              {"\n"}Absent: {absentCount}
+              {"\n"}Attendance Rate: {attendanceRate}%
+              {"\n\n"}This action will:
+              {"\n"}• Lock attendance entry
+              {"\n"}• Disable QR check-in
+              {"\n"}• Notify connected devices
+              {"\n"}• Prevent further changes
+              {"\n\n"}PIN verification will be required.
+            </Text>
             <View style={styles.modalBtnRow}>
               <TouchableOpacity
-  style={[styles.modalSaveBtn, { backgroundColor: "#e74c3c" }]}
-  onPress={() => {
-    setEndServiceModal(false);
-    setEnteredPin("");
-setPinModalVisible(true);
-  }}
->
-
+                style={[styles.modalSaveBtn, { backgroundColor: "#e74c3c" }]}
+                onPress={() => {
+                  setEndServiceModal(false);
+                  setEnteredPin("");
+                  setPinModalVisible(true);
+                }}
+              >
                 <Text style={styles.white}>End Service</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEndServiceModal(false)}>
@@ -2404,69 +2117,42 @@ setPinModalVisible(true);
           </View>
         </View>
       </Modal>
-<Modal
-  visible={pinModalVisible}
-  transparent
-  animationType="fade"
->
-  <View style={styles.overlay}>
-    <View style={styles.modalBox}>
 
-     <Text style={styles.modalTitle}>
-  Attendance PIN Verification
-</Text>
-
-      <Text style={styles.modalSub}>
-        Enter your 6-digit PIN to end this
-        attendance session.
-      </Text>
-<PinPad
-  pin={enteredPin}
-  onDigit={(digit) => {
-    if (enteredPin.length >= 6) {
-      return;
-    }
-
-    setEnteredPin(
-      (prev) => prev + digit
-    );
-  }}
-  onBackspace={() => {
-    setEnteredPin(
-      (prev) => prev.slice(0, -1)
-    );
-  }}
-/>
-
-
-      <View style={styles.modalBtnRow}>
-
-        <TouchableOpacity
-          style={styles.modalSaveBtn}
-          onPress={confirmEndSession}
-        >
-          <Text style={styles.white}>
-            Verify
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.modalCancelBtn}
-          onPress={() => {
-            setPinModalVisible(false);
-            setEnteredPin("");
-          }}
-        >
-          <Text style={styles.white}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
-
-      </View>
-
-    </View>
-  </View>
-</Modal>
+      {/* ══════════ PIN MODAL ══════════ */}
+      <Modal visible={pinModalVisible} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Attendance PIN Verification</Text>
+            <Text style={styles.modalSub}>
+              Enter your 6-digit PIN to end this attendance session.
+            </Text>
+            <PinPad
+              pin={enteredPin}
+              onDigit={(digit) => {
+                if (enteredPin.length >= 6) return;
+                setEnteredPin((prev) => prev + digit);
+              }}
+              onBackspace={() => {
+                setEnteredPin((prev) => prev.slice(0, -1));
+              }}
+            />
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity style={styles.modalSaveBtn} onPress={confirmEndSession}>
+                <Text style={styles.white}>Verify</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setPinModalVisible(false);
+                  setEnteredPin("");
+                }}
+              >
+                <Text style={styles.white}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -2479,13 +2165,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f4f6fb" },
 
   header: { backgroundColor: "#4B3F72", paddingTop: 50, paddingBottom: 12, paddingHorizontal: 14, flexDirection: "row", alignItems: "center" },
-  headerTitle: {
-  color: "#fff",
-  fontSize: 18,
-  fontWeight: "700",
-  flexShrink: 1,
-},
-
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700", flexShrink: 1 },
   headerSub: { color: "rgba(255,255,255,0.6)", fontSize: 10, marginTop: 2 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
@@ -2592,6 +2272,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: "800", color: "#222", marginBottom: 14, textAlign: "center" },
   modalSub: { fontSize: 13, color: "#666", textAlign: "center", marginBottom: 16, lineHeight: 19 },
   fieldLabel: { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", marginBottom: 6, marginTop: 10 },
+  hintText: { fontSize: 11, color: "#aaa", marginBottom: 6, lineHeight: 15 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f0f0f0" },
   chipActive: { backgroundColor: "#4B3F72" },
@@ -2608,18 +2289,6 @@ const styles = StyleSheet.create({
   logName: { fontSize: 13, fontWeight: "700", color: "#222" },
   logSub: { fontSize: 11, color: "#aaa", marginTop: 1 },
   logStatus: { fontSize: 11, fontWeight: "700" },
-  awayMemberBadge: {
-  backgroundColor: "#EEF0FA",
-  borderRadius: 10,
-  paddingHorizontal: 5,
-  paddingVertical: 2,
-},
-
-awayMemberBadgeText: {
-  fontSize: 9,
-  color: "#4B3F72",
-  fontWeight: "800",
-},
-
-
+  awayMemberBadge: { backgroundColor: "#EEF0FA", borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2 },
+  awayMemberBadgeText: { fontSize: 9, color: "#4B3F72", fontWeight: "800" },
 });
