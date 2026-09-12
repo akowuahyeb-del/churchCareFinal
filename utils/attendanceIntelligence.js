@@ -158,18 +158,6 @@ export const DEFAULT_PARTICIPATION_WINDOWS = {
     attendanceRule: "attend_any",
   },
 };
-export function resolveParticipationWindow(session) {
-  const category = normalizeCategory(
-    session?.windowType ||
-    session?.sessionCategory ||
-    "worship"
-  );
-
-  return (
-    DEFAULT_PARTICIPATION_WINDOWS[category] ||
-    DEFAULT_PARTICIPATION_WINDOWS.worship
-  );
-}
 
 export const CATEGORY_MIGRATION_MAP = {
   regular: "worship",
@@ -191,6 +179,51 @@ export function normalizeCategory(category) {
   );
 }
 
+export const DEFAULT_ATTENDANCE_POLICY = {
+  worship: {
+    warningThreshold: 2,
+    concernThreshold: 4,
+    criticalThreshold: 8,
+  },
+
+  ministry: {
+    warningThreshold: 3,
+    concernThreshold: 6,
+    criticalThreshold: 12,
+  },
+};
+
+export const DEFAULT_WINDOW_MAPPINGS = {
+  sunday: {
+    windowId: "sunday_worship",
+    windowType: "worship",
+  },
+
+  midweek: {
+    windowId: "midweek_worship",
+    windowType: "worship",
+  },
+
+  revival: {
+    windowId: "revival",
+    windowType: "revival",
+  },
+};
+
+export function resolveWindowMapping(session) {
+  const track = resolveAttendanceTrack(session);
+
+  return (
+    DEFAULT_WINDOW_MAPPINGS[track] || {
+      windowId: track,
+      windowType: normalizeCategory(
+        session?.windowType ||
+        session?.sessionCategory ||
+        "worship"
+      ),
+    }
+  );
+}
 
 
 // Fallback track derivation: group by the service name itself, so
