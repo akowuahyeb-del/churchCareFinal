@@ -472,23 +472,29 @@ export default function AttendanceScreen() {
     try {
       const ref = await addDoc(
         collection(db, "organizations", organizationId, "entities", entityId, "sessions"),
-        {
-          date: today(),
-          service: selectedService,
-          type: selectedType,
-          event: selectedEvent,
-          startTime,
-          endTime,
-          status: "open",
-          entityId,
-          organizationId,
-          // FIX: session categorization + track/series, the backbone
-          // of the category-aware absence intelligence.
-          sessionCategory,
-          attendanceTrack: currentTrack,
-          seriesId: sessionCategory === "revival" ? revivalSeriesId : null,
-          createdAt: serverTimestamp(),
-        }
+       {
+  date: today(),
+  service: selectedService,
+  type: selectedType,
+  event: selectedEvent,
+  startTime,
+  endTime,
+  status: "open",
+  entityId,
+  organizationId,
+
+  sessionCategory: normalizeCategory(sessionCategory),
+
+  attendanceTrack: currentTrack,
+
+  seriesId:
+    normalizeCategory(sessionCategory) === "revival"
+      ? revivalSeriesId
+      : null,
+
+  createdAt: serverTimestamp(),
+}
+
       );
 
       const qrLink = await buildAttendanceSessionLink(ref.id, organizationId, entityId);
@@ -787,9 +793,14 @@ export default function AttendanceScreen() {
     // FIX: denormalized onto every attendance record so the
     // intelligence layer can query by track/category/series directly
     // without joining back to the session document each time.
-    sessionCategory,
-    attendanceTrack: currentTrack,
-    seriesId: sessionCategory === "revival" ? revivalSeriesId : null,
+    sessionCategory: normalizeCategory(sessionCategory),
+
+attendanceTrack: currentTrack,
+
+seriesId:
+  normalizeCategory(sessionCategory) === "revival"
+    ? revivalSeriesId
+    : null,
     timestamp: new Date().toISOString(),
   });
 
@@ -1794,8 +1805,14 @@ export default function AttendanceScreen() {
 
       {/* ══════════ SESSION SETUP MODAL ══════════ */}
       <Modal visible={sessionModal} transparent animationType="slide">
-        <View style={styles.overlay}>
-          <View style={styles.modalBox}>
+  <View style={styles.overlay}>
+    <View style={[styles.modalBox, { maxHeight: "90%" }]}>
+      <ScrollView
+  showsVerticalScrollIndicator={true}
+  keyboardShouldPersistTaps="handled"
+  contentContainerStyle={{ paddingBottom: 40 }}
+>
+      
             <Text style={styles.modalTitle}>New Session</Text>
 
             {/* FIX: session category selector — drives all downstream
@@ -1935,6 +1952,7 @@ export default function AttendanceScreen() {
                 <Text style={styles.white}>Cancel</Text>
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2273,7 +2291,13 @@ const styles = StyleSheet.create({
   scanFeedbackText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center" },
-  modalBox: { backgroundColor: "#fff", margin: 20, borderRadius: 16, padding: 20 },
+  modalBox: {
+  backgroundColor: "#fff",
+  margin: 20,
+  borderRadius: 16,
+  padding: 20,
+  maxHeight: "90%",
+},
   modalTitle: { fontSize: 16, fontWeight: "800", color: "#222", marginBottom: 14, textAlign: "center" },
   modalSub: { fontSize: 13, color: "#666", textAlign: "center", marginBottom: 16, lineHeight: 19 },
   fieldLabel: { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", marginBottom: 6, marginTop: 10 },
