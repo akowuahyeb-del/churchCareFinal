@@ -34,6 +34,7 @@ import {
   SESSION_CATEGORIES,
   resolveAttendanceTrack,
   computeAbsenceStreak,
+  normalizeCategory,
 } from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ export default function AttendanceScreen() {
   const [sessionQR, setSessionQR] = useState(null);
 
   // ── SESSION CATEGORY / REVIVAL SERIES ──
-  const [sessionCategory, setSessionCategory] = useState("regular");
+  const [sessionCategory, setSessionCategory] = useState("worship");
   const [revivalSeriesId, setRevivalSeriesId] = useState(null);
   const [existingRevivalSeries, setExistingRevivalSeries] = useState(null);
 
@@ -372,7 +373,11 @@ export default function AttendanceScreen() {
       // FIX: restore category/series so any device that resumes or
       // joins this session keeps writing attendance records tagged
       // consistently with how the session was actually started.
-      setSessionCategory(data.sessionCategory || "regular");
+      setSessionCategory(
+  normalizeCategory(
+    data.sessionCategory || "worship"
+  )
+);
       setRevivalSeriesId(data.seriesId || null);
 
       await AsyncStorage.setItem("activeSession", targetSessionId);
@@ -727,7 +732,7 @@ export default function AttendanceScreen() {
       setGeoActive(false);
       // FIX: reset category/series so the next session setup doesn't
       // silently inherit "revival" (or any other category) by default.
-      setSessionCategory("regular");
+      setSessionCategory("worship");
       setRevivalSeriesId(null);
       setExistingRevivalSeries(null);
       if (geoWatchRef.current) { geoWatchRef.current.remove(); geoWatchRef.current = null; }
