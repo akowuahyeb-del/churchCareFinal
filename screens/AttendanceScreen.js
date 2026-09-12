@@ -1821,7 +1821,12 @@ seriesId:
                 just tag the category here. */}
             <Text style={styles.fieldLabel}>Session Category</Text>
             <View style={styles.chipRow}>
-              {SESSION_CATEGORIES.map(cat => (
+              {SESSION_CATEGORIES
+  .filter(
+    cat =>
+      !["regular", "celebration", "special"].includes(cat.key)
+  )
+  .map(cat => (
                 <TouchableOpacity
                   key={cat.key}
                   style={[styles.chip, sessionCategory === cat.key && styles.chipActive]}
