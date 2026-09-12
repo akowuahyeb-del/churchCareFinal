@@ -309,12 +309,15 @@ const canSeeHelp =
 />
 
 
-  {canSeeAttendance && (
   <Tab.Screen
-    name="Attendance"
-    component={AttendanceScreen}
-  />
-)}
+  name="Attendance"
+  component={AttendanceScreen}
+  options={{
+    tabBarButton: canSeeAttendance
+      ? undefined
+      : () => null,
+  }}
+/>
 
   {/* Everyone */}
   <Tab.Screen

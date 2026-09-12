@@ -1432,7 +1432,18 @@ seriesId:
             <View style={[styles.sessionDot, { backgroundColor: sessionStatus === "extended" ? "#e67e22" : "#27ae60" }]} />
             <Text style={styles.sessionBarText}>
               In Progress · {startTime}
-              {sessionCategory !== "regular" ? ` · ${SESSION_CATEGORIES.find(c => c.key === sessionCategory)?.label}` : ""}
+              {
+  SESSION_CATEGORIES.find(
+    c => c.key === sessionCategory
+  )?.label
+    ? ` · ${
+        SESSION_CATEGORIES.find(
+          c => c.key === sessionCategory
+        ).label
+      }`
+    : ""
+}
+
             </Text>
           </View>
           <View style={styles.sessionBarActions}>

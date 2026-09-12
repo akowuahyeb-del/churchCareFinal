@@ -1260,7 +1260,9 @@ return (
     icon: "checkmark-circle-outline",
     label: "Attendance",
     onPress: () =>
-  navigation.navigate("Attendance"),
+  navigation.navigate("MainTabs", {
+    screen: "Attendance",
+  }),
 
   },
 
