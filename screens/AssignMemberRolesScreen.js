@@ -86,7 +86,11 @@ const assignableRoles = roles.filter(
       selectedRoleIds.includes(r.id)
     )
 );
-
+const protectedRoles = roles.filter(
+  r =>
+    r.protected ||
+    PROTECTED_ROLE_IDS.includes(r.id)
+);
 
  const toggleRole = (role) => {
   // 🚫 Super Admin is not assignable from this screen
@@ -106,6 +110,110 @@ const assignableRoles = roles.filter(
       : [...prev, role.id]
   );
 };
+
+
+const openProtectedOfficeNomination =
+  (role) => {
+
+    Alert.alert(
+      "Protected Office",
+
+      `Nominate ${user.name} for ${role.label}?`,
+
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+
+        {
+          text: "Submit",
+
+          onPress: () =>
+            submitProtectedOfficeNomination(
+              role
+            ),
+        },
+      ]
+    );
+  };
+
+  const submitProtectedOfficeNomination =
+  async (role) => {
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "activeEntity"
+        );
+
+      if (!stored) {
+        Alert.alert(
+          "Error",
+          "No active entity."
+        );
+        return;
+      }
+
+      const activeEntity =
+        JSON.parse(stored);
+
+      await addDoc(
+        collection(
+          db,
+          "organizations",
+          activeEntity.organizationId,
+          "approvalRequests"
+        ),
+        {
+          type: "governance",
+
+          nominationType:
+            "protected_office",
+
+          protectedOffice:
+            role.id,
+
+          protectedOfficeName:
+            role.label,
+
+          actionType:
+            "add_holder",
+
+          memberId:
+            user.id,
+
+          memberName:
+            user.name,
+
+          requestedAt:
+            new Date().toISOString(),
+
+          status:
+            "pending",
+
+          approvals: [],
+          rejections: [],
+        }
+      );
+
+      Alert.alert(
+        "Submitted",
+
+        `${role.label} nomination sent for governance approval.`
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        e.message
+      );
+
+    }
+  };
+
 
   const handleSave = async () => {
     if (!organizationId || !entityId || !user?.id) {
@@ -210,7 +318,7 @@ Upgrade your plan to assign additional administrative roles.`,
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <AppHeader
-        title="Assign Roles"
+        title="Roles & Offices"
         showBack
         onBack={() => navigation.goBack()}
       />
@@ -227,6 +335,26 @@ Upgrade your plan to assign additional administrative roles.`,
             permissions are the combination of all selected roles.
           </Text>
 
+<Text
+  style={{
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 10,
+    color: "#4B3F72",
+  }}
+>
+  Operational Roles
+</Text>
+
+<Text
+  style={{
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 12,
+  }}
+>
+  Operational roles are assigned directly and become effective immediately.
+</Text>
           {assignableRoles.map(role => {
             const selected = selectedRoleIds.includes(role.id);
             const inactive = role.active === false;
@@ -269,6 +397,80 @@ Upgrade your plan to assign additional administrative roles.`,
               </TouchableOpacity>
             );
           })}
+
+<Text
+  style={{
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 20,
+    marginBottom: 10,
+    color: "#B8860B",
+  }}
+>
+  Protected Offices
+</Text>
+
+<Text
+  style={{
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 12,
+  }}
+>
+  Protected offices cannot be assigned directly.
+  Any nomination will be routed through
+  Governance Approval.
+</Text>
+
+{protectedRoles.map(role => (
+
+  <TouchableOpacity
+    key={role.id}
+    style={[
+      styles.row,
+      {
+        borderWidth: 1,
+        borderColor: "#B8860B",
+        backgroundColor: "#FFFBEA",
+      },
+    ]}
+    onPress={() =>
+      openProtectedOfficeNomination(role)
+    }
+  >
+
+    <View style={{ flex: 1 }}>
+
+      <Text
+        style={[
+          styles.roleLabel,
+          { color: "#B8860B" }
+        ]}
+      >
+        🔒 {role.label}
+      </Text>
+
+      <Text
+        style={{
+          fontSize: 11,
+          color: "#666",
+        }}
+      >
+        Governance approval required
+      </Text>
+
+    </View>
+
+    <Ionicons
+      name="lock-closed"
+      size={20}
+      color="#B8860B"
+    />
+
+  </TouchableOpacity>
+
+))}
+
 
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
