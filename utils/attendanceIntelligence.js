@@ -127,6 +127,49 @@ export const WINDOW_BEHAVIOURS = {
   },
 };
 
+export const DEFAULT_PARTICIPATION_WINDOWS = {
+  worship: {
+    id: "worship",
+    attendanceRule: "attend_any",
+  },
+
+  special_worship: {
+    id: "special_worship",
+    attendanceRule: "attend_any",
+  },
+
+  revival: {
+    id: "revival",
+    attendanceRule: "attend_any",
+  },
+
+  ministry: {
+    id: "ministry",
+    attendanceRule: "attend_any",
+  },
+
+  administrative: {
+    id: "administrative",
+    attendanceRule: "attend_any",
+  },
+
+  one_off: {
+    id: "one_off",
+    attendanceRule: "attend_any",
+  },
+};
+export function resolveParticipationWindow(session) {
+  const category = normalizeCategory(
+    session?.windowType ||
+    session?.sessionCategory ||
+    "worship"
+  );
+
+  return (
+    DEFAULT_PARTICIPATION_WINDOWS[category] ||
+    DEFAULT_PARTICIPATION_WINDOWS.worship
+  );
+}
 
 export const CATEGORY_MIGRATION_MAP = {
   regular: "worship",
