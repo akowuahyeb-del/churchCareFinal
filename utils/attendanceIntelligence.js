@@ -1,0 +1,177 @@
+// utils/attendanceIntelligence.js
+//
+// Category-aware attendance intelligence.
+//
+// Not every church gathering carries the same weight for "was this
+// member here." This module defines how different kinds of sessions
+// are grouped and interpreted when computing a member's continuous-
+// absence streak — the number that drives the pastoral care alert.
+//
+// SESSION CATEGORIES
+//   regular     The normal recurring gathering (Sunday First/Second
+//               Service, Wednesday Prayer). Counts fully both ways:
+//               present resets the streak, absent extends it.
+//   celebration High-attendance Sundays that still sit on the regular
+//               calendar (Easter, Christmas). Presence resets the
+//               streak — real evidence someone isn't estranged. A miss
+//               is invisible: it neither extends nor resets it.
+//   revival     A multi-day special series. The whole series collapses
+//               into ONE occurrence: present on any night resets the
+//               streak; missing every night counts as a single absence
+//               occurrence, not one per missed night.
+//   special     One-off events most members aren't expected at
+//               (weddings, funerals). Never enters the streak
+//               calculation, no matter how many "absent" records exist
+//               for it.
+//
+// GROUPING
+//   "regular" and "celebration" sessions are grouped by
+//   (attendanceTrack, date) — attending EITHER First or Second Service
+//   on a given Sunday counts as one present occurrence for that date,
+//   not two separate obligations.
+//
+//   "revival" sessions are grouped by seriesId, regardless of date —
+//   every night of the same revival collapses into one occurrence.
+
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase";
+
+export const SESSION_CATEGORIES = [
+  { key: "regular", label: "Regular Service" },
+  { key: "celebration", label: "Celebration (Easter, Christmas...)" },
+  { key: "revival", label: "Revival / Multi-Day Series" },
+  { key: "special", label: "Special Event (Wedding, Funeral...)" },
+];
+
+// Fallback track derivation: group by the service name itself, so
+// "Sunday" First/Second Service collapse together even on records
+// written before attendanceTrack was explicitly set.
+export const resolveAttendanceTrack = (session) =>
+  (session.attendanceTrack || session.service || "unknown")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+
+// Fetch every attendance record for a member relevant to a track,
+// then collapse into "occurrences" per the category rules above.
+// Returns an array ordered most-recent-first:
+//   [{ key, category, date, status: "present" | "absent" }, ...]
+export async function getMemberOccurrences({
+  organizationId,
+  entityId,
+  memberId,
+  track,
+}) {
+  const attendanceRef = collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "attendance"
+  );
+
+  // Regular + celebration sessions on this track.
+  const trackSnap = await getDocs(
+    query(
+      attendanceRef,
+      where("memberId", "==", memberId),
+      where("attendanceTrack", "==", track)
+    )
+  );
+
+  // Revival sessions are grouped by seriesId, not track — pull them
+  // separately so a revival that happens to share a track value isn't
+  // missed, and isn't double-obligated either.
+  const revivalSnap = await getDocs(
+    query(
+      attendanceRef,
+      where("memberId", "==", memberId),
+      where("sessionCategory", "==", "revival")
+    )
+  );
+
+  const occurrenceMap = new Map(); // key -> { category, date, sawPresent }
+
+  const ingest = (docs) => {
+    docs.forEach((d) => {
+      const data = d.data();
+      const category = data.sessionCategory || "regular";
+
+      // Special events never enter the streak at all, regardless of
+      // how many "absent" records exist for them.
+      if (category === "special") return;
+
+      const key =
+        category === "revival"
+          ? `revival:${data.seriesId || data.sessionId}`
+          : `${category}:${data.attendanceTrack || track}:${data.date}`;
+
+      const existing = occurrenceMap.get(key) || {
+        key,
+        category,
+        date: data.date,
+        sawPresent: false,
+      };
+
+      if (data.status === "present") existing.sawPresent = true;
+      if (!existing.date || (data.date || "") > existing.date) {
+        existing.date = data.date;
+      }
+
+      occurrenceMap.set(key, existing);
+    });
+  };
+
+  ingest(trackSnap.docs);
+  ingest(revivalSnap.docs);
+
+  return Array.from(occurrenceMap.values())
+    .map((o) => ({
+      key: o.key,
+      category: o.category,
+      date: o.date,
+      status: o.sawPresent ? "present" : "absent",
+    }))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+}
+
+// Walk occurrences most-recent-first and compute the current
+// consecutive-absence streak.
+export function computeStreakFromOccurrences(occurrences) {
+  let streak = 0;
+
+  for (const occ of occurrences) {
+    if (occ.status === "present") {
+      // Presence of any kind is evidence the person isn't estranged —
+      // stop counting immediately.
+      break;
+    }
+
+    if (occ.category === "celebration") {
+      // Missing a celebration doesn't count against them — skip
+      // without breaking or extending the streak.
+      continue;
+    }
+
+    streak += 1;
+  }
+
+  return streak;
+}
+
+export async function computeAbsenceStreak({
+  organizationId,
+  entityId,
+  memberId,
+  track,
+}) {
+  const occurrences = await getMemberOccurrences({
+    organizationId,
+    entityId,
+    memberId,
+    track,
+  });
+  return computeStreakFromOccurrences(occurrences);
+}
