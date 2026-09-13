@@ -564,13 +564,27 @@ windowDefinition: {
     }
   };
 
-  const subscribeToSession = useCallback(() => {
-    if (!organizationId || !entityId || !sessionId) return;
-
-    if (sessionUnsubRef.current) {
-      sessionUnsubRef.current();
-      sessionUnsubRef.current = null;
+ const subscribeToSession = useCallback(() => {
+  console.log(
+    "SUBSCRIBE SESSION CALLED",
+    {
+      organizationId,
+      entityId,
+      sessionId,
     }
+  );
+
+  if (!organizationId || !entityId || !sessionId) {
+    console.log(
+      "SESSION LISTENER SKIPPED",
+      {
+        organizationId,
+        entityId,
+        sessionId,
+      }
+    );
+    return;
+  }
 
     sessionUnsubRef.current = onSnapshot(
       doc(db, "organizations", organizationId, "entities", entityId, "sessions", sessionId),
@@ -580,7 +594,12 @@ windowDefinition: {
         const data = snap.data();
         const newStatus = data.status || "open";
 
-        if (newStatus !== sessionStatus) {
+
+        if (newStatus !== sessionStatus) {console.log(
+  "SESSION UPDATE RECEIVED:",
+  sessionId,
+  newStatus
+);
           setSessionStatus(newStatus);
         }
 
@@ -616,9 +635,20 @@ windowDefinition: {
         if (!snap.exists()) return;
 
         const state = snap.data();
+        console.log(
+  "ATTENDANCE STATE UPDATE:",
+  JSON.stringify(state, null, 2)
+);
 
         if (state.activeSessionId && state.activeSessionId !== sessionId) {
-          await applySessionData(state.activeSessionId);
+          console.log(
+  "AUTO-JOINING SESSION:",
+  state.activeSessionId
+);
+
+await applySessionData(
+  state.activeSessionId
+);
         }
 
         if (state.status === "ended") {
@@ -1892,46 +1922,170 @@ seriesId:
       )}
 
       {/* ── SELF QR MODE ── */}
-      {mode === "selfqr" && (
-        <View style={styles.selfQRContainer}>
-          {sessionQR ? (
-            <>
-              <Text style={styles.selfQRLabel}>Members scan this to check in</Text>
-              <QRCodeDisplay
-                value={sessionQR}
-                title={`${selectedService} · ${selectedType}`}
-                subtitle="Scan with the ChurchCare app to check in automatically"
-                size={200}
-              />
-            </>
-          ) : (
-            <View style={styles.permCenter}>
-              <Ionicons name="qr-code-outline" size={40} color="#ccc" />
-              <Text style={styles.permText}>Start a session to generate a check-in QR code.</Text>
-            </View>
-          )}
-          <View style={styles.divider}>
-            <Text style={styles.dividerText}>or enter ID manually</Text>
-          </View>
-          <TextInput
-            style={styles.geoInput}
-            placeholder="Member ID or Code"
-            value={memberGeoCode}
-            onChangeText={setMemberGeoCode}
-          />
-          <TouchableOpacity style={styles.geoMarkBtn} onPress={async () => {
-            const m = members.find(x => x.id === memberGeoCode.trim() || x.memberCode === memberGeoCode.trim());
-            if (!m) { Alert.alert("Not Found"); return; }
-            if (attendance[m.id]) { Alert.alert("Already Marked", `${m.name} is recorded.`); return; }
-            await toggleAttendance(m, "present");
-            Alert.alert("✅ Marked", `${m.name} marked Present.`);
-            setMemberGeoCode("");
-          }}>
-            <Ionicons name="checkmark-circle" size={15} color="#fff" />
-            <Text style={styles.geoMarkBtnText}>Mark Present</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+{/* ── SELF QR MODE ── */}
+{mode === "selfqr" && (
+  <ScrollView
+    style={{ flex: 1 }}
+    contentContainerStyle={{
+      padding: 12,
+      paddingBottom: 40,
+    }}
+    showsVerticalScrollIndicator={false}
+  >
+    {/* Manual Check-In */}
+    <View
+      style={{
+        backgroundColor: "#EEF0FA",
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "700",
+          textAlign: "center",
+          color: "#4B3F72",
+        }}
+      >
+        Manual Check-In
+      </Text>
+
+      <Text
+        style={{
+          textAlign: "center",
+          color: "#666",
+          marginTop: 4,
+          marginBottom: 10,
+        }}
+      >
+        Enter Member ID or Member Code
+      </Text>
+
+      <TextInput
+        style={[
+          styles.geoInput,
+          {
+            backgroundColor: "#fff",
+            marginBottom: 8,
+          },
+        ]}
+        placeholder="Member ID or Code"
+        value={memberGeoCode}
+        onChangeText={setMemberGeoCode}
+      />
+
+      <TouchableOpacity
+        style={[
+          styles.geoMarkBtn,
+          {
+            marginBottom: 0,
+          },
+        ]}
+        onPress={async () => {
+          const m = members.find(
+            x =>
+              x.id === memberGeoCode.trim() ||
+              x.memberCode === memberGeoCode.trim()
+          );
+
+          if (!m) {
+            Alert.alert(
+              "Not Found",
+              "Member not found."
+            );
+            return;
+          }
+
+          if (attendance[m.id]) {
+            Alert.alert(
+              "Already Marked",
+              `${m.name} is already recorded.`
+            );
+            return;
+          }
+
+          await toggleAttendance(
+            m,
+            "present"
+          );
+
+          Alert.alert(
+            "✅ Marked",
+            `${m.name} marked Present.`
+          );
+
+          setMemberGeoCode("");
+        }}
+      >
+        <Ionicons
+          name="checkmark-circle"
+          size={16}
+          color="#fff"
+        />
+
+        <Text style={styles.geoMarkBtnText}>
+          Mark Present
+        </Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* QR Section */}
+    {sessionQR ? (
+      <View
+        style={{
+          backgroundColor: "#fff",
+          borderRadius: 12,
+          padding: 12,
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            color: "#333",
+          }}
+        >
+          QR Check-In
+        </Text>
+
+        <Text
+          style={{
+            textAlign: "center",
+            color: "#666",
+            marginTop: 4,
+            marginBottom: 12,
+          }}
+        >
+          Members scan this code to check in
+        </Text>
+
+        <QRCodeDisplay
+          value={sessionQR}
+          title=""
+          subtitle=""
+          size={180}
+        />
+      </View>
+    ) : (
+      <View style={styles.permCenter}>
+        <Ionicons
+          name="qr-code-outline"
+          size={40}
+          color="#ccc"
+        />
+
+        <Text style={styles.permText}>
+          Start a session to generate a check-in QR code.
+        </Text>
+      </View>
+    )}
+  </ScrollView>
+)}
+
+
 
       {/* ── GEO MODE ── */}
       {mode === "geo" && (
@@ -2373,16 +2527,31 @@ const styles = StyleSheet.create({
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" },
   liveText: { color: "#fff", fontSize: 10, fontWeight: "800" },
 
-  sessionBar: { backgroundColor: "#fff", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  sessionBar: {
+  backgroundColor: "#fff",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+},
   sessionBarLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
   sessionDot: { width: 8, height: 8, borderRadius: 4 },
   sessionBarText: { fontSize: 12, fontWeight: "700", color: "#333" },
-  sessionBarActions: { flexDirection: "row", gap: 6 },
-  qrBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#4B3F72", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  sessionBarActions: {
+  flexDirection: "row",
+  marginTop: 10,
+  flexWrap: "wrap",
+  gap: 6,
+},
+
+  qrBtn: { flexDirection: "row", alignItems: "center", gap: 4,minWidth: 90,
+justifyContent: "center", backgroundColor: "#4B3F72", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   qrBtnText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-  extendBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#e67e22", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  extendBtn: { flexDirection: "row", alignItems: "center", gap: 4,minWidth: 90,
+justifyContent: "center", backgroundColor: "#e67e22", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   extendBtnText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-  endBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#e74c3c", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  endBtn: { flexDirection: "row", alignItems: "center", gap: 4,minWidth: 90,
+justifyContent: "center", backgroundColor: "#e74c3c", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   endBtnText: { color: "#fff", fontSize: 10, fontWeight: "700" },
 
   statsRow: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#eee" },
