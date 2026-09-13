@@ -50,7 +50,7 @@ export const ATTENDANCE_SETTINGS_DEFAULTS = {
   defaultService:       "Sunday",
   defaultType:          "First Service",
   defaultStartTime:     "9:00 AM",
-  defaultEvent:         "None",
+  defaultOccasion: "None",
   // Dynamic master data
 serviceOptions: [
   "Sunday",
@@ -68,7 +68,6 @@ typeOptions: [
   "Youth",
   "Children",
 ],
-
 timeOptions: [
   "7:00 AM",
   "8:00 AM",
@@ -78,31 +77,16 @@ timeOptions: [
   "6:00 PM",
 ],
 
-sessionTemplates: [
-  {
-    id: "sunday_morning",
-    name: "Sunday first Worship",
-    service: "Sunday",
-    type: "First Service",
-    startTime: "9:00 AM",
-  },
-
-  {
-    id: "wednesday_bible",
-    name: "Sunday Second Worship",
-    service: "Wednesday",
-    type: "Bible Study",
-    startTime: "6:00 PM",
-  },
-
-  {
-    id: "friday_prayer",
-    name: "Friday Prayer Meeting",
-    service: "Friday",
-    type: "Prayer",
-    startTime: "6:00 PM",
-  },
+occasionOptions: [
+  "None",
+  "Easter",
+  "Christmas",
+  "Harvest",
+  "Founders Day",
+  "Convention",
 ],
+
+
   // Absence alerts
   absenceWarningCount:  2,         // contacts modal after this many absences
   absenceFlagCount:     3,         // red-flag modal after this many
@@ -139,13 +123,6 @@ export default function AttendanceSettingsScreen() {
 const [itemModalVisible, setItemModalVisible] = useState(false);
 
 const [editingMode, setEditingMode] = useState("service");
-const [templateName, setTemplateName] = useState("");
-
-const [templateService, setTemplateService] = useState("");
-
-const [templateType, setTemplateType] = useState("");
-
-const [templateTime, setTemplateTime] = useState("");
 
 
 const [editingIndex, setEditingIndex] = useState(null);
@@ -243,21 +220,10 @@ const openAddTime = () => {
   setItemModalVisible(true);
 };
 
-const openAddTemplate = () => {
-  setEditingMode("template");
+const openAddOccasion = () => {
+  setEditingMode("occasion");
   setEditingIndex(null);
-
-  setTemplateName("");
-  setTemplateService(
-    settings.defaultService || ""
-  );
-  setTemplateType(
-    settings.defaultType || ""
-  );
-  setTemplateTime(
-    settings.defaultStartTime || ""
-  );
-
+  setItemName("");
   setItemModalVisible(true);
 };
 
@@ -275,28 +241,6 @@ const editItem = (mode, value, index) => {
   setItemModalVisible(true);
 };
 
-const editTemplate = (template, index) => {
-  setEditingMode("template");
-  setEditingIndex(index);
-
-  setTemplateName(
-    template.name
-  );
-
-  setTemplateService(
-    template.service
-  );
-
-  setTemplateType(
-    template.type
-  );
-
-  setTemplateTime(
-    template.startTime
-  );
-
-  setItemModalVisible(true);
-};
 
 
 const saveItem = () => {
@@ -354,33 +298,24 @@ const saveItem = () => {
     if (!settings.defaultStartTime && list.length > 0) {
       update("defaultStartTime", list[0]);
     }
+  };
+  if (editingMode === "occasion") {
+  const list = [...s.occasionOptions];
+
+  if (editingIndex === null) {
+    list.push(itemName.trim());
+  } else {
+    list[editingIndex] = itemName.trim();
   }
 
-  if (editingMode === "template") {
-    const list = [
-      ...(settings.sessionTemplates || [])
-    ];
+  update("occasionOptions", list);
 
-    const template = {
-      id:
-        editingIndex === null
-          ? `template_${Date.now()}`
-          : list[editingIndex].id,
-
-      name: templateName,
-      service: templateService,
-      type: templateType,
-      startTime: templateTime,
-    };
-
-    if (editingIndex === null) {
-      list.push(template);
-    } else {
-      list[editingIndex] = template;
-    }
-
-    update("sessionTemplates", list);
+  if (!settings.defaultOccasion && list.length > 0) {
+    update("defaultOccasion", list[0]);
   }
+}
+
+
 
   setItemModalVisible(false);
 };
@@ -407,23 +342,15 @@ const deleteItem = () => {
     list.splice(editingIndex, 1);
 
     update("timeOptions", list);
-  }
-if (editingMode === "template") {
+  };
+  if (editingMode === "occasion") {
+  const list = [...s.occasionOptions];
+  list.splice(editingIndex, 1);
 
-  const list = [
-    ...(settings.sessionTemplates || [])
-  ];
-
-  list.splice(
-    editingIndex,
-    1
-  );
-
-  update(
-    "sessionTemplates",
-    list
-  );
+  update("occasionOptions", list);
 }
+
+
   setItemModalVisible(false);
 };
   // ─────────────────────────────────────────────────────────────────
@@ -638,7 +565,7 @@ if (editingMode === "template") {
        
 
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>Default Service</Text>
+          <Text style={styles.fieldLabel}> Service</Text>
 
 <View style={styles.dynamicList}>
   {(settings.serviceOptions || []).map((service, index) => (
@@ -694,7 +621,7 @@ if (editingMode === "template") {
   </Text>
 </TouchableOpacity>
 
-<Text style={styles.fieldLabel}>Default Type</Text>
+<Text style={styles.fieldLabel}> Type</Text>
 
 <View style={styles.dynamicList}>
   {(settings.typeOptions || []).map((type, index) => (
@@ -749,8 +676,76 @@ if (editingMode === "template") {
     Add Type
   </Text>
 </TouchableOpacity>
+
+
+<Text style={styles.fieldLabel}>
+   Occasion
+</Text>
+
+<View style={styles.dynamicList}>
+  {(settings.occasionOptions || []).map(
+    (occasion, index) => (
+      <View
+        key={`${occasion}-${index}`}
+        style={styles.dynamicListRow}
+      >
+        <TouchableOpacity
+          style={[
+            styles.dynamicChip,
+            settings.defaultOccasion === occasion &&
+              styles.dynamicChipActive,
+          ]}
+          onPress={() =>
+            update("defaultOccasion", occasion)
+          }
+        >
+          <Text
+            style={[
+              styles.dynamicChipText,
+              settings.defaultOccasion === occasion &&
+                styles.dynamicChipTextActive,
+            ]}
+          >
+            {occasion}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() =>
+            editItem(
+              "occasion",
+              occasion,
+              index
+            )
+          }
+        >
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color="#4B3F72"
+          />
+        </TouchableOpacity>
+      </View>
+    )
+  )}
+</View>
+
+<TouchableOpacity
+  style={styles.manageBtn}
+  onPress={openAddOccasion}
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={16}
+    color="#4B3F72"
+  />
+  <Text style={styles.manageBtnText}>
+    Add Occasion
+  </Text>
+</TouchableOpacity>
+
  
-<Text style={styles.fieldLabel}>Default Start Time</Text>
+<Text style={styles.fieldLabel}>Start Time</Text>
 
 <View style={styles.dynamicList}>
   {(settings.timeOptions || []).map((time, index) => (
@@ -811,83 +806,13 @@ if (editingMode === "template") {
         </View>
 
 
-
-{/* ══ SESSION TEMPLATES ══ */}
+{/* ══ SESSION CONFIGURATION ══ */}
 <SectionHeader
-  icon="albums-outline"
-  color="#16A085"
-  title="Session Templates"
-  subtitle="One-tap attendance session presets"
+  icon="calendar-outline"
+  color="#4B3F72"
+  title="Session Configuration"
+  subtitle="Manage services, types, occasions and times"
 />
-
-<View style={styles.card}>
-
-  {(settings.sessionTemplates || []).map(
-    (template, index) => (
-      <View
-        key={template.id}
-        style={styles.dynamicListRow}
-      >
-        <View style={{ flex: 1 }}>
-
-          <Text
-            style={{
-              fontWeight: "700",
-              color: "#222",
-            }}
-          >
-            {template.name}
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 11,
-              color: "#888",
-            }}
-          >
-            {template.service}
-            {" • "}
-            {template.type}
-            {" • "}
-            {template.startTime}
-          </Text>
-
-        </View>
-
-        <TouchableOpacity
-          onPress={() =>
-            editTemplate(
-              template,
-              index
-            )
-          }
-        >
-          <Ionicons
-            name="create-outline"
-            size={18}
-            color="#4B3F72"
-          />
-        </TouchableOpacity>
-
-      </View>
-    )
-  )}
-
-  <TouchableOpacity
-    style={styles.manageBtn}
-    onPress={openAddTemplate}
-  >
-    <Ionicons
-      name="add-circle-outline"
-      size={16}
-      color="#16A085"
-    />
-    <Text style={styles.manageBtnText}>
-      Add Template
-    </Text>
-  </TouchableOpacity>
-
-</View>
 
 {/* ══ ABSENCE ALERTS ══ */}
 <SectionHeader
@@ -1146,136 +1071,13 @@ if (editingMode === "template") {
       <Text style={styles.modalTitle}>
   {editingIndex === null ? "Add" : "Edit"}{" "}
   {editingMode === "service"
-    ? "Service"
-    : editingMode === "type"
-    ? "Session Type"
-    : editingMode === "time"
-    ? "Service Time"
-    : "Template"}
+  ? "Service"
+  : editingMode === "type"
+  ? "Session Type"
+  : "Service Time"}
 </Text>
 
-      {editingMode === "template" ? (
-  <>
-    <Text style={styles.fieldLabel}>
-      Template Name
-    </Text>
-
-    <TextInput
-      style={styles.modalInput}
-      value={templateName}
-      onChangeText={setTemplateName}
-      placeholder="Sunday Morning Worship"
-    />
-
-    <Text style={styles.fieldLabel}>
-      Service
-    </Text>
-
-<ChipPicker
-  options={settings.serviceOptions || []}
-  value={templateService}
-  onChange={setTemplateService}
-/>
-
-<TouchableOpacity
-  onPress={() => {
-    setItemModalVisible(false);
-  }}
->
-<View
-  style={{
-    flexDirection: "column",
-    alignItems: "center",
-    marginTop: 6,
-    marginBottom: 12,
-  }}
->
-  <Ionicons
-    name="information-circle-outline"
-    size={14}
-    color="#4B3F72"
-  />
-
-  <Text style={styles.manageHint}>
-    Can't find a service? Add it in Services above.
-  </Text>
-</View>
-</TouchableOpacity>
-
-<Text style={styles.fieldLabel}>
-  Type
-</Text>
-
-    <ChipPicker
-      options={settings.typeOptions || []}
-      value={templateType}
-      onChange={setTemplateType}
-    />
-
-    <Text style={styles.fieldLabel}>
-      Start Time
-    </Text>
-
-    <ChipPicker
-      options={settings.timeOptions || []}
-      value={templateTime}
-      onChange={setTemplateTime}
-    />
-  </>
-) : editingMode === "template" ? (
-  <>
-    <Text style={styles.fieldLabel}>
-      Template Name
-    </Text>
-
-    <TextInput
-      style={styles.modalInput}
-      value={templateName}
-      onChangeText={setTemplateName}
-      placeholder="Sunday Morning Worship"
-    />
-
-   <Text style={styles.fieldLabel}>
-  Service
-</Text>
-
-<ChipPicker
-  options={settings.serviceOptions || []}
-  value={templateService}
-  onChange={setTemplateService}
-/>
-
-<TouchableOpacity
-  onPress={() => {
-    setItemModalVisible(false);
-  }}
->
-  <Text style={styles.manageLink}>
-    + Manage Services
-  </Text>
-</TouchableOpacity>
-
-    <Text style={styles.fieldLabel}>
-      Session Type
-    </Text>
-
-    <ChipPicker
-      options={settings.typeOptions || []}
-      value={templateType}
-      onChange={setTemplateType}
-    />
-
-    <Text style={styles.fieldLabel}>
-      Start Time
-    </Text>
-
-    <ChipPicker
-      options={settings.timeOptions || []}
-      value={templateTime}
-      onChange={setTemplateTime}
-    />
-  </>
-) : editingMode === "time" ? (
+{editingMode === "time" ? (
   <>
     <TouchableOpacity
       style={styles.timeButton}

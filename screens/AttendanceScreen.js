@@ -39,7 +39,7 @@ import {
 
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
-const EVENTS  = ["None", "Easter", "Christmas", "Harvest", "Founders Day", "Convention"];
+
 const METHODS = ["manual", "qr", "selfqr", "geo"];
 
 // ─────────────────────────────────────────────────────────────────
@@ -85,8 +85,8 @@ export default function AttendanceScreen() {
   // ── SESSION STATE ──
   const [selectedService, setSelectedService] = useState("");
   const [selectedType, setSelectedType] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState("None");
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedOccasion, setSelectedOccasion] = useState("None");
+  
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [sessionId, setSessionId] = useState(null);
@@ -203,7 +203,9 @@ export default function AttendanceScreen() {
     setSelectedService(attendanceSettings.defaultService || "");
     setSelectedType(attendanceSettings.defaultType || "");
     setStartTime(attendanceSettings.defaultStartTime || "");
-    setSelectedEvent(attendanceSettings.defaultEvent || "None");
+  setSelectedOccasion(
+  attendanceSettings.defaultOccasion || "None"
+);
   }, [attendanceSettings, settingsLoaded]);
 
   // ── ROUTE PARAMS (resume from QR scan) ──
@@ -363,7 +365,9 @@ export default function AttendanceScreen() {
 
       setSelectedService(data.service || "Sunday");
       setSelectedType(data.type || "First Service");
-      setSelectedEvent(data.event || "None");
+    setSelectedOccasion(
+  data.occasion || data.event || "None"
+);
       setStartTime(data.startTime || "");
       setEndTime(data.endTime || "");
       setSessionStatus(data.status || "open");
@@ -459,7 +463,7 @@ export default function AttendanceScreen() {
               const restored = await applySessionData(existingSession.id);
               if (restored) {
                 setSessionModal(false);
-                setSelectedTemplate(null);
+            
                 Alert.alert("Session Restored", "You have joined the active attendance session.");
               }
             },
@@ -476,7 +480,7 @@ export default function AttendanceScreen() {
   date: today(),
   service: selectedService,
   type: selectedType,
-  event: selectedEvent,
+  occasion: selectedOccasion,
   startTime,
   endTime,
   status: "open",
@@ -795,7 +799,7 @@ windowDefinition: {
     sessionId,
     service: selectedService,
     type: selectedType,
-    event: selectedEvent,
+    occasion: selectedOccasion,
     date: today(),
     status,
     method: mode,
@@ -1360,7 +1364,9 @@ seriesId:
   const SERVICES = attendanceSettings?.serviceOptions || [];
   const TYPES = attendanceSettings?.typeOptions || [];
   const TIMES = attendanceSettings?.timeOptions || [];
-  const TEMPLATES = attendanceSettings?.sessionTemplates || [];
+  const OCCASIONS =
+  attendanceSettings?.occasionOptions || [];
+  
 
   // ─────────────────────────────────────────────────────────────────
   // RENDER
@@ -1897,25 +1903,7 @@ seriesId:
               </View>
             )}
 
-            <Text style={styles.fieldLabel}>Session Template</Text>
-            <View style={styles.chipRow}>
-              {TEMPLATES.map(template => (
-                <TouchableOpacity
-                  key={template.id}
-                  style={[styles.chip, selectedTemplate === template.id && styles.chipActive]}
-                  onPress={() => {
-                    setSelectedTemplate(template.id);
-                    setSelectedService(template.service);
-                    setSelectedType(template.type);
-                    setStartTime(template.startTime);
-                  }}
-                >
-                  <Text style={[styles.chipText, selectedTemplate === template.id && styles.chipTextActive]}>
-                    {template.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+           
 
             <Text style={styles.fieldLabel}>Service</Text>
             <View style={styles.chipRow}>
@@ -1945,18 +1933,35 @@ seriesId:
               </View>
             </ScrollView>
 
-            <Text style={styles.fieldLabel}>Event</Text>
-            <View style={styles.chipRow}>
-              {EVENTS.map(e => (
-                <TouchableOpacity
-                  key={e}
-                  style={[styles.chip, selectedEvent === e && styles.chipActive]}
-                  onPress={() => setSelectedEvent(e)}
-                >
-                  <Text style={[styles.chipText, selectedEvent === e && styles.chipTextActive]}>{e}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={styles.fieldLabel}>
+  Occasion
+</Text>
+
+<View style={styles.chipRow}>
+  {OCCASIONS.map(occasion => (
+    <TouchableOpacity
+      key={occasion}
+      style={[
+        styles.chip,
+        selectedOccasion === occasion &&
+          styles.chipActive
+      ]}
+      onPress={() =>
+        setSelectedOccasion(occasion)
+      }
+    >
+      <Text
+        style={[
+          styles.chipText,
+          selectedOccasion === occasion &&
+            styles.chipTextActive
+        ]}
+      >
+        {occasion}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
             <Text style={styles.fieldLabel}>Start Time</Text>
             <View style={styles.chipRow}>
