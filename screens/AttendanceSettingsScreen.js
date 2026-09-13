@@ -51,57 +51,73 @@ export const ATTENDANCE_SETTINGS_DEFAULTS = {
   defaultType:          "First Service",
   defaultStartTime:     "9:00 AM",
   defaultOccasion: "None",
-  // Dynamic master data
-serviceOptions: [
-  "Sunday",
-  "Wednesday",
-  "Friday",
-  "Saturday",
-  "Special",
-],
 
-typeOptions: [
-  "First Service",
-  "Second Service",
-  "Third Service",
-  "Evening Service",
-  "Youth",
-  "Children",
-],
-timeOptions: [
-  "7:00 AM",
-  "8:00 AM",
-  "9:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "6:00 PM",
-],
+  serviceOptions: [
+    "Sunday",
+    "Wednesday",
+    "Friday",
+    "Saturday",
+    "Special",
+  ],
 
-occasionOptions: [
-  "None",
-  "Easter",
-  "Christmas",
-  "Harvest",
-  "Founders Day",
-  "Convention",
-],
+  typeOptions: [
+    "First Service",
+    "Second Service",
+    "Third Service",
+    "Evening Service",
+    "Youth",
+    "Children",
+  ],
+  timeOptions: [
+    "7:00 AM",
+    "8:00 AM",
+    "9:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "6:00 PM",
+  ],
 
+  occasionOptions: [
+    "None",
+    "Easter",
+    "Christmas",
+    "Harvest",
+    "Founders Day",
+    "Convention",
+  ],
 
   // Absence alerts
-  absenceWarningCount:  2,         // contacts modal after this many absences
-  absenceFlagCount:     3,         // red-flag modal after this many
+  absenceWarningCount:  2,
+  absenceFlagCount:     3,
 
   // Session behaviour
-  lockAfterEnd:         true,      // non-admins can't edit after session ends
-  allowSelfCheckin:     true,      // Self QR mode available
-  qrSessionTimeoutMins: 120,       // QR codes expire after this many minutes
-  requireSessionNote:   false,     // force admin to write a note at session end
+  lockAfterEnd:         true,
+  allowSelfCheckin:     true,
+  qrSessionTimeoutMins: 120,
+  requireSessionNote:   false,
   requireAttendancePin: false,
-
 
   // Offline queue
   offlineSyncEnabled:   true,
   offlineSyncIntervalSecs: 10,
+};
+
+// FIX: was missing entirely — editItem() reset the time picker to
+// "now" instead of the value actually being edited. Parses strings
+// like "9:00 AM" (the exact format saveItem produces) back into a
+// Date so the picker opens pre-filled with the real value.
+const parseTimeString = (str) => {
+  if (!str) return new Date();
+  const match = str.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return new Date();
+  let [, h, m, ampm] = match;
+  h = parseInt(h, 10);
+  m = parseInt(m, 10);
+  if (/pm/i.test(ampm) && h !== 12) h += 12;
+  if (/am/i.test(ampm) && h === 12) h = 0;
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
 };
 
 export default function AttendanceSettingsScreen() {
@@ -115,24 +131,18 @@ export default function AttendanceSettingsScreen() {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [locating, setLocating] = useState(false);
-  const [dirty,    setDirty]    = useState(false); 
-
-
+  const [dirty,    setDirty]    = useState(false);
 
   // Service Defaults Modal
-const [itemModalVisible, setItemModalVisible] = useState(false);
-
-const [editingMode, setEditingMode] = useState("service");
-
-
-const [editingIndex, setEditingIndex] = useState(null);
-
-const [itemName, setItemName] = useState("");
-
-const [timeValue, setTimeValue] = useState(new Date());
-
-const [showTimePicker, setShowTimePicker] = useState(false);
-
+  const [itemModalVisible, setItemModalVisible] = useState(false);
+  const [editingMode, setEditingMode] = useState("service");
+  const [editingIndex, setEditingIndex] = useState(null);
+  // FIX: needed so saveItem can tell whether the item being edited was
+  // the current default, and keep the default in sync if its name changes.
+  const [editingOriginalValue, setEditingOriginalValue] = useState(null);
+  const [itemName, setItemName] = useState("");
+  const [timeValue, setTimeValue] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // ── BOOTSTRAP ──
   useEffect(() => {
@@ -195,168 +205,128 @@ const [showTimePicker, setShowTimePicker] = useState(false);
     setDirty(true);
   };
 
-// ─────────────────────────────────────────────────────────────────
-// SESSION DEFAULT MODAL HANDLERS
-// ─────────────────────────────────────────────────────────────────
-
-const openAddService = () => {
-  setEditingMode("service");
-  setEditingIndex(null);
-  setItemName("");
-  setItemModalVisible(true);
-};
-
-const openAddType = () => {
-  setEditingMode("type");
-  setEditingIndex(null);
-  setItemName("");
-  setItemModalVisible(true);
-};
-
-const openAddTime = () => {
-  setEditingMode("time");
-  setEditingIndex(null);
-  setTimeValue(new Date());
-  setItemModalVisible(true);
-};
-
-const openAddOccasion = () => {
-  setEditingMode("occasion");
-  setEditingIndex(null);
-  setItemName("");
-  setItemModalVisible(true);
-};
-
-
-const editItem = (mode, value, index) => {
-  setEditingMode(mode);
-  setEditingIndex(index);
-
-  if (mode === "time") {
-    setTimeValue(new Date());
-  } else {
-    setItemName(value);
-  }
-
-  setItemModalVisible(true);
-};
-
-
-
-const saveItem = () => {
-  const s = { ...settings };
-
-  if (editingMode === "service") {
-    const list = [...s.serviceOptions];
-
-    if (editingIndex === null) {
-      list.push(itemName.trim());
-    } else {
-      list[editingIndex] = itemName.trim();
-    }
-
-    update("serviceOptions", list);
-
-    if (!settings.defaultService && list.length > 0) {
-      update("defaultService", list[0]);
-    }
-  }
-
-  if (editingMode === "type") {
-    const list = [...s.typeOptions];
-
-    if (editingIndex === null) {
-      list.push(itemName.trim());
-    } else {
-      list[editingIndex] = itemName.trim();
-    }
-
-    update("typeOptions", list);
-
-    if (!settings.defaultType && list.length > 0) {
-      update("defaultType", list[0]);
-    }
-  }
-
-  if (editingMode === "time") {
-    const formattedTime =
-      timeValue.toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      });
-
-    const list = [...s.timeOptions];
-
-    if (editingIndex === null) {
-      list.push(formattedTime);
-    } else {
-      list[editingIndex] = formattedTime;
-    }
-
-    update("timeOptions", list);
-
-    if (!settings.defaultStartTime && list.length > 0) {
-      update("defaultStartTime", list[0]);
-    }
-  };
-  if (editingMode === "occasion") {
-  const list = [...s.occasionOptions];
-
-  if (editingIndex === null) {
-    list.push(itemName.trim());
-  } else {
-    list[editingIndex] = itemName.trim();
-  }
-
-  update("occasionOptions", list);
-
-  if (!settings.defaultOccasion && list.length > 0) {
-    update("defaultOccasion", list[0]);
-  }
-}
-
-
-
-  setItemModalVisible(false);
-};
-
-const deleteItem = () => {
-  const s = { ...settings };
-
-  if (editingMode === "service") {
-    const list = [...s.serviceOptions];
-    list.splice(editingIndex, 1);
-
-    update("serviceOptions", list);
-  }
-
-  if (editingMode === "type") {
-    const list = [...s.typeOptions];
-    list.splice(editingIndex, 1);
-
-    update("typeOptions", list);
-  }
-
-  if (editingMode === "time") {
-    const list = [...s.timeOptions];
-    list.splice(editingIndex, 1);
-
-    update("timeOptions", list);
-  };
-  if (editingMode === "occasion") {
-  const list = [...s.occasionOptions];
-  list.splice(editingIndex, 1);
-
-  update("occasionOptions", list);
-}
-
-
-  setItemModalVisible(false);
-};
   // ─────────────────────────────────────────────────────────────────
-  // DETECT CURRENT GPS — so admin doesn't have to look up coordinates
-  // ✅ This is the "smart" part: tap a button and your church's real
-  // coordinates are filled in automatically instead of guessing.
+  // SESSION DEFAULT MODAL HANDLERS
+  // ─────────────────────────────────────────────────────────────────
+
+  const openAddService = () => {
+    setEditingMode("service");
+    setEditingIndex(null);
+    setEditingOriginalValue(null);
+    setItemName("");
+    setItemModalVisible(true);
+  };
+
+  const openAddType = () => {
+    setEditingMode("type");
+    setEditingIndex(null);
+    setEditingOriginalValue(null);
+    setItemName("");
+    setItemModalVisible(true);
+  };
+
+  const openAddTime = () => {
+    setEditingMode("time");
+    setEditingIndex(null);
+    setEditingOriginalValue(null);
+    setTimeValue(new Date());
+    setItemModalVisible(true);
+  };
+
+  const openAddOccasion = () => {
+    setEditingMode("occasion");
+    setEditingIndex(null);
+    setEditingOriginalValue(null);
+    setItemName("");
+    setItemModalVisible(true);
+  };
+
+  const editItem = (mode, value, index) => {
+    setEditingMode(mode);
+    setEditingIndex(index);
+    setEditingOriginalValue(value);
+
+    if (mode === "time") {
+      // FIX: was `new Date()` — always reset to "now" instead of the
+      // time actually being edited.
+      setTimeValue(parseTimeString(value));
+    } else {
+      setItemName(value);
+    }
+
+    setItemModalVisible(true);
+  };
+
+  const defaultKeyFor = (mode) => ({
+    service: "defaultService",
+    type: "defaultType",
+    time: "defaultStartTime",
+    occasion: "defaultOccasion",
+  }[mode]);
+
+  const listKeyFor = (mode) => ({
+    service: "serviceOptions",
+    type: "typeOptions",
+    time: "timeOptions",
+    occasion: "occasionOptions",
+  }[mode]);
+
+  const saveItem = () => {
+    const listKey = listKeyFor(editingMode);
+    const defaultKey = defaultKeyFor(editingMode);
+    const list = [...(settings[listKey] || [])];
+
+    const newValue =
+      editingMode === "time"
+        ? timeValue.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : itemName.trim();
+
+    if (editingIndex === null) {
+      list.push(newValue);
+    } else {
+      list[editingIndex] = newValue;
+    }
+
+    update(listKey, list);
+
+    if (!settings[defaultKey] && list.length > 0) {
+      update(defaultKey, list[0]);
+    } else if (
+      // FIX: if the item being edited WAS the current default, keep
+      // the default pointing at it under its new name instead of
+      // leaving it referencing a value that no longer exists in the list.
+      editingIndex !== null &&
+      editingOriginalValue !== null &&
+      settings[defaultKey] === editingOriginalValue
+    ) {
+      update(defaultKey, newValue);
+    }
+
+    setItemModalVisible(false);
+  };
+
+  const deleteItem = () => {
+    const listKey = listKeyFor(editingMode);
+    const defaultKey = defaultKeyFor(editingMode);
+    const list = [...(settings[listKey] || [])];
+    const removed = list[editingIndex];
+
+    list.splice(editingIndex, 1);
+    update(listKey, list);
+
+    // FIX: if the deleted item was the current default, it was left
+    // pointing at a value no longer in the list — nothing would show
+    // as selected, and AttendanceScreen would pre-fill a session with
+    // a nonexistent option.
+    if (settings[defaultKey] === removed) {
+      update(defaultKey, list[0] || "");
+    }
+
+    setItemModalVisible(false);
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+  // DETECT CURRENT GPS
   // ─────────────────────────────────────────────────────────────────
   const detectLocation = async () => {
     setLocating(true);
@@ -370,7 +340,6 @@ const deleteItem = () => {
         accuracy: Location.Accuracy.High
       });
 
-      // Reverse geocode to get a human-readable address
       let address = "";
       try {
         const geocode = await Location.reverseGeocodeAsync({
@@ -403,10 +372,6 @@ const deleteItem = () => {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────
-  // RADIUS PREVIEW — shows what the current radius feels like in
-  // real-world terms so admins can make an informed decision
-  // ─────────────────────────────────────────────────────────────────
   const radiusDescription = (r) => {
     if (r <= 50)  return "Very tight — members must be inside the building.";
     if (r <= 100) return "Building + immediate surroundings.";
@@ -432,7 +397,6 @@ const deleteItem = () => {
         onBack={() => navigation.goBack()}
       />
 
-      {/* UNSAVED CHANGES BANNER */}
       {dirty && (
         <View style={styles.dirtyBanner}>
           <Ionicons name="alert-circle-outline" size={14} color="#fff" />
@@ -463,7 +427,6 @@ const deleteItem = () => {
 
         {settings.geoEnabled && (
           <>
-            {/* RADIUS SLIDER */}
             <View style={styles.radiusCard}>
               <View style={styles.radiusHeader}>
                 <Text style={styles.radiusLabel}>Geo Fence Radius</Text>
@@ -472,7 +435,6 @@ const deleteItem = () => {
                 </View>
               </View>
 
-              {/* Manual slider using preset buttons */}
               <View style={styles.radiusPresets}>
                 {[50, 100, 150, 200, 300, 500].map(r => (
                   <TouchableOpacity
@@ -507,7 +469,6 @@ const deleteItem = () => {
               </View>
             </View>
 
-            {/* CHURCH COORDINATES */}
             <View style={styles.coordCard}>
               <View style={styles.coordCardHeader}>
                 <Text style={styles.coordCardTitle}>Church GPS Coordinates</Text>
@@ -562,266 +523,160 @@ const deleteItem = () => {
           </>
         )}
 
-       
+        {/* FIX: header moved to precede the card it actually describes,
+            instead of trailing it with nothing underneath. */}
+        <SectionHeader
+          icon="calendar-outline"
+          color="#4B3F72"
+          title="Session Configuration"
+          subtitle="Manage services, types, occasions and times"
+        />
 
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}> Service</Text>
+          <Text style={styles.fieldLabel}>Service</Text>
 
-<View style={styles.dynamicList}>
-  {(settings.serviceOptions || []).map((service, index) => (
-    <View
-      key={`${service}-${index}`}
-      style={styles.dynamicListRow}
-    >
-      <TouchableOpacity
-        style={[
-          styles.dynamicChip,
-          settings.defaultService === service &&
-            styles.dynamicChipActive,
-        ]}
-        onPress={() => update("defaultService", service)}
-      >
-        <Text
-          style={[
-            styles.dynamicChipText,
-            settings.defaultService === service &&
-              styles.dynamicChipTextActive,
-          ]}
-        >
-          {service}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.dynamicList}>
+            {(settings.serviceOptions || []).map((service, index) => (
+              <View key={`${service}-${index}`} style={styles.dynamicListRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.dynamicChip,
+                    settings.defaultService === service && styles.dynamicChipActive,
+                  ]}
+                  onPress={() => update("defaultService", service)}
+                >
+                  <Text
+                    style={[
+                      styles.dynamicChipText,
+                      settings.defaultService === service && styles.dynamicChipTextActive,
+                    ]}
+                  >
+                    {service}
+                  </Text>
+                </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() =>
-          editItem("service", service, index)
-        }
-      >
-        <Ionicons
-          name="create-outline"
-          size={18}
-          color="#4B3F72"
-        />
-      </TouchableOpacity>
-    </View>
-  ))}
-</View>
+                <TouchableOpacity onPress={() => editItem("service", service, index)}>
+                  <Ionicons name="create-outline" size={18} color="#4B3F72" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
 
-<TouchableOpacity
-  style={styles.manageBtn}
-  onPress={openAddService}
->
-  <Ionicons
-    name="add-circle-outline"
-    size={16}
-    color="#4B3F72"
-  />
-  <Text style={styles.manageBtnText}>
-    Add Service
-  </Text>
-</TouchableOpacity>
+          <TouchableOpacity style={styles.manageBtn} onPress={openAddService}>
+            <Ionicons name="add-circle-outline" size={16} color="#4B3F72" />
+            <Text style={styles.manageBtnText}>Add Service</Text>
+          </TouchableOpacity>
 
-<Text style={styles.fieldLabel}> Type</Text>
+          <Text style={styles.fieldLabel}>Type</Text>
 
-<View style={styles.dynamicList}>
-  {(settings.typeOptions || []).map((type, index) => (
-    <View
-      key={`${type}-${index}`}
-      style={styles.dynamicListRow}
-    >
-      <TouchableOpacity
-        style={[
-          styles.dynamicChip,
-          settings.defaultType === type &&
-            styles.dynamicChipActive,
-        ]}
-        onPress={() => update("defaultType", type)}
-      >
-        <Text
-          style={[
-            styles.dynamicChipText,
-            settings.defaultType === type &&
-              styles.dynamicChipTextActive,
-          ]}
-        >
-          {type}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.dynamicList}>
+            {(settings.typeOptions || []).map((type, index) => (
+              <View key={`${type}-${index}`} style={styles.dynamicListRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.dynamicChip,
+                    settings.defaultType === type && styles.dynamicChipActive,
+                  ]}
+                  onPress={() => update("defaultType", type)}
+                >
+                  <Text
+                    style={[
+                      styles.dynamicChipText,
+                      settings.defaultType === type && styles.dynamicChipTextActive,
+                    ]}
+                  >
+                    {type}
+                  </Text>
+                </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() =>
-          editItem("type", type, index)
-        }
-      >
-        <Ionicons
-          name="create-outline"
-          size={18}
-          color="#4B3F72"
-        />
-      </TouchableOpacity>
-    </View>
-  ))}
-</View>
+                <TouchableOpacity onPress={() => editItem("type", type, index)}>
+                  <Ionicons name="create-outline" size={18} color="#4B3F72" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
 
-<TouchableOpacity
-  style={styles.manageBtn}
-  onPress={openAddType}
->
-  <Ionicons
-    name="add-circle-outline"
-    size={16}
-    color="#4B3F72"
-  />
-  <Text style={styles.manageBtnText}>
-    Add Type
-  </Text>
-</TouchableOpacity>
+          <TouchableOpacity style={styles.manageBtn} onPress={openAddType}>
+            <Ionicons name="add-circle-outline" size={16} color="#4B3F72" />
+            <Text style={styles.manageBtnText}>Add Type</Text>
+          </TouchableOpacity>
 
+          <Text style={styles.fieldLabel}>Occasion</Text>
 
-<Text style={styles.fieldLabel}>
-   Occasion
-</Text>
+          <View style={styles.dynamicList}>
+            {(settings.occasionOptions || []).map((occasion, index) => (
+              <View key={`${occasion}-${index}`} style={styles.dynamicListRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.dynamicChip,
+                    settings.defaultOccasion === occasion && styles.dynamicChipActive,
+                  ]}
+                  onPress={() => update("defaultOccasion", occasion)}
+                >
+                  <Text
+                    style={[
+                      styles.dynamicChipText,
+                      settings.defaultOccasion === occasion && styles.dynamicChipTextActive,
+                    ]}
+                  >
+                    {occasion}
+                  </Text>
+                </TouchableOpacity>
 
-<View style={styles.dynamicList}>
-  {(settings.occasionOptions || []).map(
-    (occasion, index) => (
-      <View
-        key={`${occasion}-${index}`}
-        style={styles.dynamicListRow}
-      >
-        <TouchableOpacity
-          style={[
-            styles.dynamicChip,
-            settings.defaultOccasion === occasion &&
-              styles.dynamicChipActive,
-          ]}
-          onPress={() =>
-            update("defaultOccasion", occasion)
-          }
-        >
-          <Text
-            style={[
-              styles.dynamicChipText,
-              settings.defaultOccasion === occasion &&
-                styles.dynamicChipTextActive,
-            ]}
-          >
-            {occasion}
-          </Text>
-        </TouchableOpacity>
+                <TouchableOpacity onPress={() => editItem("occasion", occasion, index)}>
+                  <Ionicons name="create-outline" size={18} color="#4B3F72" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
 
-        <TouchableOpacity
-          onPress={() =>
-            editItem(
-              "occasion",
-              occasion,
-              index
-            )
-          }
-        >
-          <Ionicons
-            name="create-outline"
-            size={18}
-            color="#4B3F72"
-          />
-        </TouchableOpacity>
-      </View>
-    )
-  )}
-</View>
+          <TouchableOpacity style={styles.manageBtn} onPress={openAddOccasion}>
+            <Ionicons name="add-circle-outline" size={16} color="#4B3F72" />
+            <Text style={styles.manageBtnText}>Add Occasion</Text>
+          </TouchableOpacity>
 
-<TouchableOpacity
-  style={styles.manageBtn}
-  onPress={openAddOccasion}
->
-  <Ionicons
-    name="add-circle-outline"
-    size={16}
-    color="#4B3F72"
-  />
-  <Text style={styles.manageBtnText}>
-    Add Occasion
-  </Text>
-</TouchableOpacity>
+          <Text style={styles.fieldLabel}>Start Time</Text>
 
- 
-<Text style={styles.fieldLabel}>Start Time</Text>
+          <View style={styles.dynamicList}>
+            {(settings.timeOptions || []).map((time, index) => (
+              <View key={`${time}-${index}`} style={styles.dynamicListRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.dynamicChip,
+                    settings.defaultStartTime === time && styles.dynamicChipActive,
+                  ]}
+                  onPress={() => update("defaultStartTime", time)}
+                >
+                  <Text
+                    style={[
+                      styles.dynamicChipText,
+                      settings.defaultStartTime === time && styles.dynamicChipTextActive,
+                    ]}
+                  >
+                    {time}
+                  </Text>
+                </TouchableOpacity>
 
-<View style={styles.dynamicList}>
-  {(settings.timeOptions || []).map((time, index) => (
-    <View
-      key={`${time}-${index}`}
-      style={styles.dynamicListRow}
-    >
-      <TouchableOpacity
-        style={[
-          styles.dynamicChip,
-          settings.defaultStartTime === time &&
-            styles.dynamicChipActive,
-        ]}
-        onPress={() =>
-          update("defaultStartTime", time)
-        }
-      >
-        <Text
-          style={[
-            styles.dynamicChipText,
-            settings.defaultStartTime === time &&
-              styles.dynamicChipTextActive,
-          ]}
-        >
-          {time}
-        </Text>
-      </TouchableOpacity>
+                <TouchableOpacity onPress={() => editItem("time", time, index)}>
+                  <Ionicons name="create-outline" size={18} color="#4B3F72" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
 
-      <TouchableOpacity
-        onPress={() =>
-          editItem("time", time, index)
-        }
-      >
-        <Ionicons
-          name="create-outline"
-          size={18}
-          color="#4B3F72"
-        />
-      </TouchableOpacity>
-    </View>
-  ))}
-</View>
-
-<TouchableOpacity
-  style={styles.manageBtn}
-  onPress={openAddTime}
->
-  <Ionicons
-    name="time-outline"
-    size={16}
-    color="#4B3F72"
-  />
-  <Text style={styles.manageBtnText}>
-    Add Time
-  </Text>
-</TouchableOpacity>
-        
+          <TouchableOpacity style={styles.manageBtn} onPress={openAddTime}>
+            <Ionicons name="time-outline" size={16} color="#4B3F72" />
+            <Text style={styles.manageBtnText}>Add Time</Text>
+          </TouchableOpacity>
         </View>
 
-
-{/* ══ SESSION CONFIGURATION ══ */}
-<SectionHeader
-  icon="calendar-outline"
-  color="#4B3F72"
-  title="Session Configuration"
-  subtitle="Manage services, types, occasions and times"
-/>
-
-{/* ══ ABSENCE ALERTS ══ */}
-<SectionHeader
-  icon="notifications-outline"
-  color="#e67e22"
-  title="Absence Alerts"
-  subtitle="When to prompt pastoral follow-up"
-/>
-
+        {/* ══ ABSENCE ALERTS ══ */}
+        <SectionHeader
+          icon="notifications-outline"
+          color="#e67e22"
+          title="Absence Alerts"
+          subtitle="When to prompt pastoral follow-up"
+        />
 
         <View style={styles.card}>
           <View style={styles.thresholdRow}>
@@ -886,93 +741,42 @@ const deleteItem = () => {
         <SettingRow label="Require Session Note" description="Force a summary note before a session can be ended">
           <Switch value={settings.requireSessionNote} onValueChange={v => update("requireSessionNote", v)} trackColor={{ true: "#0984E3" }} />
         </SettingRow>
-       <SettingRow
-  label="Require Attendance PIN"
-  description="Users must verify their Attendance PIN before joining or ending a session"
->
-  <Switch
-    value={
-      settings.requireAttendancePin
-|| false
-    }
-    onValueChange={v =>
-      update("requireAttendancePin", v)
-    }
-    trackColor={{ true: "#0984E3" }}
-  />
-</SettingRow>
-{settings.requireAttendancePin && (
-  <View style={styles.card}>
-    <Text style={styles.thresholdLabel}>
-      Session Security PIN
-    </Text>
-
-    <Text
-      style={[
-        styles.thresholdSub,
-        { marginBottom: 16 }
-      ]}
-    >
-      Used to authorise session closure and
-      other attendance security actions.
-    </Text>
-
-    <View
-      style={{
-        flexDirection: "row",
-        gap: 10,
-      }}
-    >
-      <TouchableOpacity
-        style={styles.detectBtn}
-        onPress={() =>
-          navigation.navigate(
-            "PinSetup",
-            {
-              mode: "attendance",
-            }
-          )
-        }
-      >
-        <Ionicons
-          name="key-outline"
-          size={14}
-          color="#fff"
-        />
-
-        <Text style={styles.detectBtnText}>
-          Setup Attendance PIN
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.attendanceResetBtn}
-        onPress={() =>
-          navigation.navigate(
-  "Login",
-  {
-    resetPinMode: "attendance",
-  }
-)
-        }
-      >
-        <Ionicons
-          name="refresh-circle-outline"
-          size={18}
-          color="#E67E22"
-        />
-
-        <Text
-          style={
-            styles.attendanceResetText
-          }
+        <SettingRow
+          label="Require Attendance PIN"
+          description="Users must verify their Attendance PIN before joining or ending a session"
         >
-          Reset PIN
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+          <Switch
+            value={settings.requireAttendancePin || false}
+            onValueChange={v => update("requireAttendancePin", v)}
+            trackColor={{ true: "#0984E3" }}
+          />
+        </SettingRow>
+        {settings.requireAttendancePin && (
+          <View style={styles.card}>
+            <Text style={styles.thresholdLabel}>Session Security PIN</Text>
+            <Text style={[styles.thresholdSub, { marginBottom: 16 }]}>
+              Used to authorise session closure and other attendance security actions.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={styles.detectBtn}
+                onPress={() => navigation.navigate("PinSetup", { mode: "attendance" })}
+              >
+                <Ionicons name="key-outline" size={14} color="#fff" />
+                <Text style={styles.detectBtnText}>Setup Attendance PIN</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.attendanceResetBtn}
+                onPress={() => navigation.navigate("Login", { resetPinMode: "attendance" })}
+              >
+                <Ionicons name="refresh-circle-outline" size={18} color="#E67E22" />
+                <Text style={styles.attendanceResetText}>Reset PIN</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.thresholdRow}>
@@ -1024,7 +828,6 @@ const deleteItem = () => {
           </View>
         )}
 
-        {/* SAVE BUTTON */}
         <TouchableOpacity
           style={[styles.saveBtn, (!dirty || saving) && { opacity: 0.6 }]}
           onPress={saveSettings}
@@ -1038,7 +841,6 @@ const deleteItem = () => {
               </>}
         </TouchableOpacity>
 
-        {/* RESET */}
         <TouchableOpacity
           style={styles.resetBtn}
           onPress={() => {
@@ -1059,96 +861,77 @@ const deleteItem = () => {
         </TouchableOpacity>
 
       </ScrollView>
-      
-<Modal
-  visible={itemModalVisible}
-  transparent
-  animationType="slide"
->
-  <View style={styles.overlay}>
-    <View style={styles.modalCard}>
 
-      <Text style={styles.modalTitle}>
-  {editingIndex === null ? "Add" : "Edit"}{" "}
-  {editingMode === "service"
-  ? "Service"
-  : editingMode === "type"
-  ? "Session Type"
-  : "Service Time"}
-</Text>
+      <Modal visible={itemModalVisible} transparent animationType="slide">
+        <View style={styles.overlay}>
+          <View style={styles.modalCard}>
 
-{editingMode === "time" ? (
-  <>
-    <TouchableOpacity
-      style={styles.timeButton}
-      onPress={() => setShowTimePicker(true)}
-    >
-      <Text style={styles.timeButtonText}>
-        {timeValue.toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-        })}
-      </Text>
-    </TouchableOpacity>
-
-    {showTimePicker && (
-      <DateTimePicker
-        value={timeValue}
-        mode="time"
-        is24Hour={false}
-        onChange={(event, selectedDate) => {
-          setShowTimePicker(false);
-
-          if (selectedDate) {
-            setTimeValue(selectedDate);
-          }
-        }}
-      />
-    )}
-  </>
-) : (
-  <TextInput
-    style={styles.modalInput}
-    value={itemName}
-    onChangeText={setItemName}
-    placeholder="Enter value"
-  />
-)}
-
-      <View style={styles.modalActions}>
-
-        {editingIndex !== null && (
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={deleteItem}
-          >
-            <Text style={styles.deleteText}>
-              Delete
+            <Text style={styles.modalTitle}>
+              {editingIndex === null ? "Add" : "Edit"}{" "}
+              {/* FIX: missing "occasion" case — editing/adding an
+                  Occasion mislabeled the modal "Service Time". */}
+              {editingMode === "service" ? "Service"
+                : editingMode === "type" ? "Session Type"
+                : editingMode === "occasion" ? "Occasion"
+                : "Service Time"}
             </Text>
-          </TouchableOpacity>
-        )}
 
-        <TouchableOpacity
-          style={styles.cancelBtn}
-          onPress={() => setItemModalVisible(false)}
-        >
-          <Text>Cancel</Text>
-        </TouchableOpacity>
+            {editingMode === "time" ? (
+              <>
+                <TouchableOpacity
+                  style={styles.timeButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.timeButtonText}>
+                    {timeValue.toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.saveModalBtn}
-          onPress={saveItem}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700" }}>
-            Save
-          </Text>
-        </TouchableOpacity>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={timeValue}
+                    mode="time"
+                    is24Hour={false}
+                    onChange={(event, selectedDate) => {
+                      setShowTimePicker(false);
+                      if (selectedDate) {
+                        setTimeValue(selectedDate);
+                      }
+                    }}
+                  />
+                )}
+              </>
+            ) : (
+              <TextInput
+                style={styles.modalInput}
+                value={itemName}
+                onChangeText={setItemName}
+                placeholder="Enter value"
+              />
+            )}
 
-      </View>
+            <View style={styles.modalActions}>
+              {editingIndex !== null && (
+                <TouchableOpacity style={styles.deleteBtn} onPress={deleteItem}>
+                  <Text style={styles.deleteText}>Delete</Text>
+                </TouchableOpacity>
+              )}
 
-    </View>
-  </View>
-</Modal>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setItemModalVisible(false)}>
+                <Text>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.saveModalBtn} onPress={saveItem}>
+                <Text style={{ color: "#fff", fontWeight: "700" }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -1269,141 +1052,60 @@ const styles = StyleSheet.create({
   resetBtn: { alignItems: "center", padding: 14 },
   resetBtnText: { color: "#e74c3c", fontSize: 13, fontWeight: "600" },
 
-overlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  justifyContent: "center",
-  padding: 20,
-},
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
+  modalCard: { backgroundColor: "#fff", borderRadius: 20, padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "800", marginBottom: 16, color: "#222" },
+  modalInput: { borderWidth: 1, borderColor: "#ddd", borderRadius: 12, padding: 14 },
+  timeButton: { borderWidth: 1, borderColor: "#ddd", borderRadius: 12, padding: 16, alignItems: "center" },
+  timeButtonText: { fontSize: 16, fontWeight: "700" },
+  modalActions: { flexDirection: "row", alignItems: "center", marginTop: 20 },
+  saveModalBtn: { backgroundColor: "#4B3F72", borderRadius: 10, paddingHorizontal: 18, paddingVertical: 12 },
+  cancelBtn: { paddingHorizontal: 18, paddingVertical: 12, marginRight: 8 },
+  deleteBtn: { backgroundColor: "#FDEDED", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginRight: "auto" },
+  deleteText: { color: "#E74C3C", fontWeight: "700" },
 
-modalCard: {
-  backgroundColor: "#fff",
-  borderRadius: 20,
-  padding: 20,
-},
+  dynamicList: { marginBottom: 10 },
+  dynamicListRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  dynamicChip: { flex: 1, backgroundColor: "#f0f0f0", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, marginRight: 10 },
+  dynamicChipActive: { backgroundColor: "#4B3F72" },
+  dynamicChipText: { color: "#555", fontWeight: "600" },
+  dynamicChipTextActive: { color: "#fff" },
 
-modalTitle: {
-  fontSize: 18,
-  fontWeight: "800",
-  marginBottom: 16,
-  color: "#222",
-},
+  // FIX: referenced in JSX for the four "Add" buttons (Service, Type,
+  // Occasion, Time) but never actually defined — they rendered as
+  // bare unstyled text with no background or spacing, easy to
+  // overlook entirely.
+  manageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#EEF0FA",
+    borderWidth: 1,
+    borderColor: "#4B3F72",
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  manageBtnText: {
+    color: "#4B3F72",
+    fontWeight: "700",
+    fontSize: 13,
+  },
 
-modalInput: {
-  borderWidth: 1,
-  borderColor: "#ddd",
-  borderRadius: 12,
-  padding: 14,
-},
+  manageLink: { color: "#4B3F72", fontSize: 12, fontWeight: "600", marginTop: 4, marginBottom: 10 },
+  manageHint: { fontSize: 11, color: "#4B3F72", marginTop: 6, marginBottom: 12, fontWeight: "600" },
 
-timeButton: {
-  borderWidth: 1,
-  borderColor: "#ddd",
-  borderRadius: 12,
-  padding: 16,
-  alignItems: "center",
-},
-
-timeButtonText: {
-  fontSize: 16,
-  fontWeight: "700",
-},
-
-modalActions: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginTop: 20,
-},
-
-saveModalBtn: {
-  backgroundColor: "#4B3F72",
-  borderRadius: 10,
-  paddingHorizontal: 18,
-  paddingVertical: 12,
-},
-
-cancelBtn: {
-  paddingHorizontal: 18,
-  paddingVertical: 12,
-  marginRight: 8,
-},
-
-deleteBtn: {
-  backgroundColor: "#FDEDED",
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  marginRight: "auto",
-},
-
-deleteText: {
-  color: "#E74C3C",
-  fontWeight: "700",
-},
-dynamicList: {
-  marginBottom: 10,
-},
-
-dynamicListRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 8,
-},
-
-dynamicChip: {
-  flex: 1,
-  backgroundColor: "#f0f0f0",
-  borderRadius: 20,
-  paddingHorizontal: 12,
-  paddingVertical: 8,
-  marginRight: 10,
-},
-
-dynamicChipActive: {
-  backgroundColor: "#4B3F72",
-},
-
-dynamicChipText: {
-  color: "#555",
-  fontWeight: "600",
-},
-
-dynamicChipTextActive: {
-  color: "#fff",
-},
-manageLink: {
-  color: "#4B3F72",
-  fontSize: 12,
-  fontWeight: "600",
-  marginTop: 4,
-  marginBottom: 10,
-},
-manageHint: {
-  fontSize: 11,
-  color: "#4B3F72",
-  marginTop: 6,
-  marginBottom: 12,
-  fontWeight: "600",
-},
-attendanceResetBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 6,
-
-  borderWidth: 1,
-  borderColor: "#E67E22",
-
-  borderRadius: 8,
-
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-},
-
-attendanceResetText: {
-  color: "#E67E22",
-  fontSize: 11,
-  fontWeight: "700",
-},
+  attendanceResetBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E67E22",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  attendanceResetText: { color: "#E67E22", fontSize: 11, fontWeight: "700" },
 });

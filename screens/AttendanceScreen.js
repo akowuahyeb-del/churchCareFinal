@@ -222,10 +222,31 @@ export default function AttendanceScreen() {
   }, [route?.params?.resumeSessionId, organizationId, entityId]);
 
   // ── OFFLINE QUEUE DRAIN ──
-  useEffect(() => {
-    const interval = setInterval(drainOfflineQueue, 10000);
-    return () => clearInterval(interval);
-  }, [organizationId, entityId]);
+ useEffect(() => {
+  if (
+    attendanceSettings?.offlineSyncEnabled === false
+  ) {
+    return;
+  }
+
+  const intervalMs =
+    (
+      attendanceSettings?.offlineSyncIntervalSecs ||
+      10
+    ) * 1000;
+
+  const interval = setInterval(
+    drainOfflineQueue,
+    intervalMs
+  );
+
+  return () => clearInterval(interval);
+}, [
+  organizationId,
+  entityId,
+  attendanceSettings?.offlineSyncEnabled,
+  attendanceSettings?.offlineSyncIntervalSecs,
+]);
 
   useEffect(() => {
     if (enteredPin.length === 6) {
@@ -1214,29 +1235,70 @@ seriesId:
   // ─────────────────────────────────────────────────────────────────
   // GEO MODE
   // ─────────────────────────────────────────────────────────────────
-  const startGeoWatch = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Location Required", "Enable location access for Geo check-in.");
-      return;
-    }
-
-    const watch = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, distanceInterval: 10, timeInterval: 15000 },
-      (loc) => {
-        const dist = haversineDistance(
-          loc.coords.latitude, loc.coords.longitude,
-          CHURCH_COORDS.latitude, CHURCH_COORDS.longitude
-        );
-        if (dist <= GEO_RADIUS_METERS) {
-          setScanFeedback(`📍 Within range (${Math.round(dist)}m from church)`);
-        }
-      }
+ const startGeoWatch = async () => {
+  if (!settingsLoaded) {
+    Alert.alert(
+      "Loading Settings",
+      "Attendance settings are still loading."
     );
+    return;
+  }
 
-    geoWatchRef.current = watch;
-    setGeoActive(true);
-  };
+  if (!attendanceSettings?.geoEnabled) {
+    Alert.alert(
+      "Geo Check-in Disabled",
+      "Geo attendance has been disabled by the administrator."
+    );
+    return;
+  }
+
+  if (
+    !attendanceSettings?.geoLatitude ||
+    !attendanceSettings?.geoLongitude
+  ) {
+    Alert.alert(
+      "Church Location Missing",
+      "Configure church GPS coordinates in Attendance Settings."
+    );
+    return;
+  }
+
+  const { status } =
+    await Location.requestForegroundPermissionsAsync();
+
+  if (status !== "granted") {
+    Alert.alert(
+      "Location Required",
+      "Enable location access for Geo check-in."
+    );
+    return;
+  }
+
+  const watch = await Location.watchPositionAsync(
+    {
+      accuracy: Location.Accuracy.High,
+      distanceInterval: 10,
+      timeInterval: 15000,
+    },
+    (loc) => {
+      const dist = haversineDistance(
+        loc.coords.latitude,
+        loc.coords.longitude,
+        CHURCH_COORDS.latitude,
+        CHURCH_COORDS.longitude
+      );
+
+      if (dist <= GEO_RADIUS_METERS) {
+        setScanFeedback(
+          `📍 Within range (${Math.round(dist)}m from church)`
+        );
+      }
+    }
+  );
+
+  geoWatchRef.current = watch;
+  setGeoActive(true);
+};
 
   const stopGeoWatch = () => {
     if (geoWatchRef.current) { geoWatchRef.current.remove(); geoWatchRef.current = null; }
@@ -1244,25 +1306,74 @@ seriesId:
   };
 
   const geoMarkPresent = async () => {
+  if (!settingsLoaded) {
+    Alert.alert(
+      "Loading Settings",
+      "Please wait for attendance settings to load."
+    );
+    return;
+  }
+
+  if (!attendanceSettings?.geoEnabled) {
+    Alert.alert(
+      "Geo Check-in Disabled",
+      "Geo attendance is disabled."
+    );
+    return;
+  }
+
+  if (
+    !attendanceSettings?.geoLatitude ||
+    !attendanceSettings?.geoLongitude
+  ) {
+    Alert.alert(
+      "Church Coordinates Missing",
+      "Configure church GPS coordinates first."
+    );
+    return;
+  }
     const member = members.find(
       m => m.id === memberGeoCode.trim() || m.memberCode === memberGeoCode.trim()
     );
     if (!member) { Alert.alert("Not Found"); return; }
     if (attendance[member.id]) { Alert.alert("Already Marked", `${member.name} already recorded.`); return; }
 
-    try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const dist = haversineDistance(
-        loc.coords.latitude, loc.coords.longitude,
-        CHURCH_COORDS.latitude, CHURCH_COORDS.longitude
-      );
-      if (dist > GEO_RADIUS_METERS) {
-        Alert.alert("Out of Range", `${member.name} appears to be ${Math.round(dist)}m from the church (limit: ${GEO_RADIUS_METERS}m).`);
-        return;
-      }
-    } catch (e) {
-      // Fallback — mark anyway if location check fails
-    }
+   try {
+  const loc = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.High,
+  });
+
+  const dist = haversineDistance(
+    loc.coords.latitude,
+    loc.coords.longitude,
+    CHURCH_COORDS.latitude,
+    CHURCH_COORDS.longitude
+  );
+
+  console.log("===== GEO CHECK =====");
+  console.log("Church:", CHURCH_COORDS);
+  console.log("User:", loc.coords);
+  console.log("Distance:", dist);
+  console.log("Radius:", GEO_RADIUS_METERS);
+
+  if (dist > GEO_RADIUS_METERS) {
+    Alert.alert(
+      "Out of Range",
+      `${member.name} is ${Math.round(dist)}m away from the church. Allowed radius is ${GEO_RADIUS_METERS}m.`
+    );
+    return;
+  }
+
+} catch (e) {
+  console.log("❌ Geo verification failed:", e);
+
+  Alert.alert(
+    "Location Error",
+    "Unable to verify GPS location. Please enable location services and try again."
+  );
+
+  return;
+}
 
     await toggleAttendance(member, "present");
     Alert.alert("✅ Checked In", `${member.name} marked Present via Geo.`);
@@ -1351,6 +1462,14 @@ seriesId:
   };
 
   const GEO_RADIUS_METERS = attendanceSettings?.geoRadiusMeters ?? 150;
+  useEffect(() => {
+  console.log("===== GEO SETTINGS =====");
+  console.log("settingsLoaded:", settingsLoaded);
+  console.log("geoEnabled:", attendanceSettings?.geoEnabled);
+  console.log("latitude:", attendanceSettings?.geoLatitude);
+  console.log("longitude:", attendanceSettings?.geoLongitude);
+  console.log("radius:", attendanceSettings?.geoRadiusMeters);
+}, [attendanceSettings, settingsLoaded]);
 
   const modeTabs = [
     { key: "manual", label: "Manual", icon: "pencil-outline" },
@@ -1358,14 +1477,30 @@ seriesId:
     ...(attendanceSettings?.allowSelfCheckin
       ? [{ key: "selfqr", label: "Self QR", icon: "phone-portrait-outline" }]
       : []),
-    { key: "geo", label: "Geo", icon: "location-outline" },
+    ...(attendanceSettings?.geoEnabled !== false
+  ? [{
+      key: "geo",
+      label: "Geo",
+      icon: "location-outline",
+    }]
+  : []),
   ];
+  useEffect(() => {
+  if (
+    mode === "geo" &&
+    attendanceSettings?.geoEnabled === false
+  ) {
+    setMode("manual");
+  }
+}, [mode, attendanceSettings?.geoEnabled]);
+
 
   const SERVICES = attendanceSettings?.serviceOptions || [];
   const TYPES = attendanceSettings?.typeOptions || [];
   const TIMES = attendanceSettings?.timeOptions || [];
   const OCCASIONS =
   attendanceSettings?.occasionOptions || [];
+ 
   
 
   // ─────────────────────────────────────────────────────────────────
