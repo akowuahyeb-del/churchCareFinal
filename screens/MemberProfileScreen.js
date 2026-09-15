@@ -25,11 +25,19 @@ import {
   updateMemberLifecycle,
 } from "../utils/memberIntake";
 import {
+  computeAbsenceStreak,
+  classifyAttendanceHealth,
+  buildAttendanceRecommendation,
+} from "../utils/attendanceIntelligence";
+import {
   getFunctions,
   httpsCallable,
 } from "firebase/functions";
 import ServiceHistoryCard
   from "../components/ServiceHistoryCard";
+  import {
+  formatDate,
+} from "../utils/dateUtils";
 
 
 
@@ -115,9 +123,49 @@ const PROFILE_FIELDS = [
     selfEditable: false,
   },
 ];
+
+const formatAttendanceHealth = (value) => {
+  const labels = {
+    healthy: "Healthy",
+    follow_up: "Follow-Up",
+    at_risk: "At Risk",
+    inactive_candidate: "Inactive Candidate",
+  };
+
+  return labels[value] || value;
+};
+
+ const formatAttendanceAction = (value) => {
+  const labels = {
+    follow_up: "Follow-Up Required",
+    pastoral_review: "Pastoral Review",
+    inactive_review: "Inactive Review",
+    none: "None",
+  };
+
+  return labels[value] || value;
+};
+
+const formatLifecycleStatus = (value) => {
+  const labels = {
+    visitor: "Visitor",
+    interested: "Interested",
+    pending_approval: "Pending Approval",
+    member: "Member",
+    invited: "Invited",
+    registered: "Registered",
+    active_user: "Active User",
+    inactive_candidate: "Inactive Candidate",
+    inactive: "Inactive",
+  };
+
+  return labels[value] || value;
+};
+
 export default function MemberProfileScreen({ route, navigation }) {
 
- 
+
+
  const memberId =
   route?.params?.memberId ||
   route?.params?.viewerMemberId ||
@@ -168,6 +216,16 @@ const entityId =
   const [loading, setLoading] = useState(true);
 
   const [attendanceHistory, setAttendanceHistory] = useState([]);
+
+  const [attendanceHealth, setAttendanceHealth] =
+  useState("healthy");
+
+const [absenceStreak, setAbsenceStreak] =
+  useState(0);
+
+const [attendanceRecommendation,
+  setAttendanceRecommendation] =
+  useState(null);
   const [contributions, setContributions] = useState([]);
 
   const [tab, setTab] = useState("profile");
@@ -299,6 +357,43 @@ const [previousRoles, setPreviousRoles] =
     } catch (e) {
       console.log("❌ Load attendance error:", e);
     }
+  };
+
+
+const loadAttendanceIntelligence =
+  async () => {
+
+    if (
+      !organizationId ||
+      !entityId ||
+      !memberId
+    ) {
+      return;
+    }
+
+    const streak =
+      await computeAbsenceStreak({
+        organizationId,
+        entityId,
+        memberId,
+        track: "sunday",
+      });
+
+    const health =
+      classifyAttendanceHealth(
+        streak
+      );
+
+    const recommendation =
+      buildAttendanceRecommendation(
+        streak
+      );
+
+    setAbsenceStreak(streak);
+    setAttendanceHealth(health);
+    setAttendanceRecommendation(
+      recommendation
+    );
   };
 
 
@@ -657,6 +752,9 @@ useEffect(() => {
 
 loadMember();
 loadAttendance();
+loadAttendanceIntelligence();
+
+
 
 setTimeout(() => {
   loadAssignedVisitors();
@@ -1187,6 +1285,7 @@ try {
                 : "Active"}
           </Text>
         </View>
+        
 
         {/* Quick stats — derived from real loaded attendance/contributions */}
        {/* Quick stats — derived from real loaded attendance/contributions */}
@@ -1402,11 +1501,48 @@ console.log("INVITE DEBUG", {
         {/* ══ TAB: ATTENDANCE ══ */}
         {tab === "attendance" && (
           <View>
+            <View style={styles.statusCard}>
+  <Text style={styles.statusCardLabel}>
+    ATTENDANCE INTELLIGENCE
+  </Text>
+
+  <Text style={styles.statusCardValue}>
+  {formatAttendanceHealth(attendanceHealth)}
+</Text>
+
+  <Text
+    style={{
+      marginTop: 6,
+      color: "#666",
+    }}
+  >
+    Current absence streak:
+    {" "}
+    {absenceStreak}
+  </Text>
+
+  <Text
+    style={{
+      marginTop: 6,
+      color: "#4B3F72",
+      fontWeight: "700",
+    }}
+  >
+    Recommended action:
+    {" "}
+    {
+  formatAttendanceAction(
+    attendanceRecommendation?.action || "none"
+  )
+}
+  </Text>
+</View>
             <Text style={styles.sectionTitle}>Attendance History</Text>
             {lastAttended && (
               <Text style={styles.lastAttendedNote}>
-                Last attended: {lastAttended.date} ({lastAttended.service} · {lastAttended.type})
-              </Text>
+  Last attended: {formatDate(lastAttended.date)}
+  ({lastAttended.service} · {lastAttended.type})
+</Text>
             )}
             {attendanceHistory.length === 0 ? (
               <View style={styles.emptyState}>
@@ -1418,7 +1554,10 @@ console.log("INVITE DEBUG", {
                 <View key={r.id} style={styles.recordRow}>
                   <View>
                     <Text style={styles.recordTitle}>{r.service} · {r.type}</Text>
-                    <Text style={styles.recordSub}>{r.date}{r.event ? ` · ${r.event}` : ""}</Text>
+                    <Text style={styles.recordSub}>
+  {formatDate(r.date)}
+  {r.event ? ` · ${r.event}` : ""}
+</Text>
                   </View>
                   <View style={[styles.recordBadge, {
                     backgroundColor: r.status === "present" ? "#e8f8f0" : "#fce8e8"
@@ -1461,7 +1600,7 @@ console.log("INVITE DEBUG", {
 
 </Text>
                       <Text style={styles.recordSub}>
-  {c.date}
+  {formatDate(c.date)}
 </Text>
 
 {c.acknowledgedByName && (
@@ -1504,7 +1643,7 @@ console.log("INVITE DEBUG", {
         {/* ══ TAB: STATUS / ADMIN ACTIONS ══ */}
         {tab === "status" && (
           <View>
-            <Text style={styles.sectionTitle}>Member Status</Text>
+            
 
             <View style={styles.statusCard}>
               <Text style={styles.statusCardLabel}>Current Status</Text>
@@ -1518,6 +1657,71 @@ console.log("INVITE DEBUG", {
                 </Text>
               )}
             </View>
+
+<View
+  style={[
+    styles.statusCard,
+    { marginTop: 10 },
+  ]}
+>
+  <Text style={styles.statusCardLabel}>
+    LIFECYCLE STATUS
+  </Text>
+
+ <Text style={styles.statusCardValue}>
+  {formatLifecycleStatus(
+    member?.lifecycleStatus || "member"
+  )}
+</Text>
+</View>
+
+
+
+            <View
+  style={[
+    styles.statusCard,
+    {
+      marginTop: 10,
+    },
+  ]}
+>
+  <Text style={styles.statusCardLabel}>
+    ATTENDANCE HEALTH
+  </Text>
+
+  <Text style={styles.statusCardValue}>
+    {formatAttendanceHealth(
+      attendanceHealth
+    )}
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 12,
+      color: "#666",
+      marginTop: 4,
+      textAlign: "center",
+    }}
+  >
+    Recommended Action:{" "}
+    {formatAttendanceAction(
+      attendanceRecommendation?.action ||
+        "none"
+    )}
+  </Text>
+
+  <Text
+    style={{
+      fontSize: 12,
+      color: "#666",
+      marginTop: 4,
+      textAlign: "center",
+    }}
+  >
+    Absence Streak: {absenceStreak}
+  </Text>
+</View>
+
 
             {!canManageMembers && (
               <View style={styles.emptyState}>
@@ -1631,6 +1835,7 @@ console.log("INVITE DEBUG", {
 )}
 
           </View>
+          
         )}
 
    
