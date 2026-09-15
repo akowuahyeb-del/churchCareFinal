@@ -306,6 +306,109 @@ setEscalatedCount(
 
 </View>
 
+{/* ATTENDANCE INTELLIGENCE QUEUES */}
+
+{followUpMembers.length > 0 && (
+  <View style={styles.queueCard}>
+    <Text style={styles.queueTitle}>
+      Follow-Up Queue
+    </Text>
+
+    {followUpMembers.map((member) => (
+  <TouchableOpacity
+    key={member.id}
+    style={styles.queueRow}
+    onPress={() =>
+      navigation.navigate(
+        "MemberProfile",
+        {
+          memberId: member.id,
+        }
+      )
+    }
+  >
+    <View>
+      <Text style={styles.queueName}>
+        {member.name}
+      </Text>
+
+      <Text style={styles.queueMeta}>
+        Follow-Up Required
+      </Text>
+    </View>
+
+    <Ionicons
+      name="chevron-forward"
+      size={16}
+      color="#999"
+    />
+  </TouchableOpacity>
+))}
+  </View>
+)}
+
+{atRiskMembers.length > 0 && (
+  <View style={styles.queueCard}>
+    <Text style={styles.queueTitle}>
+      At-Risk Queue
+    </Text>
+
+    {atRiskMembers.map((member) => (
+      <TouchableOpacity
+        key={member.id}
+        style={styles.queueRow}
+        onPress={() =>
+          navigation.navigate(
+            "MemberProfile",
+            {
+              memberId: member.id,
+            }
+          )
+        }
+      >
+        <Text style={styles.queueName}>
+          {member.name}
+        </Text>
+
+        <Text style={styles.queueMeta}>
+          Pastoral Review
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
+
+{inactiveCandidateMembers.length > 0 && (
+  <View style={styles.queueCard}>
+    <Text style={styles.queueTitle}>
+      Inactive Candidate Queue
+    </Text>
+
+    {inactiveCandidateMembers.map((member) => (
+      <TouchableOpacity
+        key={member.id}
+        style={styles.queueRow}
+        onPress={() =>
+          navigation.navigate(
+            "MemberProfile",
+            {
+              memberId: member.id,
+            }
+          )
+        }
+      >
+        <Text style={styles.queueName}>
+          {member.name}
+        </Text>
+
+        <Text style={styles.queueMeta}>
+          Inactive Review
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
+
       <FlatList
         data={tickets}
         keyExtractor={(item) => item.id}
@@ -432,5 +535,37 @@ intelligenceLabel: {
   fontSize: 11,
   color: "#666",
   marginTop: 4,
+},
+queueCard: {
+  backgroundColor: "#fff",
+  marginHorizontal: 16,
+  marginTop: 12,
+  marginBottom: 4,
+  borderRadius: 16,
+  padding: 14,
+},
+
+queueTitle: {
+  fontSize: 14,
+  fontWeight: "700",
+  color: "#4B3F72",
+  marginBottom: 10,
+},
+
+queueRow: {
+  paddingVertical: 10,
+  borderBottomWidth: 1,
+  borderBottomColor: "#F1F1F1",
+},
+
+queueName: {
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+queueMeta: {
+  fontSize: 11,
+  color: "#777",
+  marginTop: 2,
 },
 });
