@@ -216,6 +216,14 @@ export const DEFAULT_WINDOW_MAPPINGS = {
   },
 };
 
+
+export const ATTENDANCE_HEALTH = {
+  HEALTHY: "healthy",
+  FOLLOW_UP: "follow_up",
+  AT_RISK: "at_risk",
+  INACTIVE_CANDIDATE: "inactive_candidate",
+};
+
 export function resolveWindowMapping(session) {
   const track = resolveAttendanceTrack(session);
 
@@ -429,4 +437,163 @@ export async function computeAbsenceStreak({
     track,
   });
   return computeStreakFromOccurrences(occurrences);
+}
+
+
+export function classifyAttendanceHealth(
+  streak,
+  warningThreshold = 2,
+  concernThreshold = 4,
+  criticalThreshold = 8
+) {
+  if (streak >= criticalThreshold) {
+    return ATTENDANCE_HEALTH.INACTIVE_CANDIDATE;
+  }
+
+  if (streak >= concernThreshold) {
+    return ATTENDANCE_HEALTH.AT_RISK;
+  }
+
+  if (streak >= warningThreshold) {
+    return ATTENDANCE_HEALTH.FOLLOW_UP;
+  }
+
+  return ATTENDANCE_HEALTH.HEALTHY;
+}
+
+export function isInactiveCandidate(
+  streak,
+  threshold = 8
+) {
+  return streak >= threshold;
+}
+
+export function buildAttendanceRecommendation(
+  streak
+) {
+  const health =
+    classifyAttendanceHealth(streak);
+
+  switch (health) {
+    case ATTENDANCE_HEALTH.FOLLOW_UP:
+      return {
+        health,
+        action: "follow_up",
+        priority: "low",
+      };
+
+    case ATTENDANCE_HEALTH.AT_RISK:
+      return {
+        health,
+        action: "pastoral_review",
+        priority: "medium",
+      };
+
+    case ATTENDANCE_HEALTH.INACTIVE_CANDIDATE:
+      return {
+        health,
+        action: "inactive_review",
+        priority: "high",
+      };
+
+    default:
+      return {
+        health,
+        action: "none",
+        priority: "none",
+      };
+  }
+}
+
+
+export function shouldIncludeInAttendanceIntelligence(
+  member
+) {
+  const status = String(
+    member?.lifecycleStatus || ""
+  ).toLowerCase();
+
+  if (
+    [
+      "deceased",
+      "visitor",
+      "transferred"
+    ].includes(status)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+export async function buildAttendanceIntelligenceSummary({
+  organizationId,
+  entityId,
+  members,
+  track = "sunday",
+}) {
+  const summary = {
+    followUpCount: 0,
+    atRiskCount: 0,
+    inactiveCandidateCount: 0,
+
+    followUpMembers: [],
+    atRiskMembers: [],
+    inactiveCandidateMembers: [],
+  };
+
+  const intelligenceMembers =
+    members.filter(
+      shouldIncludeInAttendanceIntelligence
+    );
+
+  for (const member of intelligenceMembers) {
+    const streak =
+      await computeAbsenceStreak({
+        organizationId,
+        entityId,
+        memberId: member.id,
+        track,
+      });
+
+    const recommendation =
+      buildAttendanceRecommendation(
+        streak
+      );
+
+    const item = {
+      memberId: member.id,
+      memberName:
+        member.fullName ||
+        member.name ||
+        "Unknown",
+      streak,
+      recommendation,
+    };
+
+    switch (
+      recommendation.health
+    ) {
+      case ATTENDANCE_HEALTH.FOLLOW_UP:
+        summary.followUpCount++;
+        summary.followUpMembers.push(item);
+        break;
+
+      case ATTENDANCE_HEALTH.AT_RISK:
+        summary.atRiskCount++;
+        summary.atRiskMembers.push(item);
+        break;
+
+      case ATTENDANCE_HEALTH.INACTIVE_CANDIDATE:
+        summary.inactiveCandidateCount++;
+        summary.inactiveCandidateMembers.push(
+          item
+        );
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return summary;
 }
