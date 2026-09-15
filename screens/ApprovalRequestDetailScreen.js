@@ -377,6 +377,60 @@ if (
         }
       }
 
+// =================================================
+// ATTENDANCE REVIEW APPROVAL
+// =================================================
+if (request.type === "attendance") {
+
+  const now =
+    new Date().toISOString();
+
+  const memberRef = doc(
+    db,
+    "organizations",
+    entity.organizationId,
+    "entities",
+    request.entityId,
+    "members",
+    request.memberId
+  );
+
+  await updateDoc(
+    memberRef,
+    {
+      lifecycleStatus: "inactive",
+      inactiveAt: now,
+      inactivityApprovalId: request.id,
+    }
+  );
+
+  await updateDoc(
+    requestRef,
+    {
+      approvals: arrayUnion(
+        approverId
+      ),
+      status: "approved",
+      approvedAt: now,
+    }
+  );
+
+  setRequest((prev) => ({
+    ...prev,
+    status: "approved",
+    approvedAt: now,
+  }));
+
+  Alert.alert(
+    "Approved",
+    "Member marked as Inactive."
+  );
+
+  navigation.goBack();
+
+  return;
+}
+
 
 // =================================================
 // PROTECTED OFFICE APPROVAL
@@ -554,6 +608,38 @@ if (
           rejectedAt: now,
           rejectionNote: rejectionNote.trim() || null,
         });
+        if (request.type === "attendance") {
+
+  const now =
+    new Date().toISOString();
+
+  await updateDoc(
+    requestRef,
+    {
+      rejections: arrayUnion(
+        rejectorId
+      ),
+      status: "rejected",
+      rejectedAt: now,
+      rejectionNote:
+        rejectionNote.trim() || null,
+    }
+  );
+
+  setRequest((prev) => ({
+    ...prev,
+    status: "rejected",
+  }));
+
+  Alert.alert(
+    "Rejected",
+    "Attendance review rejected."
+  );
+
+  navigation.goBack();
+
+  return;
+}
 
         await updateDoc(
           doc(
@@ -683,15 +769,42 @@ if (
         <Text style={{ marginTop: 16 }}>Requested By:</Text>
         <Text>{request.requestedByName || "Unknown"}</Text>
 
-        <Text style={{ marginTop: 16 }}>Request Type:</Text>
-        <Text>
-          {request.type === "disciplinary"
-            ? `Disciplinary: ${request.actionType}`
-            : request.nominationType}
-        </Text>
+        <Text style={{ marginTop: 16 }}>
+  Request Type:
+</Text>
+
+<Text>
+  {request.type === "disciplinary"
+    ? `Disciplinary: ${request.actionType}`
+
+    : request.type === "attendance"
+    ? "Attendance Review"
+
+    : request.nominationType}
+</Text>
 
         <Text style={{ marginTop: 16 }}>Status:</Text>
         <Text>{request.status}</Text>
+        {request.type === "attendance" && (
+  <>
+    <Text style={{ marginTop: 16 }}>
+      Attendance Health:
+    </Text>
+
+    <Text>
+      {request.attendanceHealth ||
+        "Inactive Candidate"}
+    </Text>
+
+    <Text style={{ marginTop: 16 }}>
+      Absence Streak:
+    </Text>
+
+    <Text>
+      {request.absenceStreak || 0}
+    </Text>
+  </>
+)}
 
         <Text style={{ marginTop: 8 }}>
           Approvals Recorded: {(request.approvals || []).length}

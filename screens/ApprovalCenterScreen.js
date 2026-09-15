@@ -30,6 +30,19 @@ import {
 import { db } from "../firebase";
 import AppHeader from "../components/AppHeader";
 
+const formatRequestType = (value) => {
+  const labels = {
+    protected_office: "Protected Office",
+    leadership: "Leadership Appointment",
+    membership: "Membership Change",
+    transfer: "Transfer Request",
+    attendance: "Attendance Review",
+  };
+
+  return labels[value] || value;
+};
+
+
 export default function ApprovalCenterScreen({
   navigation,
   route,
@@ -157,6 +170,11 @@ const categories = [
   },
 
   {
+    key: "attendance",
+    label: "Attendance Reviews",
+  },
+
+  {
     key: "finance",
     label: "Finance",
   },
@@ -167,7 +185,6 @@ const categories = [
   },
 
 ];
-
 
  
 const renderItem = ({ item }) => {
@@ -195,8 +212,10 @@ const renderItem = ({ item }) => {
     : item.type === "transfer"
     ? "Transfer Request"
 
-    : item.nominationType ||
-      "Governance Request"}
+   : formatRequestType(
+    item.nominationType
+  ) ||
+  "Governance Request"}
 </Text>
 
 
@@ -210,7 +229,10 @@ const renderItem = ({ item }) => {
         item.toEntityName || "Unknown"
       }`
 
-    : item.governanceBodyName}
+    : item.governanceBodyName ||
+  item.protectedOfficeName ||
+  "Governance Request"}
+
 
 </Text>
 
@@ -220,6 +242,21 @@ const renderItem = ({ item }) => {
     </TouchableOpacity>
   );
 };
+
+const pendingCount =
+  approvalItems.filter(
+    (i) => i.status === "pending"
+  ).length;
+
+const approvedCount =
+  approvalItems.filter(
+    (i) => i.status === "approved"
+  ).length;
+
+const rejectedCount =
+  approvalItems.filter(
+    (i) => i.status === "rejected"
+  ).length;
 
 if (loading) {
   return (
@@ -232,22 +269,66 @@ if (loading) {
   );
 }
 
+
   return (
     <View style={styles.container}>
   <AppHeader
     title="Approval Centre"
-    subtitle="Pending disciplinary approvals"
+    subtitle="Review and manage approval requests"
     onBack={() => navigation.goBack()}
   />
 
-  {!selectedCategory ? (
+  <View style={styles.summaryRow}>
 
-  <ScrollView
-    contentContainerStyle={{
-      padding: 16,
-      paddingBottom: 100,
-    }}
-  >
+  <View style={styles.summaryCard}>
+    <Text style={styles.summaryNumber}>
+      {pendingCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Pending
+    </Text>
+  </View>
+
+  <View style={styles.summaryCard}>
+    <Text style={styles.summaryNumber}>
+      {approvedCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Approved
+    </Text>
+  </View>
+
+  <View style={styles.summaryCard}>
+    <Text style={styles.summaryNumber}>
+      {rejectedCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Rejected
+    </Text>
+  </View>
+
+</View>
+
+
+
+
+ {!selectedCategory ? (
+
+  <>
+    <TextInput
+      style={styles.search}
+      placeholder="Search approvals..."
+      placeholderTextColor="#888"
+      value={search}
+      onChangeText={setSearch}
+    />
+
+    <ScrollView
+      contentContainerStyle={{
+        padding: 16,
+        paddingBottom: 100,
+      }}
+    >
 
     <Text
       style={{
@@ -308,7 +389,8 @@ if (loading) {
 
 
 
-  </ScrollView>
+   </ScrollView>
+  </>
 
 ) : (
 
@@ -367,28 +449,7 @@ if (loading) {
 
   </View>
 
-  <Text>
-  Category: {selectedCategory}
-</Text>
-
-<Text>
-  Status: {statusFilter}
-</Text>
-
-<Text>
-  Matching:
-  {
-    approvalItems
-      .filter(
-        (item) =>
-          item.type === selectedCategory
-      )
-      .filter(
-        (item) =>
-          item.status === statusFilter
-      ).length
-  }
-</Text>
+ 
 
   <FlatList
     data={approvalItems
@@ -539,5 +600,34 @@ filterChip: {
 
 filterChipSelected: {
   backgroundColor: "#DDE3FF",
+},
+
+summaryRow: {
+  flexDirection: "row",
+  paddingHorizontal: 12,
+  paddingVertical: 12,
+  gap: 8,
+},
+
+summaryCard: {
+  flex: 1,
+  minHeight: 80,
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  paddingVertical: 12,
+  marginHorizontal: 4,
+  alignItems: "center",
+},
+
+summaryNumber: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#4B3F72",
+},
+
+summaryLabel: {
+  fontSize: 11,
+  color: "#666",
+  marginTop: 4,
 },
 });
