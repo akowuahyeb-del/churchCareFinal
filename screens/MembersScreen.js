@@ -51,6 +51,8 @@ const LIFECYCLE_COLORS = {
   registered: "#6C5CE7",
 
   active_user: "#16A085",
+  inactive_candidate: "#F39C12",
+inactive: "#E74C3C",
 };
 
 const formatLifecycle = (value) => {
@@ -62,6 +64,8 @@ const formatLifecycle = (value) => {
     invited: "Invited",
     registered: "Registered",
     active_user: "Active User",
+    inactive_candidate: "Inactive Candidate",
+inactive: "Inactive",
   };
 
   return labels[value] || value;
@@ -231,6 +235,8 @@ const hiddenLifecycles = [
   "invited",
   "registered",
   "active_user",
+  "inactive_candidate",
+"inactive",
 ];
 
 

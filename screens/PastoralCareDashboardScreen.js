@@ -43,6 +43,7 @@ const [deceasedCount, setDeceasedCount] = useState(0);
   const [entity, setEntity] = useState(null);
   const [members, setMembers] = useState([]);
 
+
   const [followUpMembers, setFollowUpMembers] = useState([]);
 const [atRiskMembers, setAtRiskMembers] = useState([]);
 const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
@@ -123,6 +124,23 @@ setAtRiskMembers(
 setInactiveCandidateMembers(
   summary.inactiveCandidateMembers
 );
+
+
+console.log(
+  "FOLLOW-UP MEMBERS",
+  summary.followUpMembers
+);
+
+console.log(
+  "AT-RISK MEMBERS",
+  summary.atRiskMembers
+);
+
+console.log(
+  "INACTIVE CANDIDATES",
+  summary.inactiveCandidateMembers
+);
+
 
 setDeceasedCount(
   allMembers.filter(
