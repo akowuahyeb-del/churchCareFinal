@@ -368,7 +368,7 @@ exports.approveOrganization =
     // Activate Organization
     // --------------------------------------------------
 
-   await orgRef.update({
+  await orgRef.update({
   status: "active",
   approvedAt: now,
   organizationCode,
@@ -384,6 +384,11 @@ exports.approveOrganization =
   contactClaimed: false,
   contactUid: null,
   contactMemberId: null,
+
+  policySources: {
+    denomination:
+      org.denomination || null,
+  },
 });
 
     // --------------------------------------------------
