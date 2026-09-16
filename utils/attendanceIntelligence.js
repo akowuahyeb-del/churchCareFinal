@@ -710,3 +710,53 @@ export async function resolveMemberTrack({
 
   }
 }
+export function buildAttendanceIntelligenceSnapshot({
+  streak,
+  attendancePolicy,
+  lastAttendanceDate = null,
+}) {
+  const health = classifyAttendanceHealth(
+    streak,
+    attendancePolicy
+  );
+
+  return {
+    health,
+
+    absenceStreak: streak,
+
+    followUpRequired:
+      health === "follow_up",
+
+    atRisk:
+      health === "at_risk",
+
+    inactiveCandidate:
+      health === "inactive_candidate",
+
+    lastAttendanceDate,
+
+    lastCalculatedAt:
+      new Date().toISOString(),
+  };
+}
+export async function rebuildMemberAttendanceIntelligence({
+  organizationId,
+  entityId,
+  member,
+  attendancePolicy,
+  track,
+}) {
+  const streak =
+    await computeAbsenceStreak({
+      organizationId,
+      entityId,
+      memberId: member.id,
+      track,
+    });
+
+  return buildAttendanceIntelligenceSnapshot({
+    streak,
+    attendancePolicy,
+  });
+}

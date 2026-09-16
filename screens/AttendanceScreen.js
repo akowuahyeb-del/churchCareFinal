@@ -36,6 +36,7 @@ import {
   computeAbsenceStreak,
   normalizeCategory,
   classifyAttendanceHealth,
+  buildAttendanceIntelligenceSnapshot,
 } from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
@@ -722,6 +723,26 @@ await applySessionData(
           track: currentTrack,
         });
 
+        const snapshot =
+  buildAttendanceIntelligenceSnapshot({
+    streak,
+    attendancePolicy,
+  });
+
+  await updateDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    member.id
+  ),
+  {
+    attendanceIntelligence: snapshot,
+  }
+);
         const health =
   classifyAttendanceHealth(
     streak,
