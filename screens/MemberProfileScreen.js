@@ -128,6 +128,11 @@ export default function MemberProfileScreen({ route, navigation }) {
   const [attendanceHealth, setAttendanceHealth] = useState("healthy");
   const [absenceStreak, setAbsenceStreak] = useState(0);
   const [attendanceRecommendation, setAttendanceRecommendation] = useState(null);
+ const [attendancePolicy,
+  setAttendancePolicy] =
+  useState({
+    loaded: false,
+  });
   const [contributions, setContributions] = useState([]);
 const [attendanceTrack,
   setAttendanceTrack] =
@@ -248,7 +253,19 @@ const [entityDefaultTrack,
   };
 
   const loadAttendanceIntelligence = async () => {
-    if (!organizationId || !entityId || !memberId) return;
+  if (
+  !organizationId ||
+  !entityId ||
+  !memberId
+) {
+  return;
+}
+
+if (
+  !attendancePolicy?.loaded
+) {
+  return;
+}
 
     try {
      const track =
@@ -274,12 +291,23 @@ const streak =
       const memberIsInactive = member?.lifecycleStatus === "inactive";
 
       const health = memberIsInactive
-        ? "inactive"
-        : classifyAttendanceHealth(streak);
+  ? "inactive"
+  : classifyAttendanceHealth(
+      streak,
+      attendancePolicy
+    );
 
-      const recommendation = memberIsInactive
-        ? { health: "inactive", action: "none", priority: "none" }
-        : buildAttendanceRecommendation(streak);
+     const recommendation =
+  memberIsInactive
+    ? {
+        health: "inactive",
+        action: "none",
+        priority: "none",
+      }
+    : buildAttendanceRecommendation(
+        streak,
+        attendancePolicy
+      );
 
       setAbsenceStreak(streak);
       setAttendanceHealth(health);
@@ -484,9 +512,23 @@ const streak =
   // inactive members were misclassified as "At Risk"/"Follow-Up
   // Required" with no re-run once member data arrived.
   useEffect(() => {
-    if (!member?.id) return;
-    loadAttendanceIntelligence();
-  }, [member]);
+
+  if (!member?.id) {
+    return;
+  }
+
+  if (
+    !attendancePolicy?.loaded
+  ) {
+    return;
+  }
+
+  loadAttendanceIntelligence();
+
+}, [
+  member,
+  attendancePolicy,
+]);
 
   useEffect(() => {
     if (member?.id) {
@@ -532,25 +574,36 @@ const streak =
             )
           );
 
+        if (!snap.exists()) {
+          return;
+        }
+
+        const data =
+          snap.data();
+
         if (
-          snap.exists()
+          data?.defaultService
         ) {
 
-          const data =
-            snap.data();
-
-          if (
-            data?.defaultService
-          ) {
-
-            setEntityDefaultTrack(
-              data.defaultService
-                .toLowerCase()
-            );
-
-          }
+          setEntityDefaultTrack(
+            data.defaultService
+              .toLowerCase()
+          );
 
         }
+
+        setAttendancePolicy({
+          loaded: true,
+
+          followUpThreshold:
+            data.followUpThreshold,
+
+          atRiskThreshold:
+            data.atRiskThreshold,
+
+          inactiveCandidateThreshold:
+            data.inactiveCandidateThreshold,
+        });
 
       } catch (e) {
 

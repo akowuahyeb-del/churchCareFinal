@@ -442,19 +442,26 @@ export async function computeAbsenceStreak({
 
 export function classifyAttendanceHealth(
   streak,
-  warningThreshold = 2,
-  concernThreshold = 4,
-  criticalThreshold = 8
+  policy
 ) {
-  if (streak >= criticalThreshold) {
+  if (
+    streak >=
+    policy.inactiveCandidateThreshold
+  ) {
     return ATTENDANCE_HEALTH.INACTIVE_CANDIDATE;
   }
 
-  if (streak >= concernThreshold) {
+  if (
+    streak >=
+    policy.atRiskThreshold
+  ) {
     return ATTENDANCE_HEALTH.AT_RISK;
   }
 
-  if (streak >= warningThreshold) {
+  if (
+    streak >=
+    policy.followUpThreshold
+  ) {
     return ATTENDANCE_HEALTH.FOLLOW_UP;
   }
 
@@ -470,16 +477,14 @@ export function isInactiveCandidate(
 
 export function buildAttendanceRecommendation(
   streak,
-  policy =
-    DEFAULT_ATTENDANCE_POLICY.worship
+  policy
 ) {
   const health =
   classifyAttendanceHealth(
     streak,
-    policy.warningThreshold,
-    policy.concernThreshold,
-    policy.criticalThreshold
+    policy
   );
+
 console.log(
   "HEALTH RESULT",
   {
