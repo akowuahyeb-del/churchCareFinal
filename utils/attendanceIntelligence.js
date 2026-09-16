@@ -621,3 +621,101 @@ console.log(
 
   return summary;
 }
+export async function resolveMemberTrack({
+  organizationId,
+  entityId,
+  memberId,
+  fallbackTrack,
+}) {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "attendance"
+        ),
+        where("memberId", "==", memberId),
+        where("status", "==", "present")
+      )
+    );
+
+    const tally = {};
+
+    snap.docs.forEach((d) => {
+      const data = d.data();
+
+      const category =
+        data.sessionCategory || "regular";
+
+      if (
+        category !== "regular" &&
+        category !== "celebration"
+      ) {
+        return;
+      }
+
+      const track =
+        data.attendanceTrack;
+
+      if (!track) return;
+
+      const existing =
+        tally[track] || {
+          count: 0,
+          lastDate: "",
+        };
+
+      existing.count += 1;
+
+      if (
+        (data.date || "") >
+        existing.lastDate
+      ) {
+        existing.lastDate =
+          data.date || "";
+      }
+
+      tally[track] = existing;
+    });
+
+    const ranked =
+      Object.entries(tally).sort(
+        (a, b) => {
+
+          if (
+            b[1].count !==
+            a[1].count
+          ) {
+            return (
+              b[1].count -
+              a[1].count
+            );
+          }
+
+          return (
+            b[1].lastDate || ""
+          ).localeCompare(
+            a[1].lastDate || ""
+          );
+        }
+      );
+
+    return ranked.length
+      ? ranked[0][0]
+      : fallbackTrack;
+
+  } catch (e) {
+
+    console.log(
+      "resolveMemberTrack",
+      e
+    );
+
+    return fallbackTrack;
+
+  }
+}

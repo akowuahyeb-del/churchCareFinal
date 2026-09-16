@@ -23,6 +23,7 @@ import QRCodeDisplay from "../components/QRCodeDisplay";
 import { hasPermission } from "../constants/permissions";
 import {
   computeAbsenceStreak,
+  resolveMemberTrack,
   classifyAttendanceHealth,
   buildAttendanceRecommendation,
 } from "../utils/attendanceIntelligence";
@@ -128,6 +129,13 @@ export default function MemberProfileScreen({ route, navigation }) {
   const [absenceStreak, setAbsenceStreak] = useState(0);
   const [attendanceRecommendation, setAttendanceRecommendation] = useState(null);
   const [contributions, setContributions] = useState([]);
+const [attendanceTrack,
+  setAttendanceTrack] =
+  useState(null);
+
+const [entityDefaultTrack,
+  setEntityDefaultTrack] =
+  useState("sunday");
 
   const [tab, setTab] = useState("profile");
 
@@ -243,12 +251,25 @@ export default function MemberProfileScreen({ route, navigation }) {
     if (!organizationId || !entityId || !memberId) return;
 
     try {
-      const streak = await computeAbsenceStreak({
-        organizationId,
-        entityId,
-        memberId,
-        track: "sunday",
-      });
+     const track =
+  await resolveMemberTrack({
+    organizationId,
+    entityId,
+    memberId,
+    fallbackTrack:
+      entityDefaultTrack,
+  });
+
+setAttendanceTrack(track);
+
+const streak =
+  await computeAbsenceStreak({
+    organizationId,
+    entityId,
+    memberId,
+    track,
+  });
+
 
       const memberIsInactive = member?.lifecycleStatus === "inactive";
 
@@ -483,6 +504,71 @@ export default function MemberProfileScreen({ route, navigation }) {
       loadEldersCount();
     }
   }, [organizationId, entityId]);
+
+  useEffect(() => {
+
+  if (
+    !organizationId ||
+    !entityId
+  ) {
+    return;
+  }
+
+  const loadSettings =
+    async () => {
+
+      try {
+
+        const snap =
+          await getDoc(
+            doc(
+              db,
+              "organizations",
+              organizationId,
+              "entities",
+              entityId,
+              "settings",
+              "attendanceSettings"
+            )
+          );
+
+        if (
+          snap.exists()
+        ) {
+
+          const data =
+            snap.data();
+
+          if (
+            data?.defaultService
+          ) {
+
+            setEntityDefaultTrack(
+              data.defaultService
+                .toLowerCase()
+            );
+
+          }
+
+        }
+
+      } catch (e) {
+
+        console.log(
+          "attendanceSettings",
+          e
+        );
+
+      }
+
+    };
+
+  loadSettings();
+
+}, [
+  organizationId,
+  entityId,
+]);
 
   /* ────────────── DERIVED "SMART" STATS ────────────── */
   // FIX: these counted EVERY attendance record, including "special"
@@ -1047,7 +1133,12 @@ export default function MemberProfileScreen({ route, navigation }) {
               </Text>
 
               <Text style={{ marginTop: 6, color: "#666" }}>
-                Current absence streak: {absenceStreak}
+                Current absence streak:
+{" "}
+{absenceStreak}
+{attendanceTrack
+  ? ` (${attendanceTrack})`
+  : ""}
               </Text>
 
               <Text style={{ marginTop: 6, color: "#4B3F72", fontWeight: "700" }}>
