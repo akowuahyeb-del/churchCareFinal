@@ -395,6 +395,8 @@ if (request.type === "attendance") {
     request.memberId
   );
 
+  try {
+
   await updateDoc(
     memberRef,
     {
@@ -403,6 +405,19 @@ if (request.type === "attendance") {
       inactivityApprovalId: request.id,
     }
   );
+
+} catch (e) {
+
+  Alert.alert(
+    "Member Update Failed",
+    e.message
+  );
+
+  console.log(
+    "ATTENDANCE MEMBER UPDATE FAILED",
+    e
+  );
+}
 
   await updateDoc(
     requestRef,
@@ -613,27 +628,51 @@ if (
   const now =
     new Date().toISOString();
 
+  // APPROVE REQUEST FIRST
   await updateDoc(
     requestRef,
     {
-      rejections: arrayUnion(
-        rejectorId
+      approvals: arrayUnion(
+        approverId
       ),
-      status: "rejected",
-      rejectedAt: now,
-      rejectionNote:
-        rejectionNote.trim() || null,
+      status: "approved",
+      approvedAt: now,
     }
   );
 
-  setRequest((prev) => ({
-    ...prev,
-    status: "rejected",
-  }));
+  // THEN UPDATE MEMBER
+  try {
+
+    const memberRef = doc(
+      db,
+      "organizations",
+      entity.organizationId,
+      "entities",
+      request.entityId,
+      "members",
+      request.memberId
+    );
+
+    await updateDoc(
+      memberRef,
+      {
+        lifecycleStatus: "inactive",
+        inactiveAt: now,
+        inactivityApprovalId: request.id,
+      }
+    );
+
+  } catch (e) {
+
+    console.log(
+      "Attendance member update failed",
+      e
+    );
+  }
 
   Alert.alert(
-    "Rejected",
-    "Attendance review rejected."
+    "Approved",
+    "Member marked as Inactive."
   );
 
   navigation.goBack();

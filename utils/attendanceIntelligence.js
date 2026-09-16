@@ -181,9 +181,9 @@ export function normalizeCategory(category) {
 
 export const DEFAULT_ATTENDANCE_POLICY = {
   worship: {
-    warningThreshold: 2,
-    concernThreshold: 4,
-    criticalThreshold: 8,
+    warningThreshold: 1,
+    concernThreshold: 1,
+    criticalThreshold: 1,
   },
 
   revival: {
@@ -469,11 +469,25 @@ export function isInactiveCandidate(
 }
 
 export function buildAttendanceRecommendation(
-  streak
+  streak,
+  policy =
+    DEFAULT_ATTENDANCE_POLICY.worship
 ) {
   const health =
-    classifyAttendanceHealth(streak);
-
+  classifyAttendanceHealth(
+    streak,
+    policy.warningThreshold,
+    policy.concernThreshold,
+    policy.criticalThreshold
+  );
+console.log(
+  "HEALTH RESULT",
+  {
+    streak,
+    health,
+    policy,
+  }
+);
   switch (health) {
     case ATTENDANCE_HEALTH.FOLLOW_UP:
       return {
@@ -554,11 +568,21 @@ export async function buildAttendanceIntelligenceSummary({
         memberId: member.id,
         track,
       });
-
+      console.log(
+  "STREAK RESULT:",
+  member.name,
+  streak
+);
+console.log(
+  "PROCESSING MEMBER:",
+  member.name,
+  member.id
+);
     const recommendation =
-      buildAttendanceRecommendation(
-        streak
-      );
+  buildAttendanceRecommendation(
+    streak,
+    DEFAULT_ATTENDANCE_POLICY.worship
+  );
 
     const item = {
       memberId: member.id,

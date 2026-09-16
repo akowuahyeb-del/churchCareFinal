@@ -20,10 +20,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import QRCodeDisplay from "../components/QRCodeDisplay";
-import { hasPermission, ALL_PERMISSION_KEYS } from "../constants/permissions";
-import {
-  updateMemberLifecycle,
-} from "../utils/memberIntake";
+import { hasPermission } from "../constants/permissions";
 import {
   computeAbsenceStreak,
   classifyAttendanceHealth,
@@ -33,21 +30,13 @@ import {
   getFunctions,
   httpsCallable,
 } from "firebase/functions";
-import ServiceHistoryCard
-  from "../components/ServiceHistoryCard";
-  import {
-  formatDate,
-} from "../utils/dateUtils";
-
-
+import ServiceHistoryCard from "../components/ServiceHistoryCard";
+import { formatDate } from "../utils/dateUtils";
 
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
 // (disciplinaryStatus / disciplinaryNote / disciplinaryDate) so both
-// screens always agree on a member's real standing. Approval thresholds
-// replace the old hardcoded "pastor"/"elder" role-name checks — anyone
-// holding manage_members can approve, and an action fires once enough
-// DISTINCT people have approved, tracked by viewerMemberId.
+// screens always agree on a member's real standing.
 // ─────────────────────────────────────────────────
 const ACTION_CONFIG = {
   suspend: {
@@ -62,66 +51,18 @@ const ACTION_CONFIG = {
     label: "Demote Member", color: "#8e44ad", icon: "arrow-down-circle-outline", threshold: 2,
     description: "Demotes the member's standing. Requires 2 separate approvals."
   },
-  
 };
 
+const SERIOUS_ACTIONS = ["expel", "investigation"];
 
-const SERIOUS_ACTIONS = [
-  "expel",
-  "investigation",
-];
-
-
-
-
-
-
-// Profile fields — match MembersScreen.js's DEFAULT_MEMBER shape exactly.
-// The original screen used baptism/emergency/duration, which don't exist
-// anywhere in the real member document — those fields always rendered
-// blank no matter what was actually saved.
 const PROFILE_FIELDS = [
-  {
-    key: "phone",
-    label: "Phone",
-    selfEditable: true,
-  },
-
-  {
-    key: "address",
-    label: "Address",
-    selfEditable: false,
-  },
-
-  {
-    key: "occupation",
-    label: "Occupation",
-    selfEditable: false,
-  },
-
-  {
-    key: "memberships",
-    label: "Memberships",
-    selfEditable: false,
-  },
-
-  {
-    key: "baptismStatus",
-    label: "Baptism Status",
-    selfEditable: false,
-  },
-
-  {
-    key: "emergencyContact",
-    label: "Emergency Contact",
-    selfEditable: false,
-  },
-
-  {
-    key: "membershipDuration",
-    label: "Membership Duration",
-    selfEditable: false,
-  },
+  { key: "phone", label: "Phone", selfEditable: true },
+  { key: "address", label: "Address", selfEditable: false },
+  { key: "occupation", label: "Occupation", selfEditable: false },
+  { key: "memberships", label: "Memberships", selfEditable: false },
+  { key: "baptismStatus", label: "Baptism Status", selfEditable: false },
+  { key: "emergencyContact", label: "Emergency Contact", selfEditable: false },
+  { key: "membershipDuration", label: "Membership Duration", selfEditable: false },
 ];
 
 const formatAttendanceHealth = (value) => {
@@ -130,19 +71,18 @@ const formatAttendanceHealth = (value) => {
     follow_up: "Follow-Up",
     at_risk: "At Risk",
     inactive_candidate: "Inactive Candidate",
+    inactive: "Inactive",
   };
-
   return labels[value] || value;
 };
 
- const formatAttendanceAction = (value) => {
+const formatAttendanceAction = (value) => {
   const labels = {
     follow_up: "Follow-Up Required",
     pastoral_review: "Pastoral Review",
     inactive_review: "Inactive Review",
     none: "None",
   };
-
   return labels[value] || value;
 };
 
@@ -158,74 +98,35 @@ const formatLifecycleStatus = (value) => {
     inactive_candidate: "Inactive Candidate",
     inactive: "Inactive",
   };
-
   return labels[value] || value;
 };
 
 export default function MemberProfileScreen({ route, navigation }) {
 
+  const memberId =
+    route?.params?.memberId ||
+    route?.params?.viewerMemberId ||
+    null;
 
+  const passedOrganizationId = route?.params?.organizationId;
+  const passedEntityId = route?.params?.entityId;
+  const viewerUid = route?.params?.viewerUid || null;
+  const viewerName = route?.params?.viewerName || "Staff";
 
- const memberId =
-  route?.params?.memberId ||
-  route?.params?.viewerMemberId ||
-  null;
-
-
-  const passedOrganizationId =
-  route?.params?.organizationId;
-
-const passedEntityId =
-  route?.params?.entityId;
-  const viewerUid =
-  route?.params?.viewerUid || null;
-
-const viewerName =
-  route?.params?.viewerName || "Staff";
-
-  // ⚠️ There's no real Firebase Auth → member linkage anywhere in this
-  // app yet (every screen so far hardcodes userRole = "admin"). Until
-  // that exists, pass the logged-in admin's own memberId as
-  // viewerMemberId — this screen will then look up their REAL
-  // permissions the exact same way AssignMemberRolesScreen already
-  // writes them. Falls back to an explicit viewerPermissions array, or
-  // to [] (no special access) if neither is given — least-privilege by
-  // default, instead of silently assuming admin like the old version did.
   const viewerMemberId = route?.params?.viewerMemberId || null;
   const [viewerPermissions, setViewerPermissions] = useState(route?.params?.viewerPermissions || []);
 
   const [activeEntity, setActiveEntity] = useState(null);
- const organizationId =
-  passedOrganizationId ||
-  activeEntity?.organizationId;
-
-const entityId =
-  passedEntityId ||
-  activeEntity?.entityId;
-
-  console.log(
-  "PROFILE IDS",
-  {
-    memberId,
-    organizationId,
-    entityId,
-  }
-);
+  const organizationId = passedOrganizationId || activeEntity?.organizationId;
+  const entityId = passedEntityId || activeEntity?.entityId;
 
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [attendanceHistory, setAttendanceHistory] = useState([]);
-
-  const [attendanceHealth, setAttendanceHealth] =
-  useState("healthy");
-
-const [absenceStreak, setAbsenceStreak] =
-  useState(0);
-
-const [attendanceRecommendation,
-  setAttendanceRecommendation] =
-  useState(null);
+  const [attendanceHealth, setAttendanceHealth] = useState("healthy");
+  const [absenceStreak, setAbsenceStreak] = useState(0);
+  const [attendanceRecommendation, setAttendanceRecommendation] = useState(null);
   const [contributions, setContributions] = useState([]);
 
   const [tab, setTab] = useState("profile");
@@ -246,20 +147,13 @@ const [attendanceRecommendation,
   const [requestField, setRequestField] = useState("");
   const [requestLabel, setRequestLabel] = useState("");
   const [requestValue, setRequestValue] = useState("");
-  const [activeRoles, setActiveRoles] =
-  useState([]);
-
-const [previousRoles, setPreviousRoles] =
-  useState([]);
+  const [activeRoles, setActiveRoles] = useState([]);
+  const [previousRoles, setPreviousRoles] = useState([]);
 
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [transferHistory, setTransferHistory] =
-  useState([]);
-
-   const [assignedVisitors,
-  setAssignedVisitors] =
-    useState([]);
+  const [transferHistory, setTransferHistory] = useState([]);
+  const [assignedVisitors, setAssignedVisitors] = useState([]);
 
   /* ────────────── ACTIVE ENTITY ────────────── */
   useEffect(() => {
@@ -272,7 +166,7 @@ const [previousRoles, setPreviousRoles] =
 
   /* ────────────── VIEWER PERMISSIONS ────────────── */
   useEffect(() => {
-    if (route?.params?.viewerPermissions) return; // already provided directly
+    if (route?.params?.viewerPermissions) return;
     if (!viewerMemberId || !organizationId || !entityId) return;
 
     const loadViewerPermissions = async () => {
@@ -293,43 +187,33 @@ const [previousRoles, setPreviousRoles] =
 
   /* ────────────── LOAD REAL DATA ────────────── */
   const memberRef = () => {
-  if (!organizationId || !entityId || !memberId) return null;
-  return doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members",
-    memberId
-  );
-};
+    if (!organizationId || !entityId || !memberId) return null;
+    return doc(
+      db, "organizations", organizationId, "entities", entityId, "members", memberId
+    );
+  };
 
   const loadMember = async () => {
     setLoading(true);
     try {
       const snap = await getDoc(memberRef());
       if (snap.exists()) {
+        const raw = snap.data();
 
-  const data = {
-    id: snap.id,
-    lifecycleStatus: "member",
-    ...snap.data(),
-  };
+        // FIX: lifecycleStatus default was placed BEFORE the spread —
+        // correct only by accident of ordering. Reordering those lines
+        // would have silently forced every member to "member". Now
+        // explicit and order-independent.
+        const data = {
+          id: snap.id,
+          ...raw,
+          lifecycleStatus: raw.lifecycleStatus || "member",
+        };
 
-  console.log(
-    "🔥 MEMBER PROFILE DATA",
-    JSON.stringify(data, null, 2)
-  );
-
-  setMember(data);
-
-} else {
-  Alert.alert(
-    "Not Found",
-    "This member record could not be found."
-  );
-}
+        setMember(data);
+      } else {
+        Alert.alert("Not Found", "This member record could not be found.");
+      }
     } catch (e) {
       console.log("❌ Load member error:", e);
       Alert.alert("Error", "Could not load this member's profile.");
@@ -338,10 +222,6 @@ const [previousRoles, setPreviousRoles] =
     }
   };
 
-  // ✅ FIXED: was collection(db, "attendance") — a flat, unscoped path
-  // that doesn't match where AttendanceScreen actually writes records
-  // (organizations/{orgId}/entities/{entityId}/attendance). This always
-  // returned nothing real.
   const loadAttendance = async () => {
     if (!organizationId || !entityId) return;
     try {
@@ -359,476 +239,294 @@ const [previousRoles, setPreviousRoles] =
     }
   };
 
+  const loadAttendanceIntelligence = async () => {
+    if (!organizationId || !entityId || !memberId) return;
 
-const loadAttendanceIntelligence =
-  async () => {
-
-    if (
-      !organizationId ||
-      !entityId ||
-      !memberId
-    ) {
-      return;
-    }
-
-    const streak =
-      await computeAbsenceStreak({
+    try {
+      const streak = await computeAbsenceStreak({
         organizationId,
         entityId,
         memberId,
         track: "sunday",
       });
 
-    const health =
-      classifyAttendanceHealth(
-        streak
-      );
+      const memberIsInactive = member?.lifecycleStatus === "inactive";
 
-    const recommendation =
-      buildAttendanceRecommendation(
-        streak
-      );
+      const health = memberIsInactive
+        ? "inactive"
+        : classifyAttendanceHealth(streak);
 
-    setAbsenceStreak(streak);
-    setAttendanceHealth(health);
-    setAttendanceRecommendation(
-      recommendation
-    );
+      const recommendation = memberIsInactive
+        ? { health: "inactive", action: "none", priority: "none" }
+        : buildAttendanceRecommendation(streak);
+
+      setAbsenceStreak(streak);
+      setAttendanceHealth(health);
+      setAttendanceRecommendation(recommendation);
+    } catch (e) {
+      console.log("❌ Load attendance intelligence error:", e);
+    }
   };
 
+  const functions = getFunctions();
 
-const functions = getFunctions();
+  const _sendApprovalRequestNotifications =
+    httpsCallable(functions, "sendApprovalRequestNotifications");
 
-const _sendApprovalRequestNotifications =
-  httpsCallable(
-    functions,
-    "sendApprovalRequestNotifications"
-  );
+  const _sendIndividualNotification =
+    httpsCallable(functions, "sendIndividualNotification");
 
-const _sendIndividualNotification =
-  httpsCallable(
-    functions,
-    "sendIndividualNotification"
-  );
-
-
-
-  // ✅ FIXED: same bug, was collection(db, "contributions") — the real
-  // path (fixed several turns ago in DonateScreen.js) is nested under
-  // organizations/{orgId}/entities/{entityId}/contributions.
-const loadContributions = async () => {
-  if (!organizationId || !entityId || !member?.name) {
-    return;
-  }
-
-  try {
-    // CASH DONATIONS
-
-   const cashSnap = await getDocs(
-  collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "contributions"
-  )
-);
-
-const cashData = cashSnap.docs
-  .map(d => ({
-    id: d.id,
-    donationType: "cash",
-    ...d.data(),
-  }))
-  .filter(d =>
-    d.memberId === memberId ||
-    d.memberName === member?.name
-  );
-
-
-    // IN-KIND DONATIONS
-
-    const inKindSnap = await getDocs(
-  collection(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "inkind_donations"
-  )
-);
-
-const inKindData = inKindSnap.docs
-  .map(d => ({
-    id: d.id,
-    donationType: "inkind",
-    ...d.data(),
-  }))
-  .filter(d => {
-
-    if (d.memberId === memberId) {
-      return true;
-    }
-
-    if (d.memberName === member?.name) {
-      return true;
-    }
-
-    if (
-      Array.isArray(d.donors) &&
-      d.donors.some(
-        donor =>
-          donor?.id === memberId ||
-          donor?.name === member?.name
-      )
-    ) {
-      return true;
-    }
-
-    return false;
-  });
-
-    const combined = [
-      ...cashData,
-      ...inKindData,
-    ].sort(
-      (a, b) =>
-        (b.date || "").localeCompare(
-          a.date || ""
-        )
-    );
-
-    setContributions(combined);
-  } catch (e) {
-    console.log(
-      "❌ Load contributions error",
-      e
-    );
-  }
-};
-
-
-
-const loadAssignedVisitors = async () => {
-
-  if (!organizationId || !entityId || !memberId) {
-    return;
-  }
-
-  try {
-
-    const snap = await getDocs(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "visitors"
-      )
-    );
-
-    const matches =
-      snap.docs
-        .map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }))
-        .filter(
-          (v) =>
-            v.assignment?.id ===
-            memberId
-        );
-
-    setAssignedVisitors(matches);
-
-  } catch (e) {
-
-    console.log(
-      "LOAD ASSIGNED VISITORS",
-      e
-    );
-
-  }
-
-};
-
-const loadEldersCount = async () => {
-  if (!organizationId || !entityId) return;
-
-  try {
-    const q = query(
-      collection(db, "organizations", organizationId, "entities", entityId, "members"),
-      where("permissions", "array-contains", "elder_approval")
-    );
-
-    const snap = await getDocs(q);
-    setEldersCount(snap.size);
-  } catch (e) {
-    console.log("❌ Load elders error:", e);
-  }
-};
-console.log("🚀 loadTransferHistory called");
-
-const loadTransferHistory = async () => {
-
-  console.log(
-    "🚀 loadTransferHistory called",
-    {
-      organizationId,
-      memberId,
-    }
-  );
-
-  if (!organizationId || !memberId) return;
-
-  try {
-    const q = query(
-      collection(
-        db,
-        "organizations",
-        organizationId,
-        "transfers"
-      ),
-      where("memberId", "==", memberId)
-    );
-
-    const snap = await getDocs(q);
-    console.log(
-  "📦 Transfer records found:",
-  snap.docs.length
-);
-
-    setTransferHistory(
-      snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-    );
-  } catch (e) {
-    console.log(
-      "❌ loadTransferHistory:",
-      e
-    );
-  }
-};
-
-console.log(
-  "✅ MemberProfile useEffect fired",
-  {
-    memberId,
-    organizationId,
-    entityId,
-  }
-);
-
-
-const loadServiceHistory =
-  useCallback(async () => {
+  const loadContributions = async () => {
+    if (!organizationId || !entityId || !member?.name) return;
 
     try {
+      // CASH DONATIONS
+      const cashSnap = await getDocs(
+        collection(db, "organizations", organizationId, "entities", entityId, "contributions")
+      );
 
-      const stored =
-        await AsyncStorage.getItem(
-          "activeEntity"
-        );
+      // FIX: was also matching on `d.memberName === member?.name` —
+      // two members sharing a display name would see each other's cash
+      // contributions. Same privacy issue already fixed on the in-kind
+      // side; now ID-only, with a name fallback ONLY for legacy records
+      // that predate memberId being stored.
+      const cashData = cashSnap.docs
+        .map(d => ({ id: d.id, donationType: "cash", ...d.data() }))
+        .filter(d => {
+          if (d.memberId) return d.memberId === memberId;
+          return d.memberName === member?.name; // legacy records only
+        });
 
+      // IN-KIND DONATIONS
+      const inKindSnap = await getDocs(
+        collection(db, "organizations", organizationId, "entities", entityId, "inkind_donations")
+      );
+
+      const inKindData = inKindSnap.docs
+        .map(d => ({ id: d.id, donationType: "inkind", ...d.data() }))
+        .filter(d => {
+          if (d.memberId) return d.memberId === memberId;
+
+          if (Array.isArray(d.donors)) {
+            return d.donors.some(donor => donor?.id === memberId);
+          }
+
+          return d.memberName === member?.name; // legacy records only
+        });
+
+      const combined = [...cashData, ...inKindData].sort(
+        (a, b) => (b.date || "").localeCompare(a.date || "")
+      );
+
+      setContributions(combined);
+    } catch (e) {
+      console.log("❌ Load contributions error", e);
+    }
+  };
+
+  const loadAssignedVisitors = async () => {
+    if (!organizationId || !entityId || !memberId) return;
+
+    try {
+      const snap = await getDocs(
+        collection(db, "organizations", organizationId, "entities", entityId, "visitors")
+      );
+
+      const matches = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((v) => v.assignment?.id === memberId);
+
+      setAssignedVisitors(matches);
+    } catch (e) {
+      console.log("LOAD ASSIGNED VISITORS", e);
+    }
+  };
+
+  const loadEldersCount = async () => {
+    if (!organizationId || !entityId) return;
+
+    try {
+      const q = query(
+        collection(db, "organizations", organizationId, "entities", entityId, "members"),
+        where("permissions", "array-contains", "elder_approval")
+      );
+
+      const snap = await getDocs(q);
+      setEldersCount(snap.size);
+    } catch (e) {
+      console.log("❌ Load elders error:", e);
+    }
+  };
+
+  const loadTransferHistory = async () => {
+    if (!organizationId || !memberId) return;
+
+    try {
+      const q = query(
+        collection(db, "organizations", organizationId, "transfers"),
+        where("memberId", "==", memberId)
+      );
+
+      const snap = await getDocs(q);
+
+      setTransferHistory(
+        snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      );
+    } catch (e) {
+      console.log("❌ loadTransferHistory:", e);
+    }
+  };
+
+  const loadServiceHistory = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem("activeEntity");
       if (!stored) return;
 
-      const entity =
-        JSON.parse(stored);
+      const entity = JSON.parse(stored);
 
-      const governanceSnap =
-        await getDocs(
-          collection(
-            db,
-            "organizations",
-            entity.organizationId,
-            "governanceMemberships"
-          )
-        );
+      const governanceSnap = await getDocs(
+        collection(db, "organizations", entity.organizationId, "governanceMemberships")
+      );
 
-      const memberHistory =
-        governanceSnap.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
-          .filter(
-            (r) =>
-              r.memberId === member?.id
-          );
+      const memberHistory = governanceSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((r) => r.memberId === member?.id);
 
-      const active =
-        memberHistory
-          .filter(
-            (r) => r.status === "active"
-          )
-          .map((r) => ({
+      const active = memberHistory
+        .filter((r) => r.status === "active")
+        .map((r) => ({
+          id: r.id,
+          role: r.membershipRole,
+          organization: r.governanceBodyName,
+          startDate: r.startDate,
+        }));
+
+      const previous = memberHistory
+        .filter((r) => r.status === "inactive")
+        .map((r) => {
+          let duration = "Unknown";
+
+          if (r.startDate && r.endDate) {
+            const months = Math.floor(
+              (new Date(r.endDate) - new Date(r.startDate)) /
+              (1000 * 60 * 60 * 24 * 30)
+            );
+
+            duration = months < 1 ? "Less than 1 month" : `${months} months`;
+          }
+
+          return {
             id: r.id,
             role: r.membershipRole,
             organization: r.governanceBodyName,
             startDate: r.startDate,
-          }));
-
-      const previous =
-        memberHistory
-          .filter(
-            (r) => r.status === "inactive"
-          )
-          .map((r) => {
-            let duration = "Unknown";
-
-            if (
-              r.startDate &&
-              r.endDate
-            ) {
-              const months =
-                Math.floor(
-                  (
-                    new Date(r.endDate) -
-                    new Date(r.startDate)
-                  ) /
-                  (
-                    1000 *
-                    60 *
-                    60 *
-                    24 *
-                    30
-                  )
-                );
-
-              duration =
-                months < 1
-                  ? "Less than 1 month"
-                  : `${months} months`;
-            }
-
-            return {
-              id: r.id,
-              role: r.membershipRole,
-              organization:
-                r.governanceBodyName,
-              startDate: r.startDate,
-              endDate: r.endDate,
-              duration,
-            };
-          });
+            endDate: r.endDate,
+            duration,
+          };
+        });
 
       setActiveRoles(active);
       setPreviousRoles(previous);
-
     } catch (error) {
-
-      console.log(
-        "loadServiceHistory",
-        error
-      );
-
+      console.log("loadServiceHistory", error);
     }
-
   }, [member]);
 
-
-
-
-const handleInviteMember = async () => {
-  navigation.navigate("InviteMember", {
-    organizationId,
-    entityId,
-    memberId: member.id,
-
-    memberName: member.name,
-    phone: member.phone,
-    memberCode: member.memberCode,
-  });
-};
-    
-
-useEffect(() => {
-  if (!memberId || !organizationId || !entityId) return;
-
-loadMember();
-loadAttendance();
-loadAttendanceIntelligence();
-
-
-
-setTimeout(() => {
-  loadAssignedVisitors();
-}, 500);
-
-loadTransferHistory();
-}, [
-  memberId,
-  organizationId,
-  entityId,
-]);
-
-useEffect(() => {
-  if (member?.id) {
-    loadContributions();
-  }
-}, [member]);
-
-useEffect(() => {
-
-  if (!member?.id) return;
-
-  loadServiceHistory();
-
-}, [member]);
-
+  const handleInviteMember = async () => {
+    navigation.navigate("InviteMember", {
+      organizationId,
+      entityId,
+      memberId: member.id,
+      memberName: member.name,
+      phone: member.phone,
+      memberCode: member.memberCode,
+    });
+  };
 
   useEffect(() => {
-  if (organizationId && entityId) {
-    loadEldersCount();
-  }
-}, [organizationId, entityId]);
+    if (!memberId || !organizationId || !entityId) return;
+
+    loadMember();
+    loadAttendance();
+
+    // FIX: was wrapped in setTimeout(..., 500) — a band-aid that just
+    // delayed the visitor list appearing. Every ID it needs is already
+    // available here.
+    loadAssignedVisitors();
+
+    loadTransferHistory();
+  }, [memberId, organizationId, entityId]);
+
+  // FIX: loadAttendanceIntelligence used to run in the mount effect
+  // above, where `member` was still null — so the
+  // lifecycleStatus === "inactive" branch NEVER ran on first load, and
+  // inactive members were misclassified as "At Risk"/"Follow-Up
+  // Required" with no re-run once member data arrived.
+  useEffect(() => {
+    if (!member?.id) return;
+    loadAttendanceIntelligence();
+  }, [member]);
+
+  useEffect(() => {
+    if (member?.id) {
+      loadContributions();
+    }
+  }, [member]);
+
+  useEffect(() => {
+    if (!member?.id) return;
+    loadServiceHistory();
+  }, [member]);
+
+  useEffect(() => {
+    if (organizationId && entityId) {
+      loadEldersCount();
+    }
+  }, [organizationId, entityId]);
 
   /* ────────────── DERIVED "SMART" STATS ────────────── */
-  const presentCount = attendanceHistory.filter(a => a.status === "present").length;
-  const absentCount = attendanceHistory.filter(a => a.status === "absent").length;
-  const attendanceRate = attendanceHistory.length > 0
-    ? Math.round((presentCount / attendanceHistory.length) * 100)
+  // FIX: these counted EVERY attendance record, including "special"
+  // sessions (weddings, funerals). Since sessions now auto-mark
+  // absentees, members accumulate absence records for one-off events
+  // they were never expected at — dragging down the headline
+  // attendance rate and absence count, and directly contradicting the
+  // streak logic, which correctly excludes special sessions.
+  const countableHistory = attendanceHistory.filter(
+    a => (a.sessionCategory || "regular") !== "special"
+  );
+
+  const presentCount = countableHistory.filter(a => a.status === "present").length;
+  const absentCount = countableHistory.filter(a => a.status === "absent").length;
+  const attendanceRate = countableHistory.length > 0
+    ? Math.round((presentCount / countableHistory.length) * 100)
     : null;
+
   const lastAttended = attendanceHistory.find(a => a.status === "present");
   const totalGiven = contributions.reduce((s, c) => s + (c.amount || 0), 0);
-  const contributionCount =
-  contributions.length;
+  const contributionCount = contributions.length;
 
+  /* ────────────── ELDER THRESHOLD LOGIC ────────────── */
+  const getElderThreshold = (action) => {
+    if (member?.customThresholds?.[action]) {
+      return member.customThresholds[action];
+    }
 
-/* ────────────── ELDER THRESHOLD LOGIC ────────────── */
-const getElderThreshold = (action) => {
-  // ✅ Override per member (optional)
-  if (member?.customThresholds?.[action]) {
-    return member.customThresholds[action];
-  }
+    if (eldersCount === 0) return 0;
 
-  if (eldersCount === 0) return 0;
-
-  return Math.ceil((2 / 3) * eldersCount);
-};
-
+    return Math.ceil((2 / 3) * eldersCount);
+  };
 
   /* ────────────── PERMISSIONS ────────────── */
   const isSelf = !!viewerMemberId && viewerMemberId === memberId;
   const isSuperAdmin =
-  route?.params?.viewerRole === "super_admin" ||
-  viewerPermissions?.includes("super_admin");
+    route?.params?.viewerRole === "super_admin" ||
+    viewerPermissions?.includes("super_admin");
 
-const canManageMembers =
-  isSuperAdmin ||
-  hasPermission(
-    { permissions: viewerPermissions },
-    "manage_members"
-  );
-  const isElder = hasPermission(
-  { permissions: viewerPermissions },
-  "elder_approval"
-);
+  const canManageMembers =
+    isSuperAdmin ||
+    hasPermission({ permissions: viewerPermissions }, "manage_members");
+
+  const isElder = hasPermission({ permissions: viewerPermissions }, "elder_approval");
 
   const isDeceased = member?.status === "deceased";
   const isDisciplined = !!member?.disciplinaryStatus;
@@ -836,7 +534,7 @@ const canManageMembers =
   const approvalsFor = (action) => pendingApprovals[action] || [];
   const isFullyApproved = (action) => approvalsFor(action).length >= ACTION_CONFIG[action].threshold;
 
-  /* ────────────── PROFILE PHOTO (real upload now) ────────────── */
+  /* ────────────── PROFILE PHOTO ────────────── */
   const pickImage = async () => {
     if (!(canManageMembers || isSelf)) return;
 
@@ -853,8 +551,6 @@ const canManageMembers =
 
     setUploadingPhoto(true);
     try {
-      // ✅ FIXED: was only setMember(...) locally with a "TODO: upload to
-      // Firebase Storage" comment — never actually uploaded or saved.
       const blob = await (await fetch(result.assets[0].uri)).blob();
       const storageRef = ref(storage, `member-photos/${entityId}/${memberId}.jpg`);
       await uploadBytes(storageRef, blob);
@@ -870,9 +566,7 @@ const canManageMembers =
     }
   };
 
-
-
-  /* ────────────── EDIT FIELD (real persistence now) ────────────── */
+  /* ────────────── EDIT FIELD ────────────── */
   const openEdit = (field, label, value) => {
     setEditField(field); setEditLabel(label); setEditInput(value || "");
     setEditModal(true);
@@ -881,7 +575,6 @@ const canManageMembers =
   const saveEdit = async () => {
     setSaving(true);
     try {
-      // ✅ FIXED: was setMember(...) only, with "TODO: updateDoc(...)"
       await updateDoc(memberRef(), { [editField]: editInput });
       setMember(prev => ({ ...prev, [editField]: editInput }));
       setEditModal(false);
@@ -892,7 +585,7 @@ const canManageMembers =
     }
   };
 
-  /* ────────────── SELF-SERVICE EDIT REQUEST (now actually recorded) ── */
+  /* ────────────── SELF-SERVICE EDIT REQUEST ────────────── */
   const openRequest = (field, label) => {
     setRequestField(field); setRequestLabel(label); setRequestValue("");
     setRequestModal(true);
@@ -904,8 +597,6 @@ const canManageMembers =
       return;
     }
     try {
-      // ✅ FIXED: original just showed an Alert with nothing saved
-      // anywhere — an admin had no actual way to ever see this request.
       await addDoc(
         collection(db, "organizations", organizationId, "entities", entityId, "edit_requests"),
         {
@@ -941,110 +632,79 @@ const canManageMembers =
   };
 
   /* ────────────── DISCIPLINARY APPROVAL CHAIN ────────────── */
- const grantApproval = async (action) => {
+  const grantApproval = async (action) => {
+    const isSerious = SERIOUS_ACTIONS.includes(action);
 
-  // ✅ Check if serious (elder-only)
-  const isSerious = SERIOUS_ACTIONS.includes(action);
-
-  if (isSerious && !isElder) {
-    Alert.alert("Restricted", "Only Elders can approve this action.");
-    return;
-  }
-
-  if (!viewerMemberId) {
-  
-    Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
-    return;
-  }
-
-  const current = approvalsFor(action);
-
-  if (current.includes(viewerMemberId)) {
-    Alert.alert("Already Approved", "You've already approved this action.");
-    return;
-  }
-
-  const updated = [...current, viewerMemberId];
-  const newPending = { ...pendingApprovals, [action]: updated };
-
-  try {
-    const refDoc = memberRef();
-    if (!refDoc) return;
-
-    await updateDoc(refDoc, { pendingApprovals: newPending });
-
-if (updated.length === 1) {
-  try {
-    await _sendApprovalRequestNotifications({
-      organizationId,
-      entityId,
-
-      action:
-        ACTION_CONFIG[action]?.label ||
-        action,
-
-      memberId,
-      memberName:
-        member?.name || "Member",
-
-      initiatedBy: viewerName,
-
-      excludeMemberId:
-        viewerMemberId,
-    });
-  } catch (e) {
-    console.log(
-      "⚠️ approval notification failed:",
-      e
-    );
-  }
-}
-
-    setMember(prev => ({
-      ...prev,
-      pendingApprovals: newPending,
-    }));
-
-    // ✅ Compute threshold
-    const requiredThreshold = isSerious
-      ? getElderThreshold(action)
-      : ACTION_CONFIG[action]?.threshold;
-
-    if (!requiredThreshold) {
-      Alert.alert("Error", "Invalid threshold configuration.");
+    if (isSerious && !isElder) {
+      Alert.alert("Restricted", "Only Elders can approve this action.");
       return;
     }
 
-    // ✅ Execute or wait
-    if (updated.length >= requiredThreshold) {
-      await executeAction(action, newPending);
-    } else {
-      Alert.alert(
-        "Approval Recorded",
-        `${updated.length} of ${requiredThreshold} approvals collected.`
-      );
+    if (!viewerMemberId) {
+      Alert.alert("Cannot Approve", "Your own member record isn't linked to this session yet.");
+      return;
     }
 
-  } catch (e) {
-    console.log("❌ Approval error:", e);
-    Alert.alert("Error", "Could not record your approval.");
-  }
-};
+    const current = approvalsFor(action);
+
+    if (current.includes(viewerMemberId)) {
+      Alert.alert("Already Approved", "You've already approved this action.");
+      return;
+    }
+
+    const updated = [...current, viewerMemberId];
+    const newPending = { ...pendingApprovals, [action]: updated };
+
+    try {
+      const refDoc = memberRef();
+      if (!refDoc) return;
+
+      await updateDoc(refDoc, { pendingApprovals: newPending });
+
+      if (updated.length === 1) {
+        try {
+          await _sendApprovalRequestNotifications({
+            organizationId,
+            entityId,
+            action: ACTION_CONFIG[action]?.label || action,
+            memberId,
+            memberName: member?.name || "Member",
+            initiatedBy: viewerName,
+            excludeMemberId: viewerMemberId,
+          });
+        } catch (e) {
+          console.log("⚠️ approval notification failed:", e);
+        }
+      }
+
+      setMember(prev => ({ ...prev, pendingApprovals: newPending }));
+
+      const requiredThreshold = isSerious
+        ? getElderThreshold(action)
+        : ACTION_CONFIG[action]?.threshold;
+
+      if (!requiredThreshold) {
+        Alert.alert("Error", "Invalid threshold configuration.");
+        return;
+      }
+
+      if (updated.length >= requiredThreshold) {
+        await executeAction(action, newPending);
+      } else {
+        Alert.alert(
+          "Approval Recorded",
+          `${updated.length} of ${requiredThreshold} approvals collected.`
+        );
+      }
+    } catch (e) {
+      console.log("❌ Approval error:", e);
+      Alert.alert("Error", "Could not record your approval.");
+    }
+  };
 
   const executeAction = async (action, pendingSnapshot) => {
     try {
       const cleared = { ...(pendingSnapshot || pendingApprovals), [action]: [] };
-
-      // ✅ FIXED: now writes disciplinaryStatus/disciplinaryNote/
-      // disciplinaryDate — the EXACT fields MembersScreen.js already
-      // reads to show "⚠️ SUSPENDED" badges and the Reinstate button.
-      // The original screen wrote member.status === "suspended" instead,
-      // a field MembersScreen never looks at — the two screens could
-      // disagree about whether someone was actually suspended.
-
-     
-
-  
 
       await updateDoc(memberRef(), {
         disciplinaryStatus: action,
@@ -1052,28 +712,21 @@ if (updated.length === 1) {
         disciplinaryDate: new Date().toISOString().split("T")[0],
         pendingApprovals: cleared,
       });
-try {
-  await _sendIndividualNotification({
-    organizationId,
-    entityId,
-    memberId,
 
-    title: "Account Status Update",
-
-    message:
-      `Your membership status has been updated to: ${action}.` +
-      (actionNote
-        ? ` Note: ${actionNote}`
-        : ""),
-
-    category: "disciplinary",
-  });
-} catch (e) {
-  console.log(
-    "⚠️ disciplinary notification failed:",
-    e
-  );
-}
+      try {
+        await _sendIndividualNotification({
+          organizationId,
+          entityId,
+          memberId,
+          title: "Account Status Update",
+          message:
+            `Your membership status has been updated to: ${action}.` +
+            (actionNote ? ` Note: ${actionNote}` : ""),
+          category: "disciplinary",
+        });
+      } catch (e) {
+        console.log("⚠️ disciplinary notification failed:", e);
+      }
 
       setMember(prev => ({
         ...prev,
@@ -1096,17 +749,17 @@ try {
         disciplinaryNote: null,
         disciplinaryDate: null,
       });
-      setMember(prev => ({ ...prev, disciplinaryStatus: null, disciplinaryNote: null, disciplinaryDate: null }));
+      setMember(prev => ({
+        ...prev,
+        disciplinaryStatus: null,
+        disciplinaryNote: null,
+        disciplinaryDate: null
+      }));
       Alert.alert("Reinstated", "This member has been reinstated.");
     } catch (e) {
       Alert.alert("Error", "Could not reinstate this member.");
     }
   };
-
-  console.log(
-  "TRANSFER HISTORY:",
-  transferHistory
-);
 
   /* ════════════════════════════════════════════
                       RENDER
@@ -1120,82 +773,38 @@ try {
     );
   }
 
-  console.log("SUPER ADMIN DEBUG", {
-  viewerPermissions,
-  routePermissions:
-    route?.params?.viewerPermissions,
-});
- if (!member) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20,
-      }}
-    >
-      <Ionicons
-        name="shield-checkmark"
-        size={60}
-        color="#4B3F72"
-      />
+  if (!member) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+        <Ionicons name="shield-checkmark" size={60} color="#4B3F72" />
 
-      <Text
-        style={{
-          fontSize: 20,
-          fontWeight: "700",
-          marginTop: 12,
-          marginBottom: 8,
-          textAlign: "center",
-        }}
-      >
-        Super Administrator
-      </Text>
-
-      <Text
-        style={{
-          textAlign: "center",
-          color: "#666",
-          lineHeight: 22,
-        }}
-      >
-        No member record found.
-      </Text>
-
-      <Text
-        style={{
-          textAlign: "center",
-          color: "#666",
-          lineHeight: 22,
-        }}
-      >
-        Platform administrators do not require a
-        linked member profile.
-      </Text>
-
-      <TouchableOpacity
-        style={{
-          marginTop: 20,
-          backgroundColor: "#4B3F72",
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          borderRadius: 10,
-        }}
-        onPress={() => navigation.goBack()}
-      >
-        <Text
-          style={{
-            color: "#fff",
-            fontWeight: "700",
-          }}
-        >
-          Back
+        <Text style={{ fontSize: 20, fontWeight: "700", marginTop: 12, marginBottom: 8, textAlign: "center" }}>
+          Super Administrator
         </Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+
+        <Text style={{ textAlign: "center", color: "#666", lineHeight: 22 }}>
+          No member record found.
+        </Text>
+
+        <Text style={{ textAlign: "center", color: "#666", lineHeight: 22 }}>
+          Platform administrators do not require a linked member profile.
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            marginTop: 20,
+            backgroundColor: "#4B3F72",
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderRadius: 10,
+          }}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const memberBadgeValue = member.memberCode
     ? JSON.stringify({ memberCode: member.memberCode, entityId })
@@ -1207,15 +816,15 @@ try {
       {/* ── HEADER ── */}
       <View style={styles.topBar}>
         <TouchableOpacity
-  onPress={() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate("Settings");
-    }
-  }}
-  style={styles.backBtn}
->
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("Settings");
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Member Profile</Text>
@@ -1253,16 +862,15 @@ try {
 
         <Text style={styles.heroName}>{member.name || "Unnamed Member"}</Text>
         <Text style={styles.heroMinistry}>
-  {member.memberships?.length > 0
-    ? member.memberships.join(" • ")
-    : member.ministry || "No memberships"}
-</Text>
+          {member.memberships?.length > 0
+            ? member.memberships.join(" • ")
+            : member.ministry || "No memberships"}
+        </Text>
 
         {member.memberCode && (
           <Text style={styles.heroCode}>ID: {member.memberCode}</Text>
         )}
 
-        {/* Status badge */}
         <View style={[styles.statusBadge, {
           backgroundColor:
             isDeceased ? "#f0f0f0" :
@@ -1285,75 +893,37 @@ try {
                 : "Active"}
           </Text>
         </View>
-        
 
-        {/* Quick stats — derived from real loaded attendance/contributions */}
-       {/* Quick stats — derived from real loaded attendance/contributions */}
-<View style={styles.statsRow}>
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Ionicons name="checkmark-circle" size={28} color="#7CFFB2" />
+            <Text style={styles.statPillValue}>
+              {attendanceRate !== null ? `${attendanceRate}%` : "—"}
+            </Text>
+            <Text style={styles.statPillLabel}>Attendance</Text>
+          </View>
 
-  <View style={styles.statPill}>
-    <Ionicons
-      name="checkmark-circle"
-      size={28}
-      color="#7CFFB2"
-    />
-    <Text style={styles.statPillValue}>
-      {attendanceRate !== null
-        ? `${attendanceRate}%`
-        : "—"}
-    </Text>
-    <Text style={styles.statPillLabel}>
-      Attendance
-    </Text>
-  </View>
+          <View style={styles.statPill}>
+            <Ionicons name="wallet" size={28} color="#FFD166" />
+            <Text style={styles.statPillValue}>
+              ₵{totalGiven.toLocaleString()}
+            </Text>
+            <Text style={styles.statPillLabel}>Total Given</Text>
+          </View>
 
-  <View style={styles.statPill}>
-    <Ionicons
-      name="wallet"
-      size={28}
-      color="#FFD166"
-    />
-    <Text style={styles.statPillValue}>
-      ₵{totalGiven.toLocaleString()}
-    </Text>
-    <Text style={styles.statPillLabel}>
-      Total Given
-    </Text>
-  </View>
+          <View style={styles.statPill}>
+            <Ionicons name="alert-circle" size={28} color="#FF8A8A" />
+            <Text style={styles.statPillValue}>{absentCount}</Text>
+            <Text style={styles.statPillLabel}>Absences</Text>
+          </View>
+        </View>
 
-
-  <View style={styles.statPill}>
-    <Ionicons
-      name="alert-circle"
-      size={28}
-      color="#FF8A8A"
-    />
-    <Text style={styles.statPillValue}>
-      {absentCount}
-    </Text>
-    <Text style={styles.statPillLabel}>
-      Absences
-    </Text>
-  </View>
-
-</View>
-
-{member.memberCode && (canManageMembers || isSelf) && (
-  <TouchableOpacity
-    style={styles.badgeBtn}
-    onPress={() => setBadgeModalVisible(true)}
-  >
-    <Ionicons
-      name="qr-code-outline"
-      size={14}
-      color="#fff"
-    />
-    <Text style={styles.badgeBtnText}>
-      View Member Badge
-    </Text>
-  </TouchableOpacity>
-)}
-
+        {member.memberCode && (canManageMembers || isSelf) && (
+          <TouchableOpacity style={styles.badgeBtn} onPress={() => setBadgeModalVisible(true)}>
+            <Ionicons name="qr-code-outline" size={14} color="#fff" />
+            <Text style={styles.badgeBtnText}>View Member Badge</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── TABS ── */}
@@ -1396,30 +966,24 @@ try {
               </View>
             )}
 
+            {/* FIX: removed the "INVITE DEBUG" console.log that sat
+                inside this map — it fired once per field on every
+                render and printed viewer permissions. */}
             {PROFILE_FIELDS.map(({ key, label, selfEditable }) => {
               const canEditField = canManageMembers || (isSelf && selfEditable);
               const canRequestField = isSelf && !selfEditable && !canManageMembers;
-
-console.log("INVITE DEBUG", {
-  lifecycleStatus: member?.lifecycleStatus,
-  canManageMembers,
-  isDeceased,
-  permissions: viewerPermissions,
-});
 
               return (
                 <View key={key} style={styles.infoRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.infoLabel}>{label}</Text>
                     <Text style={styles.infoValue}>
-  {key === "memberships"
-    ? (
-        member.memberships?.length > 0
-          ? member.memberships.join(" • ")
-          : member.ministry || "—"
-      )
-    : (member[key] || "—")}
-</Text>
+                      {key === "memberships"
+                        ? (member.memberships?.length > 0
+                            ? member.memberships.join(" • ")
+                            : member.ministry || "—")
+                        : (member[key] || "—")}
+                    </Text>
                   </View>
                   {canEditField && !isDeceased && (
                     <TouchableOpacity
@@ -1441,60 +1005,32 @@ console.log("INVITE DEBUG", {
               );
             })}
 
-<View style={styles.infoRow}>
+            <View style={styles.infoRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoLabel}>ASSIGNED VISITORS</Text>
+                <Text style={styles.infoValue}>
+                  {assignedVisitors.length} visitor(s)
+                </Text>
+              </View>
+            </View>
 
-  <View style={{ flex: 1 }}>
+            {assignedVisitors.map((visitor) => (
+              <TouchableOpacity
+                key={visitor.id}
+                style={styles.recordRow}
+                onPress={() => navigation.navigate("VisitorProfile", { visitor })}
+              >
+                <View>
+                  <Text style={styles.recordTitle}>{visitor.name}</Text>
+                  <Text style={styles.recordSub}>{visitor.phone || "-"}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
 
-    <Text style={styles.infoLabel}>
-      ASSIGNED VISITORS
-    </Text>
-
-    <Text style={styles.infoValue}>
-      {assignedVisitors.length}
-      {" "}
-      visitor(s)
-    </Text>
-
-  </View>
-
-</View>
-
-{assignedVisitors.map((visitor) => (
-
-  <TouchableOpacity
-    key={visitor.id}
-    style={styles.recordRow}
-    onPress={() =>
-      navigation.navigate(
-        "VisitorProfile",
-        {
-          visitor,
-        }
-      )
-    }
-  >
-
-    <View>
-
-      <Text style={styles.recordTitle}>
-        {visitor.name}
-      </Text>
-
-      <Text style={styles.recordSub}>
-        {visitor.phone || "-"}
-      </Text>
-
-    </View>
-
-  </TouchableOpacity>
-
-))}
-
-<ServiceHistoryCard
-  activeRoles={activeRoles}
-  previousRoles={previousRoles}
-/>
-
+            <ServiceHistoryCard
+              activeRoles={activeRoles}
+              previousRoles={previousRoles}
+            />
           </View>
         )}
 
@@ -1502,47 +1038,30 @@ console.log("INVITE DEBUG", {
         {tab === "attendance" && (
           <View>
             <View style={styles.statusCard}>
-  <Text style={styles.statusCardLabel}>
-    ATTENDANCE INTELLIGENCE
-  </Text>
+              <Text style={styles.statusCardLabel}>ATTENDANCE INTELLIGENCE</Text>
 
-  <Text style={styles.statusCardValue}>
-  {formatAttendanceHealth(attendanceHealth)}
-</Text>
+              <Text style={styles.statusCardValue}>
+                {member?.lifecycleStatus === "inactive"
+                  ? "Inactive"
+                  : formatAttendanceHealth(attendanceHealth)}
+              </Text>
 
-  <Text
-    style={{
-      marginTop: 6,
-      color: "#666",
-    }}
-  >
-    Current absence streak:
-    {" "}
-    {absenceStreak}
-  </Text>
+              <Text style={{ marginTop: 6, color: "#666" }}>
+                Current absence streak: {absenceStreak}
+              </Text>
 
-  <Text
-    style={{
-      marginTop: 6,
-      color: "#4B3F72",
-      fontWeight: "700",
-    }}
-  >
-    Recommended action:
-    {" "}
-    {
-  formatAttendanceAction(
-    attendanceRecommendation?.action || "none"
-  )
-}
-  </Text>
-</View>
+              <Text style={{ marginTop: 6, color: "#4B3F72", fontWeight: "700" }}>
+                Recommended action:{" "}
+                {formatAttendanceAction(attendanceRecommendation?.action || "none")}
+              </Text>
+            </View>
+
             <Text style={styles.sectionTitle}>Attendance History</Text>
             {lastAttended && (
               <Text style={styles.lastAttendedNote}>
-  Last attended: {formatDate(lastAttended.date)}
-  ({lastAttended.service} · {lastAttended.type})
-</Text>
+                Last attended: {formatDate(lastAttended.date)}
+                ({lastAttended.service} · {lastAttended.type})
+              </Text>
             )}
             {attendanceHistory.length === 0 ? (
               <View style={styles.emptyState}>
@@ -1555,14 +1074,18 @@ console.log("INVITE DEBUG", {
                   <View>
                     <Text style={styles.recordTitle}>{r.service} · {r.type}</Text>
                     <Text style={styles.recordSub}>
-  {formatDate(r.date)}
-  {r.event ? ` · ${r.event}` : ""}
-</Text>
+                      {formatDate(r.date)}
+                      {r.event ? ` · ${r.event}` : ""}
+                    </Text>
                   </View>
                   <View style={[styles.recordBadge, {
                     backgroundColor: r.status === "present" ? "#e8f8f0" : "#fce8e8"
                   }]}>
-                    <Text style={{ color: r.status === "present" ? "#27ae60" : "#e74c3c", fontSize: 11, fontWeight: "700" }}>
+                    <Text style={{
+                      color: r.status === "present" ? "#27ae60" : "#e74c3c",
+                      fontSize: 11,
+                      fontWeight: "700"
+                    }}>
                       {r.status === "present" ? "Present" : "Absent"}
                     </Text>
                   </View>
@@ -1591,48 +1114,33 @@ console.log("INVITE DEBUG", {
                   <View key={c.id} style={styles.recordRow}>
                     <View>
                       <Text style={styles.recordTitle}>
+                        {c.donationType === "inkind"
+                          ? c.itemName || c.categoryLabel || "In-Kind Donation"
+                          : c.type || "Offering"}
+                      </Text>
+                      <Text style={styles.recordSub}>{formatDate(c.date)}</Text>
 
-  {c.donationType === "inkind"
-    ? c.itemName ||
-      c.categoryLabel ||
-      "In-Kind Donation"
-    : c.type || "Offering"}
+                      {c.acknowledgedByName && (
+                        <Text style={styles.recordSub}>
+                          ✅ Approved by {c.acknowledgedByName}
+                        </Text>
+                      )}
 
-</Text>
-                      <Text style={styles.recordSub}>
-  {formatDate(c.date)}
-</Text>
+                      {c.acknowledgedByRole && (
+                        <Text style={styles.recordSub}>Role: {c.acknowledgedByRole}</Text>
+                      )}
 
-{c.acknowledgedByName && (
-  <Text style={styles.recordSub}>
-    ✅ Approved by {c.acknowledgedByName}
-  </Text>
-)}
-
-{c.acknowledgedByRole && (
-  <Text style={styles.recordSub}>
-    Role: {c.acknowledgedByRole}
-  </Text>
-)}
-
-{c.acknowledgedAt && (
-  <Text style={styles.recordSub}>
-    {new Date(c.acknowledgedAt)
-      .toLocaleString()}
-  </Text>
-)}
-
+                      {c.acknowledgedAt && (
+                        <Text style={styles.recordSub}>
+                          {new Date(c.acknowledgedAt).toLocaleString()}
+                        </Text>
+                      )}
                     </View>
                     <Text style={styles.contribAmount}>
-
-  {c.donationType === "inkind"
-    ? `${c.quantity || 0} ${
-        c.unit || ""
-      }`
-    : `GH₵ ${(c.amount || 0)
-        .toLocaleString()}`}
-
-</Text>
+                      {c.donationType === "inkind"
+                        ? `${c.quantity || 0} ${c.unit || ""}`
+                        : `GH₵ ${(c.amount || 0).toLocaleString()}`}
+                    </Text>
                   </View>
                 ))}
               </>
@@ -1643,12 +1151,16 @@ console.log("INVITE DEBUG", {
         {/* ══ TAB: STATUS / ADMIN ACTIONS ══ */}
         {tab === "status" && (
           <View>
-            
-
             <View style={styles.statusCard}>
               <Text style={styles.statusCardLabel}>Current Status</Text>
               <Text style={styles.statusCardValue}>
-                {isDeceased ? "DECEASED" : isDisciplined ? member.disciplinaryStatus.toUpperCase() : "ACTIVE"}
+                {isDeceased
+                  ? "DECEASED"
+                  : isDisciplined
+                  ? member.disciplinaryStatus.toUpperCase()
+                  : member?.lifecycleStatus === "inactive"
+                  ? "INACTIVE"
+                  : "ACTIVE"}
               </Text>
               {isDisciplined && member.disciplinaryDate && (
                 <Text style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
@@ -1658,70 +1170,31 @@ console.log("INVITE DEBUG", {
               )}
             </View>
 
-<View
-  style={[
-    styles.statusCard,
-    { marginTop: 10 },
-  ]}
->
-  <Text style={styles.statusCardLabel}>
-    LIFECYCLE STATUS
-  </Text>
+            <View style={[styles.statusCard, { marginTop: 10 }]}>
+              <Text style={styles.statusCardLabel}>LIFECYCLE STATUS</Text>
+              <Text style={styles.statusCardValue}>
+                {formatLifecycleStatus(member?.lifecycleStatus || "member")}
+              </Text>
+            </View>
 
- <Text style={styles.statusCardValue}>
-  {formatLifecycleStatus(
-    member?.lifecycleStatus || "member"
-  )}
-</Text>
-</View>
+            <View style={[styles.statusCard, { marginTop: 10 }]}>
+              <Text style={styles.statusCardLabel}>ATTENDANCE HEALTH</Text>
 
+              <Text style={styles.statusCardValue}>
+                {member?.lifecycleStatus === "inactive"
+                  ? "Inactive"
+                  : formatAttendanceHealth(attendanceHealth)}
+              </Text>
 
+              <Text style={{ fontSize: 12, color: "#666", marginTop: 4, textAlign: "center" }}>
+                Recommended Action:{" "}
+                {formatAttendanceAction(attendanceRecommendation?.action || "none")}
+              </Text>
 
-            <View
-  style={[
-    styles.statusCard,
-    {
-      marginTop: 10,
-    },
-  ]}
->
-  <Text style={styles.statusCardLabel}>
-    ATTENDANCE HEALTH
-  </Text>
-
-  <Text style={styles.statusCardValue}>
-    {formatAttendanceHealth(
-      attendanceHealth
-    )}
-  </Text>
-
-  <Text
-    style={{
-      fontSize: 12,
-      color: "#666",
-      marginTop: 4,
-      textAlign: "center",
-    }}
-  >
-    Recommended Action:{" "}
-    {formatAttendanceAction(
-      attendanceRecommendation?.action ||
-        "none"
-    )}
-  </Text>
-
-  <Text
-    style={{
-      fontSize: 12,
-      color: "#666",
-      marginTop: 4,
-      textAlign: "center",
-    }}
-  >
-    Absence Streak: {absenceStreak}
-  </Text>
-</View>
-
+              <Text style={{ fontSize: 12, color: "#666", marginTop: 4, textAlign: "center" }}>
+                Absence Streak: {absenceStreak}
+              </Text>
+            </View>
 
             {!canManageMembers && (
               <View style={styles.emptyState}>
@@ -1736,39 +1209,27 @@ console.log("INVITE DEBUG", {
 
             {canManageMembers && !isDeceased && (
               <>
-              {(!member?.lifecycleStatus ||
-  member?.lifecycleStatus === "member") && (
-  <TouchableOpacity
-    style={[
-      styles.actionExecBtn,
-      {
-        backgroundColor: "#0984E3",
-        marginBottom: 10,
-      },
-    ]}
-    onPress={handleInviteMember}
-  >
-    <Ionicons
-      name="send-outline"
-      size={14}
-      color="#fff"
-      style={{ marginRight: 4 }}
-    />
-    <Text style={styles.white}>
-      Invite Member
-    </Text>
-  </TouchableOpacity>
-)}
+                {(!member?.lifecycleStatus || member?.lifecycleStatus === "member") && (
+                  <TouchableOpacity
+                    style={[styles.actionExecBtn, { backgroundColor: "#0984E3", marginBottom: 10 }]}
+                    onPress={handleInviteMember}
+                  >
+                    <Ionicons name="send-outline" size={14} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={styles.white}>Invite Member</Text>
+                  </TouchableOpacity>
+                )}
+
                 {isDisciplined && (
-                  <TouchableOpacity style={[styles.actionExecBtn, { backgroundColor: "#27ae60", marginBottom: 10 }]} onPress={reinstate}>
+                  <TouchableOpacity
+                    style={[styles.actionExecBtn, { backgroundColor: "#27ae60", marginBottom: 10 }]}
+                    onPress={reinstate}
+                  >
                     <Ionicons name="refresh" size={14} color="#fff" style={{ marginRight: 4 }} />
                     <Text style={styles.white}>Reinstate Member</Text>
                   </TouchableOpacity>
                 )}
-{!isDisciplined &&
-  Object.entries(ACTION_CONFIG).map(
 
-([action, cfg]) => (
+                {!isDisciplined && Object.entries(ACTION_CONFIG).map(([action, cfg]) => (
                   <ActionBlock
                     key={action}
                     title={cfg.label}
@@ -1791,54 +1252,28 @@ console.log("INVITE DEBUG", {
               </>
             )}
 
+            {canManageMembers && !isSelf && !isDeceased && (
+              <TouchableOpacity
+                style={styles.transferBtn}
+                onPress={() => navigation.navigate("TransferRequest", { member, isAdmin: true })}
+              >
+                <Ionicons name="swap-horizontal-outline" size={18} color="#4B3F72" />
+                <Text style={styles.transferBtnText}>Initiate Transfer</Text>
+              </TouchableOpacity>
+            )}
 
-{canManageMembers && !isSelf && !isDeceased && (
-  <TouchableOpacity
-    style={styles.transferBtn}
-    onPress={() =>
-      navigation.navigate("TransferRequest", {
-        member,
-        isAdmin: true,
-      })
-    }
-  >
-    <Ionicons
-      name="swap-horizontal-outline"
-      size={18}
-      color="#4B3F72"
-    />
-    <Text style={styles.transferBtnText}>
-      Initiate Transfer
-    </Text>
-  </TouchableOpacity>
-)}
-
-{isSelf && !isDeceased && !isDisciplined && (
-  <TouchableOpacity
-    style={styles.transferBtn}
-    onPress={() =>
-      navigation.navigate("TransferRequest", {
-        member,
-        isAdmin: false,
-      })
-    }
-  >
-    <Ionicons
-      name="swap-horizontal-outline"
-      size={18}
-      color="#4B3F72"
-    />
-    <Text style={styles.transferBtnText}>
-      Request Congregation Transfer
-    </Text>
-  </TouchableOpacity>
-)}
-
+            {isSelf && !isDeceased && !isDisciplined && (
+              <TouchableOpacity
+                style={styles.transferBtn}
+                onPress={() => navigation.navigate("TransferRequest", { member, isAdmin: false })}
+              >
+                <Ionicons name="swap-horizontal-outline" size={18} color="#4B3F72" />
+                <Text style={styles.transferBtnText}>Request Congregation Transfer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          
         )}
 
-   
       </ScrollView>
 
       {/* ══════════ EDIT MODAL ══════════ */}
@@ -1854,7 +1289,11 @@ console.log("INVITE DEBUG", {
               placeholder={`Enter ${editLabel}`}
             />
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={[styles.modalSaveBtn, saving && { opacity: 0.6 }]} onPress={saveEdit} disabled={saving}>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, saving && { opacity: 0.6 }]}
+                onPress={saveEdit}
+                disabled={saving}
+              >
                 <Text style={styles.white}>{saving ? "Saving..." : "Save"}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditModal(false)}>
@@ -1885,7 +1324,10 @@ console.log("INVITE DEBUG", {
               autoFocus
             />
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: "#555" }]} onPress={confirmDeceased}>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, { backgroundColor: "#555" }]}
+                onPress={confirmDeceased}
+              >
                 <Text style={styles.white}>Confirm</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setDeceasedModal(false)}>
@@ -1945,8 +1387,7 @@ console.log("INVITE DEBUG", {
 }
 
 /* ─────────────────────────────────────────
-   ActionBlock — approval-chain card, driven by real permission-based
-   threshold counts instead of hardcoded role names
+   ActionBlock
 ───────────────────────────────────── */
 function ActionBlock({
   title, color, icon, description,
@@ -2031,26 +1472,10 @@ const styles = StyleSheet.create({
     width: 24, height: 24, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: "#fff"
   },
-  heroName: {
-  color: "#FFFFFF",
-  fontSize: 32,
-  fontWeight: "800",
-  marginTop: 14,
-  textAlign: "center",
-},
-  heroMinistry: {
-  color: "rgba(255,255,255,0.85)",
-  fontSize: 15,
-  marginTop: 6,
-  textAlign: "center",
-},
+  heroName: { color: "#FFFFFF", fontSize: 32, fontWeight: "800", marginTop: 14, textAlign: "center" },
+  heroMinistry: { color: "rgba(255,255,255,0.85)", fontSize: 15, marginTop: 6, textAlign: "center" },
+  heroCode: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 8, fontWeight: "700" },
 
-  heroCode: {
-  color: "rgba(255,255,255,0.75)",
-  fontSize: 13,
-  marginTop: 8,
-  fontWeight: "700",
-},
   statusBadge: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, paddingVertical: 5,
@@ -2060,125 +1485,64 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 12, fontWeight: "700" },
 
   statsRow: { flexDirection: "row", gap: 10, marginTop: 14 },
- statPill: {
-  flex: 1,
-
-  backgroundColor: "#FFFFFF",
-
-  borderRadius: 20,
-
-  paddingVertical: 18,
-
-  alignItems: "center",
-
-  shadowColor: "#000",
-  shadowOpacity: 0.12,
-  shadowRadius: 10,
-
-  shadowOffset: {
-    width: 0,
-    height: 4,
+  statPill: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-
-  elevation: 6,
-},
-  statPillValue: {
-  color: "#1F2937",
-  fontSize: 24,
-  fontWeight: "800",
-  marginTop: 6,
-},
-  statPillLabel: {
-  color: "#6B7280",
-  fontSize: 11,
-  marginTop: 6,
-  fontWeight: "600",
-},
+  statPillValue: { color: "#1F2937", fontSize: 24, fontWeight: "800", marginTop: 6 },
+  statPillLabel: { color: "#6B7280", fontSize: 11, marginTop: 6, fontWeight: "600" },
 
   badgeBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-
-  backgroundColor: "rgba(255,255,255,0.18)",
-
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.15)",
-
-  borderRadius: 30,
-
-  paddingHorizontal: 24,
-  paddingVertical: 12,
-
-  marginTop: 18,
-
-  shadowColor: "#000",
-  shadowOpacity: 0.10,
-  shadowRadius: 8,
-
-  shadowOffset: {
-    width: 0,
-    height: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginTop: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
+  badgeBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700", marginLeft: 8 },
 
-  elevation: 4,
-},
-  badgeBtnText: {
-  color: "#FFFFFF",
-  fontSize: 14,
-  fontWeight: "700",
-  marginLeft: 8,
-},
-
-  tabRow: {
-    flexDirection: "row", backgroundColor: "#fff",
-    borderBottomWidth: 1, borderBottomColor: "#eee"
-  },
+  tabRow: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#eee" },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: "center" },
   tabActive: { borderBottomWidth: 2, borderBottomColor: "#4B3F72" },
   tabText: { fontSize: 11, color: "#aaa", fontWeight: "600" },
   tabTextActive: { color: "#4B3F72" },
 
-  communicantBanner: {
-    flexDirection: "row", alignItems: "center",
-    borderRadius: 10, padding: 12, marginVertical: 6
+  communicantBanner: { flexDirection: "row", alignItems: "center", borderRadius: 10, padding: 12, marginVertical: 6 },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginVertical: 6,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
-
- infoRow: {
-  flexDirection: "row",
-  alignItems: "center",
-
-  backgroundColor: "#FFFFFF",
-
-  paddingHorizontal: 18,
-  paddingVertical: 16,
-
-  marginVertical: 6,
-
-  borderRadius: 18,
-
-  shadowColor: "#000",
-  shadowOpacity: 0.08,
-  shadowRadius: 8,
-  shadowOffset: {
-    width: 0,
-    height: 3,
-  },
-
-  elevation: 4,
-},
-  infoLabel: {
-  fontSize: 11,
-  color: "#8A8A8A",
-  fontWeight: "700",
-  textTransform: "uppercase",
-  marginBottom: 6,
-},
-  infoValue: {
-  fontSize: 16,
-  color: "#1F2937",
-  fontWeight: "600",
-},
+  infoLabel: { fontSize: 11, color: "#8A8A8A", fontWeight: "700", textTransform: "uppercase", marginBottom: 6 },
+  infoValue: { fontSize: 16, color: "#1F2937", fontWeight: "600" },
   editIconBtn: { backgroundColor: "#f0edf9", borderRadius: 8, padding: 8, marginLeft: 8 },
   requestBtn: { backgroundColor: "#e8f0fe", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginLeft: 8 },
   requestBtnText: { fontSize: 10, color: "#4B3F72", fontWeight: "600" },
@@ -2256,48 +1620,32 @@ const styles = StyleSheet.create({
   modalSaveBtn: { flex: 1, backgroundColor: "#4B3F72", padding: 12, borderRadius: 8, alignItems: "center" },
   modalCancelBtn: { flex: 1, backgroundColor: "#aaa", padding: 12, borderRadius: 8, alignItems: "center" },
   white: { color: "#fff", fontWeight: "600" },
+
+  // FIX: transferBtn and transferBtnText were each defined twice —
+  // the first copy was silently dead. Deduplicated.
   transferBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#EEF0FA",
-  borderWidth: 1,
-  borderColor: "#D9DDF2",
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  borderRadius: 12,
-  marginTop: 10,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EEF0FA",
+    borderWidth: 1,
+    borderColor: "#D9DDF2",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 10,
+  },
+  transferBtnText: {
+    marginLeft: 8,
+    color: "#4B3F72",
+    fontWeight: "700",
+    fontSize: 14,
+  },
 
-transferBtnText: {
-  color: "#4B3F72",
-  fontWeight: "700",
-  fontSize: 14,
-  marginLeft: 8,
-},
-transferBtn: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#EEF0FA",
-  borderWidth: 1,
-  borderColor: "#D9DDF2",
-  borderRadius: 12,
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  marginTop: 10,
-},
-
-transferBtnText: {
-  marginLeft: 8,
-  color: "#4B3F72",
-  fontWeight: "700",
-  fontSize: 14,
-},
-visitorRow: {
-  backgroundColor: "#F7F8FC",
-  padding: 12,
-  borderRadius: 10,
-  marginBottom: 8,
-},
+  visitorRow: {
+    backgroundColor: "#F7F8FC",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
 });

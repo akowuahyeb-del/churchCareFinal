@@ -3,11 +3,16 @@ import {
   View,
   Text,
   FlatList,
+  Alert,
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase";
 
@@ -16,6 +21,7 @@ import {
 } from "../utils/attendanceIntelligence";
 
 import AppHeader from "../components/AppHeader";
+import { Ionicons } from "@expo/vector-icons";
 
 const CATEGORY_LABELS = {
   prayer: "Prayer",
@@ -49,6 +55,75 @@ const [atRiskMembers, setAtRiskMembers] = useState([]);
 const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
 
   const currentUid = getAuth().currentUser?.uid;
+  const createAttendanceReviewRequest =
+  async (member) => {
+
+    try {
+
+      if (!entity) {
+        Alert.alert(
+          "Error",
+          "Active church not found."
+        );
+        return;
+      }
+
+      await addDoc(
+        collection(
+          db,
+          "organizations",
+          entity.organizationId,
+          "approvalRequests"
+        ),
+        {
+          type: "attendance",
+
+          attendanceHealth:
+            "inactive_candidate",
+
+          memberId:
+            member.memberId,
+
+          memberName:
+            member.memberName,
+
+          absenceStreak:
+            member.streak,
+
+          entityId:
+            entity.entityId,
+
+          organizationId:
+            entity.organizationId,
+
+          status: "pending",
+
+          approvals: [],
+          rejections: [],
+
+          requestedAt:
+            new Date().toISOString(),
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        `${member.memberName} review submitted.`
+      );
+
+    } catch (e) {
+
+      console.log(
+        "ATTENDANCE REVIEW ERROR",
+        e
+      );
+
+      Alert.alert(
+        "Error",
+        e.message
+      );
+    }
+  };
 
   const loadTickets = useCallback(async () => {
     const stored = await AsyncStorage.getItem("activeEntity");
@@ -95,6 +170,18 @@ const allMembers =
 
 setMembers(allMembers);
 
+console.log(
+  "MEMBERS LOADED:",
+  allMembers.length
+);
+console.log(
+  "PASTORAL DASHBOARD REACHED"
+);
+
+console.log(
+  "MEMBERS LOADED:",
+  allMembers.length
+);
 const summary =
   await buildAttendanceIntelligenceSummary({
     organizationId:
@@ -104,6 +191,16 @@ const summary =
     members: allMembers,
     track: "sunday",
   });
+
+console.log(
+  "ATTENDANCE SUMMARY:",
+  JSON.stringify(
+    summary,
+    null,
+    2
+  )
+);
+
 
 setFollowUpCount(
   summary.followUpCount
@@ -123,6 +220,20 @@ setAtRiskMembers(
 
 setInactiveCandidateMembers(
   summary.inactiveCandidateMembers
+);
+console.log(
+  "FOLLOW UP COUNT:",
+  summary.followUpCount
+);
+
+console.log(
+  "AT RISK COUNT:",
+  summary.atRiskCount
+);
+
+console.log(
+  "INACTIVE COUNT:",
+  summary.inactiveCandidateCount
 );
 
 
@@ -316,20 +427,20 @@ setEscalatedCount(
 
     {followUpMembers.map((member) => (
   <TouchableOpacity
-    key={member.id}
+    key={member.memberId}
     style={styles.queueRow}
     onPress={() =>
       navigation.navigate(
         "MemberProfile",
         {
-          memberId: member.id,
+          memberId: member.memberId,
         }
       )
     }
   >
     <View>
       <Text style={styles.queueName}>
-        {member.name}
+        {member.memberName}
       </Text>
 
       <Text style={styles.queueMeta}>
@@ -355,19 +466,19 @@ setEscalatedCount(
 
     {atRiskMembers.map((member) => (
       <TouchableOpacity
-        key={member.id}
+        key={member.memberId}
         style={styles.queueRow}
         onPress={() =>
           navigation.navigate(
             "MemberProfile",
             {
-              memberId: member.id,
+            memberId: member.memberId,
             }
           )
         }
       >
         <Text style={styles.queueName}>
-          {member.name}
+          {member.memberName}
         </Text>
 
         <Text style={styles.queueMeta}>
@@ -385,30 +496,54 @@ setEscalatedCount(
     </Text>
 
     {inactiveCandidateMembers.map((member) => (
-      <TouchableOpacity
-        key={member.id}
-        style={styles.queueRow}
-        onPress={() =>
-          navigation.navigate(
-            "MemberProfile",
-            {
-              memberId: member.id,
-            }
-          )
-        }
-      >
-        <Text style={styles.queueName}>
-          {member.name}
-        </Text>
 
-        <Text style={styles.queueMeta}>
-          Inactive Review
-        </Text>
-      </TouchableOpacity>
-    ))}
+  <View
+    key={member.memberId}
+    style={styles.queueRow}
+  >
+
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate(
+          "MemberProfile",
+          {
+            memberId:
+              member.memberId,
+          }
+        )
+      }
+    >
+      <Text style={styles.queueName}>
+        {member.memberName}
+      </Text>
+
+      <Text style={styles.queueMeta}>
+        Inactive Review
+      </Text>
+
+      <Text style={styles.queueMeta}>
+        Streak: {member.streak}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.reviewBtn}
+      onPress={() =>
+        createAttendanceReviewRequest(
+          member
+        )
+      }
+    >
+      <Text style={styles.reviewBtnText}>
+        Submit Review
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+
+))}
   </View>
 )}
-
       <FlatList
         data={tickets}
         keyExtractor={(item) => item.id}
@@ -567,5 +702,19 @@ queueMeta: {
   fontSize: 11,
   color: "#777",
   marginTop: 2,
+},
+reviewBtn: {
+  marginTop: 8,
+  backgroundColor: "#E67E22",
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 8,
+  alignSelf: "flex-start",
+},
+
+reviewBtnText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 12,
 },
 });

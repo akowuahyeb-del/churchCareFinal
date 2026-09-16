@@ -146,6 +146,14 @@ console.log(
   results.length
 );
 
+console.log(
+  "APPROVAL REQUESTS LOADED",
+  JSON.stringify(
+    results,
+    null,
+    2
+  )
+);
 setApprovalItems(results);
 
       } catch (e) {
@@ -205,21 +213,23 @@ const renderItem = ({ item }) => {
         {item.memberName || "Unknown Member"}
       </Text>
 
-     <Text style={styles.action}>
+    <Text style={styles.action}>
   {item.type === "disciplinary"
     ? `Disciplinary: ${item.actionType}`
 
     : item.type === "transfer"
     ? "Transfer Request"
 
-   : formatRequestType(
-    item.nominationType
-  ) ||
-  "Governance Request"}
+    : item.type === "attendance"
+    ? "Attendance Review"
+
+    : formatRequestType(
+        item.nominationType
+      ) ||
+      "Governance Request"}
 </Text>
 
-
-    <Text style={styles.count}>
+<Text style={styles.count}>
 
   {item.type === "disciplinary"
     ? item.memberName
@@ -229,10 +239,12 @@ const renderItem = ({ item }) => {
         item.toEntityName || "Unknown"
       }`
 
-    : item.governanceBodyName ||
-  item.protectedOfficeName ||
-  "Governance Request"}
+    : item.type === "attendance"
+    ? `Absence Streak: ${item.absenceStreak}`
 
+    : item.governanceBodyName ||
+      item.protectedOfficeName ||
+      "Governance Request"}
 
 </Text>
 
@@ -343,6 +355,16 @@ if (loading) {
 
     {categories.map((category) => {
 
+      console.log(
+  "CATEGORY CHECK",
+  category.key,
+  approvalItems.filter(
+    (item) =>
+      (item.type || "").toLowerCase() ===
+      category.key.toLowerCase()
+  ).length
+);
+
  const count =
   approvalItems.filter(
     (item) =>
@@ -448,6 +470,8 @@ if (loading) {
     </TouchableOpacity>
 
   </View>
+
+ 
 
  
 
