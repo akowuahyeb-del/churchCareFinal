@@ -86,9 +86,12 @@ export const ATTENDANCE_SETTINGS_DEFAULTS = {
     "Convention",
   ],
 
-  // Absence alerts
-  absenceWarningCount:  2,
-  absenceFlagCount:     3,
+ // Attendance Intelligence Policy
+attendancePolicy: {
+  followUpThreshold: null,
+  atRiskThreshold: null,
+  inactiveCandidateThreshold: null,
+},
 
   // Session behaviour
   lockAfterEnd:         true,
@@ -669,60 +672,108 @@ export default function AttendanceSettingsScreen() {
             <Text style={styles.manageBtnText}>Add Time</Text>
           </TouchableOpacity>
         </View>
+{/* ══ ATTENDANCE INTELLIGENCE POLICY ══ */}
+<SectionHeader
+  icon="analytics-outline"
+  color="#e67e22"
+  title="Attendance Intelligence Policy"
+  subtitle="Configure attendance review thresholds"
+/>
 
-        {/* ══ ABSENCE ALERTS ══ */}
-        <SectionHeader
-          icon="notifications-outline"
-          color="#e67e22"
-          title="Absence Alerts"
-          subtitle="When to prompt pastoral follow-up"
-        />
+<View style={styles.card}>
 
-        <View style={styles.card}>
-          <View style={styles.thresholdRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.thresholdLabel}>Contact Prompt</Text>
-              <Text style={styles.thresholdSub}>Show "follow-up suggested" after this many absences</Text>
-            </View>
-            <View style={styles.stepperRow}>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => update("absenceWarningCount", Math.max(1, settings.absenceWarningCount - 1))}
-              >
-                <Ionicons name="remove" size={16} color="#4B3F72" />
-              </TouchableOpacity>
-              <Text style={styles.stepperValue}>{settings.absenceWarningCount}</Text>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => update("absenceWarningCount", Math.min(10, settings.absenceWarningCount + 1))}
-              >
-                <Ionicons name="add" size={16} color="#4B3F72" />
-              </TouchableOpacity>
-            </View>
-          </View>
+  <View style={styles.thresholdRow}>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.thresholdLabel}>
+        Follow-Up Threshold
+      </Text>
+      <Text style={styles.thresholdSub}>
+        Number of consecutive absences before a follow-up is recommended.
+      </Text>
+    </View>
 
-          <View style={[styles.thresholdRow, { marginTop: 14 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.thresholdLabel}>Red Flag Alert</Text>
-              <Text style={styles.thresholdSub}>Show pastoral red flag after this many absences</Text>
-            </View>
-            <View style={styles.stepperRow}>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => update("absenceFlagCount", Math.max(settings.absenceWarningCount + 1, settings.absenceFlagCount - 1))}
-              >
-                <Ionicons name="remove" size={16} color="#e74c3c" />
-              </TouchableOpacity>
-              <Text style={[styles.stepperValue, { color: "#e74c3c" }]}>{settings.absenceFlagCount}</Text>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => update("absenceFlagCount", Math.min(20, settings.absenceFlagCount + 1))}
-              >
-                <Ionicons name="add" size={16} color="#e74c3c" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+    <TextInput
+      style={styles.coordInput}
+      keyboardType="numeric"
+      value={
+        settings.attendancePolicy?.followUpThreshold?.toString() || ""
+      }
+      onChangeText={(v) =>
+        update("attendancePolicy", {
+          ...settings.attendancePolicy,
+          followUpThreshold:
+            v === "" ? null : Number(v),
+        })
+      }
+      placeholder="Not configured"
+    />
+  </View>
+
+  <View
+    style={[
+      styles.thresholdRow,
+      { marginTop: 16 },
+    ]}
+  >
+    <View style={{ flex: 1 }}>
+      <Text style={styles.thresholdLabel}>
+        At Risk Threshold
+      </Text>
+      <Text style={styles.thresholdSub}>
+        Number of consecutive absences before a member is considered at risk.
+      </Text>
+    </View>
+
+    <TextInput
+      style={styles.coordInput}
+      keyboardType="numeric"
+      value={
+        settings.attendancePolicy?.atRiskThreshold?.toString() || ""
+      }
+      onChangeText={(v) =>
+        update("attendancePolicy", {
+          ...settings.attendancePolicy,
+          atRiskThreshold:
+            v === "" ? null : Number(v),
+        })
+      }
+      placeholder="Not configured"
+    />
+  </View>
+
+  <View
+    style={[
+      styles.thresholdRow,
+      { marginTop: 16 },
+    ]}
+  >
+    <View style={{ flex: 1 }}>
+      <Text style={styles.thresholdLabel}>
+        Inactive Candidate Threshold
+      </Text>
+      <Text style={styles.thresholdSub}>
+        Number of consecutive absences before inactivity review is triggered.
+      </Text>
+    </View>
+
+    <TextInput
+      style={styles.coordInput}
+      keyboardType="numeric"
+      value={
+        settings.attendancePolicy?.inactiveCandidateThreshold?.toString() || ""
+      }
+      onChangeText={(v) =>
+        update("attendancePolicy", {
+          ...settings.attendancePolicy,
+          inactiveCandidateThreshold:
+            v === "" ? null : Number(v),
+        })
+      }
+      placeholder="Not configured"
+    />
+  </View>
+
+</View>
 
         {/* ══ SESSION BEHAVIOUR ══ */}
         <SectionHeader

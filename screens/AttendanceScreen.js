@@ -35,6 +35,7 @@ import {
   resolveAttendanceTrack,
   computeAbsenceStreak,
   normalizeCategory,
+  classifyAttendanceHealth,
 } from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
@@ -721,9 +722,21 @@ await applySessionData(
           track: currentTrack,
         });
 
-        if (streak >= ABSENCE_WARNING) {
-          flagged.push(`${member.name} (${streak})`);
-        }
+        const health =
+  classifyAttendanceHealth(
+    streak,
+    attendancePolicy
+  );
+
+if (
+  health === "follow_up" ||
+  health === "at_risk" ||
+  health === "inactive_candidate"
+) {
+  flagged.push(
+    `${member.name} (${streak})`
+  );
+}
       } catch (e) {
         console.log("❌ post-session streak check:", e);
       }
@@ -743,8 +756,12 @@ await applySessionData(
   const endSession = async () => {
     try {
       const currentPresent = members.filter(m => attendance[m.id]?.status === "present").length;
-      const currentAbsent = members.length - currentPresent;
-      const currentTotal = members.length;
+      const currentAbsent =
+  localMembers.length -
+  currentPresent;
+
+const currentTotal =
+  localMembers.length;
       const currentRate = currentTotal > 0 ? Math.round((currentPresent / currentTotal) * 100) : 0;
 
       const snapshot = {
@@ -1067,15 +1084,31 @@ seriesId:
       const streak = await computeAbsenceStreak({
         organizationId,
         entityId,
+
         memberId: member.id,
         track: currentTrack,
       });
 
-      if (streak >= ABSENCE_FLAG) {
-        setRedFlagMember(member); setRedFlagCount(streak); setRedFlagModal(true);
-      } else if (streak >= ABSENCE_WARNING) {
-        setContactMember(member); setContactModal(true);
-      }
+      const health =
+  classifyAttendanceHealth(
+    streak,
+    attendancePolicy
+  );
+
+if (
+  health === "inactive_candidate" ||
+  health === "at_risk"
+) {
+  setRedFlagMember(member);
+  setRedFlagCount(streak);
+  setRedFlagModal(true);
+
+} else if (
+  health === "follow_up"
+) {
+  setContactMember(member);
+  setContactModal(true);
+}
     } catch (e) {
       console.log("❌ checkAbsenceStreak error (check for missing Firestore index):", e);
     }
@@ -1483,8 +1516,20 @@ seriesId:
     return matchSearch && matchFilter;
   });
 
-  const ABSENCE_WARNING = attendanceSettings?.absenceWarningCount ?? 2;
-  const ABSENCE_FLAG = attendanceSettings?.absenceFlagCount ?? 3;
+const attendancePolicy = {
+  followUpThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.followUpThreshold ?? null,
+
+  atRiskThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.atRiskThreshold ?? null,
+
+  inactiveCandidateThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.inactiveCandidateThreshold ?? null,
+};
+
 
   const CHURCH_COORDS = {
     latitude: attendanceSettings?.geoLatitude ?? 5.6037,
@@ -2420,9 +2465,18 @@ seriesId:
             <Ionicons name="flag" size={36} color="#e74c3c" style={{ alignSelf: "center" }} />
             <Text style={styles.modalTitle}>Pastoral Alert</Text>
             <Text style={styles.modalSub}>
-              {redFlagMember?.name} has been marked absent {redFlagCount} times.
-              Consider a pastoral visit or phone call.
-            </Text>
+  {redFlagMember?.name} has reached the configured
+  Attendance Risk threshold.
+
+  {"\n\n"}
+
+  Current absence streak: {redFlagCount}.
+
+  {"\n\n"}
+
+  Consider a pastoral visit or phone call.
+</Text>
+
             <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: "#e74c3c" }]} onPress={() => setRedFlagModal(false)}>
               <Text style={styles.white}>Noted — Will Follow Up</Text>
             </TouchableOpacity>
@@ -2437,7 +2491,7 @@ seriesId:
             <Ionicons name="call-outline" size={36} color="#e67e22" style={{ alignSelf: "center" }} />
             <Text style={styles.modalTitle}>Follow-Up Suggested</Text>
             <Text style={styles.modalSub}>
-              {contactMember?.name} has missed 2 consecutive sessions.
+              {contactMember?.name} has reached the configured Follow-Up threshold.
               {contactMember?.phone ? ` You can reach them at ${contactMember.phone}.` : ""}
             </Text>
             <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: "#e67e22" }]} onPress={() => setContactModal(false)}>

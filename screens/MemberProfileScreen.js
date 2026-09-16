@@ -575,8 +575,16 @@ const streak =
           );
 
         if (!snap.exists()) {
-          return;
-        }
+
+  setAttendancePolicy({
+    loaded: true,
+    followUpThreshold: null,
+    atRiskThreshold: null,
+    inactiveCandidateThreshold: null,
+  });
+
+  return;
+}
 
         const data =
           snap.data();
@@ -593,17 +601,20 @@ const streak =
         }
 
         setAttendancePolicy({
-          loaded: true,
+  loaded: true,
 
-          followUpThreshold:
-            data.followUpThreshold,
+  followUpThreshold:
+    data?.attendancePolicy
+      ?.followUpThreshold ?? null,
 
-          atRiskThreshold:
-            data.atRiskThreshold,
+  atRiskThreshold:
+    data?.attendancePolicy
+      ?.atRiskThreshold ?? null,
 
-          inactiveCandidateThreshold:
-            data.inactiveCandidateThreshold,
-        });
+  inactiveCandidateThreshold:
+    data?.attendancePolicy
+      ?.inactiveCandidateThreshold ?? null,
+});
 
       } catch (e) {
 
@@ -900,6 +911,52 @@ const streak =
     }
   };
 
+
+  const restoreInactiveMember =
+  async () => {
+    try {
+
+      await updateDoc(
+        memberRef(),
+        {
+          lifecycleStatus: "member",
+
+          inactiveDate: null,
+
+          inactiveReason: null,
+
+          restoredDate:
+            new Date()
+              .toISOString()
+              .split("T")[0],
+        }
+      );
+
+      setMember(prev => ({
+        ...prev,
+        lifecycleStatus: "member",
+        inactiveDate: null,
+        inactiveReason: null,
+      }));
+
+      Alert.alert(
+        "Member Restored",
+        "Member status changed back to Active."
+      );
+
+    } catch (e) {
+
+      console.log(
+        "restoreInactiveMember",
+        e
+      );
+
+      Alert.alert(
+        "Error",
+        "Could not restore member."
+      );
+    }
+};
   /* ════════════════════════════════════════════
                       RENDER
   ════════════════════════════════════════════ */
@@ -1372,6 +1429,28 @@ const streak =
                     <Text style={styles.white}>Reinstate Member</Text>
                   </TouchableOpacity>
                 )}
+                {member?.lifecycleStatus === "inactive" && (
+  <TouchableOpacity
+    style={[
+      styles.actionExecBtn,
+      {
+        backgroundColor: "#27ae60",
+        marginBottom: 10,
+      },
+    ]}
+    onPress={restoreInactiveMember}
+  >
+    <Ionicons
+      name="refresh"
+      size={14}
+      color="#fff"
+      style={{ marginRight: 4 }}
+    />
+    <Text style={styles.white}>
+      Restore Member
+    </Text>
+  </TouchableOpacity>
+)}
 
                 {!isDisciplined && Object.entries(ACTION_CONFIG).map(([action, cfg]) => (
                   <ActionBlock

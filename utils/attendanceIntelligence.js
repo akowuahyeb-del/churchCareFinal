@@ -179,25 +179,7 @@ export function normalizeCategory(category) {
   );
 }
 
-export const DEFAULT_ATTENDANCE_POLICY = {
-  worship: {
-    warningThreshold: 1,
-    concernThreshold: 1,
-    criticalThreshold: 1,
-  },
-
-  revival: {
-    warningThreshold: 2,
-    concernThreshold: 4,
-    criticalThreshold: 8,
-  },
-
-  ministry: {
-    warningThreshold: 3,
-    concernThreshold: 6,
-    criticalThreshold: 12,
-  },
-};
+export const DEFAULT_ATTENDANCE_POLICY = {};
 
 export const DEFAULT_WINDOW_MAPPINGS = {
   sunday: {
@@ -470,8 +452,12 @@ export function classifyAttendanceHealth(
 
 export function isInactiveCandidate(
   streak,
-  threshold = 8
+  threshold
 ) {
+  if (!threshold) {
+    return false;
+  }
+
   return streak >= threshold;
 }
 
