@@ -584,19 +584,35 @@ export async function buildAttendanceIntelligenceSummary({
     switch (health) {
       case ATTENDANCE_HEALTH.FOLLOW_UP:
         summary.followUpCount++;
-        summary.followUpMembers.push(item);
+        if (
+  !summary.followUpMembers.some(
+    m => m.memberId === item.memberId
+  )
+) {
+  summary.followUpMembers.push(item);
+}
         break;
 
       case ATTENDANCE_HEALTH.AT_RISK:
         summary.atRiskCount++;
-        summary.atRiskMembers.push(item);
+        if (
+  !summary.atRiskMembers.some(
+    m => m.memberId === item.memberId
+  )
+) {
+  summary.atRiskMembers.push(item);
+}
         break;
 
       case ATTENDANCE_HEALTH.INACTIVE_CANDIDATE:
         summary.inactiveCandidateCount++;
-        summary.inactiveCandidateMembers.push(
-          item
-        );
+       if (
+  !summary.inactiveCandidateMembers.some(
+    m => m.memberId === item.memberId
+  )
+) {
+  summary.inactiveCandidateMembers.push(item);
+}
         break;
 
       default:

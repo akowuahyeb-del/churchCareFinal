@@ -487,6 +487,11 @@ setEscalatedCount(
             </Text>
           </TouchableOpacity>
         ))}
+        {followUpMembers.length > 3 && (
+  <Text style={styles.loadMoreText}>
+    Showing 3 of {followUpMembers.length}
+  </Text>
+)}
     </View>
   )}
 
@@ -519,6 +524,11 @@ setEscalatedCount(
             </Text>
           </TouchableOpacity>
         ))}
+        {atRiskMembers.length > 3 && (
+  <Text style={styles.loadMoreText}>
+    Showing 3 of {atRiskMembers.length}
+  </Text>
+)}
     </View>
   )}
 
@@ -557,6 +567,11 @@ setEscalatedCount(
             </Text>
           </TouchableOpacity>
         ))}
+        {inactiveCandidateMembers.length > 3 && (
+  <Text style={styles.loadMoreText}>
+    Showing 3 of {inactiveCandidateMembers.length}
+  </Text>
+)}
     </View>
   )}
 </>}
