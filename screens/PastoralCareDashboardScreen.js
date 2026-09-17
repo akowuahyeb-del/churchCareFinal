@@ -6,6 +6,7 @@ import {
   Alert,
   TouchableOpacity,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -49,7 +50,8 @@ export default function PastoralCareDashboardScreen({ navigation }) {
 const [atRiskCount, setAtRiskCount] = useState(0);
 const [escalatedCount, setEscalatedCount] = useState(0);
 const [deceasedCount, setDeceasedCount] = useState(0);
-
+const [search, setSearch] = useState("");
+const [queueFilter, setQueueFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [entity, setEntity] = useState(null);
   const {
@@ -64,6 +66,10 @@ const [deceasedCount, setDeceasedCount] = useState(0);
   const [followUpMembers, setFollowUpMembers] = useState([]);
 const [atRiskMembers, setAtRiskMembers] = useState([]);
 const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
+const [followUpLimit, setFollowUpLimit] = useState(3);
+const [atRiskLimit, setAtRiskLimit] = useState(3);
+const [inactiveLimit, setInactiveLimit] = useState(3);
+
 
 
 
@@ -423,11 +429,95 @@ setEscalatedCount(
   data={tickets}
 
   ListHeaderComponent={<>
+  <View style={styles.headerWrapper}>
   <AppHeader
     title="Pastoral Care"
     subtitle="Ticket queue"
     onBack={() => navigation.goBack()}
   />
+</View>
+
+<TextInput
+  style={styles.search}
+  placeholder="Search member..."
+  placeholderTextColor="#888"
+  value={search}
+  onChangeText={setSearch}
+/>
+
+<View style={styles.filterRow}>
+
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      queueFilter === "all" &&
+        styles.filterChipActive,
+    ]}
+    onPress={() =>
+      setQueueFilter("all")
+    }
+  >
+    <Text>
+  All (
+  {followUpMembers.length +
+    atRiskMembers.length +
+    inactiveCandidateMembers.length}
+  )
+</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      queueFilter === "followup" &&
+        styles.filterChipActive,
+    ]}
+    onPress={() =>
+      setQueueFilter("followup")
+    }
+  >
+    <Text>
+  Follow-Up (
+  {followUpMembers.length}
+  )
+</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      queueFilter === "atrisk" &&
+        styles.filterChipActive,
+    ]}
+    onPress={() =>
+      setQueueFilter("atrisk")
+    }
+  >
+    <Text>
+  At Risk (
+  {atRiskMembers.length}
+  )
+</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.filterChip,
+      queueFilter === "inactive" &&
+        styles.filterChipActive,
+    ]}
+    onPress={() =>
+      setQueueFilter("inactive")
+    }
+  >
+    <Text>
+  Inactive (
+  {inactiveCandidateMembers.length}
+  )
+</Text>
+  </TouchableOpacity>
+
+</View>
 
   <View style={styles.tabRow}>
     {[
@@ -496,49 +586,96 @@ setEscalatedCount(
 
   {/* FOLLOW-UP */}
 
-  {followUpMembers.length > 0 && (
+  {(queueFilter === "all" ||
+  queueFilter === "followup") &&
+  followUpMembers.length > 0 && (
     <View style={styles.queueCard}>
       <Text style={styles.queueTitle}>
         Follow-Up Queue ({followUpMembers.length})
       </Text>
+{followUpMembers
+  .filter((member) =>
+    (member.memberName || "")
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  )
+  .sort(
+    (a, b) =>
+      (b.streak || 0) -
+      (a.streak || 0)
+  )
+  .slice(0, followUpLimit)
+  .map((member) => (
+    <TouchableOpacity
+      key={member.memberId}
+      style={styles.queueRow}
+      onPress={() =>
+        navigation.navigate(
+          "MyMemberProfile",
+          {
+            memberId: member.memberId,
+          }
+        )
+      }
+    >
+      <Text style={styles.queueName}>
+        {member.memberName}
+      </Text>
 
-      {followUpMembers
-        .slice(0, 3)
-        .map((member) => (
-          <View
-  key={member.memberId}
-  style={styles.queueRow}
->
+      <Text
+        style={[
+          styles.queueMeta,
+          styles.followUpBadge,
+        ]}
+      >
+        Follow-Up Required
+      </Text>
+    </TouchableOpacity>
+  ))}
 
-            <Text style={styles.queueName}>
-              {member.memberName}
-            </Text>
-            <Text style={styles.queueMeta}>
-  Follow-Up Required
-</Text>
-          </View>
-
-
-
-        ))}
-        {followUpMembers.length > 3 && (
-  <Text style={styles.loadMoreText}>
-    Showing 3 of {followUpMembers.length}
-  </Text>
+     {followUpMembers.length >
+  followUpLimit && (
+  <TouchableOpacity
+    onPress={() =>
+      setFollowUpLimit(
+        (prev) => prev + 3
+      )
+    }
+  >
+    <Text style={styles.loadMoreText}>
+      {followUpMembers.length -
+        followUpLimit} more members
+    </Text>
+  </TouchableOpacity>
 )}
+
     </View>
   )}
 
-  {/* AT RISK */}
 
-  {atRiskMembers.length > 0 && (
+
+{/* AT RISK */}
+
+{(queueFilter === "all" ||
+  queueFilter === "atrisk") &&
+  atRiskMembers.length > 0 && (
     <View style={styles.queueCard}>
       <Text style={styles.queueTitle}>
         At-Risk Queue ({atRiskMembers.length})
       </Text>
 
       {atRiskMembers
-        .slice(0, 3)
+        .filter((member) =>
+          (member.memberName || "")
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        )
+        .sort(
+          (a, b) =>
+            (b.streak || 0) -
+            (a.streak || 0)
+        )
+        .slice(0, atRiskLimit)
         .map((member) => (
           <TouchableOpacity
             key={member.memberId}
@@ -556,22 +693,43 @@ setEscalatedCount(
             <Text style={styles.queueName}>
               {member.memberName}
             </Text>
-            <Text style={styles.queueMeta}>
-  Pastoral Review Required
-</Text>
+
+            <Text
+              style={[
+                styles.queueMeta,
+                styles.atRiskBadge,
+              ]}
+            >
+              Pastoral Review Required
+            </Text>
           </TouchableOpacity>
         ))}
-        {atRiskMembers.length > 3 && (
-  <Text style={styles.loadMoreText}>
-    Showing 3 of {atRiskMembers.length}
-  </Text>
-)}
+
+      {atRiskMembers.length >
+        atRiskLimit && (
+        <TouchableOpacity
+          onPress={() =>
+            setAtRiskLimit(
+              (prev) => prev + 3
+            )
+          }
+        >
+          <Text style={styles.loadMoreText}>
+            {atRiskMembers.length -
+              atRiskLimit} more members
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
-  )}
+)}
+
+
 
   {/* INACTIVE */}
 
-  {inactiveCandidateMembers.length > 0 && (
+  {(queueFilter === "all" ||
+  queueFilter === "inactive") &&
+  inactiveCandidateMembers.length > 0 && (
     <View style={styles.queueCard}>
       <Text style={styles.queueTitle}>
         Inactive Candidate Queue (
@@ -580,45 +738,65 @@ setEscalatedCount(
       </Text>
 
       {inactiveCandidateMembers
-        .slice(0, 3)
-        .map((member) => (
-          <TouchableOpacity
-            key={member.memberId}
-            style={styles.queueRow}
-            onPress={() =>
-              navigation.navigate(
-                "MyMemberProfile",
-                {
-                  memberId:
-                    member.memberId,
-                }
-              )
+  .filter((member) =>
+    (member.memberName || "")
+      .toLowerCase()
+      .includes(
+        search.toLowerCase()
+      )
+  )
+  .sort(
+    (a, b) =>
+      (b.streak || 0) -
+      (a.streak || 0)
+  )
+  .slice(0, inactiveLimit)
+  .map((member) => (
+    <View
+      key={member.memberId}
+      style={styles.queueRow}
+    >
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate(
+            "MyMemberProfile",
+            {
+              memberId:
+                member.memberId,
             }
-          >
-            <Text style={styles.queueName}>
-              {member.memberName}
-            </Text>
+          )
+        }
+      >
+        <Text style={styles.queueName}>
+          {member.memberName}
+        </Text>
+      </TouchableOpacity>
 
-            <Text style={styles.queueMeta}>
-              Streak: {member.streak}
-            </Text>
-            <TouchableOpacity
-  style={styles.reviewBtn}
-  onPress={() =>
-    createAttendanceReviewRequest(
-      member
-    )
-  }
->
-  <Text style={styles.reviewBtnText}>
-    Submit Review
-  </Text>
-</TouchableOpacity>
-          </TouchableOpacity>
-        ))}
-        {inactiveCandidateMembers.length > 3 && (
+      <Text style={styles.queueMeta}>
+        Streak: {member.streak}
+      </Text>
+
+      <TouchableOpacity
+        style={styles.reviewBtn}
+        onPress={() =>
+          createAttendanceReviewRequest(
+            member
+          )
+        }
+      >
+        <Text
+          style={styles.reviewBtnText}
+        >
+          Submit Review
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ))}
+
+
+   {inactiveCandidateMembers.length > 3 && (
   <Text style={styles.loadMoreText}>
-    Showing 3 of {inactiveCandidateMembers.length}
+    {inactiveCandidateMembers.length - 3} more members
   </Text>
 )}
     </View>
@@ -629,10 +807,10 @@ setEscalatedCount(
 
         refreshing={loading}
         onRefresh={loadTickets}
-        contentContainerStyle={{
-  padding: 16,
+    contentContainerStyle={{
   paddingBottom: 120,
 }}
+
         ListEmptyComponent={
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No open tickets here.</Text>
@@ -640,7 +818,12 @@ setEscalatedCount(
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.card}
+  style={[
+    styles.card,
+    {
+      marginHorizontal: 16,
+    },
+  ]}
             onPress={() =>
               navigation.navigate("PastoralTicketDetail", {
                 requestId: item.id,
@@ -710,10 +893,27 @@ setEscalatedCount(
 }
 
 const styles = StyleSheet.create({
-  tabRow: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#eee" },
-  tab: { flex: 1, alignItems: "center", paddingVertical: 12 },
+  tabRow: {
+  flexDirection: "row",
+  backgroundColor: "#fff",
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+  minHeight: 60,
+},
+  tab: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 16,
+  minHeight: 56,
+},
   tabActive: { borderBottomWidth: 2, borderBottomColor: "#4B3F72" },
-  tabText: { color: "#777", fontWeight: "600", fontSize: 12 },
+  tabText: {
+  color: "#777",
+  fontWeight: "700",
+  fontSize: 14,
+},
+
   tabTextActive: { color: "#4B3F72" },
   emptyCard: { backgroundColor: "#fff", borderRadius: 16, padding: 24, alignItems: "center" },
   emptyText: { color: "#999" },
@@ -806,5 +1006,52 @@ loadMoreText: {
   marginTop: 10,
   color: "#4B3F72",
   fontWeight: "700",
+},
+followUpBadge: {
+  marginTop: 4,
+  backgroundColor: "#FFF8D6",
+  color: "#A67C00",
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 6,
+  alignSelf: "flex-start",
+},
+
+atRiskBadge: {
+  marginTop: 4,
+  backgroundColor: "#FFE5E5",
+  color: "#B3261E",
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 6,
+  alignSelf: "flex-start",
+},
+search: {
+  backgroundColor: "#FFF",
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  marginHorizontal: 16,
+  marginTop: 12,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+},
+filterRow: {
+  flexDirection: "row",
+  paddingHorizontal: 16,
+  marginBottom: 12,
+},
+
+filterChip: {
+  backgroundColor: "#EEE",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+  marginRight: 8,
+},
+
+filterChipActive: {
+  backgroundColor: "#DDE3FF",
 },
 });
