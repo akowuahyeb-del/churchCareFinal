@@ -794,10 +794,20 @@ setEscalatedCount(
   ))}
 
 
-   {inactiveCandidateMembers.length > 3 && (
-  <Text style={styles.loadMoreText}>
-    {inactiveCandidateMembers.length - 3} more members
-  </Text>
+  {inactiveCandidateMembers.length >
+  inactiveLimit && (
+  <TouchableOpacity
+    onPress={() =>
+      setInactiveLimit(
+        (prev) => prev + 3
+      )
+    }
+  >
+    <Text style={styles.loadMoreText}>
+      {inactiveCandidateMembers.length -
+        inactiveLimit} more members
+    </Text>
+  </TouchableOpacity>
 )}
     </View>
   )}
