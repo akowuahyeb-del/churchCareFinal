@@ -12,6 +12,8 @@ import {
   collection,
   getDocs,
   addDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase";
@@ -78,6 +80,42 @@ const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
         );
         return;
       }
+const existingQuery = query(
+  collection(
+    db,
+    "organizations",
+    entity.organizationId,
+    "approvalRequests"
+  ),
+  where(
+    "memberId",
+    "==",
+    member.memberId
+  ),
+  where(
+    "status",
+    "==",
+    "pending"
+  ),
+  where(
+    "type",
+    "==",
+    "attendance"
+  )
+);
+
+const existingSnap =
+  await getDocs(
+    existingQuery
+  );
+
+if (!existingSnap.empty) {
+  Alert.alert(
+    "Already Submitted",
+    "There is already a pending attendance review for this member."
+  );
+  return;
+}
 
       await addDoc(
         collection(
@@ -467,26 +505,21 @@ setEscalatedCount(
       {followUpMembers
         .slice(0, 3)
         .map((member) => (
-          <TouchableOpacity
-            key={member.memberId}
-            style={styles.queueRow}
-            onPress={() =>
-              navigation.navigate(
-                "MyMemberProfile",
-                {
-                  memberId:
-                    member.memberId,
-                }
-              )
-            }
-          >
+          <View
+  key={member.memberId}
+  style={styles.queueRow}
+>
+
             <Text style={styles.queueName}>
               {member.memberName}
             </Text>
             <Text style={styles.queueMeta}>
   Follow-Up Required
 </Text>
-          </TouchableOpacity>
+          </View>
+
+
+
         ))}
         {followUpMembers.length > 3 && (
   <Text style={styles.loadMoreText}>
