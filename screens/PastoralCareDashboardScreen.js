@@ -483,6 +483,9 @@ setEscalatedCount(
             <Text style={styles.queueName}>
               {member.memberName}
             </Text>
+            <Text style={styles.queueMeta}>
+  Follow-Up Required
+</Text>
           </TouchableOpacity>
         ))}
         {followUpMembers.length > 3 && (
@@ -520,6 +523,9 @@ setEscalatedCount(
             <Text style={styles.queueName}>
               {member.memberName}
             </Text>
+            <Text style={styles.queueMeta}>
+  Pastoral Review Required
+</Text>
           </TouchableOpacity>
         ))}
         {atRiskMembers.length > 3 && (
