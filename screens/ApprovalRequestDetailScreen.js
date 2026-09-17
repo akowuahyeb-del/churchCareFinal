@@ -396,15 +396,18 @@ if (request.type === "attendance") {
   );
 
   try {
+await updateDoc(
+  memberRef,
+  {
+    lifecycleStatus:
+      "inactive_candidate",
 
-  await updateDoc(
-    memberRef,
-    {
-      lifecycleStatus: "inactive",
-      inactiveAt: now,
-      inactivityApprovalId: request.id,
-    }
-  );
+    inactiveCandidateAt: now,
+
+    inactivityApprovalId:
+      request.id,
+  }
+);
 
 } catch (e) {
 
@@ -437,13 +440,19 @@ if (request.type === "attendance") {
   }));
 
   Alert.alert(
-    "Approved",
-    "Member marked as Inactive."
-  );
+  "Approved",
+  "Member moved to Inactive Candidate."
+);
 
-  navigation.goBack();
-
-  return;
+ console.log(
+  "ATTENDANCE REVIEW APPROVED",
+  {
+    memberId: request.memberId,
+    memberName: request.memberName,
+    lifecycleStatus:
+      "inactive_candidate",
+  }
+);
 }
 
 
@@ -623,62 +632,7 @@ if (
           rejectedAt: now,
           rejectionNote: rejectionNote.trim() || null,
         });
-        if (request.type === "attendance") {
-
-  const now =
-    new Date().toISOString();
-
-  // APPROVE REQUEST FIRST
-  await updateDoc(
-    requestRef,
-    {
-      approvals: arrayUnion(
-        approverId
-      ),
-      status: "approved",
-      approvedAt: now,
-    }
-  );
-
-  // THEN UPDATE MEMBER
-  try {
-
-    const memberRef = doc(
-      db,
-      "organizations",
-      entity.organizationId,
-      "entities",
-      request.entityId,
-      "members",
-      request.memberId
-    );
-
-    await updateDoc(
-      memberRef,
-      {
-        lifecycleStatus: "inactive",
-        inactiveAt: now,
-        inactivityApprovalId: request.id,
-      }
-    );
-
-  } catch (e) {
-
-    console.log(
-      "Attendance member update failed",
-      e
-    );
-  }
-
-  Alert.alert(
-    "Approved",
-    "Member marked as Inactive."
-  );
-
-  navigation.goBack();
-
-  return;
-}
+        
 
         await updateDoc(
           doc(
