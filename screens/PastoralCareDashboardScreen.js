@@ -62,6 +62,10 @@ const [deceasedCount, setDeceasedCount] = useState(0);
   const [followUpMembers, setFollowUpMembers] = useState([]);
 const [atRiskMembers, setAtRiskMembers] = useState([]);
 const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
+const [followUpLimit, setFollowUpLimit] = useState(5);
+const [atRiskLimit, setAtRiskLimit] = useState(5);
+const [inactiveLimit, setInactiveLimit] = useState(5);
+
 
   const currentUid = getAuth().currentUser?.uid;
   const createAttendanceReviewRequest =
@@ -375,8 +379,9 @@ setEscalatedCount(
   }, [loadTickets]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <AppHeader
+  <View style={{ flex: 1 }}>
+
+  <AppHeader
         title="Pastoral Care"
         subtitle="Ticket queue"
         onBack={() => navigation.goBack()}
@@ -449,36 +454,53 @@ setEscalatedCount(
       Follow-Up Queue
     </Text>
 
-    {followUpMembers.map((member) => (
-  <TouchableOpacity
-    key={member.memberId}
-    style={styles.queueRow}
-    onPress={() =>
-      navigation.navigate(
-        "MyMemberProfile",
-        {
-          memberId: member.memberId,
+    {followUpMembers
+      .slice(0, followUpLimit)
+      .map((member) => (
+        <TouchableOpacity
+          key={member.memberId}
+          style={styles.queueRow}
+          onPress={() =>
+            navigation.navigate(
+              "MyMemberProfile",
+              {
+                memberId: member.memberId,
+              }
+            )
+          }
+        >
+          <View>
+            <Text style={styles.queueName}>
+              {member.memberName}
+            </Text>
+
+            <Text style={styles.queueMeta}>
+              Follow-Up Required
+            </Text>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color="#999"
+          />
+        </TouchableOpacity>
+      ))}
+
+    {followUpMembers.length >
+      followUpLimit && (
+      <TouchableOpacity
+        onPress={() =>
+          setFollowUpLimit(
+            prev => prev + 5
+          )
         }
-      )
-    }
-  >
-    <View>
-      <Text style={styles.queueName}>
-        {member.memberName}
-      </Text>
-
-      <Text style={styles.queueMeta}>
-        Follow-Up Required
-      </Text>
-    </View>
-
-    <Ionicons
-      name="chevron-forward"
-      size={16}
-      color="#999"
-    />
-  </TouchableOpacity>
-))}
+      >
+        <Text style={styles.loadMoreText}>
+          View More
+        </Text>
+      </TouchableOpacity>
+    )}
   </View>
 )}
 
@@ -488,92 +510,182 @@ setEscalatedCount(
       At-Risk Queue
     </Text>
 
-    {atRiskMembers.map((member) => (
+    {atRiskMembers
+      .slice(0, atRiskLimit)
+      .map((member) => (
+        <TouchableOpacity
+          key={member.memberId}
+          style={styles.queueRow}
+          onPress={() =>
+            navigation.navigate(
+              "MyMemberProfile",
+              {
+                memberId:
+                  member.memberId,
+              }
+            )
+          }
+        >
+          <Text style={styles.queueName}>
+            {member.memberName}
+          </Text>
+
+          <Text style={styles.queueMeta}>
+            Pastoral Review
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+    {atRiskMembers.length >
+      atRiskLimit && (
       <TouchableOpacity
-        key={member.memberId}
-        style={styles.queueRow}
         onPress={() =>
-          navigation.navigate(
-            "MyMemberProfile",
-            {
-            memberId: member.memberId,
-            }
+          setAtRiskLimit(
+            prev => prev + 5
           )
         }
       >
-        <Text style={styles.queueName}>
-          {member.memberName}
-        </Text>
-
-        <Text style={styles.queueMeta}>
-          Pastoral Review
+        <Text style={styles.loadMoreText}>
+          View More
         </Text>
       </TouchableOpacity>
-    ))}
+    )}
   </View>
 )}
 
-{inactiveCandidateMembers.length > 0 && (
+{inactiveCandidateMembers.length >
+  0 && (
   <View style={styles.queueCard}>
     <Text style={styles.queueTitle}>
       Inactive Candidate Queue
     </Text>
 
-    {inactiveCandidateMembers.map((member) => (
+    {inactiveCandidateMembers
+      .slice(0, inactiveLimit)
+      .map((member) => (
+        <View
+          key={member.memberId}
+          style={styles.queueRow}
+        >
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate(
+                "MyMemberProfile",
+                {
+                  memberId:
+                    member.memberId,
+                }
+              )
+            }
+          >
+            <Text
+              style={styles.queueName}
+            >
+              {member.memberName}
+            </Text>
 
-  <View
-    key={member.memberId}
-    style={styles.queueRow}
-  >
+            <Text
+              style={styles.queueMeta}
+            >
+              Inactive Review
+            </Text>
 
-    <TouchableOpacity
-      onPress={() =>
-        navigation.navigate(
-          "MyMemberProfile",
-          {
-            memberId:
-              member.memberId,
-          }
-        )
-      }
-    >
-      <Text style={styles.queueName}>
-        {member.memberName}
-      </Text>
+            <Text
+              style={styles.queueMeta}
+            >
+              Streak: {member.streak}
+            </Text>
+          </TouchableOpacity>
 
-      <Text style={styles.queueMeta}>
-        Inactive Review
-      </Text>
+          <TouchableOpacity
+            style={styles.reviewBtn}
+            onPress={() =>
+              createAttendanceReviewRequest(
+                member
+              )
+            }
+          >
+            <Text
+              style={
+                styles.reviewBtnText
+              }
+            >
+              Submit Review
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ))}
 
-      <Text style={styles.queueMeta}>
-        Streak: {member.streak}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity
-      style={styles.reviewBtn}
-      onPress={() =>
-        createAttendanceReviewRequest(
-          member
-        )
-      }
-    >
-      <Text style={styles.reviewBtnText}>
-        Submit Review
-      </Text>
-    </TouchableOpacity>
-
-  </View>
-
-))}
+    {inactiveCandidateMembers.length >
+      inactiveLimit && (
+      <TouchableOpacity
+        onPress={() =>
+          setInactiveLimit(
+            prev => prev + 5
+          )
+        }
+      >
+        <Text style={styles.loadMoreText}>
+          View More
+        </Text>
+      </TouchableOpacity>
+    )}
   </View>
 )}
-      <FlatList
-        data={tickets}
-        keyExtractor={(item) => item.id}
+   
+<FlatList
+  data={tickets}
+
+  ListHeaderComponent={
+    <View>
+      <View style={styles.intelligenceRow}>
+        <View style={styles.intelligenceCard}>
+          <Text style={styles.intelligenceNumber}>
+            {followUpCount}
+          </Text>
+          <Text style={styles.intelligenceLabel}>
+            Follow-Up
+          </Text>
+        </View>
+
+        <View style={styles.intelligenceCard}>
+          <Text style={styles.intelligenceNumber}>
+            {atRiskCount}
+          </Text>
+          <Text style={styles.intelligenceLabel}>
+            At Risk
+          </Text>
+        </View>
+
+        <View style={styles.intelligenceCard}>
+          <Text style={styles.intelligenceNumber}>
+            {escalatedCount}
+          </Text>
+          <Text style={styles.intelligenceLabel}>
+            Escalated Cases
+          </Text>
+        </View>
+
+        <View style={styles.intelligenceCard}>
+          <Text style={styles.intelligenceNumber}>
+            {deceasedCount}
+          </Text>
+          <Text style={styles.intelligenceLabel}>
+            Deceased
+          </Text>
+        </View>
+      </View>
+    </View>
+  }
+
+  keyExtractor={(item) => item.id}
+
         refreshing={loading}
         onRefresh={loadTickets}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{
+  padding: 16,
+  paddingBottom: 120,
+}}
         ListEmptyComponent={
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No open tickets here.</Text>
@@ -645,8 +757,9 @@ setEscalatedCount(
           </TouchableOpacity>
         )}
       />
-    </View>
-  );
+   </View>
+);
+
 }
 
 const styles = StyleSheet.create({
@@ -740,5 +853,11 @@ reviewBtnText: {
   color: "#fff",
   fontWeight: "700",
   fontSize: 12,
+},
+loadMoreText: {
+  textAlign: "center",
+  marginTop: 10,
+  color: "#4B3F72",
+  fontWeight: "700",
 },
 });
