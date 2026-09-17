@@ -62,9 +62,7 @@ const [deceasedCount, setDeceasedCount] = useState(0);
   const [followUpMembers, setFollowUpMembers] = useState([]);
 const [atRiskMembers, setAtRiskMembers] = useState([]);
 const [inactiveCandidateMembers, setInactiveCandidateMembers] = useState([]);
-const [followUpLimit, setFollowUpLimit] = useState(5);
-const [atRiskLimit, setAtRiskLimit] = useState(5);
-const [inactiveLimit, setInactiveLimit] = useState(5);
+
 
 
   const currentUid = getAuth().currentUser?.uid;
@@ -565,6 +563,18 @@ setEscalatedCount(
             <Text style={styles.queueMeta}>
               Streak: {member.streak}
             </Text>
+            <TouchableOpacity
+  style={styles.reviewBtn}
+  onPress={() =>
+    createAttendanceReviewRequest(
+      member
+    )
+  }
+>
+  <Text style={styles.reviewBtnText}>
+    Submit Review
+  </Text>
+</TouchableOpacity>
           </TouchableOpacity>
         ))}
         {inactiveCandidateMembers.length > 3 && (
