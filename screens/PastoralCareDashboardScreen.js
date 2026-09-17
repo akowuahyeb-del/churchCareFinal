@@ -381,193 +381,97 @@ setEscalatedCount(
   return (
   <View style={{ flex: 1 }}>
 
+  
+   
+<FlatList
+  data={tickets}
+
+  ListHeaderComponent={<>
   <AppHeader
-        title="Pastoral Care"
-        subtitle="Ticket queue"
-        onBack={() => navigation.goBack()}
-      />
+    title="Pastoral Care"
+    subtitle="Ticket queue"
+    onBack={() => navigation.goBack()}
+  />
 
-      <View style={styles.tabRow}>
-        {[
-          { key: "mine", label: "My Tickets" },
-          { key: "team", label: "Team" },
-          { key: "unassigned", label: "Unassigned" },
-        ].map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={[styles.tab, tab === t.key && styles.tabActive]}
-            onPress={() => setTab(t.key)}
-          >
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-<View style={styles.intelligenceRow}>
-
-  <View style={styles.intelligenceCard}>
-    <Text style={styles.intelligenceNumber}>
-      {followUpCount}
-    </Text>
-    <Text style={styles.intelligenceLabel}>
-      Follow-Up
-    </Text>
-  </View>
-
-  <View style={styles.intelligenceCard}>
-    <Text style={styles.intelligenceNumber}>
-  {atRiskCount}
-</Text>
-   <Text style={styles.intelligenceLabel}>
-  At Risk
-</Text>
-  </View>
-
-  <View style={styles.intelligenceCard}>
-  <Text style={styles.intelligenceNumber}>
-    {escalatedCount}
-  </Text>
-
-  <Text style={styles.intelligenceLabel}>
-  Escalated Cases
-</Text>
-</View>
-
-  <View style={styles.intelligenceCard}>
-    <Text style={styles.intelligenceNumber}>
-      {deceasedCount}
-    </Text>
-    <Text style={styles.intelligenceLabel}>
-      Deceased
-    </Text>
-  </View>
-
-</View>
-
-{/* ATTENDANCE INTELLIGENCE QUEUES */}
-
-{followUpMembers.length > 0 && (
-  <View style={styles.queueCard}>
-    <Text style={styles.queueTitle}>
-      Follow-Up Queue
-    </Text>
-
-    {followUpMembers
-      .slice(0, followUpLimit)
-      .map((member) => (
-        <TouchableOpacity
-          key={member.memberId}
-          style={styles.queueRow}
-          onPress={() =>
-            navigation.navigate(
-              "MyMemberProfile",
-              {
-                memberId: member.memberId,
-              }
-            )
-          }
-        >
-          <View>
-            <Text style={styles.queueName}>
-              {member.memberName}
-            </Text>
-
-            <Text style={styles.queueMeta}>
-              Follow-Up Required
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={16}
-            color="#999"
-          />
-        </TouchableOpacity>
-      ))}
-
-    {followUpMembers.length >
-      followUpLimit && (
+  <View style={styles.tabRow}>
+    {[
+      { key: "mine", label: "My Tickets" },
+      { key: "team", label: "Team" },
+      { key: "unassigned", label: "Unassigned" },
+    ].map((t) => (
       <TouchableOpacity
-        onPress={() =>
-          setFollowUpLimit(
-            prev => prev + 5
-          )
-        }
+        key={t.key}
+        style={[
+          styles.tab,
+          tab === t.key && styles.tabActive,
+        ]}
+        onPress={() => setTab(t.key)}
       >
-        <Text style={styles.loadMoreText}>
-          View More
+        <Text
+          style={[
+            styles.tabText,
+            tab === t.key &&
+              styles.tabTextActive,
+          ]}
+        >
+          {t.label}
         </Text>
       </TouchableOpacity>
-    )}
+    ))}
   </View>
-)}
 
-{atRiskMembers.length > 0 && (
-  <View style={styles.queueCard}>
-    <Text style={styles.queueTitle}>
-      At-Risk Queue
-    </Text>
+  <View style={styles.intelligenceRow}>
+    <View style={styles.intelligenceCard}>
+      <Text style={styles.intelligenceNumber}>
+        {followUpCount}
+      </Text>
+      <Text style={styles.intelligenceLabel}>
+        Follow-Up
+      </Text>
+    </View>
 
-    {atRiskMembers
-      .slice(0, atRiskLimit)
-      .map((member) => (
-        <TouchableOpacity
-          key={member.memberId}
-          style={styles.queueRow}
-          onPress={() =>
-            navigation.navigate(
-              "MyMemberProfile",
-              {
-                memberId:
-                  member.memberId,
-              }
-            )
-          }
-        >
-          <Text style={styles.queueName}>
-            {member.memberName}
-          </Text>
+    <View style={styles.intelligenceCard}>
+      <Text style={styles.intelligenceNumber}>
+        {atRiskCount}
+      </Text>
+      <Text style={styles.intelligenceLabel}>
+        At Risk
+      </Text>
+    </View>
 
-          <Text style={styles.queueMeta}>
-            Pastoral Review
-          </Text>
-        </TouchableOpacity>
-      ))}
+    <View style={styles.intelligenceCard}>
+      <Text style={styles.intelligenceNumber}>
+        {escalatedCount}
+      </Text>
+      <Text style={styles.intelligenceLabel}>
+        Escalated Cases
+      </Text>
+    </View>
 
-    {atRiskMembers.length >
-      atRiskLimit && (
-      <TouchableOpacity
-        onPress={() =>
-          setAtRiskLimit(
-            prev => prev + 5
-          )
-        }
-      >
-        <Text style={styles.loadMoreText}>
-          View More
-        </Text>
-      </TouchableOpacity>
-    )}
+    <View style={styles.intelligenceCard}>
+      <Text style={styles.intelligenceNumber}>
+        {deceasedCount}
+      </Text>
+      <Text style={styles.intelligenceLabel}>
+        Deceased
+      </Text>
+    </View>
   </View>
-)}
 
-{inactiveCandidateMembers.length >
-  0 && (
-  <View style={styles.queueCard}>
-    <Text style={styles.queueTitle}>
-      Inactive Candidate Queue
-    </Text>
+  {/* FOLLOW-UP */}
 
-    {inactiveCandidateMembers
-      .slice(0, inactiveLimit)
-      .map((member) => (
-        <View
-          key={member.memberId}
-          style={styles.queueRow}
-        >
+  {followUpMembers.length > 0 && (
+    <View style={styles.queueCard}>
+      <Text style={styles.queueTitle}>
+        Follow-Up Queue ({followUpMembers.length})
+      </Text>
+
+      {followUpMembers
+        .slice(0, 3)
+        .map((member) => (
           <TouchableOpacity
+            key={member.memberId}
+            style={styles.queueRow}
             onPress={() =>
               navigation.navigate(
                 "MyMemberProfile",
@@ -578,105 +482,84 @@ setEscalatedCount(
               )
             }
           >
-            <Text
-              style={styles.queueName}
-            >
+            <Text style={styles.queueName}>
               {member.memberName}
             </Text>
-
-            <Text
-              style={styles.queueMeta}
-            >
-              Inactive Review
-            </Text>
-
-            <Text
-              style={styles.queueMeta}
-            >
-              Streak: {member.streak}
-            </Text>
           </TouchableOpacity>
+        ))}
+    </View>
+  )}
 
+  {/* AT RISK */}
+
+  {atRiskMembers.length > 0 && (
+    <View style={styles.queueCard}>
+      <Text style={styles.queueTitle}>
+        At-Risk Queue ({atRiskMembers.length})
+      </Text>
+
+      {atRiskMembers
+        .slice(0, 3)
+        .map((member) => (
           <TouchableOpacity
-            style={styles.reviewBtn}
+            key={member.memberId}
+            style={styles.queueRow}
             onPress={() =>
-              createAttendanceReviewRequest(
-                member
+              navigation.navigate(
+                "MyMemberProfile",
+                {
+                  memberId:
+                    member.memberId,
+                }
               )
             }
           >
-            <Text
-              style={
-                styles.reviewBtnText
-              }
-            >
-              Submit Review
+            <Text style={styles.queueName}>
+              {member.memberName}
             </Text>
           </TouchableOpacity>
-        </View>
-      ))}
-
-    {inactiveCandidateMembers.length >
-      inactiveLimit && (
-      <TouchableOpacity
-        onPress={() =>
-          setInactiveLimit(
-            prev => prev + 5
-          )
-        }
-      >
-        <Text style={styles.loadMoreText}>
-          View More
-        </Text>
-      </TouchableOpacity>
-    )}
-  </View>
-)}
-   
-<FlatList
-  data={tickets}
-
-  ListHeaderComponent={
-    <View>
-      <View style={styles.intelligenceRow}>
-        <View style={styles.intelligenceCard}>
-          <Text style={styles.intelligenceNumber}>
-            {followUpCount}
-          </Text>
-          <Text style={styles.intelligenceLabel}>
-            Follow-Up
-          </Text>
-        </View>
-
-        <View style={styles.intelligenceCard}>
-          <Text style={styles.intelligenceNumber}>
-            {atRiskCount}
-          </Text>
-          <Text style={styles.intelligenceLabel}>
-            At Risk
-          </Text>
-        </View>
-
-        <View style={styles.intelligenceCard}>
-          <Text style={styles.intelligenceNumber}>
-            {escalatedCount}
-          </Text>
-          <Text style={styles.intelligenceLabel}>
-            Escalated Cases
-          </Text>
-        </View>
-
-        <View style={styles.intelligenceCard}>
-          <Text style={styles.intelligenceNumber}>
-            {deceasedCount}
-          </Text>
-          <Text style={styles.intelligenceLabel}>
-            Deceased
-          </Text>
-        </View>
-      </View>
+        ))}
     </View>
-  }
+  )}
+
+  {/* INACTIVE */}
+
+  {inactiveCandidateMembers.length > 0 && (
+    <View style={styles.queueCard}>
+      <Text style={styles.queueTitle}>
+        Inactive Candidate Queue (
+        {inactiveCandidateMembers.length}
+        )
+      </Text>
+
+      {inactiveCandidateMembers
+        .slice(0, 3)
+        .map((member) => (
+          <TouchableOpacity
+            key={member.memberId}
+            style={styles.queueRow}
+            onPress={() =>
+              navigation.navigate(
+                "MyMemberProfile",
+                {
+                  memberId:
+                    member.memberId,
+                }
+              )
+            }
+          >
+            <Text style={styles.queueName}>
+              {member.memberName}
+            </Text>
+
+            <Text style={styles.queueMeta}>
+              Streak: {member.streak}
+            </Text>
+          </TouchableOpacity>
+        ))}
+    </View>
+  )}
+</>}
 
   keyExtractor={(item) => item.id}
 
