@@ -438,6 +438,7 @@ function RootStack() {
        <Stack.Screen name="MyProfile"component={MyProfileScreen}/>
        <Stack.Screen name="Help"component={HelpScreen}/>
        <Stack.Screen name="ApprovalRequestDetail"component={ApprovalRequestDetailScreen}/>
+       <Stack.Screen name="MemberProfile"component={MemberProfileScreen}/>
 
 
 

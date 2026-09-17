@@ -403,7 +403,24 @@ const behaviour =
     streak += 1;
   }
 
-  return streak;
+  console.log(
+  "===== OCCURRENCES ====="
+);
+
+console.log(
+  JSON.stringify(
+    occurrences,
+    null,
+    2
+  )
+);
+
+console.log(
+  "===== FINAL STREAK =====",
+  streak
+);
+
+return streak;
 }
 
 export async function computeAbsenceStreak({
@@ -426,90 +443,51 @@ export function classifyAttendanceHealth(
   streak,
   policy
 ) {
+  console.log(
+    "HEALTH CHECK",
+    JSON.stringify(
+      {
+        streak,
+        policy,
+      },
+      null,
+      2
+    )
+  );
+
+  if (!policy) {
+    return ATTENDANCE_HEALTH.HEALTHY;
+  }
+
   if (
     streak >=
-    policy.inactiveCandidateThreshold
+    Number(
+      policy.inactiveCandidateThreshold || 999
+    )
   ) {
     return ATTENDANCE_HEALTH.INACTIVE_CANDIDATE;
   }
 
   if (
     streak >=
-    policy.atRiskThreshold
+    Number(
+      policy.atRiskThreshold || 999
+    )
   ) {
     return ATTENDANCE_HEALTH.AT_RISK;
   }
 
   if (
     streak >=
-    policy.followUpThreshold
+    Number(
+      policy.followUpThreshold || 999
+    )
   ) {
     return ATTENDANCE_HEALTH.FOLLOW_UP;
   }
 
   return ATTENDANCE_HEALTH.HEALTHY;
 }
-
-export function isInactiveCandidate(
-  streak,
-  threshold
-) {
-  if (!threshold) {
-    return false;
-  }
-
-  return streak >= threshold;
-}
-
-export function buildAttendanceRecommendation(
-  streak,
-  policy
-) {
-  const health =
-  classifyAttendanceHealth(
-    streak,
-    policy
-  );
-
-console.log(
-  "HEALTH RESULT",
-  {
-    streak,
-    health,
-    policy,
-  }
-);
-  switch (health) {
-    case ATTENDANCE_HEALTH.FOLLOW_UP:
-      return {
-        health,
-        action: "follow_up",
-        priority: "low",
-      };
-
-    case ATTENDANCE_HEALTH.AT_RISK:
-      return {
-        health,
-        action: "pastoral_review",
-        priority: "medium",
-      };
-
-    case ATTENDANCE_HEALTH.INACTIVE_CANDIDATE:
-      return {
-        health,
-        action: "inactive_review",
-        priority: "high",
-      };
-
-    default:
-      return {
-        health,
-        action: "none",
-        priority: "none",
-      };
-  }
-}
-
 
 export function shouldIncludeInAttendanceIntelligence(
   member
@@ -534,6 +512,7 @@ export async function buildAttendanceIntelligenceSummary({
   organizationId,
   entityId,
   members,
+  attendancePolicy,
   track = "sunday",
 }) {
   const summary = {
@@ -559,21 +538,38 @@ export async function buildAttendanceIntelligenceSummary({
         memberId: member.id,
         track,
       });
-      console.log(
-  "STREAK RESULT:",
-  member.name,
-  streak
-);
-console.log(
-  "PROCESSING MEMBER:",
-  member.name,
-  member.id
-);
-    const recommendation =
-  buildAttendanceRecommendation(
-    streak,
-    DEFAULT_ATTENDANCE_POLICY.worship
-  );
+
+    console.log(
+      "STREAK RESULT:",
+      member.name,
+      streak
+    );
+
+    console.log(
+      "PROCESSING MEMBER:",
+      member.name,
+      member.id
+    );
+
+    const health =
+      classifyAttendanceHealth(
+        streak,
+        attendancePolicy
+      );
+
+    console.log(
+      "HEALTH RESULT",
+      {
+        health,
+        policy: attendancePolicy,
+        streak,
+      }
+    );
+
+    const recommendation = {
+      health,
+      absenceStreak: streak,
+    };
 
     const item = {
       memberId: member.id,
@@ -585,9 +581,7 @@ console.log(
       recommendation,
     };
 
-    switch (
-      recommendation.health
-    ) {
+    switch (health) {
       case ATTENDANCE_HEALTH.FOLLOW_UP:
         summary.followUpCount++;
         summary.followUpMembers.push(item);
@@ -612,6 +606,7 @@ console.log(
 
   return summary;
 }
+
 export async function resolveMemberTrack({
   organizationId,
   entityId,

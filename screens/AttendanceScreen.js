@@ -36,7 +36,7 @@ import {
   computeAbsenceStreak,
   normalizeCategory,
   classifyAttendanceHealth,
-  buildAttendanceIntelligenceSnapshot,
+buildAttendanceIntelligenceSnapshot,
 } from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
@@ -716,60 +716,66 @@ await applySessionData(
       await writeUpsert(record);
 
       try {
-        const streak = await computeAbsenceStreak({
-          organizationId,
-          entityId,
-          memberId: member.id,
-          track: currentTrack,
-        });
-
-        const snapshot =
-  buildAttendanceIntelligenceSnapshot({
-    streak,
-    attendancePolicy,
+  const streak = await computeAbsenceStreak({
+    organizationId,
+    entityId,
+    memberId: member.id,
+    track: currentTrack,
   });
 
+  const snapshot =
+    await rebuildMemberAttendanceIntelligence({
+      organizationId,
+      entityId,
+      member,
+      attendancePolicy,
+      track: currentTrack,
+    });
+
   await updateDoc(
-  doc(
-    db,
-    "organizations",
-    organizationId,
-    "entities",
-    entityId,
-    "members",
-    member.id
-  ),
-  {
-    attendanceIntelligence: snapshot,
-  }
-);
-        const health =
-  classifyAttendanceHealth(
-    streak,
-    attendancePolicy
+    doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "members",
+      member.id
+    ),
+    {
+      attendanceIntelligence: snapshot,
+    }
   );
 
-if (
-  health === "follow_up" ||
-  health === "at_risk" ||
-  health === "inactive_candidate"
-) {
-  flagged.push(
-    `${member.name} (${streak})`
+  const health = snapshot.health;
+
+  if (
+    health === "follow_up" ||
+    health === "at_risk" ||
+    health === "inactive_candidate"
+  ) {
+    flagged.push(
+      `${member.name} (${streak})`
+    );
+  }
+
+} catch (e) {
+  console.log(
+    "❌ post-session streak check:",
+    e
   );
 }
-      } catch (e) {
-        console.log("❌ post-session streak check:", e);
-      }
-    }
 
-    if (flagged.length > 0) {
-      Alert.alert(
-        "Pastoral Follow-Up Needed",
-        `${flagged.length} member(s) have reached the absence threshold:\n\n${flagged.join("\n")}`
-      );
-    }
-  };
+} // <-- closes for (const member of local)
+
+if (flagged.length > 0) {
+  Alert.alert(
+    "Pastoral Follow-Up Needed",
+    `${flagged.length} member(s) have reached the absence threshold:\n\n${flagged.join("\n")}`
+  );
+}
+
+}; // <-- closes autoMarkAbsentees
 
   // ─────────────────────────────────────────────────────────────────
   // END SESSION
@@ -1551,6 +1557,14 @@ const attendancePolicy = {
       ?.inactiveCandidateThreshold ?? null,
 };
 
+console.log(
+  "ATTENDANCE POLICY FROM SETTINGS",
+  JSON.stringify(
+    attendancePolicy,
+    null,
+    2
+  )
+);
 
   const CHURCH_COORDS = {
     latitude: attendanceSettings?.geoLatitude ?? 5.6037,

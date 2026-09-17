@@ -20,6 +20,9 @@ import {
   buildAttendanceIntelligenceSummary,
 } from "../utils/attendanceIntelligence";
 
+import { useAttendanceSettings }
+  from "../hooks/useAttendanceSettings";
+
 import AppHeader from "../components/AppHeader";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -47,6 +50,12 @@ const [deceasedCount, setDeceasedCount] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [entity, setEntity] = useState(null);
+  const {
+  settings: attendanceSettings,
+} = useAttendanceSettings(
+  entity?.organizationId,
+  entity?.entityId
+);
   const [members, setMembers] = useState([]);
 
 
@@ -182,6 +191,20 @@ console.log(
   "MEMBERS LOADED:",
   allMembers.length
 );
+const attendancePolicy = {
+  followUpThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.followUpThreshold ?? 1,
+
+  atRiskThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.atRiskThreshold ?? 2,
+
+  inactiveCandidateThreshold:
+    attendanceSettings?.attendancePolicy
+      ?.inactiveCandidateThreshold ?? 4,
+};
+
 const summary =
   await buildAttendanceIntelligenceSummary({
     organizationId:
@@ -189,6 +212,7 @@ const summary =
     entityId:
       ent.entityId,
     members: allMembers,
+    attendancePolicy,
     track: "sunday",
   });
 
@@ -431,7 +455,7 @@ setEscalatedCount(
     style={styles.queueRow}
     onPress={() =>
       navigation.navigate(
-        "MemberProfile",
+        "MyMemberProfile",
         {
           memberId: member.memberId,
         }
@@ -470,7 +494,7 @@ setEscalatedCount(
         style={styles.queueRow}
         onPress={() =>
           navigation.navigate(
-            "MemberProfile",
+            "MyMemberProfile",
             {
             memberId: member.memberId,
             }
@@ -505,7 +529,7 @@ setEscalatedCount(
     <TouchableOpacity
       onPress={() =>
         navigation.navigate(
-          "MemberProfile",
+          "MyMemberProfile",
           {
             memberId:
               member.memberId,
