@@ -546,6 +546,8 @@ setEscalatedCount(
     ))}
   </View>
 
+  
+
   <View style={styles.intelligenceRow}>
     <View style={styles.intelligenceCard}>
       <Text style={styles.intelligenceNumber}>
@@ -555,6 +557,9 @@ setEscalatedCount(
         Follow-Up
       </Text>
     </View>
+
+
+
 
     <View style={styles.intelligenceCard}>
       <Text style={styles.intelligenceNumber}>
