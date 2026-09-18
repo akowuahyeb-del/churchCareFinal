@@ -284,8 +284,25 @@ setFollowUpMembers(
   summary.followUpMembers
 );
 
+console.log(
+  "FOLLOW-UP MEMBERS FULL:",
+  JSON.stringify(
+    summary.followUpMembers,
+    null,
+    2
+  )
+);
 setAtRiskMembers(
   summary.atRiskMembers
+);
+
+console.log(
+  "AT-RISK MEMBERS FULL:",
+  JSON.stringify(
+    summary.atRiskMembers,
+    null,
+    2
+  )
 );
 
 setInactiveCandidateMembers(

@@ -306,6 +306,14 @@ export async function getMemberOccurrences({
       where("attendanceTrack", "==", track)
     )
   );
+  console.log(
+  "TRACK CHECK",
+  {
+    memberId,
+    track,
+    records: trackSnap.size,
+  }
+);
 
   // Revival sessions are grouped by seriesId, not track — pull them
   // separately so a revival that happens to share a track value isn't
@@ -319,13 +327,25 @@ export async function getMemberOccurrences({
   );
 
   const occurrenceMap = new Map(); // key -> { category, date, sawPresent }
+const ingest = (docs) => {
+  docs.forEach((d) => {
+    const data = d.data();
 
-  const ingest = (docs) => {
-    docs.forEach((d) => {
-      const data = d.data();
-      const category = normalizeCategory(
-  data.sessionCategory || "worship"
-);
+    console.log(
+      "TRACK RECORD",
+      {
+        memberId: data.memberId,
+        date: data.date,
+        service: data.service,
+        attendanceTrack: data.attendanceTrack,
+        sessionCategory: data.sessionCategory,
+        status: data.status,
+      }
+    );
+
+    const category = normalizeCategory(
+      data.sessionCategory || "worship"
+    );
 
       // Special events never enter the streak at all, regardless of
       // how many "absent" records exist for them.
@@ -487,6 +507,49 @@ export function classifyAttendanceHealth(
   }
 
   return ATTENDANCE_HEALTH.HEALTHY;
+}
+
+
+export function buildAttendanceRecommendation(
+  streak,
+  policy
+) {
+  const health =
+    classifyAttendanceHealth(
+      streak,
+      policy
+    );
+
+  switch (health) {
+    case ATTENDANCE_HEALTH.FOLLOW_UP:
+      return {
+        health,
+        action: "follow_up",
+        priority: "medium",
+      };
+
+    case ATTENDANCE_HEALTH.AT_RISK:
+      return {
+        health,
+        action: "pastoral_review",
+        priority: "high",
+      };
+
+    case ATTENDANCE_HEALTH.INACTIVE_CANDIDATE:
+      return {
+        health,
+        action: "inactive_review",
+        priority: "critical",
+      };
+
+    default:
+      return {
+        health:
+          ATTENDANCE_HEALTH.HEALTHY,
+        action: "none",
+        priority: "none",
+      };
+  }
 }
 
 export function shouldIncludeInAttendanceIntelligence(

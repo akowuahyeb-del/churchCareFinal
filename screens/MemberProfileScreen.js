@@ -26,7 +26,9 @@ import {
   resolveMemberTrack,
   classifyAttendanceHealth,
   buildAttendanceRecommendation,
+  getMemberOccurrences,
 } from "../utils/attendanceIntelligence";
+
 import {
   getFunctions,
   httpsCallable,
@@ -277,27 +279,44 @@ if (
       entityDefaultTrack,
   });
 
-setAttendanceTrack(track);
+  const normalizedTrack =
+  String(track || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+
+setAttendanceTrack(normalizedTrack);
+
 
 const streak =
   await computeAbsenceStreak({
     organizationId,
     entityId,
     memberId,
-    track,
+    track: normalizedTrack,
   });
 
 
       const memberIsInactive = member?.lifecycleStatus === "inactive";
 
-      const health = memberIsInactive
+     console.log(
+  "classifyAttendanceHealth typeof:",
+  typeof classifyAttendanceHealth
+);
+
+const health = memberIsInactive
   ? "inactive"
   : classifyAttendanceHealth(
       streak,
       attendancePolicy
     );
 
-     const recommendation =
+    console.log(
+  "buildAttendanceRecommendation typeof:",
+  typeof buildAttendanceRecommendation
+);
+
+const recommendation =
   memberIsInactive
     ? {
         health: "inactive",
@@ -310,6 +329,44 @@ const streak =
       );
 
       setAbsenceStreak(streak);
+console.log(
+  "PROFILE MEMBER:",
+  memberId
+);
+
+console.log(
+  "PROFILE TRACK:",
+  track
+);
+
+const occurrences =
+  await getMemberOccurrences({
+    organizationId,
+    entityId,
+    memberId,
+    track: normalizedTrack,
+  });
+
+console.log(
+  "PROFILE OCCURRENCES",
+  JSON.stringify(
+    occurrences,
+    null,
+    2
+  )
+);
+
+console.log(
+  "PROFILE STREAK:",
+  streak
+);
+
+console.log(
+  "PROFILE POLICY:",
+  attendancePolicy
+);
+
+
       setAttendanceHealth(health);
       setAttendanceRecommendation(recommendation);
     } catch (e) {
@@ -1031,96 +1088,181 @@ const streak =
         )}
       </View>
 
-      {/* ── PROFILE HERO ── */}
-      <View style={styles.hero}>
-        <TouchableOpacity
-          style={styles.avatarWrap}
-          onPress={(canManageMembers || isSelf) ? pickImage : undefined}
-          activeOpacity={(canManageMembers || isSelf) ? 0.7 : 1}
-        >
-          {uploadingPhoto ? (
-            <View style={styles.avatarPlaceholder}><ActivityIndicator color="#fff" /></View>
-          ) : member.profileImage ? (
-            <Image source={{ uri: member.profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitials}>
-                {(member.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-              </Text>
-            </View>
-          )}
-          {(canManageMembers || isSelf) && !uploadingPhoto && (
-            <View style={styles.cameraOverlay}>
-              <Ionicons name="camera" size={14} color="#fff" />
-            </View>
-          )}
-        </TouchableOpacity>
+{/* ── COMPACT PROFILE HERO ── */}
+<View style={styles.heroCompact}>
 
-        <Text style={styles.heroName}>{member.name || "Unnamed Member"}</Text>
-        <Text style={styles.heroMinistry}>
-          {member.memberships?.length > 0
-            ? member.memberships.join(" • ")
-            : member.ministry || "No memberships"}
+  {/* PHOTO */}
+  <TouchableOpacity
+    style={styles.avatarWrap}
+    onPress={
+      (canManageMembers || isSelf)
+        ? pickImage
+        : undefined
+    }
+    activeOpacity={
+      (canManageMembers || isSelf)
+        ? 0.7
+        : 1
+    }
+  >
+    {uploadingPhoto ? (
+      <View style={styles.avatarPlaceholder}>
+        <ActivityIndicator color="#fff" />
+      </View>
+    ) : member.profileImage ? (
+      <Image
+        source={{
+          uri: member.profileImage,
+        }}
+        style={styles.avatar}
+      />
+    ) : (
+      <View style={styles.avatarPlaceholder}>
+        <Text style={styles.avatarInitials}>
+          {(member.name || "?")
+            .split(" ")
+            .map(n => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()}
         </Text>
+      </View>
+    )}
 
-        {member.memberCode && (
-          <Text style={styles.heroCode}>ID: {member.memberCode}</Text>
-        )}
-
-        <View style={[styles.statusBadge, {
-          backgroundColor:
-            isDeceased ? "#f0f0f0" :
-            isDisciplined ? "#fff3e0" : "#e8f8f0"
-        }]}>
-          <View style={[styles.statusDot, {
-            backgroundColor:
-              isDeceased ? "#888" :
-              isDisciplined ? "#e67e22" : "#27ae60"
-          }]} />
-          <Text style={[styles.statusLabel, {
-            color:
-              isDeceased ? "#666" :
-              isDisciplined ? "#e67e22" : "#27ae60"
-          }]}>
-            {isDeceased
-              ? `Deceased${member.dateOfDeath ? ` · ${member.dateOfDeath}` : ""}`
-              : isDisciplined
-                ? member.disciplinaryStatus.charAt(0).toUpperCase() + member.disciplinaryStatus.slice(1)
-                : "Active"}
-          </Text>
+    {(canManageMembers || isSelf) &&
+      !uploadingPhoto && (
+        <View style={styles.cameraOverlay}>
+          <Ionicons
+            name="camera"
+            size={12}
+            color="#fff"
+          />
         </View>
+      )}
+  </TouchableOpacity>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Ionicons name="checkmark-circle" size={28} color="#7CFFB2" />
-            <Text style={styles.statPillValue}>
-              {attendanceRate !== null ? `${attendanceRate}%` : "—"}
-            </Text>
-            <Text style={styles.statPillLabel}>Attendance</Text>
-          </View>
+  {/* DETAILS */}
+  <View style={styles.memberInfo}>
 
-          <View style={styles.statPill}>
-            <Ionicons name="wallet" size={28} color="#FFD166" />
-            <Text style={styles.statPillValue}>
-              ₵{totalGiven.toLocaleString()}
-            </Text>
-            <Text style={styles.statPillLabel}>Total Given</Text>
-          </View>
+    <Text style={styles.heroNameCompact}>
+      {member.name || "Unnamed Member"}
+    </Text>
 
-          <View style={styles.statPill}>
-            <Ionicons name="alert-circle" size={28} color="#FF8A8A" />
-            <Text style={styles.statPillValue}>{absentCount}</Text>
-            <Text style={styles.statPillLabel}>Absences</Text>
-          </View>
-        </View>
+    <Text style={styles.heroMinistryCompact}>
+      {member.memberships?.length > 0
+        ? member.memberships.join(" • ")
+        : member.ministry || "No memberships"}
+    </Text>
 
-        {member.memberCode && (canManageMembers || isSelf) && (
-          <TouchableOpacity style={styles.badgeBtn} onPress={() => setBadgeModalVisible(true)}>
-            <Ionicons name="qr-code-outline" size={14} color="#fff" />
-            <Text style={styles.badgeBtnText}>View Member Badge</Text>
+    <View style={styles.idRow}>
+      {member.memberCode && (
+        <Text style={styles.heroCodeCompact}>
+          ID: {member.memberCode}
+        </Text>
+      )}
+
+      {member.memberCode &&
+        (canManageMembers || isSelf) && (
+          <TouchableOpacity
+            style={styles.badgeIconBtn}
+            onPress={() =>
+              setBadgeModalVisible(true)
+            }
+          >
+            <Ionicons
+              name="qr-code-outline"
+              size={18}
+              color="#fff"
+            />
           </TouchableOpacity>
         )}
-      </View>
+    </View>
+
+    <View
+      style={[
+        styles.statusBadgeCompact,
+        {
+          backgroundColor:
+            isDeceased
+              ? "#f0f0f0"
+              : isDisciplined
+              ? "#fff3e0"
+              : "#e8f8f0",
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.statusDot,
+          {
+            backgroundColor:
+              isDeceased
+                ? "#888"
+                : isDisciplined
+                ? "#e67e22"
+                : "#27ae60",
+          },
+        ]}
+      />
+
+      <Text
+        style={[
+          styles.statusLabel,
+          {
+            color:
+              isDeceased
+                ? "#666"
+                : isDisciplined
+                ? "#e67e22"
+                : "#27ae60",
+          },
+        ]}
+      >
+        {isDeceased
+          ? "Deceased"
+          : isDisciplined
+          ? member.disciplinaryStatus
+          : "Active"}
+      </Text>
+    </View>
+
+  </View>
+
+</View>
+
+{/* COMPACT STATS */}
+<View style={styles.summaryRow}>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      {attendanceRate !== null
+        ? `${attendanceRate}%`
+        : "—"}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Attendance
+    </Text>
+  </View>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      ₵{totalGiven.toLocaleString()}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Given
+    </Text>
+  </View>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      {absentCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Absences
+    </Text>
+  </View>
+
+</View>
 
       {/* ── TABS ── */}
       <View style={styles.tabRow}>
@@ -1679,7 +1821,13 @@ const styles = StyleSheet.create({
   rolePill: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   roleText: { color: "#fff", fontSize: 11, fontWeight: "600" },
 
-  hero: { backgroundColor: "#4B3F72", alignItems: "center", paddingBottom: 20, paddingTop: 8 },
+  heroCompact: {
+  backgroundColor: "#4B3F72",
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+},
   avatarWrap: { position: "relative" },
   avatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, borderColor: "#fff" },
   avatarPlaceholder: {
@@ -1871,4 +2019,68 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
   },
+  memberInfo: {
+  flex: 1,
+  marginLeft: 12,
+},
+
+heroNameCompact: {
+  color: "#fff",
+  fontSize: 22,
+  fontWeight: "800",
+},
+
+heroMinistryCompact: {
+  color: "rgba(255,255,255,0.8)",
+  fontSize: 13,
+  marginTop: 2,
+},
+
+heroCodeCompact: {
+  color: "rgba(255,255,255,0.7)",
+  fontSize: 12,
+  marginTop: 2,
+},
+
+summaryRow: {
+  backgroundColor: "#fff",
+  flexDirection: "row",
+  justifyContent: "space-around",
+  paddingVertical: 10,
+},
+
+summaryItem: {
+  alignItems: "center",
+},
+
+summaryValue: {
+  fontSize: 16,
+  fontWeight: "700",
+},
+
+summaryLabel: {
+  fontSize: 11,
+  color: "#777",
+},
+idRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 4,
+},
+
+badgeIconBtn: {
+  marginLeft: 10,
+  padding: 4,
+},
+
+statusBadgeCompact: {
+  alignSelf: "flex-start",
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 14,
+  marginTop: 6,
+},
+
 });
