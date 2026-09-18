@@ -105,7 +105,6 @@ const formatLifecycleStatus = (value) => {
 };
 
 export default function MemberProfileScreen({ route, navigation }) {
-
   const memberId =
     route?.params?.memberId ||
     route?.params?.viewerMemberId ||
@@ -145,6 +144,14 @@ const [entityDefaultTrack,
   useState("sunday");
 
   const [tab, setTab] = useState("profile");
+const [attendanceSearch, setAttendanceSearch] = useState("");
+const [attendanceFilter, setAttendanceFilter] = useState("all");
+const [attendanceSort, setAttendanceSort] = useState("newest");
+const [attendancePeriod, setAttendancePeriod] = useState("all");
+const [contributionSearch, setContributionSearch] = useState("");
+const [contributionFilter, setContributionFilter] = useState("all");
+
+const [profileSearch, setProfileSearch] = useState("");
 
   const [editModal, setEditModal] = useState(false);
   const [editField, setEditField] = useState("");
@@ -396,12 +403,29 @@ console.log(
       // contributions. Same privacy issue already fixed on the in-kind
       // side; now ID-only, with a name fallback ONLY for legacy records
       // that predate memberId being stored.
-      const cashData = cashSnap.docs
-        .map(d => ({ id: d.id, donationType: "cash", ...d.data() }))
-        .filter(d => {
-          if (d.memberId) return d.memberId === memberId;
-          return d.memberName === member?.name; // legacy records only
-        });
+     const cashData = cashSnap.docs
+  .map(d => ({
+    id: d.id,
+    donationType: "cash",
+    ...d.data(),
+  }))
+  .filter(d => {
+
+    if (d.memberId === memberId) {
+      return true;
+    }
+
+    if (
+      d.memberName &&
+      member?.name &&
+      d.memberName.trim().toLowerCase() ===
+      member.name.trim().toLowerCase()
+    ) {
+      return true;
+    }
+
+    return false;
+  });
 
       // IN-KIND DONATIONS
       const inKindSnap = await getDocs(
@@ -411,20 +435,67 @@ console.log(
       const inKindData = inKindSnap.docs
         .map(d => ({ id: d.id, donationType: "inkind", ...d.data() }))
         .filter(d => {
-          if (d.memberId) return d.memberId === memberId;
 
-          if (Array.isArray(d.donors)) {
-            return d.donors.some(donor => donor?.id === memberId);
-          }
+  if (d.memberId === memberId) {
+    return true;
+  }
 
-          return d.memberName === member?.name; // legacy records only
-        });
+  if (
+    Array.isArray(d.donors) &&
+    d.donors.some(
+      donor =>
+        donor?.id === memberId ||
+        donor?.name === member?.name
+    )
+  ) {
+    return true;
+  }
 
-      const combined = [...cashData, ...inKindData].sort(
-        (a, b) => (b.date || "").localeCompare(a.date || "")
-      );
+  if (
+    d.memberName &&
+    member?.name &&
+    d.memberName.trim().toLowerCase() ===
+    member.name.trim().toLowerCase()
+  ) {
+    return true;
+  }
 
-      setContributions(combined);
+  return false;
+});
+
+    const combined = [...cashData, ...inKindData].sort(
+  (a, b) =>
+    (b.date || "").localeCompare(
+      a.date || ""
+    )
+);
+
+setContributions(combined);
+
+      console.log(
+  "PROFILE MEMBER ID:",
+  memberId
+);
+
+console.log(
+  "CASH MATCHES:",
+  cashData.length
+);
+
+console.log(
+  "INKIND MATCHES:",
+  inKindData.length
+);
+
+console.log(
+  "CONTRIBUTION SAMPLE:",
+  JSON.stringify(
+    cashSnap.docs[0]?.data() ||
+    inKindSnap.docs[0]?.data(),
+    null,
+    2
+  )
+);
     } catch (e) {
       console.log("❌ Load contributions error", e);
     }
@@ -711,6 +782,88 @@ console.log(
   const lastAttended = attendanceHistory.find(a => a.status === "present");
   const totalGiven = contributions.reduce((s, c) => s + (c.amount || 0), 0);
   const contributionCount = contributions.length;
+  const cashCount =
+  contributions.filter(
+    c => c.donationType === "cash"
+  ).length;
+
+const inKindCount =
+  contributions.filter(
+    c => c.donationType === "inkind"
+  ).length;
+  const filteredContributions =
+  contributions.filter(item => {
+
+    const searchMatch =
+      contributionSearch.trim() === "" ||
+      JSON.stringify(item)
+        .toLowerCase()
+        .includes(
+          contributionSearch.toLowerCase()
+        );
+
+    const typeMatch =
+      contributionFilter === "all"
+        ? true
+        : item.donationType === contributionFilter;
+
+    return searchMatch && typeMatch;
+  });
+
+const filteredAttendanceHistory =
+  attendanceHistory
+    .filter(record => {
+
+      const searchMatch =
+        attendanceSearch.trim() === "" ||
+        JSON.stringify(record)
+          .toLowerCase()
+          .includes(
+            attendanceSearch.toLowerCase()
+          );
+
+      const statusMatch =
+        attendanceFilter === "all"
+          ? true
+          : record.status === attendanceFilter;
+
+      let periodMatch = true;
+
+      if (
+        attendancePeriod === "month"
+      ) {
+        const recordDate =
+          new Date(record.date);
+
+        const now = new Date();
+
+        periodMatch =
+          recordDate.getMonth() === now.getMonth() &&
+          recordDate.getFullYear() === now.getFullYear();
+      }
+
+      return (
+        searchMatch &&
+        statusMatch &&
+        periodMatch
+      );
+    })
+    .sort((a, b) => {
+
+      if (
+        attendanceSort === "oldest"
+      ) {
+        return (
+          new Date(a.date) -
+          new Date(b.date)
+        );
+      }
+
+      return (
+        new Date(b.date) -
+        new Date(a.date)
+      );
+    });
 
   /* ────────────── ELDER THRESHOLD LOGIC ────────────── */
   const getElderThreshold = (action) => {
@@ -1298,16 +1451,41 @@ console.log(
                   color: member.communicantStatus === "invalid" ? "#e74c3c" : "#27ae60"
                 }}>
                   Communicant — {member.communicantStatus === "invalid"
-                    ? `Invalid since ${member.communicantInvalidSince || "—"}`
+                    ? `Invalid since ${formatDate(member.communicantInvalidSince)}`
+
                     : "Active"}
                 </Text>
               </View>
             )}
+<View style={styles.searchContainer}>
+  <Ionicons
+    name="search"
+    size={16}
+    color="#9CA3AF"
+    style={{ marginLeft: 12 }}
+  />
+
+  <TextInput
+    style={styles.searchInputModern}
+    placeholder="Phone, address, occupation..."
+value={profileSearch}
+onChangeText={setProfileSearch}
+  />
+</View>
+
 
             {/* FIX: removed the "INVITE DEBUG" console.log that sat
                 inside this map — it fired once per field on every
                 render and printed viewer permissions. */}
-            {PROFILE_FIELDS.map(({ key, label, selfEditable }) => {
+            {PROFILE_FIELDS
+  .filter(field =>
+    field.label
+      .toLowerCase()
+      .includes(
+        profileSearch.toLowerCase()
+      )
+  )
+  .map(({ key, label, selfEditable }) => {
               const canEditField = canManageMembers || (isSelf && selfEditable);
               const canRequestField = isSelf && !selfEditable && !canManageMembers;
 
@@ -1375,6 +1553,111 @@ console.log(
         {/* ══ TAB: ATTENDANCE ══ */}
         {tab === "attendance" && (
           <View>
+     <View style={styles.searchContainer}>
+
+  <TextInput
+    style={styles.searchInputModern}
+  placeholder="Search date, service, event..."
+    placeholderTextColor="#999"
+    value={attendanceSearch}
+    onChangeText={setAttendanceSearch}
+  />
+
+  <Ionicons
+    name="search"
+    size={18}
+    color="#4B3F72"
+    style={styles.searchIcon}
+  />
+
+</View>
+
+<View style={styles.filterRow}>
+  <View style={styles.sortRow}>
+
+  <TouchableOpacity
+    style={styles.filterChip}
+    onPress={() =>
+      setAttendanceSort(
+        attendanceSort === "newest"
+          ? "oldest"
+          : "newest"
+      )
+    }
+  >
+    <Text style={styles.filterChipText}>
+      {attendanceSort === "newest"
+        ? "Newest"
+        : "Oldest"}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.filterChip}
+    onPress={() =>
+      setAttendancePeriod(
+        attendancePeriod === "all"
+          ? "month"
+          : "all"
+      )
+    }
+  >
+    <Text style={styles.filterChipText}>
+      {attendancePeriod === "all"
+        ? "All Dates"
+        : "This Month"}
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+  {["all", "present", "absent"].map(item => (
+
+    <TouchableOpacity
+      key={item}
+      style={[
+        styles.filterChip,
+        attendanceFilter === item &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setAttendanceFilter(item)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          attendanceFilter === item &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {item.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+<View style={styles.attendanceSummary}>
+
+  <Text style={styles.summaryText}>
+    Present: {
+      attendanceHistory.filter(
+        r => r.status === "present"
+      ).length
+    }
+  </Text>
+
+  <Text style={styles.summaryText}>
+    Absent: {
+      attendanceHistory.filter(
+        r => r.status === "absent"
+      ).length
+    }
+  </Text>
+
+</View>
             <View style={styles.statusCard}>
               <Text style={styles.statusCardLabel}>ATTENDANCE INTELLIGENCE</Text>
 
@@ -1406,13 +1689,13 @@ console.log(
                 ({lastAttended.service} · {lastAttended.type})
               </Text>
             )}
-            {attendanceHistory.length === 0 ? (
+            {filteredAttendanceHistory.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="calendar-outline" size={40} color="#ccc" />
                 <Text style={styles.emptyText}>No attendance records yet</Text>
               </View>
             ) : (
-              attendanceHistory.map(r => (
+              filteredAttendanceHistory.map(r => (
                 <View key={r.id} style={styles.recordRow}>
                   <View>
                     <Text style={styles.recordTitle}>{r.service} · {r.type}</Text>
@@ -1441,51 +1724,150 @@ console.log(
         {/* ══ TAB: CONTRIBUTIONS ══ */}
         {tab === "contributions" && (
           <View>
+            <View style={styles.searchContainer}>
+
+  <TextInput
+    style={styles.searchInputModern}
+    placeholder="Date, offering or item..."
+    placeholderTextColor="#999"
+    value={contributionSearch}
+    onChangeText={setContributionSearch}
+  />
+
+  <Ionicons
+    name="search"
+    size={18}
+    color="#4B3F72"
+    style={styles.searchIcon}
+  />
+
+</View>
+
+<View style={styles.filterRow}>
+
+  {["all", "cash", "inkind"].map(item => (
+
+    <TouchableOpacity
+      key={item}
+      style={[
+        styles.filterChip,
+        contributionFilter === item &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setContributionFilter(item)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          contributionFilter === item &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {item.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
             <Text style={styles.sectionTitle}>Contribution Records</Text>
-            {contributions.length === 0 ? (
+            <View style={styles.summaryRow}>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      ₵{totalGiven.toLocaleString()}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Total Given
+    </Text>
+  </View>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      {cashCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      Donations
+    </Text>
+  </View>
+
+  <View style={styles.summaryItem}>
+    <Text style={styles.summaryValue}>
+      {inKindCount}
+    </Text>
+    <Text style={styles.summaryLabel}>
+      In-Kind
+    </Text>
+  </View>
+
+</View>
+            {filteredContributions.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="wallet-outline" size={40} color="#ccc" />
                 <Text style={styles.emptyText}>No contributions recorded yet</Text>
               </View>
             ) : (
               <>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Contributions</Text>
-                  <Text style={styles.totalAmount}>GH₵ {totalGiven.toLocaleString()}</Text>
-                </View>
-                {contributions.map(c => (
-                  <View key={c.id} style={styles.recordRow}>
-                    <View>
-                      <Text style={styles.recordTitle}>
-                        {c.donationType === "inkind"
-                          ? c.itemName || c.categoryLabel || "In-Kind Donation"
-                          : c.type || "Offering"}
-                      </Text>
-                      <Text style={styles.recordSub}>{formatDate(c.date)}</Text>
+               <View style={styles.totalRow}>
+  <Text style={styles.totalLabel}>
+    Total Contributions
+  </Text>
 
-                      {c.acknowledgedByName && (
-                        <Text style={styles.recordSub}>
-                          ✅ Approved by {c.acknowledgedByName}
-                        </Text>
-                      )}
+  <Text style={styles.totalAmount}>
+    GH₵ {totalGiven.toLocaleString()}
+  </Text>
+</View>
 
-                      {c.acknowledgedByRole && (
-                        <Text style={styles.recordSub}>Role: {c.acknowledgedByRole}</Text>
-                      )}
+{filteredContributions.map(c => (
+  <View
+    key={c.id}
+    style={styles.recordRow}
+  >
+    <View>
 
-                      {c.acknowledgedAt && (
-                        <Text style={styles.recordSub}>
-                          {new Date(c.acknowledgedAt).toLocaleString()}
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={styles.contribAmount}>
-                      {c.donationType === "inkind"
-                        ? `${c.quantity || 0} ${c.unit || ""}`
-                        : `GH₵ ${(c.amount || 0).toLocaleString()}`}
-                    </Text>
-                  </View>
-                ))}
+      <Text style={styles.recordTitle}>
+        {c.donationType === "inkind"
+          ? c.itemName ||
+            c.categoryLabel ||
+            "In-Kind Donation"
+          : c.type || "Offering"}
+      </Text>
+
+      <Text style={styles.recordSub}>
+        {formatDate(c.date)}
+      </Text>
+
+      {c.acknowledgedByName && (
+        <Text style={styles.recordSub}>
+          ✅ Approved by {c.acknowledgedByName}
+        </Text>
+      )}
+
+      {c.acknowledgedByRole && (
+        <Text style={styles.recordSub}>
+          Role: {c.acknowledgedByRole}
+        </Text>
+      )}
+
+      {c.acknowledgedAt && (
+        <Text style={styles.recordSub}>
+          {formatDate(c.acknowledgedAt)}
+        </Text>
+      )}
+
+    </View>
+
+    <Text style={styles.contribAmount}>
+      {c.donationType === "inkind"
+        ? `${c.quantity || 0} ${c.unit || ""}`
+        : `GH₵ ${(c.amount || 0).toLocaleString()}`}
+    </Text>
+
+  </View>
+))}
               </>
             )}
           </View>
@@ -1507,7 +1889,7 @@ console.log(
               </Text>
               {isDisciplined && member.disciplinaryDate && (
                 <Text style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
-                  Since {member.disciplinaryDate}
+                  Since {formatDate(member.disciplinaryDate)}
                   {member.disciplinaryNote ? ` — "${member.disciplinaryNote}"` : ""}
                 </Text>
               )}
@@ -2082,5 +2464,80 @@ statusBadgeCompact: {
   borderRadius: 14,
   marginTop: 6,
 },
+searchInput: {
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: "#e5e7eb",
+},
+searchContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#FFFFFF",
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: "#E5E7EB",
+  height: 40,
+  marginBottom: 8,
+},
 
+searchInputModern: {
+  flex: 1,
+  fontSize: 13,
+  paddingHorizontal: 10,
+  color: "#111827",
+},
+searchIcon: {
+  marginLeft: 8,
+},
+
+
+filterChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 14,
+  backgroundColor: "#F3F4F6",
+  marginRight: 6,
+},
+
+
+filterChipActive: {
+  backgroundColor: "#4B3F72",
+},
+
+filterChipText: {
+  fontSize: 12,
+  color: "#666",
+  fontWeight: "600",
+},
+
+filterChipTextActive: {
+  color: "#fff",
+},
+
+attendanceSummary: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: 10,
+},
+
+summaryText: {
+  fontSize: 12,
+  color: "#666",
+  fontWeight: "600",
+},
+filterRow: {
+  flexDirection: "row",
+  marginBottom: 6,
+},
+searchIcon: {
+  marginRight: 12,
+},
+sortRow: {
+  flexDirection: "row",
+  marginBottom: 6,
+},
 });
