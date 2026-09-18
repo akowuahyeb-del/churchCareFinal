@@ -147,9 +147,10 @@ const [entityDefaultTrack,
 const [attendanceSearch, setAttendanceSearch] = useState("");
 const [attendanceFilter, setAttendanceFilter] = useState("all");
 const [attendanceSort, setAttendanceSort] = useState("newest");
-const [attendancePeriod, setAttendancePeriod] = useState("all");
+const [attendancePeriod, setAttendancePeriod] = useState("90days");
 const [contributionSearch, setContributionSearch] = useState("");
 const [contributionFilter, setContributionFilter] = useState("all");
+const [contributionPeriod, setContributionPeriod] = useState("90days");
 
 const [profileSearch, setProfileSearch] = useState("");
 
@@ -244,22 +245,113 @@ const [profileSearch, setProfileSearch] = useState("");
     }
   };
 
-  const loadAttendance = async () => {
-    if (!organizationId || !entityId) return;
-    try {
-      const q = query(
-        collection(db, "organizations", organizationId, "entities", entityId, "attendance"),
-        where("memberId", "==", memberId)
+  const getStartDate = period => {
+  const now = new Date();
+
+  switch (period) {
+
+    case "30days":
+      return new Date(
+        now.getTime() - 30 * 24 * 60 * 60 * 1000
       );
-      const snap = await getDocs(q);
-      const data = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      setAttendanceHistory(data);
-    } catch (e) {
-      console.log("❌ Load attendance error:", e);
+
+    case "90days":
+      return new Date(
+        now.getTime() - 90 * 24 * 60 * 60 * 1000
+      );
+
+    case "year":
+      return new Date(
+        now.getFullYear(),
+        0,
+        1
+      );
+
+    default:
+      return null;
+  }
+};
+
+ const loadAttendance = async () => {
+
+  if (
+    !organizationId ||
+    !entityId ||
+    !memberId
+  ) {
+    return;
+  }
+
+  try {
+
+    const startDate =
+      getStartDate(attendancePeriod);
+
+    let constraints = [
+      where(
+        "memberId",
+        "==",
+        memberId
+      ),
+    ];
+
+    if (startDate) {
+
+      constraints.push(
+        where(
+          "date",
+          ">=",
+          startDate
+            .toISOString()
+            .split("T")[0]
+        )
+      );
+
     }
-  };
+
+    const attendanceRef =
+      collection(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "attendance"
+      );
+
+    const q = query(
+      attendanceRef,
+      ...constraints
+    );
+
+    const snap =
+      await getDocs(q);
+
+    const data =
+      snap.docs
+        .map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+        .sort(
+          (a, b) =>
+            (b.date || "")
+              .localeCompare(
+                a.date || ""
+              )
+        );
+
+    setAttendanceHistory(data);
+
+  } catch (e) {
+
+    console.log(
+      "❌ Load attendance error:",
+      e
+    );
+
+  }
+};
 
   const loadAttendanceIntelligence = async () => {
   if (
@@ -620,19 +712,30 @@ console.log(
     });
   };
 
-  useEffect(() => {
-    if (!memberId || !organizationId || !entityId) return;
+ useEffect(() => {
 
-    loadMember();
-    loadAttendance();
+  if (
+    !memberId ||
+    !organizationId ||
+    !entityId
+  ) {
+    return;
+  }
 
-    // FIX: was wrapped in setTimeout(..., 500) — a band-aid that just
-    // delayed the visitor list appearing. Every ID it needs is already
-    // available here.
-    loadAssignedVisitors();
+  loadMember();
 
-    loadTransferHistory();
-  }, [memberId, organizationId, entityId]);
+  loadAttendance();
+
+  loadAssignedVisitors();
+
+  loadTransferHistory();
+
+}, [
+  memberId,
+  organizationId,
+  entityId,
+  attendancePeriod,   // reload when period changes
+]);
 
   // FIX: loadAttendanceIntelligence used to run in the mount effect
   // above, where `member` was still null — so the
@@ -1592,22 +1695,6 @@ onChangeText={setProfileSearch}
     </Text>
   </TouchableOpacity>
 
-  <TouchableOpacity
-    style={styles.filterChip}
-    onPress={() =>
-      setAttendancePeriod(
-        attendancePeriod === "all"
-          ? "month"
-          : "all"
-      )
-    }
-  >
-    <Text style={styles.filterChipText}>
-      {attendancePeriod === "all"
-        ? "All Dates"
-        : "This Month"}
-    </Text>
-  </TouchableOpacity>
 
 </View>
 
@@ -1681,6 +1768,48 @@ onChangeText={setProfileSearch}
                 {formatAttendanceAction(attendanceRecommendation?.action || "none")}
               </Text>
             </View>
+<View style={styles.filterRow}>
+
+  {[
+    "30days",
+    "90days",
+    "year",
+    "all",
+  ].map(period => (
+
+    <TouchableOpacity
+      key={period}
+      style={[
+        styles.filterChip,
+        attendancePeriod === period &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setAttendancePeriod(period)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          attendancePeriod === period &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {period === "30days"
+          ? "30D"
+          : period === "90days"
+          ? "90D"
+          : period === "year"
+          ? "YEAR"
+          : "ALL"}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+
 
             <Text style={styles.sectionTitle}>Attendance History</Text>
             {lastAttended && (
