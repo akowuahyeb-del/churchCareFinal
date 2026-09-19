@@ -25,6 +25,8 @@ import {
   computeAbsenceStreak,
   resolveMemberTrack,
   getMemberOccurrences,
+  classifyAttendanceHealth,
+  buildAttendanceRecommendation,
 } from "../utils/attendanceIntelligence";
 
 
@@ -34,6 +36,9 @@ import {
 } from "firebase/functions";
 import ServiceHistoryCard from "../components/ServiceHistoryCard";
 import { formatDate } from "../utils/dateUtils";
+import {
+  mergeMembers,
+} from "../utils/memberMerge";
 
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
@@ -176,6 +181,10 @@ const [profileSearch, setProfileSearch] = useState("");
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [transferHistory, setTransferHistory] = useState([]);
   const [assignedVisitors, setAssignedVisitors] = useState([]);
+  const [
+  mergeTargetId,
+  setMergeTargetId,
+] = useState("");
 
   /* ────────────── ACTIVE ENTITY ────────────── */
   useEffect(() => {
@@ -1357,6 +1366,55 @@ const filteredAttendanceHistory =
       );
     }
 };
+
+
+const handleMergeDuplicate =
+  async () => {
+
+    if (!mergeTargetId) {
+
+      Alert.alert(
+        "Required",
+        "Enter master member ID"
+      );
+
+      return;
+    }
+
+    try {
+
+      await mergeMembers({
+        organizationId,
+        entityId,
+
+        duplicateMemberId:
+          member.id,
+
+        masterMemberId:
+          mergeTargetId,
+      });
+
+      Alert.alert(
+        "Success",
+        "Member marked as duplicate."
+      );
+
+      navigation.goBack();
+
+    } catch (e) {
+
+      console.log(
+        "mergeMembers",
+        e
+      );
+
+      Alert.alert(
+        "Error",
+        e.message
+      );
+    }
+  };
+
   /* ════════════════════════════════════════════
                       RENDER
   ════════════════════════════════════════════ */

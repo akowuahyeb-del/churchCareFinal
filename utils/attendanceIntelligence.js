@@ -595,67 +595,90 @@ export async function buildAttendanceIntelligenceSummary({
 
 for (const member of intelligenceMembers) {
 
-  const memberTrack =
-    await resolveMemberTrack({
-      organizationId,
-      entityId,
-      memberId: member.id,
-      fallbackTrack: track,
-    });
+  let health;
+  let streak;
+  let memberTrack = null;
 
-  const streak =
-    await computeAbsenceStreak({
-      organizationId,
-      entityId,
-      memberId: member.id,
-      track: memberTrack,
-    });
+  // Use persisted session-end snapshot first
+  if (
+    member?.attendanceIntelligence?.lastCalculatedAt
+  ) {
 
-    console.log(
-      "STREAK RESULT:",
-      member.name,
-      streak
-    );
+    health =
+      member.attendanceIntelligence.health;
 
-    console.log(
-      "PROCESSING MEMBER:",
-      member.name,
-      member.id
-    );
+    streak =
+      member.attendanceIntelligence
+        .absenceStreak ?? 0;
 
-    const health =
+  } else {
+
+    // Fallback for legacy members
+    memberTrack =
+      await resolveMemberTrack({
+        organizationId,
+        entityId,
+        memberId: member.id,
+        fallbackTrack: track,
+      });
+
+    streak =
+      await computeAbsenceStreak({
+        organizationId,
+        entityId,
+        memberId: member.id,
+        track: memberTrack,
+      });
+
+    health =
       classifyAttendanceHealth(
         streak,
         attendancePolicy
       );
+  }
 
-    console.log(
-      "HEALTH RESULT",
-      {
-        health,
-        policy: attendancePolicy,
-        streak,
-      }
-    );
+  console.log(
+    "STREAK RESULT:",
+    member.name,
+    streak
+  );
 
-    const recommendation = {
+  console.log(
+    "PROCESSING MEMBER:",
+    member.name,
+    member.id
+  );
+
+  console.log(
+    "HEALTH RESULT",
+    {
       health,
-      absenceStreak: streak,
-    };
+      policy: attendancePolicy,
+      streak,
+    }
+  );
 
-   const item = {
-  memberId: member.id,
-  memberName:
-    member.fullName ||
-    member.name ||
-    "Unknown",
+  const recommendation = {
+    health,
+    absenceStreak: streak,
+  };
 
-  streak,
+  const item = {
+    memberId: member.id,
+    memberName:
+      member.fullName ||
+      member.name ||
+      "Unknown",
 
-  track: memberTrack,
+    streak,
 
-  recommendation,
-};
+    track:
+      memberTrack ||
+      member?.attendanceIntelligence?.track ||
+      track,
+
+    recommendation,
+  };
 
     switch (health) {
       case ATTENDANCE_HEALTH.FOLLOW_UP:
@@ -845,23 +868,3 @@ export function buildAttendanceIntelligenceSnapshot({
 }
 
 
-export async function rebuildMemberAttendanceIntelligence({
-  organizationId,
-  entityId,
-  member,
-  attendancePolicy,
-  track,
-}) {
-  const streak =
-    await computeAbsenceStreak({
-      organizationId,
-      entityId,
-      memberId: member.id,
-      track,
-    });
-
-  return buildAttendanceIntelligenceSnapshot({
-    streak,
-    attendancePolicy,
-  });
-}

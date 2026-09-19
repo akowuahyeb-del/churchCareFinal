@@ -177,3 +177,9 @@ exports.addPastoralNote =
 
 exports.escalateStalePastoralRequests =
   pastoralCare.escalateStalePastoralRequests;
+
+  const memberMerge =
+  require("./memberMerge");
+
+exports.mergeMembers =
+  memberMerge.mergeMembers;

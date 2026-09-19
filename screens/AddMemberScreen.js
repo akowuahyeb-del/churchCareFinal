@@ -115,6 +115,8 @@ const [availableEntities, setAvailableEntities] =
   const [showDatePicker, setShowDatePicker]     = useState(false);
   const [duplicateModal, setDuplicateModal] = useState(false);
 const [duplicateMatch, setDuplicateMatch] = useState(null);
+const [savingMember, setSavingMember] =
+  useState(false);
 
 const goNext = () => {
   if (!member.name || !member.phone) {
@@ -131,53 +133,75 @@ const goNext = () => {
     else navigation.navigate("MembersMain");
   };
 
-
-
- /* ── save ── */
+/* ── save ── */
 const handleSaveMember = async () => {
 
+  if (savingMember) {
+    return;
+  }
+
   if (!member.name || !member.phone) {
-    Alert.alert("Required", "Name and phone are required");
+    Alert.alert(
+      "Required",
+      "Name and phone are required"
+    );
     return;
   }
 
   if (!entityId || !organizationId) {
-    Alert.alert("Error", "No active church selected");
+    Alert.alert(
+      "Error",
+      "No active church selected"
+    );
     return;
   }
-if (!editingId && membersLimit.isAtLimit) {
-  Alert.alert(
-    "Member Limit Reached",
-    `You have reached your member limit.
+
+  if (
+    !editingId &&
+    membersLimit.isAtLimit
+  ) {
+    Alert.alert(
+      "Member Limit Reached",
+      `You have reached your member limit.
 
 Current: ${membersLimit.used} / ${membersLimit.limit} members
 
 Upgrade your plan to continue adding members.`,
-    [
-      {
-        text: "View Plans",
-        onPress: () => navigation.navigate("Subscription"),
-      },
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-    ]
-  );
-  return;
-}
+      [
+        {
+          text: "View Plans",
+          onPress: () =>
+            navigation.navigate(
+              "Subscription"
+            ),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
+    return;
+  }
+
+  setSavingMember(true);
+
   console.log("🔥 DEBUG SAVE:", {
     organizationId,
     entityId,
-    member
+    member,
   });
 
   try {
-console.log("🔥 FULL PATH DEBUG:", {
-  orgPath: `organizations/${organizationId}`,
-  entityPath: `organizations/${organizationId}/entities/${entityId}`,
-  collection: "members"
-});
+
+    console.log("🔥 FULL PATH DEBUG:", {
+      orgPath: `organizations/${organizationId}`,
+      entityPath: `organizations/${organizationId}/entities/${entityId}`,
+      collection: "members"
+    });
+
+    // KEEP YOUR EXISTING CODE BELOW HERE
+
 // ✅ FETCH IDENTITY FROM FIREBASE
 let denominationCode = "CH";
 let churchCode = "LOC";
@@ -324,12 +348,21 @@ if (
 
   } catch (e) {
 
-    console.log("❌ SAVE ERROR FULL:", e);
-    console.log("❌ CODE:", e.code);
-    console.log("❌ MESSAGE:", e.message);
+  console.log("❌ SAVE ERROR FULL:", e);
+  console.log("❌ CODE:", e.code);
+  console.log("❌ MESSAGE:", e.message);
 
-    Alert.alert("Save Failed ❌", e.message);
-  }
+  Alert.alert(
+    "Save Failed ❌",
+    e.message
+  );
+
+} finally {
+
+  setSavingMember(false);
+
+}
+``
 };
 
 /*useEffect*/
@@ -734,8 +767,19 @@ const toggleMembership = (membershipName) => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSaveMember}>
-        <Text style={styles.saveText}>Save Member</Text>
+      <TouchableOpacity
+  style={[
+    styles.saveBtn,
+    savingMember && { opacity: 0.6 }
+  ]}
+  onPress={handleSaveMember}
+  disabled={savingMember}
+>
+        <Text style={styles.saveText}>
+  {savingMember
+    ? "Saving..."
+    : "Save Member"}
+</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.cancelBtn} onPress={() => setStep(0)}>
