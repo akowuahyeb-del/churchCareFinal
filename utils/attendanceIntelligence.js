@@ -797,36 +797,54 @@ export async function resolveMemberTrack({
 
   }
 }
+
 export function buildAttendanceIntelligenceSnapshot({
   streak,
   attendancePolicy,
   lastAttendanceDate = null,
 }) {
-  const health = classifyAttendanceHealth(
-    streak,
-    attendancePolicy
-  );
+
+  const recommendation =
+    buildAttendanceRecommendation(
+      streak,
+      attendancePolicy
+    );
 
   return {
-    health,
 
-    absenceStreak: streak,
+    health:
+      recommendation.health,
+
+    absenceStreak:
+      streak,
+
+    action:
+      recommendation.action,
+
+    priority:
+      recommendation.priority,
 
     followUpRequired:
-      health === "follow_up",
+      recommendation.health ===
+      "follow_up",
 
     atRisk:
-      health === "at_risk",
+      recommendation.health ===
+      "at_risk",
 
     inactiveCandidate:
-      health === "inactive_candidate",
+      recommendation.health ===
+      "inactive_candidate",
 
     lastAttendanceDate,
 
     lastCalculatedAt:
       new Date().toISOString(),
+
   };
 }
+
+
 export async function rebuildMemberAttendanceIntelligence({
   organizationId,
   entityId,

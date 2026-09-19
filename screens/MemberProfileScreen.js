@@ -24,10 +24,9 @@ import { hasPermission } from "../constants/permissions";
 import {
   computeAbsenceStreak,
   resolveMemberTrack,
-  classifyAttendanceHealth,
-  buildAttendanceRecommendation,
   getMemberOccurrences,
 } from "../utils/attendanceIntelligence";
+
 
 import {
   getFunctions,
@@ -994,18 +993,44 @@ const filteredAttendanceHistory =
 
       let periodMatch = true;
 
-      if (
-        attendancePeriod === "month"
-      ) {
-        const recordDate =
-          new Date(record.date);
+     if (
+  attendancePeriod === "30days"
+) {
 
-        const now = new Date();
+  const cutoff = new Date();
 
-        periodMatch =
-          recordDate.getMonth() === now.getMonth() &&
-          recordDate.getFullYear() === now.getFullYear();
-      }
+  cutoff.setDate(
+    cutoff.getDate() - 30
+  );
+
+  periodMatch =
+    new Date(record.date) >= cutoff;
+
+} else if (
+  attendancePeriod === "90days"
+) {
+
+  const cutoff = new Date();
+
+  cutoff.setDate(
+    cutoff.getDate() - 90
+  );
+
+  periodMatch =
+    new Date(record.date) >= cutoff;
+
+} else if (
+  attendancePeriod === "year"
+) {
+
+  const now = new Date();
+
+  periodMatch =
+    new Date(record.date)
+      .getFullYear() ===
+    now.getFullYear();
+
+}
 
       return (
         searchMatch &&
