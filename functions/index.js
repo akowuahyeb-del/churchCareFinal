@@ -183,3 +183,9 @@ exports.escalateStalePastoralRequests =
 
 exports.mergeMembers =
   memberMerge.mergeMembers;
+
+ const attendanceIntelligence =
+  require("./attendanceIntelligence");
+
+exports.onAttendanceSessionEnded =
+  attendanceIntelligence.onAttendanceSessionEnded;
