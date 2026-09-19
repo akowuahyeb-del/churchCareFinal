@@ -431,7 +431,11 @@ setEscalatedCount(
     } finally {
       setLoading(false);
     }
-  }, [tab, currentUid]);
+  }, [
+  tab,
+  currentUid,
+  attendanceSettings,
+]);
 
   useEffect(() => {
     loadTickets();
