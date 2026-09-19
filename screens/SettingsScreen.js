@@ -1215,37 +1215,86 @@ const handleRemovePin = () => {
           <ToggleRow icon="cloud-offline-outline"  label="Offline Mode"  sub="Cache data locally"          value={offlineMode} onChange={setOfflineMode} color="#888" />
         </View>
 
-        {/* ── PRIVACY & SECURITY ── */}
-        <SectionHeader title="Privacy & Security" />
-        <View style={styles.card}>
-          <ToggleRow icon="finger-print-outline"     label="Biometric Login"     sub="Fingerprint / Face ID"           value={biometric}     onChange={setBiometric}     color="#4B3F72" />
-          <ToggleRow icon="eye-outline"              label="Public Profile"       sub="Visible to other members"        value={profilePublic} onChange={setProfilePublic} color="#0984E3" />
-          <ToggleRow icon="call-outline"             label="Show Phone Number"    sub="Visible to church leaders"       value={showPhone}     onChange={setShowPhone}     color="#00B894" />
-   {canDo("manage_attendance") && (
-  <TapRow
-    icon="key-outline"
-    label="Change Admin PIN"
-    sub="Update attendance lock PIN"
-    onPress={() => setPinModal(true)}
-    color="#D97706"
+       {/* ── PRIVACY & SECURITY ── */}
+<SectionHeader title="Privacy & Security" />
+
+<View style={styles.card}>
+  <ToggleRow
+    icon="finger-print-outline"
+    label="Biometric Login"
+    sub="Fingerprint / Face ID"
+    value={biometric}
+    onChange={setBiometric}
+    color="#4B3F72"
   />
-)}
-          <TapRow    icon="shield-checkmark-outline" label="Data & Privacy Policy"sub="How your data is used"          onPress={() => Alert.alert("Privacy Policy", "Your data is securely stored and never shared.")} color="#6C5CE7" />
-            <TapRow
-  icon="keypad-outline"
-  label="Change PIN"
-  sub="Update your 6-digit login PIN"
-  onPress={() => navigation.navigate("PinSetup")}
+
+  <ToggleRow
+    icon="eye-outline"
+    label="Public Profile"
+    sub="Visible to other members"
+    value={profilePublic}
+    onChange={setProfilePublic}
+    color="#0984E3"
+  />
+
+  <ToggleRow
+    icon="call-outline"
+    label="Show Phone Number"
+    sub="Visible to church leaders"
+    value={showPhone}
+    onChange={setShowPhone}
+    color="#00B894"
+  />
+
+  {canDo("manage_attendance") && (
+    <>
+      <TapRow
+  icon="shield-checkmark-outline"
+  label="Change Master PIN"
+  sub="Update your login and default security PIN"
+  onPress={() =>
+    navigation.navigate("PinSetup", {
+      mode: "master",
+    })
+  }
+  color="#D97706"
+/>
+
+      <TapRow
+  icon="lock-closed-outline"
+  label="Advanced Security"
+  sub="Manage attendance, merge and finance PIN overrides"
+  onPress={() =>
+    navigation.navigate("SecuritySettings")
+  }
   color="#4B3F72"
 />
-<TapRow
-  icon="close-circle-outline"
-  label="Remove PIN"
-  sub="Disable PIN login on this device"
-  onPress={handleRemovePin}
-  color="#e74c3c"
-/>
-        </View>
+    </>
+  )}
+
+  <TapRow
+    icon="shield-checkmark-outline"
+    label="Data & Privacy Policy"
+    sub="How your data is used"
+    onPress={() =>
+      Alert.alert(
+        "Privacy Policy",
+        "Your data is securely stored and never shared."
+      )
+    }
+    color="#6C5CE7"
+  />
+
+  <TapRow
+    icon="close-circle-outline"
+    label="Remove PIN"
+    sub="Disable PIN login on this device"
+    onPress={handleRemovePin}
+    color="#e74c3c"
+  />
+</View>
+
+{/* ── CHURCH INFORMATION ── */}
 
         {/* ── CHURCH INFORMATION ── */}
         {canDo("manage_church_settings") && (
@@ -1329,17 +1378,6 @@ const handleRemovePin = () => {
   color="#4B3F72"
 />
 
-
-
-<TapRow icon="people-outline"       label="Group Attendance"
-  sub="Record attendance for choirs, teams & groups"
-  onPress={() => navigation.navigate("GroupAttendance")} color="#7C3AED" />
-<TapRow icon="airplane-outline"     label="Member Mobility"
-  sub="Tag students, transients & visiting members"
-  onPress={() => navigation.navigate("MemberMobility")} color="#0984E3" />
-<TapRow icon="git-branch-outline"   label="Concurrent Sessions"
-  sub="View all live sessions running simultaneously"
-  onPress={() => navigation.navigate("ConcurrentSessions")} color="#27ae60" />
 
             </View>
           </>

@@ -3,7 +3,8 @@ import { auth, db } from "../firebase";
 import { hashPin } from "./pinHash";
 
 export const verifyPin = async (
-  enteredPin
+  enteredPin,
+  securityArea = "master"
 ) => {
   try {
     const uid = auth.currentUser?.uid;
@@ -23,8 +24,24 @@ export const verifyPin = async (
     const userData =
       userSnap.data();
 
-    const storedHash =
-      userData.attendancePinHash;
+    const settings =
+      userData.securitySettings || {};
+
+    let storedHash =
+      settings.masterPinHash || null;
+
+    const override =
+      settings?.overrides?.[
+        securityArea
+      ];
+
+    if (
+      override?.enabled &&
+      override?.pinHash
+    ) {
+      storedHash =
+        override.pinHash;
+    }
 
     if (!storedHash) {
       return false;
@@ -38,6 +55,7 @@ export const verifyPin = async (
     );
 
   } catch (error) {
+
     console.log(
       "verifyPin error:",
       error

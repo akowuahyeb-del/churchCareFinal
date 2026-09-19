@@ -266,7 +266,21 @@ export default function AttendanceScreen() {
       const snap = await getDocs(
         collection(db, "organizations", organizationId, "entities", entityId, "members")
       );
-      setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setMembers(
+  snap.docs
+    .map(d => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      member =>
+        member.active !== false &&
+        ["member", "active_user"].includes(
+          member.lifecycleStatus
+        )
+    )
+);
+
     } catch (e) {
       console.log("❌ loadMembers:", e);
     }
@@ -673,7 +687,10 @@ await applySessionData(
     setVerifyingPin(true);
 
     try {
-      const valid = await verifyPin(enteredPin);
+      const valid = await verifyPin(
+  enteredPin,
+  "attendance"
+);
 
       if (!valid) {
         Alert.alert("Invalid Attendance PIN", "The Attendance PIN entered is incorrect.");
