@@ -186,6 +186,33 @@ const [profileSearch, setProfileSearch] = useState("");
   setMergeTargetId,
 ] = useState("");
 
+const [
+  mergeCandidates,
+  setMergeCandidates,
+] = useState([]);
+
+const [
+  mergeModalVisible,
+  setMergeModalVisible,
+] = useState(false);
+const [
+  mergeWarningVisible,
+  setMergeWarningVisible,
+] = useState(false);
+const [
+  selectedMergeMember,
+  setSelectedMergeMember,
+] = useState(null);
+
+const [
+  mergePin,
+  setMergePin,
+] = useState("");
+const [
+  mergePinVisible,
+  setMergePinVisible,
+] = useState(false);
+
   /* ────────────── ACTIVE ENTITY ────────────── */
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -1367,6 +1394,58 @@ const filteredAttendanceHistory =
     }
 };
 
+const openMergePicker =
+  async () => {
+
+    try {
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "members"
+          )
+        );
+
+      const candidates =
+        snap.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter(
+            m =>
+              m.id !== member.id &&
+              m.lifecycleStatus !== "duplicate"
+          );
+
+     setMergeCandidates(
+  candidates
+);
+
+setMergeTargetId("");
+
+setMergeModalVisible(
+  true
+);
+
+    } catch (e) {
+
+      console.log(
+        "openMergePicker",
+        e
+      );
+
+      Alert.alert(
+        "Error",
+        "Unable to load members."
+      );
+    }
+  };
 
 const handleMergeDuplicate =
   async () => {
@@ -2346,6 +2425,118 @@ onChangeText={setProfileSearch}
                 <Text style={styles.transferBtnText}>Request Congregation Transfer</Text>
               </TouchableOpacity>
             )}
+
+            {canManageMembers && (
+
+  <View
+    style={[
+      styles.statusCard,
+      { marginTop: 12 }
+    ]}
+  >
+
+    <Text
+      style={styles.statusCardLabel}
+    >
+      DUPLICATE MANAGEMENT
+    </Text>
+
+    <Text
+      style={{
+        color: "#E67E22",
+        marginBottom: 10,
+        textAlign: "center",
+      }}
+    >
+      Merge attendance,
+      contributions and approvals
+      into another member.
+    </Text>
+
+<View
+  style={{
+    backgroundColor: "#FFF4E5",
+    borderLeftWidth: 4,
+    borderLeftColor: "#E67E22",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  }}
+>
+  <Text
+    style={{
+      color: "#E67E22",
+      fontWeight: "700",
+    }}
+  >
+    WARNING
+  </Text>
+
+  <Text
+    style={{
+      color: "#7C2D12",
+      marginTop: 4,
+      fontSize: 12,
+    }}
+  >
+    Member merge is a high-risk administrative action. Only use this when two records represent the same person.
+  </Text>
+</View>
+
+
+  <TouchableOpacity
+  style={{
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#4B3F72",
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  }}
+  onPress={openMergePicker}
+>
+  <View>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#6B7280",
+        fontWeight: "700",
+      }}
+    >
+      SURVIVING MEMBER
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 14,
+        color: mergeTargetId
+          ? "#111827"
+          : "#4B3F72",
+        fontWeight: "700",
+        marginTop: 4,
+      }}
+    >
+      {mergeTargetId
+        ? "Selected ✓"
+        : "Select Member To Merge Into"}
+    </Text>
+
+  </View>
+
+  <Ionicons
+    name="chevron-forward"
+    size={18}
+    color="#4B3F72"
+  />
+</TouchableOpacity>
+  </View>
+
+)}
           </View>
         )}
 
@@ -2457,6 +2648,483 @@ onChangeText={setProfileSearch}
         </View>
       </Modal>
 
+{/* ══════════ MERGE PICKER MODAL ══════════ */}
+<Modal
+  visible={mergeModalVisible}
+  transparent
+  animationType="slide"
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Select Surviving Member
+      </Text>
+
+     <ScrollView
+  style={{
+    maxHeight: 300,
+  }}
+>
+
+        {mergeCandidates.map(
+          candidate => (
+
+            <TouchableOpacity
+              key={candidate.id}
+              style={styles.recordRow}
+              onPress={() => {
+
+  setMergeTargetId(
+    candidate.id
+  );
+
+  setSelectedMergeMember(
+    candidate
+  );
+
+  setMergeModalVisible(
+    false
+  );
+
+  setMergeWarningVisible(
+    true
+  );
+
+}}
+            >
+
+              <View>
+
+                <Text style={styles.recordTitle}>
+                  {candidate.name}
+                </Text>
+
+                <Text style={styles.recordSub}>
+                  {candidate.memberCode ||
+                    "No Member Code"}
+                </Text>
+
+              </View>
+
+            </TouchableOpacity>
+
+          )
+        )}
+
+      </ScrollView>
+
+     <TouchableOpacity
+  style={[
+    styles.modalCancelBtn,
+    {
+      backgroundColor: "#6B7280",
+      marginTop: 12,
+      minHeight: 50,
+      justifyContent: "center",
+    },
+  ]}
+  onPress={() =>
+    setMergeModalVisible(false)
+  }
+>
+  <Text
+    style={{
+      color: "#FFFFFF",
+      fontWeight: "650",
+      fontSize: 16,
+      textAlign: "center",
+    }}
+  >
+    CLOSE
+  </Text>
+</TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+<Modal
+  visible={mergeWarningVisible}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalBox}>
+
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "800",
+          color: "#E67E22",
+          textAlign: "center",
+        }}
+      >
+        ⚠ MERGE WARNING
+      </Text>
+
+     <Text
+  style={{
+    marginTop: 10,
+    textAlign: "center",
+  }}
+>
+  Please verify the merge direction carefully.
+</Text>
+
+<View
+  style={{
+    flexDirection: "row",
+    marginTop: 20,
+    alignItems: "center",
+    justifyContent: "space-between",
+  }}
+>
+
+  {/* DUPLICATE RECORD */}
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#FEE2E2",
+      borderWidth: 2,
+      borderColor: "#DC2626",
+      borderRadius: 12,
+      padding: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#DC2626",
+        fontWeight: "800",
+        textAlign: "center",
+        marginBottom: 8,
+      }}
+    >
+      DUPLICATE
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        fontWeight: "700",
+      }}
+    >
+      {member?.name}
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        color: "#666",
+        marginTop: 4,
+      }}
+    >
+      {member?.memberCode}
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        color: "#DC2626",
+        marginTop: 10,
+        fontWeight: "700",
+      }}
+    >
+      Will Become Duplicate
+    </Text>
+  </View>
+
+  {/* ARROW */}
+  <View
+    style={{
+      paddingHorizontal: 10,
+    }}
+  >
+    <Ionicons
+      name="arrow-forward"
+      size={30}
+      color="#E67E22"
+    />
+  </View>
+
+  {/* SURVIVING RECORD */}
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#DCFCE7",
+      borderWidth: 2,
+      borderColor: "#16A34A",
+      borderRadius: 12,
+      padding: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#16A34A",
+        fontWeight: "800",
+        textAlign: "center",
+        marginBottom: 8,
+      }}
+    >
+      SURVIVES
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        fontWeight: "700",
+      }}
+    >
+      {selectedMergeMember?.name}
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        color: "#666",
+        marginTop: 4,
+      }}
+    >
+      {selectedMergeMember?.memberCode}
+    </Text>
+
+    <Text
+      style={{
+        textAlign: "center",
+        color: "#16A34A",
+        marginTop: 10,
+        fontWeight: "700",
+      }}
+    >
+      Will Remain Active
+    </Text>
+  </View>
+
+</View>
+
+<View
+  style={{
+    marginTop: 20,
+  }}
+>
+  <Text>
+    • Attendance history may move
+  </Text>
+
+  <Text>
+    • Contributions may move
+  </Text>
+
+  <Text>
+    • Approval records may move
+  </Text>
+
+  <Text>
+    • One record will be marked as duplicate
+  </Text>
+</View>
+
+      <TouchableOpacity
+        style={[
+          styles.actionExecBtn,
+          {
+            backgroundColor: "#16A34A"
+,
+            marginTop: 20,
+          },
+        ]}
+        onPress={() => {
+
+  setMergeWarningVisible(
+    false
+  );
+
+  setMergePin("");
+
+setMergePinVisible(
+  true
+);
+
+}}
+
+      >
+        <Text style={styles.white}>
+          CONTINUE TO PIN VERIFICATION
+
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.actionExecBtn,
+          {
+            backgroundColor: "#DC2626"
+,
+            marginTop: 10,
+          },
+        ]}
+        onPress={() => {
+
+          setMergeWarningVisible(
+            false
+          );
+
+          setMergeTargetId("");
+
+          setSelectedMergeMember(
+            null
+          );
+
+        }}
+      >
+        <Text style={styles.white}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+<Modal
+  visible={mergePinVisible}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.modalOverlay}>
+    <View
+  style={[
+    styles.modalBox,
+    {
+      maxHeight: "80%",
+    },
+  ]}
+>
+
+      <Text style={styles.modalTitle}>
+        Administrative PIN Required
+      </Text>
+
+      <Text
+        style={{
+          textAlign: "center",
+          color: "#666",
+          marginBottom: 15,
+        }}
+      >
+        Merging members is a protected action.
+      </Text>
+
+
+<View
+  style={{
+    backgroundColor: "#FEF3C7",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 15,
+  }}
+>
+  <Text
+    style={{
+      color: "#92400E",
+      fontWeight: "700",
+      textAlign: "center",
+    }}
+  >
+    PIN VERIFICATION REQUIRED
+  </Text>
+
+  <Text
+    style={{
+      color: "#92400E",
+      textAlign: "center",
+      marginTop: 4,
+      fontSize: 12,
+    }}
+  >
+    Enter your administrative PIN to authorise this merge.
+  </Text>
+</View>
+
+      <TextInput
+  style={[
+    styles.modalInput,
+    {
+      backgroundColor: "#FFFFFF",
+      borderWidth: 2,
+      borderColor: "#E67E22",
+      color: "#111827",
+      minHeight: 50,
+    },
+  ]}
+  value={mergePin}
+  onChangeText={setMergePin}
+  secureTextEntry
+  keyboardType="numeric"
+  placeholder="Enter Administrative PIN"
+  placeholderTextColor="#6B7280"
+/>
+
+
+      <TouchableOpacity
+        style={[
+          styles.actionExecBtn,
+          {
+            backgroundColor: "#E67E22",
+            marginTop: 10,
+          },
+        ]}
+        onPress={() => {
+
+          if (
+            mergePin !== "1234"
+          ) {
+
+            Alert.alert(
+              "Invalid PIN",
+              "Administrative PIN incorrect."
+            );
+
+            return;
+          }
+
+          setMergePinVisible(
+            false
+          );
+
+          handleMergeDuplicate();
+
+        }}
+      >
+        <Text style={styles.white}>
+          Confirm Merge
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.actionExecBtn,
+          {
+            backgroundColor: "#999",
+            marginTop: 10,
+          },
+        ]}
+        onPress={() => {
+
+          setMergePinVisible(
+            false
+          );
+
+        }}
+      >
+        <Text style={styles.white}>
+          Cancel
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
