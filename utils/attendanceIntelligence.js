@@ -593,14 +593,23 @@ export async function buildAttendanceIntelligenceSummary({
       shouldIncludeInAttendanceIntelligence
     );
 
-  for (const member of intelligenceMembers) {
-    const streak =
-      await computeAbsenceStreak({
-        organizationId,
-        entityId,
-        memberId: member.id,
-        track,
-      });
+for (const member of intelligenceMembers) {
+
+  const memberTrack =
+    await resolveMemberTrack({
+      organizationId,
+      entityId,
+      memberId: member.id,
+      fallbackTrack: track,
+    });
+
+  const streak =
+    await computeAbsenceStreak({
+      organizationId,
+      entityId,
+      memberId: member.id,
+      track: memberTrack,
+    });
 
     console.log(
       "STREAK RESULT:",
@@ -634,15 +643,19 @@ export async function buildAttendanceIntelligenceSummary({
       absenceStreak: streak,
     };
 
-    const item = {
-      memberId: member.id,
-      memberName:
-        member.fullName ||
-        member.name ||
-        "Unknown",
-      streak,
-      recommendation,
-    };
+   const item = {
+  memberId: member.id,
+  memberName:
+    member.fullName ||
+    member.name ||
+    "Unknown",
+
+  streak,
+
+  track: memberTrack,
+
+  recommendation,
+};
 
     switch (health) {
       case ATTENDANCE_HEALTH.FOLLOW_UP:
