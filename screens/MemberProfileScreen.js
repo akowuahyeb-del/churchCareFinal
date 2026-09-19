@@ -486,9 +486,41 @@ console.log(
 
     try {
       // CASH DONATIONS
-      const cashSnap = await getDocs(
-        collection(db, "organizations", organizationId, "entities", entityId, "contributions")
+     const startDate =
+  getStartDate(
+    contributionPeriod
+  );
+
+const contributionRef =
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "contributions"
+  );
+
+const contributionQuery =
+  startDate
+    ? query(
+        contributionRef,
+        where(
+          "date",
+          ">=",
+          startDate
+            .toISOString()
+            .split("T")[0]
+        )
+      )
+    : query(
+        contributionRef
       );
+
+const cashSnap =
+  await getDocs(
+    contributionQuery
+  );
 
       // FIX: was also matching on `d.memberName === member?.name` —
       // two members sharing a display name would see each other's cash
@@ -520,9 +552,36 @@ console.log(
   });
 
       // IN-KIND DONATIONS
-      const inKindSnap = await getDocs(
-        collection(db, "organizations", organizationId, "entities", entityId, "inkind_donations")
+     const inKindRef =
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "inkind_donations"
+  );
+
+const inKindQuery =
+  startDate
+    ? query(
+        inKindRef,
+        where(
+          "date",
+          ">=",
+          startDate
+            .toISOString()
+            .split("T")[0]
+        )
+      )
+    : query(
+        inKindRef
       );
+
+const inKindSnap =
+  await getDocs(
+    inKindQuery
+  );
 
       const inKindData = inKindSnap.docs
         .map(d => ({ id: d.id, donationType: "inkind", ...d.data() }))
@@ -761,11 +820,14 @@ console.log(
   attendancePolicy,
 ]);
 
-  useEffect(() => {
-    if (member?.id) {
-      loadContributions();
-    }
-  }, [member]);
+ useEffect(() => {
+  if (member?.id) {
+    loadContributions();
+  }
+}, [
+  member,
+  contributionPeriod,
+]);
 
   useEffect(() => {
     if (!member?.id) return;
@@ -1872,6 +1934,10 @@ onChangeText={setProfileSearch}
 
 </View>
 
+<Text style={styles.filterLabel}>
+  Type
+</Text>
+
 <View style={styles.filterRow}>
 
   {["all", "cash", "inkind"].map(item => (
@@ -1901,6 +1967,56 @@ onChangeText={setProfileSearch}
   ))}
 
 </View>
+
+
+<Text style={styles.filterLabel}>
+  Period
+</Text>
+
+<View style={styles.filterRow}>
+
+  {[
+    "30days",
+    "90days",
+    "year",
+    "all",
+  ].map(period => (
+
+
+    <TouchableOpacity
+      key={period}
+      style={[
+        styles.filterChip,
+        contributionPeriod === period &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setContributionPeriod(
+          period
+        )
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          contributionPeriod === period &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {period === "30days"
+          ? "30D"
+          : period === "90days"
+          ? "90D"
+          : period === "year"
+          ? "YEAR"
+          : "ALL"}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
 
             <Text style={styles.sectionTitle}>Contribution Records</Text>
             <View style={styles.summaryRow}>
@@ -2660,7 +2776,8 @@ summaryText: {
 },
 filterRow: {
   flexDirection: "row",
-  marginBottom: 6,
+  flexWrap: "wrap",
+  marginBottom: 8,
 },
 searchIcon: {
   marginRight: 12,
@@ -2668,5 +2785,12 @@ searchIcon: {
 sortRow: {
   flexDirection: "row",
   marginBottom: 6,
+},
+filterLabel: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#6B7280",
+  marginTop: 6,
+  marginBottom: 4,
 },
 });
