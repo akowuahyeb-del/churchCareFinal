@@ -1221,23 +1221,31 @@ const handleRemovePin = () => {
           <ToggleRow icon="finger-print-outline"     label="Biometric Login"     sub="Fingerprint / Face ID"           value={biometric}     onChange={setBiometric}     color="#4B3F72" />
           <ToggleRow icon="eye-outline"              label="Public Profile"       sub="Visible to other members"        value={profilePublic} onChange={setProfilePublic} color="#0984E3" />
           <ToggleRow icon="call-outline"             label="Show Phone Number"    sub="Visible to church leaders"       value={showPhone}     onChange={setShowPhone}     color="#00B894" />
-   {canDo("manage_attendance") && (
   <TapRow
-    icon="key-outline"
-    label="Change Admin PIN"
-    sub="Update attendance lock PIN"
-    onPress={() => setPinModal(true)}
-    color="#D97706"
+  icon="shield-checkmark-outline"
+  label="Change Master PIN"
+  sub="Update your login and default security PIN"
+  onPress={() =>
+    navigation.navigate("PinSetup", {
+      mode: "app",
+    })
+  }
+  color="#D97706"
+/>
+
+{canDo("manage_attendance") && (
+  <TapRow
+    icon="lock-closed-outline"
+    label="Advanced Security"
+    sub="Manage attendance, merge, approval and finance PIN overrides"
+    onPress={() =>
+      navigation.navigate("SecuritySettings")
+    }
+    color="#6C5CE7"
   />
 )}
           <TapRow    icon="shield-checkmark-outline" label="Data & Privacy Policy"sub="How your data is used"          onPress={() => Alert.alert("Privacy Policy", "Your data is securely stored and never shared.")} color="#6C5CE7" />
-            <TapRow
-  icon="keypad-outline"
-  label="Change PIN"
-  sub="Update your 6-digit login PIN"
-  onPress={() => navigation.navigate("PinSetup")}
-  color="#4B3F72"
-/>
+    
 <TapRow
   icon="close-circle-outline"
   label="Remove PIN"

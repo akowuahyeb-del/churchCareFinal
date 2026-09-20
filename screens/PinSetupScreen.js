@@ -108,16 +108,29 @@ export default function PinSetupScreen({
      if (userData.uid) {
 
   const updates =
-    mode === "attendance"
-      ? {
-          attendancePinHash:
-            pinHash,
-          attendancePinEnabled:
-            true,
-        }
-      : {
-          pinHash,
-        };
+  mode === "attendance"
+    ? {
+        attendancePinHash: pinHash,
+        attendancePinEnabled: true,
+      }
+    : mode === "finance"
+    ? {
+        financePinHash: pinHash,
+        financePinEnabled: true,
+      }
+    : mode === "merge"
+    ? {
+        mergePinHash: pinHash,
+        mergePinEnabled: true,
+      }
+    : mode === "approval"
+    ? {
+        approvalPinHash: pinHash,
+        approvalPinEnabled: true,
+      }
+    : {
+        pinHash,
+      };
 
 console.log("PIN MODE:", mode);
 console.log("USER:", userData.uid);

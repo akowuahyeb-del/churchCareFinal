@@ -93,6 +93,7 @@ import { useState, useEffect } from "react";
 import MyProfileScreen from "./screens/MyProfileScreen";
 import { hasPermission } from "./constants/permissions";
 import ApprovalRequestDetailScreen from "./screens/ApprovalRequestDetailScreen";
+import SecuritySettingsScreen from "./screens/SecuritySettingsScreen";
 
 
 
@@ -439,6 +440,7 @@ function RootStack() {
        <Stack.Screen name="Help"component={HelpScreen}/>
        <Stack.Screen name="ApprovalRequestDetail"component={ApprovalRequestDetailScreen}/>
        <Stack.Screen name="MemberProfile"component={MemberProfileScreen}/>
+       <Stack.Screen name="SecuritySettings"component={SecuritySettingsScreen}/>
 
 
 
