@@ -18,6 +18,7 @@ async function deliverToMember({ organizationId, entityId, memberId, type, title
   const memberSnap = await memberRef.get();
   if (!memberSnap.exists) return { delivered: false, reason: "member_not_found" };
   const member = memberSnap.data();
+  const now = new Date().toISOString();
 
 // Pre-claim delivery channels.
 // Church administrators have uid:null during onboarding,
@@ -60,7 +61,7 @@ if (member.phone) {
     status: "pending",
   });
 }
-  const now = new Date().toISOString();
+
   const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
 
   await memberRef.collection("notifications").add(payload);

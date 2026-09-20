@@ -268,15 +268,37 @@ const now = FieldValue.serverTimestamp();
     entityId,
   });
 
-  await docRef.update({
-    memberCode,
-  });
+ await docRef.update({
+  memberCode,
+});
 
-  return {
-    id: docRef.id,
-    memberCode,
-    ref: docRef,
-  };
+// --------------------------------------------------
+// Member Onboarding Notification
+// --------------------------------------------------
+await deliverToMember({
+  organizationId,
+  entityId,
+  memberId: docRef.id,
+
+  type: "member_onboarding",
+
+  title:
+    "Welcome to Your Church Community 👋",
+
+  message:
+    `Welcome ${memberData.name || "Member"}.\n\n` +
+    `Your member profile has been created successfully.\n\n` +
+    `Member Code: ${memberCode}\n\n` +
+    `Your church can now connect with you and keep you informed about church activities and services.`,
+});
+
+
+
+return {
+  id: docRef.id,
+  memberCode,
+  ref: docRef,
+};
 }
 
 
@@ -395,13 +417,45 @@ exports.inviteMember = onCall(async (request) => {
   });
 
   const now = FieldValue.serverTimestamp();
-  await ref.update({
-    lifecycleStatus: "invited",
-    lastStageChangeAt: now,
-    lastChangedByUid: request.auth.uid,
-    inviteToken, inviteChannel: chosenChannel, inviteSentAt: now, inviteRetryCount: 0,
-    updatedAt: now,
-  });
+
+await ref.update({
+  lifecycleStatus: "invited",
+  lastStageChangeAt: now,
+  lastChangedByUid: request.auth.uid,
+  inviteToken,
+  inviteChannel: chosenChannel,
+  inviteSentAt: now,
+  inviteRetryCount: 0,
+  updatedAt: now,
+});
+
+ const orgSnap = await db
+  .collection("organizations")
+  .doc(organizationId)
+  .get();
+
+const organization =
+  orgSnap.data() || {};
+
+
+const organizationName =
+  organization.name || "your church";
+  await deliverToMember({
+  organizationId,
+  entityId,
+  memberId,
+
+  type: "member_invited",
+
+  title:
+    `You're Invited to ${organizationName}`,
+
+  message:
+    `Hello ${member.name || "Member"}.\n\n` +
+    `You have been invited to join ${organizationName}.\n\n` +
+    `Complete your registration to connect with your church community, receive church communications, and access member services.`,
+});
+
 
   return { invited: true, channel: chosenChannel, sent: result.sent };
 });
@@ -622,6 +676,8 @@ exports.completeMemberClaim = onCall(
         now,
     });
 
+   
+
     // --------------------------------------------------
     // Organisation onboarding update
     // --------------------------------------------------
@@ -635,26 +691,78 @@ exports.completeMemberClaim = onCall(
     const organizationSnap =
       await organizationRef.get();
 
+      await deliverToMember({
+  organizationId:
+    organizationRef.id,
+
+  entityId:
+    entityRef.id,
+
+  memberId:
+    memberDoc.id,
+
+  type:
+    "account_claimed",
+
+  title:
+    "Account Activated ✅",
+
+  message:
+    `Welcome ${member.name || "Member"}.\n\n` +
+    `Your account has been successfully activated.\n\n` +
+    `You can now access church services and complete your onboarding journey.`,
+});
+
+
     if (organizationSnap.exists) {
 
       const org =
         organizationSnap.data();
 
-      if (
-        org.adminMemberId ===
-        memberDoc.id
-      ) {
+    if (
+  org.adminMemberId ===
+  memberDoc.id
+) {
 
-        await organizationRef.update({
+  await organizationRef.update({
 
-          adminClaimed: true,
+    adminClaimed: true,
 
-          adminUid: uid,
+    adminUid: uid,
 
-          onboardingStatus:
-            "admin_claimed",
-        });
-      }
+   onboardingStatus:
+  "onboarding_started",
+
+  });
+
+  await organizationRef.update({
+  onboardingStartedAt:
+    FieldValue.serverTimestamp(),
+});
+
+
+  await deliverToMember({
+    organizationId:
+      organizationRef.id,
+
+    entityId:
+      entityRef.id,
+
+    memberId:
+      memberDoc.id,
+
+    type:
+      "admin_claimed",
+
+    title:
+      "Church Administrator Account Activated ✅",
+
+    message:
+      `Congratulations ${member.name || ""}.\n\n` +
+      `Your administrator account for ${org.name || "your church"} has been activated successfully.\n\n` +
+      `You can now complete church setup, configure ministries, and invite members.`,
+  });
+}
 
       if (
         org.contactMemberId ===

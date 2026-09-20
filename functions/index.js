@@ -189,3 +189,8 @@ exports.mergeMembers =
 
 exports.onAttendanceSessionEnded =
   attendanceIntelligence.onAttendanceSessionEnded;
+  const notificationDispatchers =
+  require("./notificationDispatchers");
+
+exports.emailDispatcher =
+  notificationDispatchers.emailDispatcher;

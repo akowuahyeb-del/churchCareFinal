@@ -20,6 +20,11 @@ const {
 } = require("./onboarding");
 
 const {
+  deliverToMember,
+} = require("./notify");
+
+
+const {
   LEVEL_CODES,
   TEMPLATE_CODES,
   getHierarchyRank,
@@ -364,6 +369,30 @@ exports.approveOrganization =
 
     const adminMemberId = adminMember.id;
 
+
+// --------------------------------------------------
+// Church Approval Notification
+// --------------------------------------------------
+
+await deliverToMember({
+  organizationId,
+  entityId,
+  memberId: adminMemberId,
+
+  type: "church_approval",
+
+  title:
+    "Church Registration Approved ✅",
+
+  message:
+    `Congratulations ${org.adminName || ""}.\n\n` +
+    `${org.name} has been approved and activated.\n\n` +
+    `Organisation Code: ${organizationCode}\n\n` +
+    `Open ChurchCare and complete your onboarding.`,
+});
+
+
+
     // --------------------------------------------------
     // Activate Organization
     // --------------------------------------------------
@@ -391,102 +420,84 @@ exports.approveOrganization =
   },
 });
 
-    // --------------------------------------------------
-    // Notify Administrator Of Approval
-    // --------------------------------------------------
+   // --------------------------------------------------
+// Contact Person Approval Notification
+// --------------------------------------------------
 
-    try {
+try {
 
-      await orgRef
-        .collection("notifications")
-        .add({
+  if (org.contactEmail) {
 
-          type:
-            "organization_approved",
+    await db.collection("outboundMail").add({
+      to: org.contactEmail,
 
-          recipientType:
-            "church_admin",
+      subject:
+        "Church Registration Approved ✅",
 
-          recipientName:
-            org.adminName || null,
+      body:
+        `The registration for ${org.name} has been approved and activated.\n\n` +
+        `Organisation Code: ${organizationCode}\n\n` +
+        `The church administrator may now continue onboarding and church setup.`,
 
-          recipientPhone:
-            org.adminPhone || null,
+      type:
+        "organization_contact_approval",
 
-          recipientEmail:
-            org.adminEmail || null,
+      organizationId,
 
-          memberId:
-            adminMemberId,
+      createdAt: now,
 
-          title:
-            "Church Registration Approved \u2705",
+      status:
+        "pending",
+    });
+  }
 
-          message:
-            `Congratulations ${org.adminName || ""}.\n\n` +
-            `${org.name} has been approved and activated.\n\n` +
-            `Organisation Code: ${organizationCode}\n\n` +
-            `Please open ChurchCare and complete your onboarding.`,
+  if (org.contactPhone) {
 
-          read: false,
+    await db.collection("outboundSms").add({
+      phone:
+        org.contactPhone,
 
-          createdAt: now,
-        });
+      message:
+        `${org.name} has been approved. Organisation Code: ${organizationCode}.`,
 
-    } catch (notificationError) {
+      type:
+        "organization_contact_approval",
 
-      console.error(
-        "ADMIN APPROVAL NOTIFICATION FAILED",
-        notificationError
-      );
+      organizationId,
 
-      // Do NOT fail approval
-    }
+      createdAt: now,
 
-    // --------------------------------------------------
-    // Contact Person Notification
-    // --------------------------------------------------
+      status:
+        "pending",
+    });
 
-    try {
+    await db.collection("outboundWhatsApp").add({
+      phone:
+        org.contactPhone,
 
-      await orgRef
-        .collection("notifications")
-        .add({
-          type: "organization_approved",
+      message:
+        `${org.name} has been approved. Organisation Code: ${organizationCode}.`,
 
-          title:
-            "Church Registration Approved \u2705",
+      type:
+        "organization_contact_approval",
 
-          message:
-            `The registration for ${org.name} has been approved and activated. ` +
-            `Organisation Code: ${organizationCode}. ` +
-            `The church administrator may now continue onboarding and church setup.`,
+      organizationId,
 
-          recipientType: "contact_person",
+      createdAt: now,
 
-          recipientName:
-            org.contactName || null,
+      status:
+        "pending",
+    });
+  }
 
-          recipientPhone:
-            org.contactPhone || null,
+} catch (notificationError) {
 
-          recipientEmail:
-            org.contactEmail || null,
+  console.error(
+    "CONTACT NOTIFICATION FAILED",
+    notificationError
+  );
+}
 
-          read: false,
-
-          createdAt: now,
-        });
-
-    } catch (notificationError) {
-
-      console.error(
-        "CONTACT NOTIFICATION FAILED",
-        notificationError
-      );
-
-      // Do NOT fail approval
-    }
 
     // --------------------------------------------------
     // Approval Audit Log

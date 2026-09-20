@@ -112,22 +112,22 @@ sessionsCount,
     };
 
   } catch (e) {
-    console.log("❌ getAttendanceSummary:", e);
+  console.log("❌ getAttendanceSummary:", e);
 
-    return {
-  membersCount,
+  return {
+    membersCount: 0,
 
-  invitedCount,
-  registeredCount,
-  activeUserCount,
+    invitedCount: 0,
+    registeredCount: 0,
+    activeUserCount: 0,
 
-  localMemberCount: membersCount,
-  awayCount: 0,
+    localMemberCount: 0,
+    awayCount: 0,
 
-  avgPresent,
-  avgRate,
-  peakPresent,
-  sessionsCount,
-};
-  }
+    avgPresent: 0,
+    avgRate: 0,
+    peakPresent: 0,
+    sessionsCount: 0,
+  };
+}
 }

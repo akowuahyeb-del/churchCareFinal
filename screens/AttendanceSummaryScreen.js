@@ -324,7 +324,17 @@ export default function AttendanceSummaryScreen() {
 
       const sessionList = sessSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      const memberList  = membSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const memberList = membSnap.docs
+  .map(d => ({
+    id: d.id,
+    ...d.data(),
+  }))
+  .filter(
+    (m) =>
+      m.lifecycleStatus !== "duplicate" &&
+      m.active !== false
+  );
+
       const attList     = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const grpList     = grpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -1086,14 +1096,20 @@ function KPICard({ icon, color, label, value, sub }) {
       <View style={[styles.kpiIcon, { backgroundColor: color + "20" }]}>
         <Ionicons name={icon} size={18} color={color} />
       </View>
+
       <AppText style={[styles.kpiValue, { color }]}>
-  {value}
-</AppText>
+        {value}
+      </AppText>
+
       <AppText style={styles.kpiLabel}>
-  {label}
-</AppText>
-      {sub && <AppText style={styles.kpiSub}>{sub}</AppText>}
-`
+        {label}
+      </AppText>
+
+      {sub && (
+        <AppText style={styles.kpiSub}>
+          {sub}
+        </AppText>
+      )}
     </View>
   );
 }
