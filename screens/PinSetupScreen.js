@@ -169,22 +169,34 @@ console.log("UPDATES:", updates);
       <View style={styles.header}>
         <Ionicons name="key-outline" size={40} color="#fff" />
        <Text style={styles.headerTitle}>
-  {stage === "create"
-    ? (
-        mode === "attendance"
-          ? "Create Attendance PIN"
-          : "Choose a 6-digit PIN"
-      )
-    : "Confirm your PIN"}
+ {stage === "create"
+  ? (
+      mode === "attendance"
+        ? "Create Attendance PIN"
+        : mode === "finance"
+        ? "Create Finance PIN"
+        : mode === "merge"
+        ? "Create Merge PIN"
+        : mode === "approval"
+        ? "Create Approval PIN"
+        : "Choose a 6-digit PIN"
+    )
+  : "Confirm your PIN"}
 </Text>
         <Text style={styles.headerSub}>
-  {stage === "create"
-    ? (
-        mode === "attendance"
-          ? "Required before joining or ending attendance sessions."
-          : "You'll use this to sign in quickly next time."
-      )
-    : "Enter it once more to confirm."}
+ {stage === "create"
+  ? (
+      mode === "attendance"
+        ? "Required before attendance security actions."
+        : mode === "finance"
+        ? "Required before finance actions."
+        : mode === "merge"
+        ? "Required before member merge actions."
+        : mode === "approval"
+        ? "Required before approval actions."
+        : "You'll use this to sign in quickly next time."
+    )
+  : "Enter it once more to confirm."}
 </Text>
 
       </View>
