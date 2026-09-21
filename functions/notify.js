@@ -26,40 +26,53 @@ async function deliverToMember({ organizationId, entityId, memberId, type, title
 
 if (member.email) {
   await db.collection("outboundMail").add({
-    to: member.email,
-    subject: title,
-    body: message,
-    type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
-  });
+  to: member.email,
+  subject: title,
+  body: message,
+  type,
+  organizationId,
+  entityId,
+  memberId,
+
+  status: "pending",
+
+  retryCount: 0,
+
+  createdAt: now,
+});
 }
 
 if (member.phone) {
-  await db.collection("outboundSms").add({
-    phone: member.phone,
-    message,
-    type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
-  });
+ await db.collection("outboundSms").add({
+  phone: member.phone,
+  message,
+  type,
+  organizationId,
+  entityId,
+  memberId,
 
-  await db.collection("outboundWhatsApp").add({
-    phone: member.phone,
-    message,
-    type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
-  });
+  status: "pending",
+
+  retryCount: 0,
+
+  createdAt: now,
+});
+
+ await db.collection("outboundWhatsApp").add({
+  phone: member.phone,
+  message,
+  type,
+  organizationId,
+  entityId,
+  memberId,
+
+  status: "pending",
+
+  retryCount: 0,
+
+  createdAt: now,
+});
+
 }
 
   const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
