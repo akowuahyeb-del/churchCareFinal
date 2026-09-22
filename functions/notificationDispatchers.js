@@ -11,6 +11,16 @@ const {
 
 const db = getFirestore();
 
+const WHATSAPP_PHONE_NUMBER_ID =
+  "1372746829249591";
+
+// TEMPORARY
+// Replace with your generated token
+const WHATSAPP_ACCESS_TOKEN =
+  "EAAj5XptIeLcBSpbBh2B9dhbPmSWxfX0vK3ylsYGsvKSngWumZC2FFmATB3BzFg50uF7kxgAOPMfVp65nNmieoZC6hak89rZAqlLLgOeZC5Hv7YrZA5ZBCU1MuXOrMH1KZA8w0ZCXrVKNEUUm99VqApjZCcqOY8CRTZBoihnZBqunzxdBzte6eEpMlpKWBnvbZAC7G3LhHjMpf4mT7aZBYSPt9M8sSszIJ64uhJkIen5CNieZBUB7wbZCop2rfYD9An03oPNla1MXOoXogWapnps28M8LQimiJLSe4RzXysRyyM2xZApQ";
+
+const axios = require("axios");
+
 // --------------------------------------------------
 // EMAIL DISPATCHER
 // --------------------------------------------------
@@ -71,9 +81,12 @@ await doc.ref.update({
       ? "dead"
       : "pending",
 
-  error:
-    error.message ||
-    "Unknown error",
+error:
+  JSON.stringify(
+    error.response?.data ||
+    error.message
+  ),
+
 });
 
         }
@@ -140,9 +153,12 @@ await doc.ref.update({
       ? "dead"
       : "pending",
 
-  error:
-    error.message ||
-    "Unknown error",
+ error:
+  JSON.stringify(
+    error.response?.data ||
+    error.message
+  ),
+
 });
 
         }
@@ -186,7 +202,36 @@ exports.whatsAppDispatcher =
             }
           );
 
-          // WhatsApp Business API later
+          await axios.post(
+
+  `https://graph.facebook.com/v23.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+
+  {
+    messaging_product:
+      "whatsapp",
+
+    to:
+      whatsapp.phone,
+
+    type:
+      "text",
+
+    text: {
+      body:
+        whatsapp.message,
+    },
+  },
+
+  {
+    headers: {
+      Authorization:
+        `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+
+      "Content-Type":
+        "application/json",
+    },
+  }
+);
 
           await doc.ref.update({
             status: "sent",
@@ -209,9 +254,12 @@ await doc.ref.update({
       ? "dead"
       : "pending",
 
-  error:
-    error.message ||
-    "Unknown error",
+ error:
+  JSON.stringify(
+    error.response?.data ||
+    error.message
+  ),
+
 });
 
         }
