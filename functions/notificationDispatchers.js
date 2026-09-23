@@ -14,12 +14,22 @@ const db = getFirestore();
 const WHATSAPP_PHONE_NUMBER_ID =
   "1372746829249591";
 
+
 // TEMPORARY
 // Replace with your generated token
 const WHATSAPP_ACCESS_TOKEN =
-  "EAAj5XptIeLcBSpbBh2B9dhbPmSWxfX0vK3ylsYGsvKSngWumZC2FFmATB3BzFg50uF7kxgAOPMfVp65nNmieoZC6hak89rZAqlLLgOeZC5Hv7YrZA5ZBCU1MuXOrMH1KZA8w0ZCXrVKNEUUm99VqApjZCcqOY8CRTZBoihnZBqunzxdBzte6eEpMlpKWBnvbZAC7G3LhHjMpf4mT7aZBYSPt9M8sSszIJ64uhJkIen5CNieZBUB7wbZCop2rfYD9An03oPNla1MXOoXogWapnps28M8LQimiJLSe4RzXysRyyM2xZApQ";
+  "EAAj5XptIeLcBSrqzaBkBZBpVHUPR2iHGs5fucMN6St5LpZCn2FpLFEh9uUV3n8YNoDEUJzURbovZAj2Ya9GEuCvzXqwVVWP8OOAriBCHLz6P5koa2rluB3VHkRfZC0FMf7lz7MpLGxluSguArdX6przE3jpbBMywbqvO13hQugxo34wdKbvnqJjP27LSfzNoYUJZAZCR0jUc1OQNZCn13qYyL8jw5o0KSiq8EtJ61yHdxYvzatykXpBhd6AnpRLcSIOuM8nFFguCci1TrgmsycD2r7fJ9ByqupQsLx21jIZD";
 
 const axios = require("axios");
+
+const sgMail =
+  require("@sendgrid/mail");
+
+sgMail.setApiKey(
+  "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"
+);
+
+
 
 // --------------------------------------------------
 // EMAIL DISPATCHER
@@ -59,11 +69,43 @@ exports.emailDispatcher =
 
           // SendGrid later
 
-          await doc.ref.update({
-            status: "sent",
-            sentAt:
-              new Date().toISOString(),
-          });
+         await sgMail.send({
+
+  to:
+    email.to,
+
+  from:
+    "admin@bryeak.com",
+
+  subject:
+    email.subject,
+
+  text:
+    email.body ||
+
+    email.message ||
+
+    "",
+
+  html:
+    `<p>${
+      email.body ||
+      email.message ||
+      ""
+    }</p>`,
+
+});
+
+await doc.ref.update({
+
+  status: "sent",
+
+  sentAt:
+    new Date().toISOString(),
+
+  error: null,
+
+});
 
         } catch (error) {
 
@@ -166,7 +208,6 @@ await doc.ref.update({
     }
   );
 
-
 // --------------------------------------------------
 // WHATSAPP DISPATCHER
 // --------------------------------------------------
@@ -202,65 +243,111 @@ exports.whatsAppDispatcher =
             }
           );
 
-          await axios.post(
+          const response =
+            await axios.post(
 
-  `https://graph.facebook.com/v23.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+              `https://graph.facebook.com/v23.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
 
-  {
-    messaging_product:
-      "whatsapp",
+              {
+                messaging_product:
+                  "whatsapp",
 
-    to:
-      whatsapp.phone,
+                to:
+                  whatsapp.phone.replace(/\D/g, ""),
 
-    type:
-      "text",
+                type:
+                  "template",
 
-    text: {
-      body:
-        whatsapp.message,
-    },
-  },
+                template: {
+                  name:
+                    whatsapp.templateName,
 
-  {
-    headers: {
-      Authorization:
-        `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+                  language: {
+                    code:
+                      "en_GB",
+                  },
 
-      "Content-Type":
-        "application/json",
-    },
-  }
-);
+                  components: [
+                    {
+                      type:
+                        "body",
+
+                      parameters:
+                        whatsapp.templateParams.map(
+                          value => ({
+                            type:
+                              "text",
+
+                            text:
+                              value,
+                          })
+                        ),
+                    },
+                  ],
+                },
+              },
+
+              {
+                headers: {
+                  Authorization:
+                    `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+
+                  "Content-Type":
+                    "application/json",
+                },
+              }
+            );
+
+          console.log(
+            "WHATSAPP RESPONSE:",
+            JSON.stringify(
+              response.data
+            )
+          );
 
           await doc.ref.update({
-            status: "sent",
+
+            status:
+              "sent",
+
             sentAt:
               new Date().toISOString(),
+
+            error:
+              null,
+
           });
 
         } catch (error) {
-const retries =
-  ((whatsapp?.retryCount) || 0) + 1;
 
+          console.error(
+            "WHATSAPP ERROR:",
+            JSON.stringify(
+              error.response?.data ||
+              error.message
+            )
+          );
 
-await doc.ref.update({
+          const retries =
+            ((whatsapp?.retryCount) || 0) + 1;
 
-  retryCount:
-    FieldValue.increment(1),
+          await doc.ref.update({
 
-  status:
-    retries >= 5
-      ? "dead"
-      : "pending",
+            retryCount:
+              FieldValue.increment(1),
 
- error:
-  JSON.stringify(
-    error.response?.data ||
-    error.message
-  ),
+            status:
+              retries >= 5
+                ? "dead"
+                : "pending",
 
-});
+            error:
+              JSON.stringify(
+                error.response?.data ||
+                error.message
+              ),
+
+          });
 
         }
       }
