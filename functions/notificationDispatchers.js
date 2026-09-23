@@ -25,9 +25,8 @@ const axios = require("axios");
 const sgMail =
   require("@sendgrid/mail");
 
-sgMail.setApiKey(
-  "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"
-);
+sgMail.setApiKey("REPLACE_ME");
+
 
 
 
