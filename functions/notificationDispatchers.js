@@ -25,7 +25,12 @@ const axios = require("axios");
 const sgMail =
   require("@sendgrid/mail");
 
-sgMail.setApiKey("REPLACE_ME");
+
+const { defineSecret } =
+  require("firebase-functions/params");
+
+const SENDGRID_API_KEY =
+  defineSecret("SENDGRID_API_KEY");
 
 
 
@@ -36,12 +41,19 @@ sgMail.setApiKey("REPLACE_ME");
 
 exports.emailDispatcher =
   onSchedule(
-    "every 1 minutes",
-    async () => {
+    {
+      schedule: "every 1 minutes",
+      secrets: [SENDGRID_API_KEY],
+    },
+   async () => {
 
-      const snap =
-        await db
-          .collection("outboundMail")
+  sgMail.setApiKey(
+    SENDGRID_API_KEY.value()
+  );
+
+  const snap =
+    await db
+      .collection("outboundMail")
           .where(
             "status",
             "==",
