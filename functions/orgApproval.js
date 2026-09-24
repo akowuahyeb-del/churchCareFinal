@@ -385,10 +385,18 @@ await deliverToMember({
     "Church Registration Approved ✅",
 
   message:
-    `Congratulations ${org.adminName || ""}.\n\n` +
-    `${org.name} has been approved and activated.\n\n` +
-    `Organisation Code: ${organizationCode}\n\n` +
-    `Open ChurchCare and complete your onboarding.`,
+    `Congratulations ${org.adminName || ""}.
+     
+${org.name} has been approved.
+
+Organisation Code: ${organizationCode}`,
+
+  data: {
+    organizationName:
+      org.name,
+
+    organizationCode,
+  },
 });
 
 
@@ -470,24 +478,30 @@ try {
       status:
         "pending",
     });
+await db.collection("outboundWhatsApp").add({
+  phone: org.contactPhone,
 
-    await db.collection("outboundWhatsApp").add({
-      phone:
-        org.contactPhone,
+  templateName:
+    "church_approval",
 
-      message:
-        `${org.name} has been approved. Organisation Code: ${organizationCode}.`,
+  templateLanguage:
+    "en_GB",
 
-      type:
-        "organization_contact_approval",
+  templateParams: [
+    org.name,
+    organizationCode,
+  ],
 
-      organizationId,
+  type:
+    "organization_contact_approval",
 
-      createdAt: now,
+  organizationId,
 
-      status:
-        "pending",
-    });
+  createdAt: now,
+
+  status: "pending",
+});
+
   }
 
 } catch (notificationError) {

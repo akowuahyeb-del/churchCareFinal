@@ -121,6 +121,8 @@ export default function HistoryScreen() {
   const [pastors,     setPastors]     = useState([]);
   const [milestones,  setMilestones]  = useState([]);
   const [gallery,     setGallery]     = useState([]);
+  const [activeEntity, setActiveEntity] =
+  useState(null);
 
   // Modal state
   const [modalVisible,   setModalVisible]   = useState(false);
@@ -139,14 +141,34 @@ export default function HistoryScreen() {
   useState([]);
 
 
+useEffect(() => {
+  const loadEntity = async () => {
+    const stored =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    if (stored) {
+      setActiveEntity(
+        JSON.parse(stored)
+      );
+    }
+  };
+
+  loadEntity();
+}, []);
+
+
  /* ══════════ LOAD ══════════ */
 useEffect(() => {
+
+  if (!activeEntity) return;
 
   loadAll();
 
   loadAssignedAdmins();
 
-}, []);
+}, [activeEntity]);
 
 useEffect(() => {
   const loadRoles = async () => {
@@ -257,10 +279,25 @@ console.log(
 
 
   const loadAll = async () => {
+
+  if (!activeEntity) return;
+
+  const {
+    organizationId,
+    entityId
+  } = activeEntity;
     setLoading(true);
     try {
       // Load section docs
-      const sectSnap = await getDocs(collection(db, "church_history"));
+      const sectSnap = await getDocs(collection(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "history"
+)
+);
       sectSnap.docs.forEach(d => {
         const data = d.data();
         if (["Overview","Founders","Vision"].includes(data.section)) {
@@ -268,13 +305,34 @@ console.log(
         }
       });
       // Load pastors
-      const pastSnap = await getDocs(query(collection(db, "church_pastors"), orderBy("start_year", "asc")));
+      const pastSnap = await getDocs(query(collection(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "pastors"
+), orderBy("start_year", "asc")));
       setPastors(pastSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       // Load milestones
-      const milSnap = await getDocs(query(collection(db, "church_milestones"), orderBy("year", "asc")));
+      const milSnap = await getDocs(query(collection(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "milestones"
+), orderBy("year", "asc")));
       setMilestones(milSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       // Load gallery
-      const galSnap = await getDocs(collection(db, "church_gallery"));
+      const galSnap = await getDocs(collection(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "gallery"
+));
       setGallery(galSnap.docs.map(d => ({ ...d.data(), id: d.id })));
     } catch (e) { console.log(e); }
     finally { setLoading(false); }
@@ -373,21 +431,66 @@ console.log(
 
   /* ══════════ SAVE ══════════ */
   const handleSave = async () => {
-    setSaving(true);
-    try {
+  setSaving(true);
+
+  try {
+
+    if (!activeEntity) {
+      Alert.alert(
+        "Error",
+        "No active church selected"
+      );
+      return;
+    }
+
+    const {
+      organizationId,
+      entityId,
+    } = activeEntity;
       if (activeTab === "Milestones" || activeTab === "Pastors" || activeTab === "Gallery") {
         // List item
-        const collName = activeTab === "Pastors" ? "church_pastors"
-                       : activeTab === "Milestones" ? "church_milestones"
-                       : "church_gallery";
+       const collName =
+  activeTab === "Pastors"
+    ? "pastors"
+    : activeTab === "Milestones"
+    ? "milestones"
+    : "gallery";
         if (modalMode === "add" || !formData.id) {
-          const docRef = await addDoc(collection(db, collName), { ...formData, createdAt: new Date().toISOString() });
+          const docRef = await addDoc(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    collName
+  ),
+  {
+    ...formData,
+    createdAt: new Date().toISOString(),
+  }
+);
           const newItem = { ...formData, id: docRef.id };
           if (activeTab === "Pastors")    setPastors(p => [...p, newItem].sort((a,b)=>(a.start_year||"").localeCompare(b.start_year||"")));
           if (activeTab === "Milestones") setMilestones(p => [...p, newItem].sort((a,b)=>(a.year||"").localeCompare(b.year||"")));
           if (activeTab === "Gallery")    setGallery(p => [...p, newItem]);
         } else {
-          await updateDoc(doc(db, collName, formData.id), { ...formData, updatedAt: new Date().toISOString() });
+          await updateDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    collName,
+    formData.id
+  ),
+  {
+    ...formData,
+    updatedAt:
+      new Date().toISOString(),
+  }
+);
           const updater = (list) => list.map(i => i.id === formData.id ? { ...formData } : i);
           if (activeTab === "Pastors")    setPastors(updater);
           if (activeTab === "Milestones") setMilestones(updater);
@@ -397,9 +500,34 @@ console.log(
         // Section (Overview / Founders / Vision)
         const section = editingItem || activeTab;
         if (sectionData[section]?.id) {
-          await updateDoc(doc(db, "church_history", sectionData[section].id), { ...formData, section, updatedAt: new Date().toISOString() });
+          await updateDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "history",
+    sectionData[section].id
+  ), { ...formData, section, updatedAt: new Date().toISOString() });
         } else {
-          const docRef = await addDoc(collection(db, "church_history"), { ...formData, section, createdAt: new Date().toISOString() });
+          const docRef = await addDoc(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "history"
+  ),
+  {
+    ...formData,
+    section,
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
           formData.id = docRef.id;
         }
         setSectionData(prev => ({ ...prev, [section]: { ...formData, section } }));
@@ -410,13 +538,34 @@ console.log(
   };
 
   /* ══════════ DELETE ══════════ */
-  const handleDelete = (item, collName, setter) => {
+  const handleDelete = (
+  item,
+  collName,
+  setter
+) => {
+
+  if (!activeEntity) return;
+
+  const {
+    organizationId,
+    entityId
+  } = activeEntity;
     if (!CAN_DELETE) { Alert.alert("Access denied", "Only admins can delete records."); return; }
     Alert.alert("Delete?", "This cannot be undone.", [
       { text: "Cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
         try {
-          if (item.id) await deleteDoc(doc(db, collName, item.id));
+          if (item.id) await deleteDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    collName,
+    item.id
+  )
+);
           setter(prev => prev.filter(i => i.id !== item.id));
         } catch (e) { Alert.alert("Error", e.message); }
       }}
@@ -424,13 +573,27 @@ console.log(
   };
 
   const handleDeleteSection = (section) => {
+    if (!activeEntity) return;
+
+const {
+  organizationId,
+  entityId
+} = activeEntity;
     if (!CAN_DELETE) { Alert.alert("Access denied"); return; }
     Alert.alert("Clear section?", "All content in this section will be cleared.", [
       { text: "Cancel" },
       { text: "Clear", style: "destructive", onPress: async () => {
         try {
           if (sectionData[section]?.id) {
-            await deleteDoc(doc(db, "church_history", sectionData[section].id));
+            await deleteDoc(doc(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "history",
+  sectionData[section].id
+));
           }
           const empty = emptySection(SECTION_FIELDS[section] || []);
           setSectionData(prev => ({ ...prev, [section]: { ...empty, id: null } }));
@@ -570,7 +733,7 @@ console.log(
                   </TouchableOpacity>
                 )}
                 {CAN_DELETE && (
-                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(p, "church_pastors", setPastors)}>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(p, "pastors", setPastors)}>
                     <Ionicons name="trash-outline" size={13} color="#fff" />
                     <Text style={styles.btnText}>Delete</Text>
                   </TouchableOpacity>
@@ -615,7 +778,7 @@ console.log(
                   </TouchableOpacity>
                 )}
                 {CAN_DELETE && (
-                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(m, "church_milestones", setMilestones)}>
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(m, "milestones", setMilestones)}>
                     <Ionicons name="trash-outline" size={13} color="#fff" /><Text style={styles.btnText}>Delete</Text>
                   </TouchableOpacity>
                 )}
@@ -656,7 +819,7 @@ console.log(
                   </TouchableOpacity>
                 )}
                 {CAN_DELETE && (
-                  <TouchableOpacity style={[styles.deleteBtn, { flex: 1, marginLeft: 4 }]} onPress={() => handleDelete(g, "church_gallery", setGallery)}>
+                  <TouchableOpacity style={[styles.deleteBtn, { flex: 1, marginLeft: 4 }]} onPress={() => handleDelete(g, "gallery", setGallery)}>
                     <Ionicons name="trash-outline" size={12} color="#fff" /><Text style={[styles.btnText, { fontSize: 10 }]}>Delete</Text>
                   </TouchableOpacity>
                 )}

@@ -437,9 +437,48 @@ await ref.update({
 const organization =
   orgSnap.data() || {};
 
-
 const organizationName =
   organization.name || "your church";
+
+  if (member.email) {
+
+  await db.collection("outboundMail").add({
+
+    to: member.email,
+
+    template:
+      "memberInvitation",
+
+    data: {
+
+      memberName:
+        member.name || "",
+
+      churchName:
+        organizationName,
+
+      inviteCode:
+        member.memberCode || "",
+
+      invitationUrl:
+        inviteLink,
+
+    },
+
+    status:
+      "pending",
+
+    retryCount:
+      0,
+
+    createdAt:
+      new Date().toISOString(),
+  });
+}
+
+
+
+
   await deliverToMember({
   organizationId,
   entityId,

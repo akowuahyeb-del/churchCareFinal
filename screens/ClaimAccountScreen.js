@@ -120,10 +120,9 @@ if (existingUser) {
     });
 
  
-
 console.log(
   "CLAIM RESULT",
-  JSON.stringify(result, null, 2)
+  JSON.stringify(claimResult, null, 2)
 );
 
 await AsyncStorage.setItem(
@@ -139,20 +138,35 @@ await AsyncStorage.setItem(
   })
 );
 
+const orgSnap = await getDoc(
+  doc(
+    db,
+    "organizations",
+    claimResult.organizationId
+  )
+);
 
-  Alert.alert(
-    "Success",
-    "Administrator identity claimed.",
-    [
-      {
-        text: "Continue",
-        onPress: () =>
-          navigation.replace(
-            "Onboarding"
-          ),
-      },
-    ]
-  );
+const orgData = {
+  id: orgSnap.id,
+  ...orgSnap.data(),
+};
+
+Alert.alert(
+  "Success",
+  "Administrator identity claimed.",
+  [
+    {
+      text: "Continue",
+      onPress: () =>
+        navigation.replace(
+          "Onboarding",
+          {
+            org: orgData,
+          }
+        ),
+    },
+  ]
+);
 
   return;
 }
