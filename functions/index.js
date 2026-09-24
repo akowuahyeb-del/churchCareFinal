@@ -177,3 +177,27 @@ exports.addPastoralNote =
 
 exports.escalateStalePastoralRequests =
   pastoralCare.escalateStalePastoralRequests;
+
+  const memberMerge =
+  require("./memberMerge");
+
+exports.mergeMembers =
+  memberMerge.mergeMembers;
+
+ const attendanceIntelligence =
+  require("./attendanceIntelligence");
+
+exports.onAttendanceSessionEnded =
+  attendanceIntelligence.onAttendanceSessionEnded;
+ 
+  const notificationDispatchers =
+  require("./notificationDispatchers");
+
+exports.emailDispatcher =
+  notificationDispatchers.emailDispatcher;
+
+exports.smsDispatcher =
+  notificationDispatchers.smsDispatcher;
+
+exports.whatsAppDispatcher =
+  notificationDispatchers.whatsAppDispatcher;

@@ -71,29 +71,29 @@ const peakPresent =
       ...doc.data(),
     }));
 
-    const membersCount = members.length;
-
-    const invitedCount = members.filter(
-      m => m.lifecycleStatus === "invited"
-    ).length;
-
-    console.log(
-  "INVITED MEMBERS",
-  members
-    .filter(m => m.lifecycleStatus === "invited")
-    .map(m => ({
-      name: m.name,
-      lifecycle: m.lifecycleStatus,
-    }))
+    const effectiveMembers = members.filter(
+  (m) =>
+    m.lifecycleStatus !== "duplicate" &&
+    m.active !== false
 );
 
-    const registeredCount = members.filter(
-      m => m.lifecycleStatus === "registered"
-    ).length;
+const membersCount =
+  effectiveMembers.length;
 
-    const activeUserCount = members.filter(
-      m => m.lifecycleStatus === "active_user"
-    ).length;
+   const invitedCount =
+  effectiveMembers.filter(
+    m => m.lifecycleStatus === "invited"
+  ).length;
+
+const registeredCount =
+  effectiveMembers.filter(
+    m => m.lifecycleStatus === "registered"
+  ).length;
+
+const activeUserCount =
+  effectiveMembers.filter(
+    m => m.lifecycleStatus === "active_user"
+  ).length;
 
     return {
       membersCount,
@@ -112,22 +112,22 @@ sessionsCount,
     };
 
   } catch (e) {
-    console.log("❌ getAttendanceSummary:", e);
+  console.log("❌ getAttendanceSummary:", e);
 
-    return {
-  membersCount,
+  return {
+    membersCount: 0,
 
-  invitedCount,
-  registeredCount,
-  activeUserCount,
+    invitedCount: 0,
+    registeredCount: 0,
+    activeUserCount: 0,
 
-  localMemberCount: membersCount,
-  awayCount: 0,
+    localMemberCount: 0,
+    awayCount: 0,
 
-  avgPresent,
-  avgRate,
-  peakPresent,
-  sessionsCount,
-};
-  }
+    avgPresent: 0,
+    avgRate: 0,
+    peakPresent: 0,
+    sessionsCount: 0,
+  };
+}
 }

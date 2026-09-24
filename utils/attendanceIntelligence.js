@@ -593,56 +593,92 @@ export async function buildAttendanceIntelligenceSummary({
       shouldIncludeInAttendanceIntelligence
     );
 
-  for (const member of intelligenceMembers) {
-    const streak =
+for (const member of intelligenceMembers) {
+
+  let health;
+  let streak;
+  let memberTrack = null;
+
+  // Use persisted session-end snapshot first
+  if (
+    member?.attendanceIntelligence?.lastCalculatedAt
+  ) {
+
+    health =
+      member.attendanceIntelligence.health;
+
+    streak =
+      member.attendanceIntelligence
+        .absenceStreak ?? 0;
+
+  } else {
+
+    // Fallback for legacy members
+    memberTrack =
+      await resolveMemberTrack({
+        organizationId,
+        entityId,
+        memberId: member.id,
+        fallbackTrack: track,
+      });
+
+    streak =
       await computeAbsenceStreak({
         organizationId,
         entityId,
         memberId: member.id,
-        track,
+        track: memberTrack,
       });
 
-    console.log(
-      "STREAK RESULT:",
-      member.name,
-      streak
-    );
-
-    console.log(
-      "PROCESSING MEMBER:",
-      member.name,
-      member.id
-    );
-
-    const health =
+    health =
       classifyAttendanceHealth(
         streak,
         attendancePolicy
       );
+  }
 
-    console.log(
-      "HEALTH RESULT",
-      {
-        health,
-        policy: attendancePolicy,
-        streak,
-      }
-    );
+  console.log(
+    "STREAK RESULT:",
+    member.name,
+    streak
+  );
 
-    const recommendation = {
+  console.log(
+    "PROCESSING MEMBER:",
+    member.name,
+    member.id
+  );
+
+  console.log(
+    "HEALTH RESULT",
+    {
       health,
-      absenceStreak: streak,
-    };
-
-    const item = {
-      memberId: member.id,
-      memberName:
-        member.fullName ||
-        member.name ||
-        "Unknown",
+      policy: attendancePolicy,
       streak,
-      recommendation,
-    };
+    }
+  );
+
+  const recommendation = {
+    health,
+    absenceStreak: streak,
+  };
+
+  const item = {
+    memberId: member.id,
+    memberName:
+      member.fullName ||
+      member.name ||
+      "Unknown",
+
+    streak,
+
+    track:
+      memberTrack ||
+      member?.attendanceIntelligence?.track ||
+      track,
+
+    recommendation,
+  };
 
     switch (health) {
       case ATTENDANCE_HEALTH.FOLLOW_UP:
@@ -784,53 +820,51 @@ export async function resolveMemberTrack({
 
   }
 }
+
 export function buildAttendanceIntelligenceSnapshot({
   streak,
   attendancePolicy,
   lastAttendanceDate = null,
 }) {
-  const health = classifyAttendanceHealth(
-    streak,
-    attendancePolicy
-  );
+
+  const recommendation =
+    buildAttendanceRecommendation(
+      streak,
+      attendancePolicy
+    );
 
   return {
-    health,
 
-    absenceStreak: streak,
+    health:
+      recommendation.health,
+
+    absenceStreak:
+      streak,
+
+    action:
+      recommendation.action,
+
+    priority:
+      recommendation.priority,
 
     followUpRequired:
-      health === "follow_up",
+      recommendation.health ===
+      "follow_up",
 
     atRisk:
-      health === "at_risk",
+      recommendation.health ===
+      "at_risk",
 
     inactiveCandidate:
-      health === "inactive_candidate",
+      recommendation.health ===
+      "inactive_candidate",
 
     lastAttendanceDate,
 
     lastCalculatedAt:
       new Date().toISOString(),
+
   };
 }
-export async function rebuildMemberAttendanceIntelligence({
-  organizationId,
-  entityId,
-  member,
-  attendancePolicy,
-  track,
-}) {
-  const streak =
-    await computeAbsenceStreak({
-      organizationId,
-      entityId,
-      memberId: member.id,
-      track,
-    });
 
-  return buildAttendanceIntelligenceSnapshot({
-    streak,
-    attendancePolicy,
-  });
-}
+

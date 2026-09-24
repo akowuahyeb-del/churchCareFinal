@@ -8,6 +8,37 @@ async function sendPush(token, title, body, data = {}) {
   return { sent: true, stub: true };
 }
 
+
+
+function resolveWhatsAppTemplate({
+  type,
+  member,
+  data = {},
+}) {
+
+  switch (type) {
+
+    case "church_approval":
+      return {
+        templateName: "church_approval",
+
+        templateLanguage: "en_GB",
+
+        templateParams: [
+          data.organizationName ||
+          member.organizationName ||
+          "Church",
+
+          data.organizationCode ||
+          member.organizationCode ||
+          "PENDING",
+        ],
+      };
+
+    default:
+      return null;
+  }
+}
 // Fans out to: the member's own subcollection (works even before they
 // have an auth uid), the linked user's feed if uid exists (what
 // HomeScreen's notification bell already listens to), and push if a
@@ -18,49 +49,90 @@ async function deliverToMember({ organizationId, entityId, memberId, type, title
   const memberSnap = await memberRef.get();
   if (!memberSnap.exists) return { delivered: false, reason: "member_not_found" };
   const member = memberSnap.data();
+  const now = new Date().toISOString();
 
 // Pre-claim delivery channels.
 // Church administrators have uid:null during onboarding,
 // so we must deliver using their email/phone.
 
+
 if (member.email) {
   await db.collection("outboundMail").add({
-    to: member.email,
-    subject: title,
-    body: message,
-    type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
-  });
+  to: member.email,
+  subject: title,
+  body: message,
+  type,
+  organizationId,
+  entityId,
+  memberId,
+
+  status: "pending",
+
+  retryCount: 0,
+
+  createdAt: now,
+});
 }
 
 if (member.phone) {
-  await db.collection("outboundSms").add({
-    phone: member.phone,
-    message,
+ await db.collection("outboundSms").add({
+  phone: member.phone,
+  message,
+  type,
+  organizationId,
+  entityId,
+  memberId,
+
+  status: "pending",
+
+  retryCount: 0,
+
+  createdAt: now,
+});
+const whatsappPayload =
+  resolveWhatsAppTemplate({
     type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
+    member,
+    data,
   });
 
-  await db.collection("outboundWhatsApp").add({
-    phone: member.phone,
-    message,
-    type,
-    organizationId,
-    entityId,
-    memberId,
-    createdAt: now,
-    status: "pending",
-  });
+if (
+  whatsappPayload &&
+  member.phone
+) {
+
+  await db
+    .collection("outboundWhatsApp")
+    .add({
+
+      phone:
+        member.phone,
+
+      templateName:
+        whatsappPayload.templateName,
+
+      templateLanguage:
+        whatsappPayload.templateLanguage,
+
+      templateParams:
+        whatsappPayload.templateParams,
+
+      type,
+
+      organizationId,
+      entityId,
+      memberId,
+
+      status: "pending",
+
+      retryCount: 0,
+
+      createdAt: now,
+    });
 }
-  const now = new Date().toISOString();
+
+}
+
   const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
 
   await memberRef.collection("notifications").add(payload);

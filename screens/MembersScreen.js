@@ -318,10 +318,15 @@ console.log(
 
     const snap = await getDocs(ref);
 
-    const data = snap.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-    }));
+   const data = snap.docs
+  .map(d => ({
+    id: d.id,
+    ...d.data(),
+  }))
+  .filter(
+    member =>
+      member.lifecycleStatus !== "duplicate"
+  );
 
     console.log("✅ MEMBERS FOUND:", data.length);
    
@@ -674,6 +679,13 @@ const executeReinstate = async () => {
 
  
 const filtered = members.filter(m => {
+
+  if (
+    m.lifecycleStatus ===
+    "duplicate"
+  ) {
+    return false;
+  }
   const q = search.toLowerCase();
 
   const matchSearch =
@@ -713,10 +725,21 @@ const filtered = members.filter(m => {
 
 
 const getLifecycleCount = (status) => {
-  if (status === "All") return members.length;
 
-  return members.filter(
-    (m) => (m.lifecycleStatus || "member") === status
+  const visibleMembers =
+    members.filter(
+      m =>
+        m.lifecycleStatus !== "duplicate"
+    );
+
+  if (status === "All") {
+    return visibleMembers.length;
+  }
+
+  return visibleMembers.filter(
+    m =>
+      (m.lifecycleStatus || "member") ===
+      status
   ).length;
 };
 

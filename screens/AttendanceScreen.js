@@ -33,10 +33,11 @@ import PinPad from "../components/PinPad";
 import {
   SESSION_CATEGORIES,
   resolveAttendanceTrack,
+  resolveMemberTrack,
   computeAbsenceStreak,
   normalizeCategory,
   classifyAttendanceHealth,
-buildAttendanceIntelligenceSnapshot,
+  buildAttendanceIntelligenceSnapshot,
 } from "../utils/attendanceIntelligence";
 
 // ─────────────────────────────────────────────────────────────────
@@ -265,7 +266,21 @@ export default function AttendanceScreen() {
       const snap = await getDocs(
         collection(db, "organizations", organizationId, "entities", entityId, "members")
       );
-      setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setMembers(
+  snap.docs
+    .map(d => ({
+      id: d.id,
+      ...d.data(),
+    }))
+    .filter(
+      member =>
+        member.active !== false &&
+        ["member", "active_user"].includes(
+          member.lifecycleStatus
+        )
+    )
+);
+
     } catch (e) {
       console.log("❌ loadMembers:", e);
     }
@@ -672,7 +687,10 @@ await applySessionData(
     setVerifyingPin(true);
 
     try {
-      const valid = await verifyPin(enteredPin);
+      const valid = await verifyPin(
+  enteredPin,
+  "attendance"
+);
 
       if (!valid) {
         Alert.alert("Invalid Attendance PIN", "The Attendance PIN entered is incorrect.");
@@ -689,93 +707,208 @@ await applySessionData(
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────
-  // AUTO-MARK ABSENTEES (runs at session end)
-  // ─────────────────────────────────────────────────────────────────
-  // FIX: previously nobody was ever marked absent unless an usher
-  // explicitly tapped it — so the "2 continuous absences" pastoral
-  // threshold had almost no real data to count against. Now, when a
-  // session ends, every "local" member (not away/visiting) with no
-  // attendance record gets an implicit absence written — across every
-  // session category, per your call — while the streak calculation
-  // itself (computeAbsenceStreak) separately decides which categories
-  // actually count toward the pastoral alert.
-  const autoMarkAbsentees = async () => {
-    const local = trueLocalMembers(members, todayDate);
-    const flagged = [];
+  const finalizeAttendanceIntelligence = async () => {
+  const local = trueLocalMembers(
+    members,
+    todayDate
+  );
 
-    for (const member of local) {
-      if (attendance[member.id]) continue; // already has a record
+  const needsAttention = [];
 
+  for (const member of local) {
+
+    if (!attendance[member.id]) {
       const record = {
-        ...buildRecord(member, "absent"),
+        ...buildRecord(
+          member,
+          "absent"
+        ),
         method: "auto",
         autoMarked: true,
       };
 
       await writeUpsert(record);
-
-      try {
-  const streak = await computeAbsenceStreak({
-    organizationId,
-    entityId,
-    memberId: member.id,
-    track: currentTrack,
-  });
-
-  const snapshot =
-    await rebuildMemberAttendanceIntelligence({
-      organizationId,
-      entityId,
-      member,
-      attendancePolicy,
-      track: currentTrack,
-    });
-
-  await updateDoc(
-    doc(
-      db,
-      "organizations",
-      organizationId,
-      "entities",
-      entityId,
-      "members",
-      member.id
-    ),
-    {
-      attendanceIntelligence: snapshot,
     }
-  );
 
-  const health = snapshot.health;
+    try {
 
-  if (
-    health === "follow_up" ||
-    health === "at_risk" ||
-    health === "inactive_candidate"
-  ) {
-    flagged.push(
-      `${member.name} (${streak})`
-    );
+      const memberTrack =
+        await resolveMemberTrack({
+          organizationId,
+          entityId,
+          memberId: member.id,
+          fallbackTrack:
+            currentTrack,
+        });
+
+      const streak =
+        await computeAbsenceStreak({
+          organizationId,
+          entityId,
+          memberId: member.id,
+          track: memberTrack,
+        });
+
+      const newSnapshot =
+        buildAttendanceIntelligenceSnapshot({
+          streak,
+          attendancePolicy,
+        });
+
+      const memberRef = doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members",
+        member.id
+      );
+
+      const memberSnap =
+        await getDoc(memberRef);
+
+      const previousHealth =
+        memberSnap.exists()
+          ? memberSnap.data()
+              ?.attendanceIntelligence
+              ?.health || null
+          : null;
+
+      const healthChanged =
+        previousHealth !==
+        newSnapshot.health;
+
+      await updateDoc(
+        memberRef,
+        {
+          attendanceIntelligence:
+            newSnapshot,
+        }
+      );
+
+      if (healthChanged) {
+
+        await addDoc(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "attendanceIntelligenceAudit"
+          ),
+          {
+            memberId: member.id,
+            memberName:
+              member.name,
+            previousHealth,
+            newHealth:
+              newSnapshot.health,
+            absenceStreak:
+              streak,
+            track:
+              memberTrack,
+            sessionId,
+            changedAt:
+              new Date()
+                .toISOString(),
+          }
+        );
+
+        const rank = {
+          healthy: 0,
+          follow_up: 1,
+          at_risk: 2,
+          inactive_candidate: 3,
+        };
+
+        const worsening =
+          (rank[
+            newSnapshot.health
+          ] ?? 0) >
+          (rank[
+            previousHealth
+          ] ?? 0);
+
+        await addDoc(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "notifications"
+          ),
+          {
+            type:
+              "attendance_health_change",
+
+            recipientUid:
+              null,
+
+            title:
+              worsening
+                ? "⚠️ Attendance follow-up needed"
+                : "✅ Attendance improved",
+
+            message:
+              `${member.name} moved from ${
+                previousHealth ||
+                "no record"
+              } to ${
+                newSnapshot.health.replace(
+                  "_",
+                  " "
+                )
+              }.`,
+
+            memberId:
+              member.id,
+
+            newHealth:
+              newSnapshot.health,
+
+            read: false,
+
+            createdAt:
+              new Date()
+                .toISOString(),
+          }
+        );
+      }
+
+      if (
+        newSnapshot.health !==
+        "healthy"
+      ) {
+        needsAttention.push(
+          `${member.name} (${newSnapshot.health.replace(
+            "_",
+            " "
+          )}, streak ${streak})`
+        );
+      }
+
+    } catch (e) {
+      console.log(
+        "❌ attendance intelligence sync:",
+        e
+      );
+    }
   }
 
-} catch (e) {
-  console.log(
-    "❌ post-session streak check:",
-    e
-  );
-}
-
-} // <-- closes for (const member of local)
-
-if (flagged.length > 0) {
-  Alert.alert(
-    "Pastoral Follow-Up Needed",
-    `${flagged.length} member(s) have reached the absence threshold:\n\n${flagged.join("\n")}`
-  );
-}
-
-}; // <-- closes autoMarkAbsentees
+  if (
+    needsAttention.length > 0
+  ) {
+    Alert.alert(
+      "Pastoral Follow-Up Needed",
+      `${needsAttention.length} member(s) need attention:\n\n${needsAttention.join(
+        "\n"
+      )}`
+    );
+  }
+};
 
   // ─────────────────────────────────────────────────────────────────
   // END SESSION
@@ -805,7 +938,8 @@ const currentTotal =
       // FIX: write implicit absences (and check pastoral thresholds)
       // BEFORE the session/attendance state is torn down below, while
       // sessionId/organizationId/entityId are still valid.
-      await autoMarkAbsentees();
+      await finalizeAttendanceIntelligence();
+
 
       if (sessionId && organizationId && entityId) {
         await updateDoc(
@@ -1546,15 +1680,15 @@ if (
 const attendancePolicy = {
   followUpThreshold:
     attendanceSettings?.attendancePolicy
-      ?.followUpThreshold ?? null,
+      ?.followUpThreshold ?? 1,
 
   atRiskThreshold:
     attendanceSettings?.attendancePolicy
-      ?.atRiskThreshold ?? null,
+      ?.atRiskThreshold ?? 2,
 
   inactiveCandidateThreshold:
     attendanceSettings?.attendancePolicy
-      ?.inactiveCandidateThreshold ?? null,
+      ?.inactiveCandidateThreshold ?? 4,
 };
 
 console.log(

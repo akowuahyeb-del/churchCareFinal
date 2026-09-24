@@ -159,15 +159,38 @@ await setDoc(
 
 
       // ✅ Persist activeEntity so the rest of the app knows the context
-      const orgName = org.name || "Church";
-      await AsyncStorage.setItem(
-        "activeEntity",
-        JSON.stringify({
-          organizationId,
-          entityId,
-          name: orgName,
-        })
-      );
+      console.log(
+  "ONBOARDING ORG OBJECT:",
+  JSON.stringify(org, null, 2)
+);
+
+const orgName =
+  org?.name?.trim()
+    ? org.name.trim()
+    : null;
+
+if (!orgName) {
+  Alert.alert(
+    "Setup Error",
+    "Organisation name was not supplied."
+  );
+  return;
+}
+     const activeEntity = {
+  organizationId,
+  entityId,
+  name: orgName,
+};
+
+console.log(
+  "SAVING ACTIVE ENTITY:",
+  activeEntity
+);
+
+await AsyncStorage.setItem(
+  "activeEntity",
+  JSON.stringify(activeEntity)
+);
 
       // ✅ Update user profile with org/entity ids
       await setDoc(
