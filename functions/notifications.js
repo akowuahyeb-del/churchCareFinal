@@ -145,21 +145,29 @@ exports.sendApprovalRequestNotifications =
         continue;
       }
 
-      await createMemberNotification({
-        organizationId,
-        entityId,
-        memberId: elder.id,
+    await deliverToMember({
+  organizationId,
+  entityId,
+  memberId: elder.id,
 
-        title: "Approval Required",
+  title: "Approval Required",
 
-        message:
-          `${initiatedBy} has requested a ` +
-          `${action} action for ${memberName}.\n\n` +
-          `Your approval is required before this action can proceed.`,
+  message:
+    `${initiatedBy} has requested a ` +
+    `${action} action for ${memberName}.\n\n` +
+    `Your approval is required before this action can proceed.`,
 
-        category: "approval",
-        type: "disciplinary_approval",
-      });
+  type: "disciplinary_approval",
+
+  data: {
+    category: "approval",
+    action,
+    targetMemberId: memberId,
+    targetMemberName: memberName,
+    initiatedBy,
+  },
+});
+
 
       delivered++;
     }

@@ -40,7 +40,8 @@ import {
   setDoc,
   query,
   orderBy,
-  getDocs
+  getDocs,
+  writeBatch
 } from "firebase/firestore";
 
 import {
@@ -115,6 +116,52 @@ useEffect(() => {
 const [notifCount, setNotifCount] = useState(0);
 const [notifModal, setNotifModal] = useState(false);
 const [notifications, setNotifications] = useState([]);
+const markNotificationsAsRead = async () => {
+  const uid = auth.currentUser?.uid;
+
+  if (!uid || notifications.length === 0) {
+    return;
+  }
+
+  try {
+    const unread = notifications.filter(
+      n => !n.read
+    );
+
+    if (unread.length === 0) {
+      return;
+    }
+
+    const batch = writeBatch(db);
+
+    unread.forEach(notification => {
+      const ref = doc(
+        db,
+        "users",
+        uid,
+        "notifications",
+        notification.id
+      );
+
+      batch.update(ref, {
+        read: true,
+        readAt: new Date().toISOString(),
+      });
+    });
+
+    await batch.commit();
+
+    console.log(
+      `✅ Marked ${unread.length} notifications as read`
+    );
+
+  } catch (e) {
+    console.log(
+      "❌ Failed to mark notifications as read:",
+      e
+    );
+  }
+};
 const carouselRef = useRef(null);
 const [carouselIndex, setCarouselIndex] = useState(0);
 
@@ -1020,12 +1067,20 @@ return (
       entity={activeEntity}
       actions={[
   {
-    icon: "notifications-outline",
-    onPress: () => {
-      setNotifModal(true);
-      setNotifCount(0);
-    },
+  icon: "notifications-outline",
+  onPress: () => {
+
+    setNotifModal(true);
+
+    markNotificationsAsRead().catch(err =>
+      console.log(
+        "❌ Notification read error:",
+        err
+      )
+    );
+
   },
+},
 
   ...(hasRole("admin") || hasRole("media")
     ? [{

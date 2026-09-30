@@ -74,21 +74,27 @@ if (member.email) {
 });
 }
 
-if (member.phone) {
- await db.collection("outboundSms").add({
-  phone: member.phone,
-  message,
-  type,
-  organizationId,
-  entityId,
-  memberId,
+// SMS is currently optional because the provider
+// has not yet been configured.
 
-  status: "pending",
+const SMS_ENABLED = false;
 
-  retryCount: 0,
+if (SMS_ENABLED && member.phone) {
+  await db.collection("outboundSms").add({
+    phone: member.phone,
+    message,
+    type,
+    organizationId,
+    entityId,
+    memberId,
 
-  createdAt: now,
-});
+    status: "pending",
+
+    retryCount: 0,
+
+    createdAt: now,
+  });
+}
 const whatsappPayload =
   resolveWhatsAppTemplate({
     type,
@@ -131,7 +137,7 @@ if (
     });
 }
 
-}
+
 
   const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
 

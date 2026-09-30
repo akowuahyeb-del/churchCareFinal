@@ -171,25 +171,24 @@ exports.smsDispatcher =
         const sms =
           doc.data();
 
-        try {
+       try {
 
-          console.log(
-            "SMS JOB",
-            {
-              id: doc.id,
-              phone: sms.phone,
-            }
-          );
+  console.log(
+    "SMS JOB (DISABLED)",
+    {
+      id: doc.id,
+      phone: sms.phone,
+    }
+  );
 
-          // Hubtel/Twilio later
+  await doc.ref.update({
+    status: "provider_unavailable",
+    sentAt: new Date().toISOString(),
+    error:
+      "SMS provider not configured. Message retained for future delivery.",
+  });
 
-          await doc.ref.update({
-            status: "sent",
-            sentAt:
-              new Date().toISOString(),
-          });
-
-        } catch (error) {
+} catch (error) {
 
     const retries =
   ((sms?.retryCount) || 0) + 1;
