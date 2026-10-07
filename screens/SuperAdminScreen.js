@@ -95,6 +95,7 @@ const reinstateOrganization =
 
   // ── LIVE ACTIVITY ──
   const [liveActivity, setLiveActivity] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const activityUnsubRef = useRef(null);
 
   // ── FEATURE FLAGS ──
@@ -158,11 +159,13 @@ const reinstateOrganization =
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([
+     await Promise.all([
   loadOrganizations(),
   loadGovernanceNodes(),
   loadFeatureFlags(),
+  loadSystemAlerts(),
 ]);
+
       startLiveActivityListener();
     } catch (e) {
       console.log("❌ SuperAdmin loadAll:", e);
@@ -215,6 +218,32 @@ const loadGovernanceNodes = async () => {
   }
 };
 
+const loadSystemAlerts = async () => {
+  try {
+
+    const snap = await getDocs(
+      query(
+        collection(db, "systemAlerts"),
+        orderBy("createdAt", "desc")
+      )
+    );
+
+    setAlerts(
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }))
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadSystemAlerts:",
+      e
+    );
+
+  }
+};
 
 
 
@@ -591,6 +620,9 @@ const reinstateChurch = async (org) => {
   { key: "overview",   label: "Overview",   icon: "grid-outline" },
   { key: "churches",   label: "Churches",   icon: "business-outline" },
   { key: "governance", label: "Governance", icon: "git-branch-outline" },
+
+  { key: "alerts",     label: "Alerts",     icon: "warning-outline" },
+
   { key: "activity",   label: "Activity",   icon: "pulse-outline" },
   { key: "flags",      label: "Flags",      icon: "flag-outline" },
 ];
@@ -857,6 +889,86 @@ const reinstateChurch = async (org) => {
 )}
 
 
+{tab === "alerts" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      System Alerts
+    </Text>
+
+    {alerts.length === 0 ? (
+
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="checkmark-circle-outline"
+          size={40}
+          color="#27ae60"
+        />
+        <Text style={styles.emptyText}>
+          No active alerts
+        </Text>
+      </View>
+
+    ) : (
+
+      alerts.map(alert => (
+
+        <View
+          key={alert.id}
+          style={styles.orgCard}
+        >
+
+          <Text
+  style={{
+    color:
+      alert.severity === "CRITICAL"
+        ? "#e74c3c"
+        : alert.severity === "HIGH"
+        ? "#F39C12"
+        : alert.severity === "MEDIUM"
+        ? "#0984E3"
+        : "#888",
+    fontWeight: "800",
+  }}
+>
+  {alert.severity}
+</Text>
+
+          <Text
+            style={{
+              color: "#ddd",
+              marginTop: 6,
+            }}
+          >
+            {alert.message}
+          </Text>
+
+<Text
+  style={{
+    color: "#4B3F72",
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "700",
+  }}
+>
+  {alert.category}
+</Text>
+
+          <Text
+            style={{
+              color: "#666",
+              marginTop: 6,
+              fontSize: 11,
+            }}
+          >
+            {alert.source}
+          </Text>
+
+        </View>
+
+      ))
+    )}
+  </>
+)}
 
 
 
