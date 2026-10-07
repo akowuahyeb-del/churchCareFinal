@@ -642,15 +642,39 @@ const reinstateChurch = async (org) => {
   // RENDER TABS
   // ─────────────────────────────────────────────────────────────────
   const TABS = [
-  { key: "overview",   label: "Overview",   icon: "grid-outline" },
-  { key: "churches",   label: "Churches",   icon: "business-outline" },
-  { key: "governance", label: "Governance", icon: "git-branch-outline" },
-
-  { key: "alerts",     label: "Alerts",     icon: "warning-outline" },
-
-  { key: "activity",   label: "Activity",   icon: "pulse-outline" },
-  { key: "flags",      label: "Flags",      icon: "flag-outline" },
+  { key: "overview",      label: "Overview",      icon: "grid-outline" },
+  { key: "churches",      label: "Churches",      icon: "business-outline" },
+  { key: "governance",    label: "Governance",    icon: "git-branch-outline" },
+  { key: "alerts",        label: "Alerts",        icon: "warning-outline" },
+  { key: "notifications", label: "Notifications", icon: "mail-outline" },
+  { key: "activity",      label: "Activity",      icon: "pulse-outline" },
+  { key: "flags",         label: "Flags",         icon: "flag-outline" },
 ];
+
+const emailAlerts =
+  alerts.filter(
+    a =>
+      (a.source || "")
+        .toLowerCase()
+        .includes("email")
+  );
+
+const whatsappAlerts =
+  alerts.filter(
+    a =>
+      (a.source || "")
+        .toLowerCase()
+        .includes("whatsapp")
+  );
+
+const criticalAlerts =
+  alerts.filter(
+    a => a.severity === "CRITICAL"
+  );
+
+
+
+
 
   return (
     <View style={styles.container}>
@@ -724,42 +748,40 @@ const reinstateChurch = async (org) => {
                 <KPICard icon="people-outline"   color="#0984E3" label="Total Members"  value={metrics.totalMembers.toLocaleString()} />
                 <KPICard icon="calendar-outline" color="#6C5CE7" label="Sessions Run"   value={metrics.totalSessions.toLocaleString()} />
                 <KPICard icon="wallet-outline"   color="#27ae60" label="Donations Rec." value={`GH₵${metrics.totalContributions.toLocaleString()}`} />
-                <Text style={{ color: "#fff" }}>
-  Governance Nodes: {governanceNodes.length}
-</Text>
+                <KPICard
+  icon="warning-outline"
+  color="#e74c3c"
+  label="Open Alerts"
+  value={
+    alerts.filter(
+      a => a.status !== "acknowledged"
+    ).length
+  }
+/>
 
-<TouchableOpacity
-  onPress={() => {
-    setTab("alerts");
-    setAlertFilter("open");
-  }}
->
-  <Text style={{ color: "#e74c3c" }}>
-    Open Alerts: {
-      alerts.filter(
-        a => a.status !== "acknowledged"
-      ).length
-    }
-  </Text>
-</TouchableOpacity>
+<KPICard
+  icon="alert-circle-outline"
+  color="#F39C12"
+  label="Critical"
+  value={
+    alerts.filter(
+      a => a.severity === "CRITICAL"
+    ).length
+  }
+/>
 
-<TouchableOpacity
-  onPress={() => {
-    setTab("alerts");
-    setAlertFilter("all");
-  }}
->
-  <Text style={{ color: "#F39C12" }}>
-    Critical Alerts: {
-      alerts.filter(
-        a => a.severity === "CRITICAL"
-      ).length
-    }
-  </Text>
-</TouchableOpacity>
+<KPICard
+  icon="git-branch-outline"
+  color="#0984E3"
+  label="Pending Links"
+  value={pendingLinks.length}
+/>
 
-<Text style={{ color: "#27ae60" }}>
-  Resolution Rate: {
+<KPICard
+  icon="checkmark-done-outline"
+  color="#27ae60"
+  label="Resolution %"
+  value={`${
     alerts.length
       ? Math.round(
           (
@@ -772,18 +794,12 @@ const reinstateChurch = async (org) => {
           ) * 100
         )
       : 0
-  }%
-</Text>
+  }%`}
+/>
+          
 
-<TouchableOpacity
-  onPress={() => {
-    setTab("governance");
-  }}
->
-  <Text style={{ color: "#F39C12" }}>
-    Pending Links: {pendingLinks.length}
-  </Text>
-</TouchableOpacity>
+
+
               </View>
 
               {/* Monthly revenue */}
@@ -1170,7 +1186,72 @@ const reinstateChurch = async (org) => {
   </>
 )}
 
+{/* ════════════════════ NOTIFICATIONS TAB ════════════════════ */}
+{tab === "notifications" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Notification Health
+    </Text>
 
+    <View style={styles.card}>
+
+      <InfoPair
+        label="Email Alerts"
+        value={emailAlerts.length}
+      />
+
+      <InfoPair
+        label="WhatsApp Alerts"
+        value={whatsappAlerts.length}
+      />
+
+      <InfoPair
+        label="Critical Alerts"
+        value={criticalAlerts.length}
+      />
+
+      <InfoPair
+        label="Total Alerts"
+        value={alerts.length}
+      />
+
+    </View>
+
+    <Text style={styles.sectionTitle}>
+      Recent Notification Issues
+    </Text>
+
+    {alerts.slice(0, 10).map(alert => (
+
+      <View
+        key={alert.id}
+        style={styles.orgCard}
+      >
+
+        <Text
+          style={{
+            color: "#ddd",
+            fontWeight: "700",
+          }}
+        >
+          {alert.message}
+        </Text>
+
+        <Text
+          style={{
+            color: "#666",
+            marginTop: 4,
+            fontSize: 11,
+          }}
+        >
+          {alert.source}
+        </Text>
+
+      </View>
+
+    ))}
+  </>
+)}
 
 
 
