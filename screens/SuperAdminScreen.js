@@ -127,6 +127,10 @@ const reinstateOrganization =
   const [planModal, setPlanModal] = useState(false);
   const [planTarget, setPlanTarget] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState("basic");
+const [memberAddonQty, setMemberAddonQty] = useState("");
+const [adminAddonQty, setAdminAddonQty] = useState("");
+
+
   useEffect(() => {
   const verifyAccess = async () => {
     try {
@@ -664,6 +668,13 @@ const updateSubscriptionAddon = async (
   amount
 ) => {
   try {
+    if (!amount || amount <= 0) {
+  Alert.alert(
+    "Invalid Quantity",
+    "Please enter a value greater than zero."
+  );
+  return;
+}
     const entityId =
   orgDetailData?.entities?.[0]?.id;
 
@@ -2013,8 +2024,27 @@ const criticalAlerts =
                     <InfoPair label="Phone" value={orgDetail.contactPhone || "—"} />
                     <InfoPair label="Email" value={orgDetail.contactEmail || "—"} />
                     <InfoPair label="Template" value={getTemplate(orgDetail.templateId)?.name || "—"} />
-                    <InfoPair label="Registered" value={orgDetail.createdAt?.slice(0, 10) || "—"} />
-                    {orgDetail.approvedAt && <InfoPair label="Approved" value={orgDetail.approvedAt?.slice(0, 10)} />}
+<InfoPair
+  label="Registered"
+  value={
+    orgDetail.createdAt
+      ? new Date(
+          orgDetail.createdAt
+        ).toLocaleDateString("en-GB")
+      : "—"
+  }
+/>
+
+{orgDetail.approvedAt && (
+  <InfoPair
+    label="Approved"
+    value={
+      new Date(
+        orgDetail.approvedAt
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
                     {orgDetail.rejectionReason && <InfoPair label="Rejection Reason" value={orgDetail.rejectionReason} />}
                   </View>
 
@@ -2037,7 +2067,7 @@ const criticalAlerts =
     value={
       orgDetailData.sub?.addons
         ?.extraMembers || 0
-    }
+    } 
   />
 
   <MiniStat
@@ -2059,7 +2089,16 @@ const criticalAlerts =
 </View>
 
                         {orgDetailData.sub?.trialEndsAt && (
-                          <InfoPair label="Trial Ends" value={orgDetailData.sub.trialEndsAt.slice(0, 10)} />
+                          <InfoPair
+  label="Trial Ends"
+  value={
+    new Date(
+      orgDetailData.sub.trialEndsAt
+    ).toLocaleDateString(
+      "en-GB"
+    )
+  }
+/>
                         )}
                         {orgDetailData.sub?.overriddenByDeveloper && (
                           <InfoPair label="Note" value="⚠️ Plan manually overridden by developer" />
@@ -2070,6 +2109,22 @@ const criticalAlerts =
   Subscription Controls
 </Text>
 
+<TextInput
+  style={styles.input}
+  placeholder="Members to add (e.g. 50)"
+  keyboardType="numeric"
+  value={memberAddonQty}
+  onChangeText={setMemberAddonQty}
+/>
+
+<TextInput
+  style={styles.input}
+  placeholder="Admins to add (e.g. 2)"
+  keyboardType="numeric"
+  value={adminAddonQty}
+  onChangeText={setAdminAddonQty}
+/>
+
 <View style={styles.modalBtnRow}>
   <TouchableOpacity
     style={styles.modalSaveBtn}
@@ -2077,12 +2132,12 @@ const criticalAlerts =
       updateSubscriptionAddon(
         orgDetail.id,
         "extraMembers",
-        100
+        Number(memberAddonQty)
       )
     }
   >
     <Text style={styles.white}>
-      Add 100 Members
+      Add Members
     </Text>
   </TouchableOpacity>
 
@@ -2092,15 +2147,16 @@ const criticalAlerts =
       updateSubscriptionAddon(
         orgDetail.id,
         "extraAdmins",
-        1
+        Number(adminAddonQty)
       )
     }
   >
     <Text style={styles.white}>
-      Add Admin
+      Add Admins
     </Text>
   </TouchableOpacity>
 </View>
+
 
 <TouchableOpacity
   style={[
