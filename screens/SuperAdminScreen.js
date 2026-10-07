@@ -737,70 +737,122 @@ const criticalAlerts =
         >
 
           {/* ════════════════════ OVERVIEW TAB ════════════════════ */}
-          {tab === "overview" && (
-            <>
-              {/* KPI grid */}
-              <Text style={styles.sectionTitle}>Platform Overview</Text>
-              <View style={styles.kpiGrid}>
-                <KPICard icon="business-outline" color="#4B3F72" label="Total Orgs"     value={metrics.totalOrgs} />
-                <KPICard icon="checkmark-circle" color="#27ae60" label="Active"         value={metrics.activeOrgs} />
-                <KPICard icon="hourglass-outline" color="#F39C12" label="Pending"       value={metrics.pendingOrgs} highlight={metrics.pendingOrgs > 0} />
-                <KPICard icon="people-outline"   color="#0984E3" label="Total Members"  value={metrics.totalMembers.toLocaleString()} />
-                <KPICard icon="calendar-outline" color="#6C5CE7" label="Sessions Run"   value={metrics.totalSessions.toLocaleString()} />
-                <KPICard icon="wallet-outline"   color="#27ae60" label="Donations Rec." value={`GH₵${metrics.totalContributions.toLocaleString()}`} />
-                <KPICard
-  icon="warning-outline"
-  color="#e74c3c"
-  label="Open Alerts"
-  value={
-    alerts.filter(
-      a => a.status !== "acknowledged"
-    ).length
-  }
-/>
+         
+              {tab === "overview" && (
+  <>
+    {/* KPI grid */}
+    <Text style={styles.sectionTitle}>
+      Platform Overview
+    </Text>
 
-<KPICard
-  icon="alert-circle-outline"
-  color="#F39C12"
-  label="Critical"
-  value={
-    alerts.filter(
-      a => a.severity === "CRITICAL"
-    ).length
-  }
-/>
+    <View style={styles.kpiGrid}>
 
-<KPICard
-  icon="git-branch-outline"
-  color="#0984E3"
-  label="Pending Links"
-  value={pendingLinks.length}
-/>
+      <KPICard
+        icon="business-outline"
+        color="#4B3F72"
+        label="Total Orgs"
+        value={metrics.totalOrgs}
+      />
 
-<KPICard
-  icon="checkmark-done-outline"
-  color="#27ae60"
-  label="Resolution %"
-  value={`${
-    alerts.length
-      ? Math.round(
-          (
-            alerts.filter(
-              a =>
-                a.status ===
-                "acknowledged"
-            ).length /
-            alerts.length
-          ) * 100
-        )
-      : 0
-  }%`}
-/>
-          
+      <KPICard
+        icon="checkmark-circle"
+        color="#27ae60"
+        label="Active"
+        value={metrics.activeOrgs}
+      />
 
+      <KPICard
+        icon="hourglass-outline"
+        color="#F39C12"
+        label="Pending"
+        value={metrics.pendingOrgs}
+        highlight={metrics.pendingOrgs > 0}
+      />
 
+      <KPICard
+        icon="people-outline"
+        color="#0984E3"
+        label="Total Members"
+        value={metrics.totalMembers.toLocaleString()}
+      />
 
-              </View>
+      <KPICard
+        icon="calendar-outline"
+        color="#6C5CE7"
+        label="Sessions Run"
+        value={metrics.totalSessions.toLocaleString()}
+      />
+
+      <KPICard
+        icon="wallet-outline"
+        color="#27ae60"
+        label="Donations Rec."
+        value={`GH₵${metrics.totalContributions.toLocaleString()}`}
+      />
+
+      <KPICard
+        icon="warning-outline"
+        color="#e74c3c"
+        label="Open Alerts"
+        value={
+          alerts.filter(
+            a => a.status !== "acknowledged"
+          ).length
+        }
+        onPress={() => {
+          setTab("alerts");
+          setAlertFilter("open");
+        }}
+      />
+
+      <KPICard
+        icon="alert-circle-outline"
+        color="#F39C12"
+        label="Critical"
+        value={
+          alerts.filter(
+            a => a.severity === "CRITICAL"
+          ).length
+        }
+        onPress={() => {
+          setTab("alerts");
+          setAlertFilter("all");
+        }}
+      />
+
+      <KPICard
+        icon="git-branch-outline"
+        color="#0984E3"
+        label="Pending Links"
+        value={pendingLinks.length}
+        onPress={() => {
+          setTab("governance");
+        }}
+      />
+
+      <KPICard
+        icon="checkmark-done-outline"
+        color="#27ae60"
+        label="Resolution %"
+        value={`${
+          alerts.length
+            ? Math.round(
+                (
+                  alerts.filter(
+                    a =>
+                      a.status ===
+                      "acknowledged"
+                  ).length /
+                  alerts.length
+                ) * 100
+              )
+            : 0
+        }%`}
+      />
+
+    </View>
+
+    {/* Monthly revenue */}
 
               {/* Monthly revenue */}
               <View style={styles.revenueCard}>
@@ -1854,16 +1906,55 @@ const criticalAlerts =
 // ─────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────
-function KPICard({ icon, color, label, value, highlight }) {
+function KPICard({
+  icon,
+  color,
+  label,
+  value,
+  highlight,
+  onPress,
+}) {
+  const Wrapper = onPress
+    ? TouchableOpacity
+    : View;
+
   return (
-    <View style={[styles.kpiCard, highlight && { borderColor: color, borderWidth: 2 }]}>
-      <Ionicons name={icon} size={18} color={color} />
-      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
-    </View>
+    <Wrapper
+      style={[
+        styles.kpiCard,
+        highlight && {
+          borderColor: color,
+          borderWidth: 2,
+        },
+      ]}
+      {...(onPress
+        ? {
+            onPress,
+            activeOpacity: 0.8,
+          }
+        : {})}
+    >
+      <Ionicons
+        name={icon}
+        size={18}
+        color={color}
+      />
+
+      <Text
+        style={[
+          styles.kpiValue,
+          { color },
+        ]}
+      >
+        {value}
+      </Text>
+
+      <Text style={styles.kpiLabel}>
+        {label}
+      </Text>
+    </Wrapper>
   );
 }
-
 function ActionCard({ icon, color, label, sub, onPress }) {
   return (
     <TouchableOpacity style={styles.actionCard} onPress={onPress}>
