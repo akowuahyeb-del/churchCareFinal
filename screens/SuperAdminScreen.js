@@ -96,6 +96,8 @@ const reinstateOrganization =
   // ── LIVE ACTIVITY ──
   const [liveActivity, setLiveActivity] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [alertFilter, setAlertFilter] = useState("all");
+
   const activityUnsubRef = useRef(null);
 
   // ── FEATURE FLAGS ──
@@ -246,6 +248,29 @@ const loadSystemAlerts = async () => {
 };
 
 
+const acknowledgeAlert = async (alertId) => {
+  try {
+
+    await updateDoc(
+      doc(db, "systemAlerts", alertId),
+      {
+        status: "acknowledged",
+        acknowledgedAt:
+          new Date().toISOString(),
+      }
+    );
+
+    await loadSystemAlerts();
+
+  } catch (e) {
+
+    console.log(
+      "❌ acknowledgeAlert:",
+      e
+    );
+
+  }
+};
 
   // ─────────────────────────────────────────────────────────────────
   // LOAD ORGANIZATIONS + AGGREGATE METRICS
@@ -703,6 +728,11 @@ const reinstateChurch = async (org) => {
   Governance Nodes: {governanceNodes.length}
 </Text>
 
+<Text style={{ color: "#e74c3c" }}>
+  Open Alerts: {alerts.filter(a => a.status !== "acknowledged").length}
+</Text>
+
+
 <Text style={{ color: "#F39C12" }}>
   Pending Links: {pendingLinks.length}
 </Text>
@@ -894,8 +924,46 @@ const reinstateChurch = async (org) => {
     <Text style={styles.sectionTitle}>
       System Alerts
     </Text>
+    <View style={styles.filterRow}>
 
-    {alerts.length === 0 ? (
+  {[
+    "all",
+    "open",
+    "acknowledged",
+    "resolved",
+  ].map(filter => (
+
+    <TouchableOpacity
+      key={filter}
+      style={[
+        styles.filterChip,
+        alertFilter === filter &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setAlertFilter(filter)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          alertFilter === filter &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {filter}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+    {alerts.filter(alert =>
+  alertFilter === "all"
+    ? true
+    : (alert.status || "open") === alertFilter
+).length === 0 ? (
 
       <View style={styles.emptyState}>
         <Ionicons
@@ -910,7 +978,14 @@ const reinstateChurch = async (org) => {
 
     ) : (
 
-      alerts.map(alert => (
+    alerts
+  .filter(alert =>
+    alertFilter === "all"
+      ? true
+      : (alert.status || "open") ===
+        alertFilter
+  )
+  .map(alert => (
 
         <View
           key={alert.id}
@@ -952,6 +1027,16 @@ const reinstateChurch = async (org) => {
 >
   {alert.category}
 </Text>
+<Text
+  style={{
+    color: "#888",
+    fontSize: 11,
+    marginTop: 2,
+  }}
+>
+  Status: {alert.status || "open"}
+</Text>
+
 
           <Text
             style={{
@@ -962,6 +1047,27 @@ const reinstateChurch = async (org) => {
           >
             {alert.source}
           </Text>
+
+          {alert.status !==
+  "acknowledged" && (
+
+  <TouchableOpacity
+    style={styles.approveCardBtn}
+    onPress={() =>
+      acknowledgeAlert(alert.id)
+    }
+  >
+    <Text
+      style={{
+        color: "#fff",
+        fontWeight: "700",
+      }}
+    >
+      Acknowledge
+    </Text>
+  </TouchableOpacity>
+
+)}
 
         </View>
 
