@@ -43,7 +43,22 @@ function resolveWhatsAppTemplate({
 // have an auth uid), the linked user's feed if uid exists (what
 // HomeScreen's notification bell already listens to), and push if a
 // token is on file. Missing channels no-op rather than failing the send.
-async function deliverToMember({ organizationId, entityId, memberId, type, title, message, data = {} }) {
+async function deliverToMember({
+  organizationId,
+  entityId,
+  memberId,
+  type,
+  title,
+  message,
+
+  severity = "INFO",
+
+  category = "GENERAL",
+
+  source = "SYSTEM",
+
+  data = {},
+}) {
   const memberRef = db.collection("organizations").doc(organizationId)
     .collection("entities").doc(entityId).collection("members").doc(memberId);
   const memberSnap = await memberRef.get();
@@ -62,9 +77,13 @@ if (member.email) {
   subject: title,
   body: message,
   type,
+  severity,
+  category,
+  source,
   organizationId,
   entityId,
   memberId,
+  
 
   status: "pending",
 
@@ -84,6 +103,9 @@ if (SMS_ENABLED && member.phone) {
     phone: member.phone,
     message,
     type,
+     severity,
+  category,
+  source,
     organizationId,
     entityId,
     memberId,
@@ -124,6 +146,9 @@ if (
         whatsappPayload.templateParams,
 
       type,
+       severity,
+  category,
+  source,
 
       organizationId,
       entityId,
@@ -139,7 +164,26 @@ if (
 
 
 
-  const payload = { type, title, message, organizationId, entityId, memberId, data, read: false, createdAt: now };
+  const payload = {
+  type,
+
+  title,
+  message,
+
+  severity,
+  category,
+  source,
+
+  organizationId,
+  entityId,
+  memberId,
+
+  data,
+
+  read: false,
+
+  createdAt: now,
+};
 
   await memberRef.collection("notifications").add(payload);
   if (member.uid) {

@@ -381,24 +381,27 @@ await deliverToMember({
 
   type: "church_approval",
 
+  severity: "HIGH",
+
+  category: "GOVERNANCE",
+
+  source: "ORGANIZATION_APPROVAL",
+
   title:
     "Church Registration Approved ✅",
 
   message:
     `Congratulations ${org.adminName || ""}.
-     
+
 ${org.name} has been approved.
 
 Organisation Code: ${organizationCode}`,
 
   data: {
-    organizationName:
-      org.name,
-
+    organizationName: org.name,
     organizationCode,
   },
 });
-
 
 
     // --------------------------------------------------
@@ -784,6 +787,11 @@ exports.rejectOrganization =
         .collection("notifications")
         .add({
           type: "organization_rejected",
+          severity: "HIGH",
+
+category: "GOVERNANCE",
+
+source: "ORGANIZATION_REJECTION",
 
           title: "Church Registration Update",
 

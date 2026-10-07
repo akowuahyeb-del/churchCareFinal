@@ -123,7 +123,7 @@ await doc.ref.update({
 
 
 await doc.ref.update({
-
+    
   retryCount:
     FieldValue.increment(1),
 
@@ -139,6 +139,28 @@ error:
   ),
 
 });
+
+if (retries >= 3) {
+
+  await db.collection("systemAlerts").add({
+
+    type: "email_dispatch_failure",
+
+    severity: "CRITICAL",
+
+    category: "OPERATIONS",
+
+    source: "EMAIL_DISPATCHER",
+
+    message:
+      `Email delivery failures detected for ${email.to}. Retry count: ${retries}.`,
+
+    createdAt:
+      new Date().toISOString(),
+
+    status: "open",
+  });
+}
 
         }
       }
@@ -328,6 +350,8 @@ console.log(
           error: null,
         });
 
+
+
       } catch (error) {
         console.error(
           "WHATSAPP ERROR:",
@@ -338,9 +362,32 @@ console.log(
 
         await doc.ref.update({
           retryCount: FieldValue.increment(1),
+
           status: retries >= 5 ? "dead" : "pending",
           error: JSON.stringify(error.response?.data || error.message),
         });
+        if (retries >= 3) {
+
+  await db.collection("systemAlerts").add({
+
+    type: "whatsapp_dispatch_failure",
+
+    severity: "CRITICAL",
+
+    category: "OPERATIONS",
+
+    source: "WHATSAPP_DISPATCHER",
+
+    message:
+      `WhatsApp delivery failures detected for ${whatsapp.phone}. Retry count: ${retries}.`,
+
+    createdAt:
+      new Date().toISOString(),
+
+    status: "open",
+  });
+}
+
       }
     }
   }
