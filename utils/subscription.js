@@ -34,16 +34,39 @@ const seedTrialSubscription = async (
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
-  const payload = {
-    planId: TRIAL_PLAN_ID,
-    status: "trialing",
-    trialEndsAt: trialEndsAt.toISOString(),
-    currentPeriodEnd: trialEndsAt.toISOString(),
-    createdAt: new Date().toISOString(),
+ const payload = {
+  planId: TRIAL_PLAN_ID,
+  status: "trialing",
 
-    paystackCustomerCode: null,
-    paystackSubscriptionCode: null,
-  };
+  overrides: {
+    maxMembers: null,
+    maxAdmins: null,
+    trialExtensionDays: 0,
+  },
+
+  addons: {
+    extraMembers: 0,
+    extraAdmins: 0,
+  },
+
+  waiver: {
+    active: false,
+    reason: "",
+    expiresAt: null,
+  },
+
+  trialEndsAt:
+    trialEndsAt.toISOString(),
+
+  currentPeriodEnd:
+    trialEndsAt.toISOString(),
+
+  createdAt:
+    new Date().toISOString(),
+
+  paystackCustomerCode: null,
+  paystackSubscriptionCode: null,
+};
 
   await setDoc(
     subRef(
@@ -159,17 +182,75 @@ return () => unsub && unsub();
   const hasFeature = (feature) =>
     isActive && !isTrialExpired && planHasFeature(effectivePlanId, feature);
 
-  const checkLimit = (limitKey, usageKey) => {
-    const limit = getLimit(effectivePlanId, limitKey);
-    const used = usage[usageKey] ?? 0;
-    return {
-      limit,                                  // null = unlimited
-      used,
-      isUnlimited: limit === null,
-      isAtLimit: limit !== null && used >= limit,
-      remaining: limit === null ? null : Math.max(0, limit - used),
-    };
+ const checkLimit = (limitKey, usageKey) => {
+  const overrides =
+    subscription?.overrides || {};
+
+  const addons =
+    subscription?.addons || {};
+
+  let limit = getLimit(
+    effectivePlanId,
+    limitKey
+  );
+
+  if (
+    limitKey === LIMITS.MAX_MEMBERS
+  ) {
+
+    if (
+      overrides.maxMembers !== null &&
+      overrides.maxMembers !== undefined
+    ) {
+      limit = overrides.maxMembers;
+    } else {
+      limit =
+        limit === null
+          ? null
+          : limit +
+            (addons.extraMembers || 0);
+    }
+
+  }
+
+  if (
+    limitKey === LIMITS.MAX_ADMINS
+  ) {
+
+    if (
+      overrides.maxAdmins !== null &&
+      overrides.maxAdmins !== undefined
+    ) {
+      limit = overrides.maxAdmins;
+    } else {
+      limit =
+        limit === null
+          ? null
+          : limit +
+            (addons.extraAdmins || 0);
+    }
+
+  }
+
+  const used =
+    usage[usageKey] ?? 0;
+
+  return {
+    limit,
+    used,
+    isUnlimited: limit === null,
+    isAtLimit:
+      limit !== null &&
+      used >= limit,
+    remaining:
+      limit === null
+        ? null
+        : Math.max(
+            0,
+            limit - used
+          ),
   };
+};
 
   return {
   subscription,
