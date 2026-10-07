@@ -285,13 +285,44 @@ const acknowledgeAlert = async (alertId) => {
       const enriched = await Promise.all(
         orgList.map(async (org) => {
           try {
-            const [subSnap, entitiesSnap] = await Promise.all([
-              getDoc(doc(db, "organizations", org.id, "billing", "subscription")),
-              getDocs(collection(db, "organizations", org.id, "entities")),
-            ]);
+           const entitiesSnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    org.id,
+    "entities"
+  )
+);
 
-            const sub = subSnap.exists() ? subSnap.data() : { planId: "free", status: "free" };
-            const entities = entitiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+const entities = entitiesSnap.docs.map(d => ({
+  id: d.id,
+  ...d.data(),
+}));
+
+let sub = {
+  planId: "free",
+  status: "free",
+};
+
+const entityId = entities?.[0]?.id;
+
+if (entityId) {
+  const subSnap = await getDoc(
+    doc(
+      db,
+      "organizations",
+      org.id,
+      "entities",
+      entityId,
+      "billing",
+      "subscription"
+    )
+  );
+
+  if (subSnap.exists()) {
+    sub = subSnap.data();
+  }
+}
 
             // Quick member + contribution count from first entity
             let memberCount = 0, contributionTotal = 0, sessionCount = 0;
@@ -534,57 +565,298 @@ const reinstateChurch = async (org) => {
   // ─────────────────────────────────────────────────────────────────
   // PLAN OVERRIDE — force a plan for a specific org
   // ─────────────────────────────────────────────────────────────────
-  const overridePlan = async () => {
-    if (!planTarget) return;
-    try {
-      await setDoc(
-        doc(db, "organizations", planTarget.id, "billing", "subscription"),
-        {
-          planId: selectedPlan,
-          status: "active",
-          currentPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
-          overriddenByDeveloper: true,
-          overriddenAt: new Date().toISOString(),
-        },
-        { merge: true }
+ const overridePlan = async () => {
+
+  if (!planTarget) return;
+
+  try {
+
+    const entitiesSnap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        planTarget.id,
+        "entities"
+      )
+    );
+
+    const entities = entitiesSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    const entityId = entities?.[0]?.id;
+
+    if (!entityId) {
+      Alert.alert(
+        "Error",
+        "Entity not found."
       );
-      await logActivity({
-        type: "plan_override",
-        orgId: planTarget.id,
-        orgName: planTarget.name,
-        message: `Plan overridden to ${selectedPlan} for ${planTarget.name}`,
-      });
-      setPlanModal(false);
-      await loadOrganizations();
-      Alert.alert("✅ Plan Updated", `${planTarget.name} is now on ${getPlan(selectedPlan).label}.`);
-    } catch (e) {
-      Alert.alert("Error", "Could not override plan.");
+      return;
     }
-  };
+
+    await setDoc(
+      doc(
+        db,
+        "organizations",
+        planTarget.id,
+        "entities",
+        entityId,
+        "billing",
+        "subscription"
+      ),
+      {
+        planId: selectedPlan,
+        status: "active",
+        currentPeriodEnd:
+          new Date(
+            Date.now() +
+            30 * 86400000
+          ).toISOString(),
+        overriddenByDeveloper: true,
+        overriddenAt:
+          new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    await logActivity({
+      type: "plan_override",
+      orgId: planTarget.id,
+      orgName: planTarget.name,
+      message:
+        `Plan overridden to ${selectedPlan} for ${planTarget.name}`,
+    });
+
+    await loadOrganizations();
+
+    if (orgDetail?.id === planTarget.id) {
+      await openOrgDetail(planTarget);
+    }
+
+    setPlanModal(false);
+
+    Alert.alert(
+      "✅ Plan Updated",
+      `${planTarget.name} is now on ${
+        getPlan(selectedPlan).label
+      }.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ overridePlan:",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      "Could not override plan."
+    );
+
+  }
+};
+
+const updateSubscriptionAddon = async (
+  organizationId,
+  field,
+  amount
+) => {
+  try {
+    const entityId =
+  orgDetailData?.entities?.[0]?.id;
+
+if (!entityId) {
+  Alert.alert(
+    "Error",
+    "Entity not found."
+  );
+  return;
+}
+
+const ref = doc(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "billing",
+  "subscription"
+);
+
+    const snap = await getDoc(ref);
+
+    const sub = snap.exists()
+      ? snap.data()
+      : {};
+
+    await setDoc(
+      ref,
+      {
+        addons: {
+          ...(sub.addons || {}),
+          [field]:
+            ((sub.addons || {})[field] || 0) +
+            amount,
+        },
+      },
+      { merge: true }
+    );
+
+    await openOrgDetail({
+  ...orgDetail
+});
+    await loadOrganizations();
+
+  } catch (e) {
+    Alert.alert(
+      "Error",
+      "Could not update add-on."
+    );
+  }
+};
+  
+const extendTrial = async (
+  organizationId,
+  days = 30
+) => {
+  try {
+    const entityId =
+  orgDetailData?.entities?.[0]?.id;
+
+if (!entityId) {
+  Alert.alert(
+    "Error",
+    "Entity not found."
+  );
+  return;
+}
+
+const ref = doc(
+  db,
+  "organizations",
+  organizationId,
+  "entities",
+  entityId,
+  "billing",
+  "subscription"
+);
+
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) return;
+
+    const sub = snap.data();
+
+    const trialEnds = new Date(
+      sub.trialEndsAt || new Date()
+    );
+
+    trialEnds.setDate(
+      trialEnds.getDate() + days
+    );
+
+    await setDoc(
+      ref,
+      {
+        trialEndsAt:
+          trialEnds.toISOString(),
+      },
+      { merge: true }
+    );
+
+    await openOrgDetail({
+  ...orgDetail
+});
+    await loadOrganizations();
+
+  } catch (e) {
+    Alert.alert(
+      "Error",
+      "Could not extend trial."
+    );
+  }
+};
+
+
 
   // ─────────────────────────────────────────────────────────────────
   // LOAD ORG DETAIL
   // ─────────────────────────────────────────────────────────────────
-  const openOrgDetail = async (org) => {
-    setOrgDetail(org);
-    setOrgDetailModal(true);
-    setOrgDetailData(null);
+ const openOrgDetail = async (org) => {
+  setOrgDetail(org);
+  setOrgDetailModal(true);
+  setOrgDetailData(null);
 
-    try {
-      const entitiesSnap = await getDocs(collection(db, "organizations", org.id, "entities"));
-      const entities = entitiesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const entitiesSnap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        org.id,
+        "entities"
+      )
+    );
 
-      const nodesSnap = await getDocs(collection(db, "organizations", org.id, "nodes"));
-      const nodes = nodesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const entities = entitiesSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
 
-      const subSnap = await getDoc(doc(db, "organizations", org.id, "billing", "subscription"));
-      const sub = subSnap.exists() ? subSnap.data() : null;
+    const nodesSnap = await getDocs(
+      collection(
+        db,
+        "organizations",
+        org.id,
+        "nodes"
+      )
+    );
 
-      setOrgDetailData({ entities, nodes, sub });
-    } catch (e) {
-      console.log("❌ openOrgDetail:", e);
+    const nodes = nodesSnap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    let sub = null;
+
+    const entityId = entities?.[0]?.id;
+
+    if (entityId) {
+
+      const subSnap = await getDoc(
+        doc(
+          db,
+          "organizations",
+          org.id,
+          "entities",
+          entityId,
+          "billing",
+          "subscription"
+        )
+      );
+
+      sub = subSnap.exists()
+        ? subSnap.data()
+        : null;
     }
-  };
+
+    setOrgDetailData({
+      entities,
+      nodes,
+      sub,
+    });
+
+  } catch (e) {
+
+    console.log(
+      "❌ openOrgDetail:",
+      e
+    );
+
+  }
+};
+
 
   // ─────────────────────────────────────────────────────────────────
   // PLATFORM ANNOUNCEMENT
@@ -1759,6 +2031,33 @@ const criticalAlerts =
                       <View style={styles.subDetail}>
                         <InfoPair label="Plan" value={getPlan(orgDetailData.sub?.planId || "free").label} />
                         <InfoPair label="Status" value={orgDetailData.sub?.status || "free"} />
+     <View style={styles.modalStatsRow}>
+  <MiniStat
+    label="Member Add-ons"
+    value={
+      orgDetailData.sub?.addons
+        ?.extraMembers || 0
+    }
+  />
+
+  <MiniStat
+    label="Admin Add-ons"
+    value={
+      orgDetailData.sub?.addons
+        ?.extraAdmins || 0
+    }
+  />
+
+  <MiniStat
+    label="Plan"
+    value={
+      getPlan(
+        orgDetailData.sub?.planId || "free"
+      ).label
+    }
+  />
+</View>
+
                         {orgDetailData.sub?.trialEndsAt && (
                           <InfoPair label="Trial Ends" value={orgDetailData.sub.trialEndsAt.slice(0, 10)} />
                         )}
@@ -1766,6 +2065,60 @@ const criticalAlerts =
                           <InfoPair label="Note" value="⚠️ Plan manually overridden by developer" />
                         )}
                       </View>
+
+<Text style={styles.fieldLabel}>
+  Subscription Controls
+</Text>
+
+<View style={styles.modalBtnRow}>
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      updateSubscriptionAddon(
+        orgDetail.id,
+        "extraMembers",
+        100
+      )
+    }
+  >
+    <Text style={styles.white}>
+      Add 100 Members
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      updateSubscriptionAddon(
+        orgDetail.id,
+        "extraAdmins",
+        1
+      )
+    }
+  >
+    <Text style={styles.white}>
+      Add Admin
+    </Text>
+  </TouchableOpacity>
+</View>
+
+<TouchableOpacity
+  style={[
+    styles.modalSaveBtn,
+    { marginTop: 10 }
+  ]}
+  onPress={() =>
+    extendTrial(
+      orgDetail.id,
+      30
+    )
+  }
+>
+  <Text style={styles.white}>
+    Extend Trial
+  </Text>
+</TouchableOpacity>
+
 
                       <Text style={styles.fieldLabel}>Nodes ({orgDetailData.nodes.length})</Text>
                       {orgDetailData.nodes.map(n => (
