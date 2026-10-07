@@ -728,14 +728,62 @@ const reinstateChurch = async (org) => {
   Governance Nodes: {governanceNodes.length}
 </Text>
 
-<Text style={{ color: "#e74c3c" }}>
-  Open Alerts: {alerts.filter(a => a.status !== "acknowledged").length}
+<TouchableOpacity
+  onPress={() => {
+    setTab("alerts");
+    setAlertFilter("open");
+  }}
+>
+  <Text style={{ color: "#e74c3c" }}>
+    Open Alerts: {
+      alerts.filter(
+        a => a.status !== "acknowledged"
+      ).length
+    }
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  onPress={() => {
+    setTab("alerts");
+    setAlertFilter("all");
+  }}
+>
+  <Text style={{ color: "#F39C12" }}>
+    Critical Alerts: {
+      alerts.filter(
+        a => a.severity === "CRITICAL"
+      ).length
+    }
+  </Text>
+</TouchableOpacity>
+
+<Text style={{ color: "#27ae60" }}>
+  Resolution Rate: {
+    alerts.length
+      ? Math.round(
+          (
+            alerts.filter(
+              a =>
+                a.status ===
+                "acknowledged"
+            ).length /
+            alerts.length
+          ) * 100
+        )
+      : 0
+  }%
 </Text>
 
-
-<Text style={{ color: "#F39C12" }}>
-  Pending Links: {pendingLinks.length}
-</Text>
+<TouchableOpacity
+  onPress={() => {
+    setTab("governance");
+  }}
+>
+  <Text style={{ color: "#F39C12" }}>
+    Pending Links: {pendingLinks.length}
+  </Text>
+</TouchableOpacity>
               </View>
 
               {/* Monthly revenue */}
@@ -924,6 +972,38 @@ const reinstateChurch = async (org) => {
     <Text style={styles.sectionTitle}>
       System Alerts
     </Text>
+<View style={styles.card}>
+
+  <InfoPair
+    label="Total"
+    value={alerts.length}
+  />
+
+  <InfoPair
+    label="Open"
+    value={
+      alerts.filter(
+        a =>
+          a.status !==
+          "acknowledged"
+      ).length
+    }
+  />
+
+  <InfoPair
+    label="Acknowledged"
+    value={
+      alerts.filter(
+        a =>
+          a.status ===
+          "acknowledged"
+      ).length
+    }
+  />
+
+</View>
+
+
     <View style={styles.filterRow}>
 
   {[
@@ -1047,6 +1127,20 @@ const reinstateChurch = async (org) => {
           >
             {alert.source}
           </Text>
+
+
+          <Text
+  style={{
+    color: "#666",
+    fontSize: 11,
+    marginTop: 2,
+  }}
+>
+  Created:
+  {" "}
+  {alert.createdAt?.slice(0, 10)}
+</Text>
+
 
           {alert.status !==
   "acknowledged" && (
