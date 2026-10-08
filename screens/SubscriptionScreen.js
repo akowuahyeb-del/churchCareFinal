@@ -11,8 +11,22 @@ import { app } from "../firebase";
 
 import AppHeader from "../components/AppHeader";
 import { useSubscription } from "../utils/subscription";
-import { PLANS, PLAN_ORDER, getPlan } from "../constants/subscriptionPlans";
+import {
+  PLANS,
+  PLAN_ORDER,
+  getPlan,
+  getLimit,
+  LIMITS,
+} from "../constants/subscriptionPlans";
 import { hasPermission } from "../constants/permissions";
+
+import {
+  collection,
+  doc,
+  setDoc,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
 
 const STATUS_COLOR = {
   trialing: "#0984E3",
@@ -33,6 +47,43 @@ const FEATURE_LABELS = {
   custom_branding: "Custom Branding",
   priority_support: "Priority Support",
 };
+
+const MEMBER_ADDON_PACKAGES = [
+  {
+    id: "member50",
+    qty: 50,
+    price: 10,
+  },
+  {
+    id: "member100",
+    qty: 100,
+    price: 18,
+  },
+  {
+    id: "member500",
+    qty: 500,
+    price: 75,
+  },
+];
+
+const ADMIN_ADDON_PACKAGES = [
+  {
+    id: "admin1",
+    qty: 1,
+    price: 5,
+  },
+  {
+    id: "admin2",
+    qty: 2,
+    price: 9,
+  },
+  {
+    id: "admin5",
+    qty: 5,
+    price: 20,
+  },
+];
+
 
 export default function SubscriptionScreen({ route }) {
   const navigation = useNavigation();
@@ -107,6 +158,179 @@ export default function SubscriptionScreen({ route }) {
       </View>
     );
   }
+
+const requestAddon = async (
+  type,
+  pkg
+) => {
+
+  if (!organizationId || !entityId) {
+    Alert.alert(
+      "Error",
+      "Organisation information is unavailable."
+    );
+    return;
+  }
+
+  try {
+    const currentMemberLimit =
+  getLimit(
+    planId,
+    LIMITS.MAX_MEMBERS
+  ) || 0;
+
+const currentAdminLimit =
+  getLimit(
+    planId,
+    LIMITS.MAX_ADMINS
+  ) || 0;
+
+  const nextPlanId =
+  PLAN_ORDER[
+    PLAN_ORDER.indexOf(planId) + 1
+  ];
+
+const nextPlan =
+  nextPlanId
+    ? getPlan(nextPlanId)
+    : null;
+
+    if (
+  type === "Members" &&
+  nextPlan
+) {
+
+ const currentAddonMembers =
+  subscription?.addons
+    ?.extraMembers || 0;
+
+const requestedCapacity =
+  currentMemberLimit +
+  currentAddonMembers +
+  pkg.qty;
+
+  const nextPlanCapacity =
+    getLimit(
+      nextPlan.id,
+      LIMITS.MAX_MEMBERS
+    );
+
+  if (
+    requestedCapacity >=
+    nextPlanCapacity
+  ) {
+
+    Alert.alert(
+      "Upgrade Required",
+      `This add-on reaches the ${nextPlan.label} plan capacity. Upgrade instead.`
+    );
+
+    return;
+  }
+}
+
+if (
+  type === "Admins" &&
+  nextPlan
+) {
+
+ const currentAddonAdmins =
+  subscription?.addons
+    ?.extraAdmins || 0;
+
+const requestedCapacity =
+  currentAdminLimit +
+  currentAddonAdmins +
+  pkg.qty;
+
+  const nextPlanCapacity =
+    getLimit(
+      nextPlan.id,
+      LIMITS.MAX_ADMINS
+    );
+
+  if (
+  requestedCapacity >
+  (nextPlanCapacity * 0.5)
+)
+{
+
+    Alert.alert(
+      "Upgrade Required",
+      `This add-on reaches the ${nextPlan.label} admin capacity. Upgrade instead.`
+    );
+
+    return;
+  }
+}
+
+    await setDoc(
+      doc(
+        collection(
+          db,
+          "subscriptionRequests"
+        )
+      ),
+      {
+        organizationId,
+        entityId,
+
+        // Human-readable data for Super Admin
+        organizationName:
+          activeEntity?.name || "",
+
+        entityName:
+          activeEntity?.name || "",
+
+        requestedBy:
+          activeEntity?.uid || "",
+
+        requestedByName:
+          activeEntity?.memberName || "",
+
+        currentPlan:
+          planId || "free",
+
+        requestType:
+          type === "Members"
+            ? "memberAddon"
+            : "adminAddon",
+
+        packageId: pkg.id,
+
+        quantity: pkg.qty,
+
+        requestedPrice: pkg.price,
+
+        currency: "GHS",
+
+        region: "ghana",
+
+        status: "pending",
+
+        requestedAt:
+          new Date().toISOString(),
+      }
+    );
+
+    Alert.alert(
+      "Request Submitted",
+      `Your ${pkg.qty} ${type} add-on request has been submitted for review.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ requestAddon:",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      "Could not submit request."
+    );
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -186,6 +410,169 @@ export default function SubscriptionScreen({ route }) {
           <UsageBar label="Members" data={membersLimit} />
           <UsageBar label="Admins" data={adminsLimit} />
         </View>
+
+
+<Text style={styles.sectionTitle}>
+  Member Capacity
+</Text>
+
+<View style={styles.usageCard}>
+  <DetailRow
+    label="Plan Capacity"
+    value={getLimit(
+      planId,
+      LIMITS.MAX_MEMBERS
+    ) ?? "Unlimited"}
+  />
+
+  <DetailRow
+    label="Purchased Add-ons"
+    value={
+      subscription?.addons?.extraMembers || 0
+    }
+  />
+
+  <DetailRow
+    label="Total Capacity"
+    value={
+      membersLimit.isUnlimited
+        ? "Unlimited"
+        : membersLimit.limit
+    }
+  />
+
+  <DetailRow
+    label="Used"
+    value={membersLimit.used}
+  />
+
+  <DetailRow
+    label="Remaining"
+    value={
+      membersLimit.isUnlimited
+        ? "Unlimited"
+        : membersLimit.remaining
+    }
+  />
+</View>
+
+<Text style={styles.sectionTitle}>
+  Admin Capacity
+</Text>
+
+<View style={styles.usageCard}>
+  <DetailRow
+    label="Plan Capacity"
+    value={getLimit(
+      planId,
+      LIMITS.MAX_ADMINS
+    ) ?? "Unlimited"}
+  />
+
+  <DetailRow
+    label="Purchased Add-ons"
+    value={
+      subscription?.addons?.extraAdmins || 0
+    }
+  />
+
+  <DetailRow
+    label="Total Capacity"
+    value={
+      adminsLimit.isUnlimited
+        ? "Unlimited"
+        : adminsLimit.limit
+    }
+  />
+
+  <DetailRow
+    label="Used"
+    value={adminsLimit.used}
+  />
+
+  <DetailRow
+    label="Remaining"
+    value={
+      adminsLimit.isUnlimited
+        ? "Unlimited"
+        : adminsLimit.remaining
+    }
+  />
+</View>
+{planId !== "pro" && (
+<>
+  <Text style={styles.sectionTitle}>
+    Need More Capacity?
+  </Text>
+
+  <View style={styles.usageCard}>
+
+    <Text
+      style={{
+        fontWeight: "700",
+        marginBottom: 12,
+        color: "#4B3F72",
+      }}
+    >
+      Member Add-ons
+    </Text>
+
+    {MEMBER_ADDON_PACKAGES.map(pkg => (
+      <TouchableOpacity
+        key={pkg.id}
+        style={styles.addonBtn}
+        onPress={() =>
+          requestAddon(
+            "Members",
+            pkg
+          )
+        }
+      >
+        <Text style={styles.addonTitle}>
+          +{pkg.qty} Members
+        </Text>
+
+        <Text style={styles.addonPrice}>
+          GH₵ {pkg.price}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+    <Text
+      style={{
+        fontWeight: "700",
+        marginTop: 16,
+        marginBottom: 12,
+        color: "#4B3F72",
+      }}
+    >
+      Admin Add-ons
+    </Text>
+
+    {ADMIN_ADDON_PACKAGES.map(pkg => (
+      <TouchableOpacity
+        key={pkg.id}
+        style={styles.addonBtn}
+        onPress={() =>
+          requestAddon(
+            "Admins",
+            pkg
+          )
+        }
+      >
+        <Text style={styles.addonTitle}>
+          +{pkg.qty} Admins
+        </Text>
+
+        <Text style={styles.addonPrice}>
+          GH₵ {pkg.price}
+        </Text>
+      </TouchableOpacity>
+    ))}
+
+  </View>
+</>
+)}
 
         {/* ── PLANS COMPARISON ── */}
         <Text style={styles.sectionTitle}>Plans</Text>
@@ -287,6 +674,40 @@ function UsageBar({ label, data }) {
   );
 }
 
+function DetailRow({
+  label,
+  value
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingVertical: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: "#666",
+          fontSize: 13,
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          color: "#222",
+          fontWeight: "700",
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f4f6fb" },
 
@@ -364,5 +785,26 @@ topFeaturesText: {
   color: "#666",
   lineHeight: 18,
   marginTop: 4,
+},
+
+addonBtn: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: "#eee",
+},
+
+addonTitle: {
+  fontSize: 13,
+  fontWeight: "700",
+  color: "#333",
+},
+
+addonPrice: {
+  fontSize: 13,
+  fontWeight: "800",
+  color: "#4B3F72",
 },
 });

@@ -17,9 +17,19 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../firebase";
 import {
-  collection, getDocs, doc, updateDoc, setDoc,
-  query, where, orderBy, limit, getDoc,
-  writeBatch, onSnapshot, deleteDoc
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  setDoc,
+  query,
+  where,          
+  orderBy,
+  limit,
+  getDoc,
+  writeBatch,
+  onSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 import { getTemplate } from "../constants/organizationTemplates";
 import { PLANS, getPlan, PLAN_ORDER } from "../constants/subscriptionPlans";
@@ -99,6 +109,22 @@ const reinstateOrganization =
   const [alertFilter, setAlertFilter] = useState("all");
 
   const activityUnsubRef = useRef(null);
+  const [subscriptionSettings, setSubscriptionSettings] =
+  useState(null);
+  const [subscriptionRequests, setSubscriptionRequests] =
+  useState([]);
+
+  const [archivedRequests, setArchivedRequests] =
+  useState([]);
+
+const [archiveSearch, setArchiveSearch] =
+  useState("");
+
+const [archiveFilter, setArchiveFilter] =
+  useState("all");
+
+const [archiveSort, setArchiveSort] =
+  useState("newest");
 
   // ── FEATURE FLAGS ──
   const [featureFlags, setFeatureFlags] = useState({
@@ -162,24 +188,38 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
   // ─────────────────────────────────────────────────────────────────
   // LOAD ALL DATA
   // ─────────────────────────────────────────────────────────────────
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    try {
-     await Promise.all([
+ const loadAll = useCallback(async () => {
+  setLoading(true);
+
+  try {
+
+  await Promise.all([
   loadOrganizations(),
   loadGovernanceNodes(),
   loadFeatureFlags(),
   loadSystemAlerts(),
+  loadSubscriptionSettings(),
+  loadSubscriptionRequests(),
+  loadSubscriptionArchive(),
 ]);
 
-      startLiveActivityListener();
-    } catch (e) {
-      console.log("❌ SuperAdmin loadAll:", e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+    startLiveActivityListener();
+
+  } catch (e) {
+
+    console.log(
+      "❌ SuperAdmin loadAll:",
+      e
+    );
+
+  } finally {
+
+    setLoading(false);
+    setRefreshing(false);
+
+  }
+}, []);
+
 
   useEffect(() => {
     loadAll();
@@ -187,6 +227,43 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
       if (activityUnsubRef.current) activityUnsubRef.current();
     };
   }, []);
+
+ useEffect(() => {
+
+  const unsub = onSnapshot(
+    query(
+      collection(
+        db,
+        "subscriptionRequests"
+      ),
+      where(
+        "status",
+        "==",
+        "pending"
+      ),
+      orderBy(
+        "requestedAt",
+        "desc"
+      )
+    ),
+    snap => {
+
+      const requests =
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+      setSubscriptionRequests(
+        requests
+      );
+
+    }
+  );
+
+  return () => unsub();
+
+}, []);
 
 
 const loadGovernanceNodes = async () => {
@@ -451,6 +528,418 @@ if (entityId) {
       setFeatureFlags(featureFlags); // revert
     }
   };
+
+const loadSubscriptionSettings = async () => {
+  try {
+
+    const ref = doc(
+      db,
+      "platform",
+      "subscriptionSettings"
+    );
+
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+
+      const defaults = {
+        pricingRegions: {
+          ghana: {
+            currency: "GHS",
+          },
+        },
+
+        memberAddons: [
+          {
+            id: "member50",
+            qty: 50,
+            price: 10,
+            active: true,
+          },
+        ],
+
+        adminAddons: [
+          {
+            id: "admin1",
+            qty: 1,
+            price: 5,
+            active: true,
+          },
+        ],
+      };
+
+      await setDoc(
+        ref,
+        defaults
+      );
+
+      setSubscriptionSettings(
+        defaults
+      );
+
+      return;
+    }
+
+    setSubscriptionSettings(
+      snap.data()
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadSubscriptionSettings:",
+      e
+    );
+
+  }
+};
+
+const loadSubscriptionRequests = async () => {
+  try {
+
+   const snap = await getDocs(
+  query(
+    collection(
+      db,
+      "subscriptionRequests"
+    ),
+    where(
+      "status",
+      "==",
+      "pending"
+    ),
+    orderBy(
+      "requestedAt",
+      "desc"
+    )
+  )
+);
+
+    const requests =
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }));
+
+    console.log(
+      "✅ Requests loaded:",
+      requests
+    );
+
+    setSubscriptionRequests(
+      requests
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadSubscriptionRequests:",
+      e
+    );
+
+  }
+};
+
+const loadSubscriptionArchive = async () => {
+  try {
+
+    const snap = await getDocs(
+      query(
+        collection(
+          db,
+          "subscriptionRequestArchive"
+        ),
+        orderBy(
+          "archivedAt",
+          "desc"
+        )
+      )
+    );
+
+    setArchivedRequests(
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }))
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ loadSubscriptionArchive:",
+      e
+    );
+
+  }
+};
+
+const approveSubscriptionRequest = async (request) => {
+  try {
+
+    const entitySnap = await getDocs(
+  collection(
+    db,
+    "organizations",
+    request.organizationId,
+    "entities"
+  )
+);
+
+const entityDoc =
+  entitySnap.docs.find(
+    d =>
+      d.id === request.entityId ||
+      d.data().entityId === request.entityId
+  );
+
+if (!entityDoc) {
+  throw new Error(
+    "Entity not found"
+  );
+}
+
+const subRef = doc(
+  db,
+  "organizations",
+  request.organizationId,
+  "entities",
+  entityDoc.id,
+  "billing",
+  "subscription"
+);
+
+    const subSnap = await getDoc(subRef);
+
+    const sub = subSnap.exists()
+      ? subSnap.data()
+      : {};
+
+    const addons = sub.addons || {};
+
+    if (
+      request.requestType === "memberAddon"
+    ) {
+
+      await setDoc(
+        subRef,
+        {
+          addons: {
+            ...addons,
+            extraMembers:
+              (addons.extraMembers || 0) +
+              (request.quantity || 0),
+          },
+        },
+        { merge: true }
+      );
+
+    }
+
+    if (
+      request.requestType === "adminAddon"
+    ) {
+
+      await setDoc(
+        subRef,
+        {
+          addons: {
+            ...addons,
+            extraAdmins:
+              (addons.extraAdmins || 0) +
+              (request.quantity || 0),
+          },
+        },
+        { merge: true }
+      );
+
+    }
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "platformActivity"
+    )
+  ),
+  {
+    type: "subscription_approved",
+    organizationId:
+      request.organizationId,
+    entityId:
+      request.entityId,
+    requestId:
+      request.id,
+    message:
+      `${request.organizationName} subscription request approved`,
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "notifications"
+    )
+  ),
+  {
+    organizationId:
+      request.organizationId,
+    entityId:
+      request.entityId,
+    title:
+      "Subscription Request Approved",
+    message:
+      request.requestType ===
+      "memberAddon"
+        ? `${request.quantity} additional member slots approved`
+        : `${request.quantity} additional admin slots approved`,
+    type:
+      "subscription_approved",
+    read: false,
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+
+   await setDoc(
+  doc(
+    db,
+    "subscriptionRequestArchive",
+    request.id
+  ),
+  {
+    ...request,
+    status: "approved",
+    reviewedAt:
+      new Date().toISOString(),
+    archivedAt:
+      new Date().toISOString(),
+  }
+);
+
+await deleteDoc(
+  doc(
+    db,
+    "subscriptionRequests",
+    request.id
+  )
+);
+
+    setSubscriptionRequests(
+      prev =>
+        prev.filter(
+          r => r.id !== request.id
+        )
+    );
+
+    Alert.alert(
+      "Approved",
+      "Add-on applied successfully."
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ approveSubscriptionRequest:",
+      e
+    );
+
+  }
+};
+
+const rejectSubscriptionRequest = async (request) => {
+  try {
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "platformActivity"
+    )
+  ),
+  {
+    type: "subscription_rejected",
+    organizationId:
+      request.organizationId,
+    entityId:
+      request.entityId,
+    requestId:
+      request.id,
+    message:
+      `${request.organizationName} subscription request rejected`,
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "notifications"
+    )
+  ),
+  {
+    organizationId:
+      request.organizationId,
+    entityId:
+      request.entityId,
+    title:
+      "Subscription Request Rejected",
+    message:
+      "Your subscription request was not approved.",
+    type:
+      "subscription_rejected",
+    read: false,
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+ await setDoc(
+  doc(
+    db,
+    "subscriptionRequestArchive",
+    request.id
+  ),
+  {
+    ...request,
+    status: "rejected",
+    reviewedAt:
+      new Date().toISOString(),
+    archivedAt:
+      new Date().toISOString(),
+  }
+);
+
+await deleteDoc(
+  doc(
+    db,
+    "subscriptionRequests",
+    request.id
+  )
+);
+
+    setSubscriptionRequests(
+      prev =>
+        prev.filter(
+          r => r.id !== request.id
+        )
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ rejectSubscriptionRequest:",
+      e
+    );
+
+  }
+};
+
 
   // ─────────────────────────────────────────────────────────────────
   // APPROVE CHURCH — same logic as ApprovalScreen, centralized here
@@ -924,14 +1413,32 @@ const ref = doc(
   // ─────────────────────────────────────────────────────────────────
   // RENDER TABS
   // ─────────────────────────────────────────────────────────────────
-  const TABS = [
-  { key: "overview",      label: "Overview",      icon: "grid-outline" },
-  { key: "churches",      label: "Churches",      icon: "business-outline" },
-  { key: "governance",    label: "Governance",    icon: "git-branch-outline" },
-  { key: "alerts",        label: "Alerts",        icon: "warning-outline" },
-  { key: "notifications", label: "Notifications", icon: "mail-outline" },
-  { key: "activity",      label: "Activity",      icon: "pulse-outline" },
-  { key: "flags",         label: "Flags",         icon: "flag-outline" },
+const TABS = [
+  {
+    key: "overview",
+    label: "Overview",
+    icon: "grid-outline",
+  },
+  {
+    key: "churches",
+    label: "Churches",
+    icon: "business-outline",
+  },
+  {
+    key: "governance",
+    label: "Governance",
+    icon: "git-branch-outline",
+  },
+  {
+    key: "platform",
+    label: "Platform",
+    icon: "settings-outline",
+  },
+  {
+    key: "subscriptionArchive",
+    label: "Archive",
+    icon: "archive-outline",
+  },
 ];
 
 const emailAlerts =
@@ -955,7 +1462,48 @@ const criticalAlerts =
     a => a.severity === "CRITICAL"
   );
 
+const filteredArchive =
+  archivedRequests
+    .filter(req => {
 
+      const matchesSearch =
+        !archiveSearch ||
+        (
+          req.organizationName || ""
+        )
+          .toLowerCase()
+          .includes(
+            archiveSearch.toLowerCase()
+          );
+
+      const matchesStatus =
+        archiveFilter === "all"
+          ? true
+          : req.status === archiveFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
+
+    })
+    .sort((a, b) => {
+
+      if (
+        archiveSort === "newest"
+      ) {
+        return (
+          new Date(b.archivedAt) -
+          new Date(a.archivedAt)
+        );
+      }
+
+      return (
+        new Date(a.archivedAt) -
+        new Date(b.archivedAt)
+      );
+
+    });
 
 
 
@@ -1611,6 +2159,499 @@ const criticalAlerts =
               )}
             </>
           )}
+
+
+         {tab === "subscriptionRequests" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Subscription Requests
+    </Text>
+
+    {subscriptionRequests.length === 0 ? (
+
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="document-text-outline"
+          size={40}
+          color="#ddd"
+        />
+
+        <Text style={styles.emptyText}>
+          No subscription requests
+        </Text>
+      </View>
+
+    ) : (
+
+    subscriptionRequests.map(req => (
+
+  <View
+    key={req.id}
+    style={styles.orgCard}
+  >
+
+   <Text style={styles.orgName}>
+  {req.organizationName}
+</Text>
+
+<Text style={styles.orgSub}>
+  Requested by {req.requestedByName}
+</Text>
+
+<View style={styles.modalStatsRow}>
+
+  <MiniStat
+    label="Type"
+    value={req.requestType}
+  />
+
+  <MiniStat
+    label="Qty"
+    value={req.quantity}
+  />
+
+  <MiniStat
+    label="Price"
+    value={`GH₵${req.requestedPrice}`}
+  />
+
+</View>
+
+<InfoPair
+  label="Plan"
+  value={req.currentPlan}
+/>
+
+<View
+  style={[
+    styles.statusPill,
+    {
+      backgroundColor: "#F39C1222",
+      alignSelf: "flex-start",
+      marginTop: 8,
+      marginBottom: 8,
+    }
+  ]}
+>
+  <Text
+    style={{
+      color: "#F39C12",
+      fontWeight: "700",
+    }}
+  >
+    {req.status.toUpperCase()}
+  </Text>
+</View>
+
+   
+
+    {req.status === "pending" && (
+      <View style={styles.modalBtnRow}>
+
+        <TouchableOpacity
+          style={styles.modalSaveBtn}
+          onPress={() =>
+            approveSubscriptionRequest(req)
+          }
+        >
+          <Text style={styles.white}>
+            Approve
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.rejectBtn}
+          onPress={() =>
+            rejectSubscriptionRequest(req)
+          }
+        >
+          <Text style={styles.white}>
+            Reject
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+    )}
+
+  </View>
+
+))
+
+    )}
+  </>
+)}
+
+{tab === "subscriptionArchive" && (
+<>
+  <Text style={styles.sectionTitle}>
+    Subscription Archive
+  </Text>
+
+  <View style={styles.searchBar}>
+    <Ionicons
+      name="search-outline"
+      size={15}
+      color="#aaa"
+    />
+
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Search organisation..."
+      value={archiveSearch}
+      onChangeText={
+        setArchiveSearch
+      }
+    />
+  </View>
+
+  <View style={styles.filterRow}>
+
+    {[
+      "all",
+      "approved",
+      "rejected",
+    ].map(status => (
+
+      <TouchableOpacity
+        key={status}
+        style={[
+          styles.filterChip,
+          archiveFilter === status &&
+            styles.filterChipActive,
+        ]}
+        onPress={() =>
+          setArchiveFilter(status)
+        }
+      >
+        <Text
+          style={[
+            styles.filterChipText,
+            archiveFilter === status &&
+              styles.filterChipTextActive,
+          ]}
+        >
+          {status}
+        </Text>
+      </TouchableOpacity>
+
+    ))}
+
+  </View>
+
+  <View style={styles.filterRow}>
+
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        archiveSort === "newest" &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setArchiveSort("newest")
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          archiveSort === "newest" &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        Newest
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.filterChip,
+        archiveSort === "oldest" &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setArchiveSort("oldest")
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          archiveSort === "oldest" &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        Oldest
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+
+  {filteredArchive.map(req => (
+
+    <View
+      key={req.id}
+      style={styles.orgCard}
+    >
+
+      <Text style={styles.orgName}>
+        {req.organizationName}
+      </Text>
+
+      <Text style={styles.orgSub}>
+        Requested by {req.requestedByName}
+      </Text>
+
+      <InfoPair
+        label="Type"
+        value={req.requestType}
+      />
+
+      <InfoPair
+        label="Quantity"
+        value={req.quantity}
+      />
+
+      <InfoPair
+        label="Price"
+        value={`GH₵${req.requestedPrice}`}
+      />
+
+      <InfoPair
+        label="Status"
+        value={req.status}
+      />
+
+      <InfoPair
+        label="Archived"
+        value={
+          req.archivedAt?.slice(
+            0,
+            10
+          )
+        }
+      />
+
+    </View>
+
+  ))}
+
+</>
+)}
+
+{tab === "subscriptions" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Subscription Settings
+    </Text>
+
+
+    {!subscriptionSettings ? (
+
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="card-outline"
+          size={40}
+          color="#ddd"
+        />
+        <Text style={styles.emptyText}>
+          No subscription settings found
+        </Text>
+      </View>
+
+    ) : (
+
+      <>
+        <View style={styles.card}>
+
+          <InfoPair
+            label="Pricing Regions"
+            value={
+              Object.keys(
+                subscriptionSettings?.pricingRegions || {}
+              ).length
+            }
+          />
+
+          <InfoPair
+            label="Member Packages"
+            value={
+              subscriptionSettings?.memberAddons
+                ?.length || 0
+            }
+          />
+
+          <InfoPair
+            label="Admin Packages"
+            value={
+              subscriptionSettings?.adminAddons
+                ?.length || 0
+            }
+          />
+
+        </View>
+
+        <Text style={styles.sectionTitle}>
+          Member Add-ons
+        </Text>
+
+        {(subscriptionSettings?.memberAddons || [])
+          .map(pkg => (
+
+          <View
+            key={pkg.id}
+            style={styles.orgCard}
+          >
+            <InfoPair
+              label="Quantity"
+              value={pkg.qty}
+            />
+
+            <InfoPair
+              label="Price"
+              value={pkg.price}
+            />
+
+            <InfoPair
+              label="Active"
+              value={
+                pkg.active
+                  ? "Yes"
+                  : "No"
+              }
+            />
+          </View>
+
+        ))}
+
+        <Text style={styles.sectionTitle}>
+          Admin Add-ons
+        </Text>
+
+        {(subscriptionSettings?.adminAddons || [])
+          .map(pkg => (
+
+          <View
+            key={pkg.id}
+            style={styles.orgCard}
+          >
+            <InfoPair
+              label="Quantity"
+              value={pkg.qty}
+            />
+
+            <InfoPair
+              label="Price"
+              value={pkg.price}
+            />
+
+            <InfoPair
+              label="Active"
+              value={
+                pkg.active
+                  ? "Yes"
+                  : "No"
+              }
+            />
+          </View>
+
+        ))}
+      </>
+    )}
+  </>
+)}
+
+
+
+{tab === "platform" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Platform Management
+    </Text>
+
+    <View style={styles.actionGrid}>
+
+      <ActionCard
+        icon="warning-outline"
+        color="#e74c3c"
+        label="Alerts"
+        sub={`${alerts.length} alerts`}
+        onPress={() => setTab("alerts")}
+      />
+
+      <ActionCard
+        icon="mail-outline"
+        color="#0984E3"
+        label="Notifications"
+        sub="Email & WhatsApp"
+        onPress={() =>
+          setTab("notifications")
+        }
+      />
+
+      <ActionCard
+        icon="pulse-outline"
+        color="#27ae60"
+        label="Activity"
+        sub="Live platform feed"
+        onPress={() =>
+          setTab("activity")
+        }
+      />
+
+      <ActionCard
+        icon="flag-outline"
+        color="#6C5CE7"
+        label="Feature Flags"
+        sub="Platform controls"
+        onPress={() =>
+          setTab("flags")
+        }
+      />
+
+      <ActionCard
+  icon="document-text-outline"
+  color="#F39C12"
+  label="Subscription Requests"
+  sub="Pending approvals"
+  onPress={async () => {
+
+  await loadSubscriptionRequests();
+
+  setTab(
+    "subscriptionRequests"
+  );
+
+}}
+/>
+
+<ActionCard
+  icon="archive-outline"
+  color="#6C5CE7"
+  label="Archive"
+  sub="Approved / Rejected"
+  onPress={async () => {
+
+    await loadSubscriptionArchive();
+
+    setTab(
+      "subscriptionArchive"
+    );
+
+  }}
+/>
+
+
+      <ActionCard
+        icon="card-outline"
+        color="#4B3F72"
+        label="Subscriptions"
+        sub="Pricing & plans"
+        onPress={() =>
+          setTab("subscriptions")
+        }
+      />
+
+    </View>
+  </>
+)}
 
           {/* ════════════════════ FLAGS TAB ════════════════════ */}
           {tab === "flags" && (
@@ -2658,7 +3699,16 @@ const styles = StyleSheet.create({
   modalSub: { fontSize: 12, color: "#888", marginBottom: 14 },
   modalHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   modalInfoGrid: { gap: 4, marginBottom: 14 },
-  modalStatsRow: { flexDirection: "row", backgroundColor: "#f8f8f8", borderRadius: 10, padding: 12, gap: 10, marginBottom: 14 },
+  modalStatsRow: {
+  flexDirection: "row",
+  backgroundColor: "#15172B",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.06)",
+  borderRadius: 10,
+  padding: 12,
+  gap: 10,
+  marginVertical: 10,
+},
   modalBtnRow: { flexDirection: "row", gap: 8, marginTop: 14 },
   modalSaveBtn: { flex: 1, backgroundColor: "#4B3F72", padding: 12, borderRadius: 10, alignItems: "center" },
   modalCancelBtn: { flex: 1, backgroundColor: "#aaa", padding: 12, borderRadius: 10, alignItems: "center" },
@@ -2669,11 +3719,24 @@ const styles = StyleSheet.create({
   infoBoxText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
 
   infoPairRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" },
-  infoPairLabel: { fontSize: 11, color: "#aaa", fontWeight: "600" },
-  infoPairValue: { fontSize: 11, color: "#333", fontWeight: "600", flex: 1, textAlign: "right", marginLeft: 10 },
+  infoPairLabel: {
+  fontSize: 11,
+  color: "#ddd",
+  fontWeight: "600",
+},
+  infoPairValue: {
+  fontSize: 11,
+  color: "#FFFFFF",
+  fontWeight: "600",
+  flex: 1,
+  textAlign: "right",
+  marginLeft: 10,
+},
 
   miniStat: { flex: 1, alignItems: "center" },
-  miniStatValue: { fontSize: 15, fontWeight: "900", color: "#4B3F72" },
+  miniStatValue: {
+  color: "#fff",
+},
   miniStatLabel: { fontSize: 9, color: "#aaa", textTransform: "uppercase", fontWeight: "700", marginTop: 2 },
 
   subDetail: { backgroundColor: "#f8f8f8", borderRadius: 10, padding: 10, marginBottom: 12, gap: 4 },
