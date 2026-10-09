@@ -431,6 +431,12 @@ setUserPermissions(
   effectivePermissions
 );
 
+await AsyncStorage.setItem(
+  "effectivePermissions",
+  JSON.stringify(effectivePermissions)
+);
+
+
 console.log(
   "EFFECTIVE ROLES:",
   effectiveRoles

@@ -111,6 +111,8 @@ const reinstateOrganization =
   const activityUnsubRef = useRef(null);
   const [subscriptionSettings, setSubscriptionSettings] =
   useState(null);
+  const [planSettings, setPlanSettings] =
+  useState({});
   const [subscriptionRequests, setSubscriptionRequests] =
   useState([]);
 
@@ -566,6 +568,25 @@ const loadSubscriptionSettings = async () => {
             active: true,
           },
         ],
+        plans: {
+  free: {
+    price: 0,
+    maxMembers: 50,
+    maxAdmins: 1,
+  },
+
+  basic: {
+    price: 30,
+    maxMembers: 200,
+    maxAdmins: 3,
+  },
+
+  pro: {
+    price: 80,
+    maxMembers: 1000,
+    maxAdmins: 10,
+  },
+},
       };
 
       await setDoc(
@@ -580,9 +601,13 @@ const loadSubscriptionSettings = async () => {
       return;
     }
 
-    setSubscriptionSettings(
-      snap.data()
-    );
+   const data = snap.data();
+
+setSubscriptionSettings(data);
+
+setPlanSettings(
+  data.plans || {}
+);
 
   } catch (e) {
 
@@ -673,6 +698,41 @@ const loadSubscriptionArchive = async () => {
   }
 };
 
+const savePlanSettings =
+  async () => {
+
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "platform",
+          "subscriptionSettings"
+        ),
+        {
+          plans: planSettings,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        "Plan settings updated."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not save settings."
+      );
+
+    }
+  };
+
+
 const approveSubscriptionRequest = async (request) => {
   try {
 
@@ -753,6 +813,37 @@ const subRef = doc(
       );
 
     }
+    if (
+  request.requestType === "planUpgrade"
+) {
+
+  await setDoc(
+    subRef,
+    {
+      planId:
+        request.requestedPlan,
+
+      status:
+        "active",
+
+      currentPeriodStart:
+        new Date().toISOString(),
+
+      currentPeriodEnd:
+        new Date(
+          Date.now() +
+          30 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+
+      upgradedAt:
+        new Date().toISOString(),
+    },
+    {
+      merge: true,
+    }
+  );
+
+}
 
 await setDoc(
   doc(
@@ -786,23 +877,29 @@ await setDoc(
   {
     organizationId:
       request.organizationId,
+
     entityId:
       request.entityId,
+
     title:
       "Subscription Request Approved",
+
     message:
-      request.requestType ===
-      "memberAddon"
+      request.requestType === "memberAddon"
         ? `${request.quantity} additional member slots approved`
-        : `${request.quantity} additional admin slots approved`,
+        : request.requestType === "adminAddon"
+        ? `${request.quantity} additional admin slots approved`
+        : `Your plan upgrade to ${request.requestedPlan} was approved`,
+
     type:
       "subscription_approved",
+
     read: false,
+
     createdAt:
       new Date().toISOString(),
   }
 );
-
 
    await setDoc(
   doc(
@@ -835,10 +932,14 @@ await deleteDoc(
         )
     );
 
-    Alert.alert(
-      "Approved",
-      "Add-on applied successfully."
-    );
+   Alert.alert(
+  "Approved",
+
+  request.requestType === "planUpgrade"
+    ? `Plan upgraded to ${request.requestedPlan}`
+    : "Add-on applied successfully."
+);
+
 
   } catch (e) {
 
@@ -2521,43 +2622,148 @@ const filteredArchive =
 
         ))}
 
-        <Text style={styles.sectionTitle}>
-          Admin Add-ons
-        </Text>
+       <Text style={styles.sectionTitle}>
+  Admin Add-ons
+</Text>
 
-        {(subscriptionSettings?.adminAddons || [])
-          .map(pkg => (
+{(subscriptionSettings?.adminAddons || [])
+  .map(pkg => (
 
-          <View
-            key={pkg.id}
-            style={styles.orgCard}
-          >
-            <InfoPair
-              label="Quantity"
-              value={pkg.qty}
-            />
+  <View
+    key={pkg.id}
+    style={styles.orgCard}
+  >
+    <InfoPair
+      label="Quantity"
+      value={pkg.qty}
+    />
 
-            <InfoPair
-              label="Price"
-              value={pkg.price}
-            />
+    <InfoPair
+      label="Price"
+      value={pkg.price}
+    />
 
-            <InfoPair
-              label="Active"
-              value={
-                pkg.active
-                  ? "Yes"
-                  : "No"
-              }
-            />
-          </View>
+    <InfoPair
+      label="Active"
+      value={
+        pkg.active
+          ? "Yes"
+          : "No"
+      }
+    />
+  </View>
 
-        ))}
+))}
+
+<Text style={styles.sectionTitle}>
+  Plan Limits & Pricing
+</Text>
+
+{["free", "basic", "pro"].map(pid => (
+
+  <View
+    key={pid}
+    style={styles.orgCard}
+  >
+<Text style={styles.orgName}>
+  {pid.toUpperCase()} PLAN
+</Text>
+
+<Text style={styles.fieldLabel}>
+  Monthly Price (GH₵)
+</Text>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={String(
+    planSettings?.[pid]?.price ??
+    (pid === "free"
+      ? 0
+      : pid === "basic"
+      ? 30
+      : 80)
+  )}
+  onChangeText={(v) =>
+    setPlanSettings(prev => ({
+      ...prev,
+      [pid]: {
+        ...prev[pid],
+        price: Number(v) || 0,
+      },
+    }))
+  }
+/>
+
+<Text style={styles.fieldLabel}>
+  Maximum Members
+</Text>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={String(
+    planSettings?.[pid]?.maxMembers ??
+    (pid === "free"
+      ? 50
+      : pid === "basic"
+      ? 200
+      : 1000)
+  )}
+  onChangeText={(v) =>
+    setPlanSettings(prev => ({
+      ...prev,
+      [pid]: {
+        ...prev[pid],
+        maxMembers: Number(v) || 0,
+      },
+    }))
+  }
+/>
+
+<Text style={styles.fieldLabel}>
+  Maximum Admins
+</Text>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={String(
+    planSettings?.[pid]?.maxAdmins ??
+    (pid === "free"
+      ? 1
+      : pid === "basic"
+      ? 3
+      : 10)
+  )}
+  onChangeText={(v) =>
+    setPlanSettings(prev => ({
+      ...prev,
+      [pid]: {
+        ...prev[pid],
+        maxAdmins: Number(v) || 0,
+      },
+    }))
+  }
+/>
+
+</View>
+
+))}
+
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={savePlanSettings}
+>
+  <Text style={styles.white}>
+    Save Plan Settings
+  </Text>
+</TouchableOpacity>
+
       </>
     )}
   </>
 )}
-
 
 
 {tab === "platform" && (
@@ -3762,7 +3968,18 @@ const styles = StyleSheet.create({
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#4B3F72" },
 
   fieldLabel: { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", marginBottom: 6, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: "#e0e0e0", borderRadius: 10, padding: 11, fontSize: 13, marginBottom: 4 },
+  input: {
+  borderWidth: 1,
+  borderColor: "#e0e0e0",
+  borderRadius: 10,
+  padding: 11,
+  fontSize: 13,
+  marginBottom: 4,
+
+  color: "#FFFFFF",
+  backgroundColor: "#15172B",
+},
+
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f0f0f0" },
   chipText: { fontSize: 12, color: "#555", fontWeight: "600" },

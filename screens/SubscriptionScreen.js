@@ -93,17 +93,65 @@ export default function SubscriptionScreen({ route }) {
 
   // ⚠️ Same placeholder pattern as other screens this conversation —
   // billing changes should be gated behind manage_church_settings.
-  const viewerPermissions = route?.params?.viewerPermissions || [];
-  const canManageBilling = hasPermission({ permissions: viewerPermissions }, "manage_church_settings");
+
+  const [viewerPermissions, setViewerPermissions] =
+  useState([]);
+
+const canManageBilling =
+  hasPermission(
+    { permissions: viewerPermissions },
+    "manage_church_settings"
+  );
+
+console.log(
+  "viewerPermissions",
+  viewerPermissions
+);
+
+console.log(
+  "canManageBilling",
+  canManageBilling
+);
 
   const [upgrading, setUpgrading] = useState(null); // planId currently checking out
   
 
-  useEffect(() => {
-    AsyncStorage.getItem("activeEntity").then(data => {
-      if (data) { try { setActiveEntity(JSON.parse(data)); } catch (_) {} }
-    });
-  }, []);
+useEffect(() => {
+
+  const loadData = async () => {
+
+    const entityRaw =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    if (entityRaw) {
+      try {
+        setActiveEntity(
+          JSON.parse(entityRaw)
+        );
+      } catch (_) {}
+    }
+
+    const permsRaw =
+      await AsyncStorage.getItem(
+        "effectivePermissions"
+      );
+
+    if (permsRaw) {
+      try {
+
+        setViewerPermissions(
+          JSON.parse(permsRaw)
+        );
+
+      } catch (_) {}
+    }
+  };
+
+  loadData();
+
+}, []);
 
   const {
     subscription, plan, planId, status, isActive, isTrialExpired,
@@ -115,41 +163,109 @@ export default function SubscriptionScreen({ route }) {
   // earlier in this build. The Paystack secret key NEVER touches the
   // client; the function returns an authorization_url that opens
   // Paystack's hosted checkout (supports card, Ghana MoMo, and bank).
-  const handleUpgrade = async (targetPlanId) => {
-    if (!canManageBilling) {
-      Alert.alert("Not Authorized", "Only an admin can change the subscription plan.");
-      return;
-    }
-    if (!organizationId) return;
+ const handleUpgrade = async (
+  targetPlanId
+) => {
 
-    const targetPlan = getPlan(targetPlanId);
-    if (targetPlan.price === null) {
-      Alert.alert("Contact Sales", "Reach out to our team to set up an Enterprise plan.");
-      return;
-    }
+  if (!canManageBilling) {
+    Alert.alert(
+      "Not Authorized",
+      "Only an admin can change the subscription plan."
+    );
+    return;
+  }
 
-    setUpgrading(targetPlanId);
-    try {
-      const functions = getFunctions(app);
-      const initCheckout = httpsCallable(functions, "initPaystackCheckout");
-      const result = await initCheckout({ organizationId, planId: targetPlanId });
+  if (!organizationId || !entityId) {
+    return;
+  }
 
-      const url = result.data?.authorization_url;
-      if (url) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert("Error", "Could not start checkout. Please try again.");
+  const targetPlan =
+    getPlan(targetPlanId);
+
+  if (targetPlan.price === null) {
+    Alert.alert(
+      "Contact Sales",
+      "Please contact us for Enterprise pricing."
+    );
+    return;
+  }
+
+  setUpgrading(targetPlanId);
+
+  try {
+
+    await setDoc(
+      doc(
+        collection(
+          db,
+          "subscriptionRequests"
+        )
+      ),
+      {
+        requestType:
+          "planUpgrade",
+
+        organizationId,
+        entityId,
+
+        organizationName:
+          activeEntity?.name || "",
+
+        entityName:
+          activeEntity?.name || "",
+
+        requestedBy:
+          activeEntity?.uid || "",
+
+        requestedByName:
+          activeEntity?.memberName || "",
+
+        currentPlan:
+          planId,
+
+        requestedPlan:
+          targetPlanId,
+
+        currentPrice:
+          plan?.price || 0,
+
+        requestedPrice:
+          targetPlan?.price || 0,
+
+        paymentStatus:
+          "pending",
+
+        status:
+          "pending",
+
+        requestedAt:
+          new Date().toISOString(),
       }
-    } catch (e) {
-      console.log("❌ Checkout error:", e);
-      Alert.alert(
-        "Checkout Unavailable",
-        "Payment processing isn't configured yet. See functions/subscriptions.js for setup."
-      );
-    } finally {
-      setUpgrading(null);
-    }
-  };
+    );
+
+    Alert.alert(
+      "Request Submitted",
+      `${targetPlan.label} upgrade request submitted for review.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ handleUpgrade:",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      "Could not submit request."
+    );
+
+  } finally {
+
+    setUpgrading(null);
+
+  }
+};
 
   if (loading) {
     return (
@@ -579,6 +695,9 @@ const requestedCapacity =
         {PLAN_ORDER.map(pid => {
           const p = PLANS[pid];
           const isCurrent = pid === planId;
+          const isUpgrade =
+  PLAN_ORDER.indexOf(pid) >
+  PLAN_ORDER.indexOf(planId);
           return (
             <View key={pid} style={[styles.planRow, isCurrent && styles.planRowActive]}>
               {pid === "pro" && (
@@ -618,7 +737,8 @@ const requestedCapacity =
                   <Text style={styles.currentBadgeText}>Current Plan</Text>
                 </View>
               ) : (
-                canManageBilling && (
+                isUpgrade &&
+canManageBilling && (
                   <TouchableOpacity
                     style={[styles.upgradeBtn, upgrading === pid && { opacity: 0.6 }]}
                     onPress={() => handleUpgrade(pid)}

@@ -86,6 +86,9 @@ const [usage, setUsage] = useState({
   admins: 0
 });
   const [loading, setLoading] = useState(true);
+  const [planOverrides, setPlanOverrides] =
+  useState({});
+
 
   // ✅ Real-time — an upgrade/downgrade or a webhook-driven status change
   // (e.g. payment failed → past_due) reflects everywhere instantly,
@@ -160,9 +163,70 @@ return () => unsub && unsub();
 }, [organizationId, entityId]);
 
   useEffect(() => { loadUsage(); }, [loadUsage]);
+  useEffect(() => {
 
-  const planId = subscription?.planId || "free";
-  const plan = getPlan(planId);
+  const loadPlanOverrides =
+    async () => {
+
+      try {
+
+        const snap = await getDoc(
+          doc(
+            db,
+            "platform",
+            "subscriptionSettings"
+          )
+        );
+
+        if (!snap.exists()) {
+          return;
+        }
+
+        setPlanOverrides(
+          snap.data().plans || {}
+        );
+
+      } catch (e) {
+
+        console.log(
+          "❌ loadPlanOverrides:",
+          e
+        );
+
+      }
+    };
+
+  loadPlanOverrides();
+
+}, []);
+
+ const planId =
+  subscription?.planId || "free";
+
+const basePlan =
+  getPlan(planId);
+
+const override =
+  planOverrides?.[planId];
+
+const plan = override
+  ? {
+      ...basePlan,
+
+      price:
+        override.price,
+
+      limits: {
+        ...basePlan.limits,
+
+        maxMembers:
+          override.maxMembers,
+
+        maxAdmins:
+          override.maxAdmins,
+      },
+    }
+  : basePlan;
 
   // ✅ A trial that's run out behaves like Free until they actually pay —
   // no feature silently stays unlocked forever just because trialing
@@ -189,10 +253,8 @@ return () => unsub && unsub();
   const addons =
     subscription?.addons || {};
 
-  let limit = getLimit(
-    effectivePlanId,
-    limitKey
-  );
+ let limit =
+  plan.limits?.[limitKey];
 
   if (
     limitKey === LIMITS.MAX_MEMBERS
@@ -254,7 +316,7 @@ return () => unsub && unsub();
 
   return {
   subscription,
-  plan: getPlan(effectivePlanId),
+  plan,
   planId: effectivePlanId,
   status: subscription?.status || "free",
   isActive,
