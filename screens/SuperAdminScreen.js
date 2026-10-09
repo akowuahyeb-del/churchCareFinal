@@ -871,6 +871,8 @@ await setDoc(
   doc(
     collection(
       db,
+      "users",
+      request.requestedBy,
       "notifications"
     )
   ),
@@ -916,6 +918,70 @@ await setDoc(
       new Date().toISOString(),
   }
 );
+await setDoc(
+  doc(
+    collection(
+      db,
+      "outboundMail"
+    )
+  ),
+  {
+    type: "subscriptionApproved",
+
+    organizationId:
+      request.organizationId,
+
+    entityId:
+      request.entityId,
+
+    recipientUid:
+      request.requestedBy,
+
+    currentPlan:
+      request.currentPlan,
+
+    requestedPlan:
+      request.requestedPlan,
+
+    status: "pending",
+
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "outboundWhatsApp"
+    )
+  ),
+  {
+    type: "subscriptionApproved",
+
+    organizationId:
+      request.organizationId,
+
+    entityId:
+      request.entityId,
+
+    recipientUid:
+      request.requestedBy,
+
+    currentPlan:
+      request.currentPlan,
+
+    requestedPlan:
+      request.requestedPlan,
+
+    status: "pending",
+
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
 
 await deleteDoc(
   doc(
@@ -2318,10 +2384,35 @@ const filteredArchive =
 
 </View>
 
-<InfoPair
-  label="Plan"
-  value={req.currentPlan}
-/>
+{req.requestType === "planUpgrade" && (
+  <View
+    style={{
+      backgroundColor: "#15172B",
+      borderRadius: 10,
+      padding: 10,
+      marginTop: 10,
+      marginBottom: 10,
+    }}
+  >
+    <Text
+      style={{
+        color: "#fff",
+        fontWeight: "700",
+      }}
+    >
+      {req.currentPlan?.toUpperCase()}
+      {" → "}
+      {req.requestedPlan?.toUpperCase()}
+    </Text>
+  </View>
+)}
+
+{req.requestType === "planUpgrade" && (
+  <InfoPair
+    label="Requested Plan"
+    value={req.requestedPlan}
+  />
+)}
 
 <View
   style={[
