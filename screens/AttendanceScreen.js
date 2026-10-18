@@ -40,6 +40,7 @@ import {
   buildAttendanceIntelligenceSnapshot,
 } from "../utils/attendanceIntelligence";
 
+import { useSubscription } from "../utils/subscription";
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
 
@@ -79,6 +80,12 @@ export default function AttendanceScreen() {
   const [currentUser, setCurrentUser] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
+  const {
+  isTrialExpired,
+} = useSubscription(
+  organizationId,
+  entityId
+);
 
   const {
     settings: attendanceSettings,
@@ -1764,10 +1771,38 @@ console.log(
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate("AttendanceSettings")}
-        >
+       <TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => {
+
+    if (isTrialExpired) {
+
+      Alert.alert(
+        "Premium Feature",
+        "Upgrade your subscription to unlock Attendance Settings.",
+        [
+          {
+            text: "View Plans",
+            onPress: () =>
+              navigation.navigate(
+                "Subscription"
+              ),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+
+      return;
+    }
+
+    navigation.navigate(
+      "AttendanceSettings"
+    );
+  }}
+>
           <Ionicons name="settings-outline" size={18} color="#fff" />
         </TouchableOpacity>
 
@@ -1791,13 +1826,83 @@ console.log(
             </TouchableOpacity>
           )}
           {sessionId && (
-            <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("ConcurrentSessions")}>
-              <Ionicons name="layers-outline" size={18} color="#fff" />
-            </TouchableOpacity>
+           <TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => {
+
+    if (isTrialExpired) {
+
+      Alert.alert(
+        "Premium Feature",
+        "Upgrade your subscription to unlock Concurrent Sessions.",
+        [
+          {
+            text: "View Plans",
+            onPress: () =>
+              navigation.navigate(
+                "Subscription"
+              ),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+
+      return;
+    }
+
+    navigation.navigate(
+      "ConcurrentSessions"
+    );
+  }}
+>
+  <Ionicons
+    name="layers-outline"
+    size={18}
+    color="#fff"
+  />
+</TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("GroupAttendance")}>
-            <Ionicons name="people-outline" size={18} color="#fff" />
-          </TouchableOpacity>
+         <TouchableOpacity
+  style={styles.headerBtn}
+  onPress={() => {
+
+    if (isTrialExpired) {
+
+      Alert.alert(
+        "Premium Feature",
+        "Upgrade your subscription to unlock Group Attendance.",
+        [
+          {
+            text: "View Plans",
+            onPress: () =>
+              navigation.navigate(
+                "Subscription"
+              ),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+
+      return;
+    }
+
+    navigation.navigate(
+      "GroupAttendance"
+    );
+  }}
+>
+  <Ionicons
+    name="people-outline"
+    size={18}
+    color="#fff"
+  />
+</TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate("AttendanceSummary")}>
             <Ionicons name="stats-chart-outline" size={18} color="#fff" />
           </TouchableOpacity>

@@ -18,12 +18,38 @@ import {
   collection, query, where, onSnapshot, updateDoc, doc
 } from "firebase/firestore";
 import AppHeader from "../components/AppHeader";
-
 export default function ConcurrentSessionsScreen() {
   const navigation = useNavigation();
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
+  const {
+  isTrialExpired,
+} = useSubscription(
+  organizationId,
+  entityId
+);
+useEffect(() => {
+
+  if (!isTrialExpired) return;
+
+  Alert.alert(
+    "Premium Feature",
+    "Concurrent Sessions requires a paid subscription.",
+    [
+      {
+        text: "View Plans",
+        onPress: () =>
+          navigation.replace(
+            "Subscription"
+          ),
+      },
+    ]
+  );
+
+}, [isTrialExpired]);
+
+ 
 
   const [liveSessions,  setLiveSessions]  = useState([]);
   const [groupSessions, setGroupSessions] = useState([]);

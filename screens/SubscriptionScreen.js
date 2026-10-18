@@ -24,6 +24,9 @@ import {
   collection,
   doc,
   setDoc,
+  getDocs,
+  query,
+  where,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -174,6 +177,14 @@ useEffect(() => {
     );
     return;
   }
+
+if (!organizationId || !entityId) {
+  Alert.alert(
+    "Error",
+    "Organisation information is unavailable."
+  );
+  return;
+}
 
   if (!organizationId || !entityId) {
     return;
@@ -448,6 +459,130 @@ const requestedCapacity =
   }
 };
 
+
+const requestCancellation = async () => {
+
+  if (!canManageBilling) {
+    Alert.alert(
+      "Not Authorized",
+      "Only an admin can manage subscriptions."
+    );
+    return;
+  }
+
+  Alert.alert(
+    "Cancel Subscription",
+    "Your premium access will remain active until the end of the current billing period. No data will be deleted.",
+    [
+      {
+        text: "Keep Subscription",
+        style: "cancel",
+      },
+      {
+        text: "Cancel Subscription",
+        style: "destructive",
+        onPress: async () => {
+
+          try {
+
+            const existing = await getDocs(
+  query(
+    collection(
+      db,
+      "subscriptionRequests"
+    ),
+    where(
+      "organizationId",
+      "==",
+      organizationId
+    ),
+    where(
+      "entityId",
+      "==",
+      entityId
+    ),
+    where(
+      "requestType",
+      "==",
+      "cancelSubscription"
+    ),
+    where(
+      "status",
+      "==",
+      "pending"
+    )
+  )
+);
+
+if (!existing.empty) {
+
+  Alert.alert(
+    "Request Already Submitted",
+    "A cancellation request is already awaiting review."
+  );
+
+  return;
+}
+
+            await setDoc(
+              doc(
+                collection(
+                  db,
+                  "subscriptionRequests"
+                )
+              ),
+              {
+                requestType:
+                  "cancelSubscription",
+
+                organizationId,
+                entityId,
+
+                organizationName:
+                  activeEntity?.name || "",
+
+                entityName:
+                  activeEntity?.name || "",
+
+                requestedBy:
+                  activeEntity?.uid || "",
+
+                requestedByName:
+                  activeEntity?.memberName || "",
+
+                currentPlan:
+                  planId,
+
+                status:
+                  "pending",
+
+                requestedAt:
+                  new Date().toISOString(),
+              }
+            );
+
+            Alert.alert(
+              "Request Submitted",
+              "Cancellation request submitted for review."
+            );
+
+          } catch (e) {
+
+            console.log(
+              "❌ requestCancellation:",
+              e
+            );
+
+            Alert.alert(
+              "Error",
+              "Could not submit request."
+            );
+          }
+        },
+      },
+    ]
+  );
+};
   return (
     <View style={styles.container}>
       <AppHeader title="Subscription & Billing" showBack onBack={() => navigation.goBack()} />
@@ -766,7 +901,28 @@ canManageBilling && (
             </Text>
           </View>
         )}
-
+{canManageBilling &&
+ status !== "canceled" && (
+  <TouchableOpacity
+    style={{
+      backgroundColor: "#e74c3c",
+      padding: 14,
+      borderRadius: 10,
+      marginTop: 20,
+      alignItems: "center",
+    }}
+    onPress={requestCancellation}
+  >
+    <Text
+      style={{
+        color: "#fff",
+        fontWeight: "800",
+      }}
+    >
+      Cancel Subscription
+    </Text>
+  </TouchableOpacity>
+)}
       </ScrollView>
     </View>
   );

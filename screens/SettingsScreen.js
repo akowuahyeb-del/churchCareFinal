@@ -131,9 +131,28 @@ function ToggleRow({ icon, label, sub, value, onChange, disabled, color = "#4B3F
   );
 }
 
-function TapRow({ icon, label, sub, onPress, danger, color = "#4B3F72", badge }) {
+function TapRow({
+  icon,
+  label,
+  sub,
+  onPress,
+  danger,
+  color = "#4B3F72",
+  badge,
+  locked = false,
+}) {
   return (
-    <TouchableOpacity style={styles.settingRow} onPress={onPress}>
+    <TouchableOpacity
+  style={styles.settingRow}
+  onPress={() => {
+
+    if (locked) {
+      return;
+    }
+
+    onPress?.();
+  }}
+>
       <View style={[styles.settingIcon, { backgroundColor: (danger ? "#e74c3c" : color) + "18" }]}>
         <Ionicons name={icon} size={18} color={danger ? "#e74c3c" : color} />
       </View>
@@ -170,6 +189,24 @@ export default function SettingsScreen({
 }) {
 
   const navigation = useNavigation();
+
+  const showUpgradePrompt = () => {
+  Alert.alert(
+    "Premium Feature",
+    "Upgrade your subscription to unlock this feature.",
+    [
+      {
+        text: "View Plans",
+        onPress: () =>
+          navigation.navigate("Subscription"),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+};
 
 
   const [activeEntity, setActiveEntity] = useState(null);
@@ -386,7 +423,8 @@ const {
   plan,
   status,
   daysLeftInTrial,
-  isTrialExpired
+  isTrialExpired,
+  hasFeature,
 } = useSubscription(
   organizationId,
   entityId
@@ -1163,16 +1201,25 @@ const handleRemovePin = () => {
       color="#4B3F72"
     />
 
-    <TouchableOpacity
-      style={styles.approvalRow}
-      onPress={() =>
-        navigation.navigate("ApproveDonations", {
-          organizationId,
-          entityId,
-          viewerName,
-        })
+  <TouchableOpacity
+  style={styles.approvalRow}
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "ApproveDonations",
+      {
+        organizationId,
+        entityId,
+        viewerName,
       }
-    >
+    );
+  }}
+>
       <View style={styles.approvalIcon}>
         <Ionicons
           name="checkmark-done-outline"
@@ -1182,12 +1229,41 @@ const handleRemovePin = () => {
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={styles.approvalTitle}>
-          Approve Donations
-          {pendingCount > 0
-            ? ` (${pendingCount})`
-            : ""}
-        </Text>
+       <View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+  }}
+>
+  <Text style={styles.approvalTitle}>
+    Approve Donations
+    {pendingCount > 0
+      ? ` (${pendingCount})`
+      : ""}
+  </Text>
+
+  {isTrialExpired && (
+    <View
+      style={{
+        marginLeft: 8,
+        backgroundColor: "#F59E0B",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+      }}
+    >
+      <Text
+        style={{
+          color: "#fff",
+          fontSize: 10,
+          fontWeight: "700",
+        }}
+      >
+        PREMIUM
+      </Text>
+    </View>
+  )}
+</View>
 
         <Text style={styles.approvalSub}>
           Review pending contributions
@@ -1261,32 +1337,73 @@ const handleRemovePin = () => {
             <SectionHeader title="Church Information" />
             <View style={styles.card}>
               <TapRow icon="business-outline"   label="Church Details"   sub="Name, address, contact"    onPress={() => setChurchInfoModal(true)} color="#4B3F72" />
-              <TapRow
+    <TapRow
   icon="people-circle-outline"
   label="Attendance Settings"
   sub="QR, Geo Attendance and Check-In Rules"
-  onPress={() =>
-    navigation.navigate("AttendanceSettings")
+  badge={
+    isTrialExpired
+      ? "PREMIUM"
+      : undefined
   }
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "AttendanceSettings"
+    );
+  }}
   color="#27AE60"
 />
+
 <TapRow
   icon="people-outline"
   label="Group Attendance"
   sub="Record attendance for choirs, teams & groups"
-  onPress={() =>
-    navigation.navigate("GroupAttendance")
+  badge={
+    isTrialExpired
+      ? "PREMIUM"
+      : undefined
   }
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "GroupAttendance"
+    );
+  }}
   color="#7C3AED"
 />
+
 
 <TapRow
   icon="airplane-outline"
   label="Member Mobility"
   sub="Tag students, transients & visiting members"
-  onPress={() =>
-    navigation.navigate("MemberMobility")
+  badge={
+    isTrialExpired
+      ? "PREMIUM"
+      : undefined
   }
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "MemberMobility"
+    );
+  }}
   color="#0984E3"
 />
 
@@ -1294,9 +1411,22 @@ const handleRemovePin = () => {
   icon="git-branch-outline"
   label="Concurrent Sessions"
   sub="View all live sessions running simultaneously"
-  onPress={() =>
-    navigation.navigate("ConcurrentSessions")
+  badge={
+    isTrialExpired
+      ? "PREMIUM"
+      : undefined
   }
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "ConcurrentSessions"
+    );
+  }}
   color="#27AE60"
 />
 
@@ -1305,6 +1435,11 @@ const handleRemovePin = () => {
   icon="people-outline"
   label="Manage Roles"
   sub="Assign roles to members"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() => navigation.navigate("Roles")}
   color="#0984E3"
 />         
@@ -1313,6 +1448,11 @@ const handleRemovePin = () => {
   icon="git-network-outline"
   label="Organisation Structure"
   sub="View governance hierarchy"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() =>
     navigation.navigate("OrganisationStructure")
   }
@@ -1322,6 +1462,11 @@ const handleRemovePin = () => {
   icon="git-branch-outline"
   label="Organisation Hierarchy"
   sub="Set up your church structure"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() => navigation.navigate("OrganisationManage")}
   color="#4B3F72"
 />
@@ -1329,6 +1474,11 @@ const handleRemovePin = () => {
   icon="pricetag-outline"
   label="Customise Church Identity"
   sub="Manage organisation code and abbreviations"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() =>
     navigation.navigate(
       "OrganizationIdentity"
@@ -1341,12 +1491,29 @@ const handleRemovePin = () => {
 
 <TapRow icon="people-outline"       label="Group Attendance"
   sub="Record attendance for choirs, teams & groups"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() => navigation.navigate("GroupAttendance")} color="#7C3AED" />
+
 <TapRow icon="airplane-outline"     label="Member Mobility"
   sub="Tag students, transients & visiting members"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() => navigation.navigate("MemberMobility")} color="#0984E3" />
+
 <TapRow icon="git-branch-outline"   label="Concurrent Sessions"
   sub="View all live sessions running simultaneously"
+  badge={
+  isTrialExpired
+    ? "PREMIUM"
+    : undefined
+}
   onPress={() => navigation.navigate("ConcurrentSessions")} color="#27ae60" />
 
             </View>
@@ -1365,7 +1532,19 @@ const handleRemovePin = () => {
 
     <View style={styles.card}>
       <TouchableOpacity
-        onPress={uploadChurchLogo}
+  onPress={() => {
+
+    if (
+      !hasFeature(
+        FEATURES.CUSTOM_BRANDING
+      )
+    ) {
+      showUpgradePrompt();
+      return;
+    }
+
+    uploadChurchLogo();
+  }}
         style={styles.logoRow}
       >
         {activeEntity?.logo ? (
@@ -1461,28 +1640,36 @@ const handleRemovePin = () => {
 
       {/* ── NEW: QR CODE GENERATOR ── */}
 {canDo("deacon") && (
-  <FeatureGate
-    feature={FEATURES.QR_GENERATOR}
-    planId={planId}
-    onUpgrade={() => navigation.navigate("Subscription")}
-  >
-    <>
-      <SectionHeader title="QR Code Generator" />
+  <>
+    <SectionHeader title="QR Code Generator" />
 
-      <View style={styles.card}>
-        <TapRow
-          icon="qr-code-outline"
-          label="Generate Dynamic QR"
-          sub="Create QR for attendance, events, and more"
-          onPress={() => { resetQR(); setQrModal(true); }}
-          color="#4B3F72"
-          badge="New"
-        />
-      </View>
-    </>
-  </FeatureGate>
-)}
-         
+    <View style={styles.card}>
+      <TapRow
+        icon="qr-code-outline"
+        label="Generate Dynamic QR"
+        sub="Create QR for attendance, events, and more"
+        color="#4B3F72"
+        badge={
+          isTrialExpired
+            ? "PREMIUM"
+            : "NEW"
+        }
+        onPress={() => {
+
+          if (isTrialExpired) {
+            navigation.navigate(
+              "Subscription"
+            );
+            return;
+          }
+
+          resetQR();
+          setQrModal(true);
+        }}
+      />
+    </View>
+  </>
+)}      
         {/* ── DATA MANAGEMENT ── */}
         <SectionHeader title="Data Management" />
         <View style={styles.card}>
@@ -1497,7 +1684,22 @@ const handleRemovePin = () => {
   icon="swap-horizontal-outline"
   label="Transfer Request"
   sub="Open transfer request screen"
-  onPress={() => navigation.navigate("TransferRequest")}
+  badge={
+    isTrialExpired
+      ? "PREMIUM"
+      : undefined
+  }
+  onPress={() => {
+
+    if (isTrialExpired) {
+      showUpgradePrompt();
+      return;
+    }
+
+    navigation.navigate(
+      "TransferRequest"
+    );
+  }}
   color="#4B3F72"
 />
 

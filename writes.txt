@@ -1,0 +1,78 @@
+screens/OrganisationManageScreen.js:        await updateDoc(doc(db, "organizations", organizationId, "nodes", editingNode.id), payload);
+screens/GroupAttendanceScreen.js:              await updateDoc(
+screens/GovernanceBodyMemberManagementScreen.js:      await updateDoc(
+screens/GovernanceBodyMemberManagementScreen.js:            await updateDoc(
+screens/VisitorProfileScreen.js:  await updateDoc(
+screens/PendingChurchesScreen.js:      await updateDoc(
+screens/PendingChurchesScreen.js:      await updateDoc(
+screens/InKindDonationScreen.js:      await updateDoc(
+screens/VisitorRegisterScreen.js:                updateDoc(
+screens/DonateScreen.js:    await updateDoc(
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(
+screens/ApprovalRequestDetailScreen.js:          await updateDoc(memberRef, {
+screens/ApprovalRequestDetailScreen.js:          await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:          await updateDoc(
+screens/ApprovalRequestDetailScreen.js:          await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:await updateDoc(
+screens/ApprovalRequestDetailScreen.js:  await updateDoc(
+screens/ApprovalRequestDetailScreen.js:  await updateDoc(
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(
+screens/ApprovalRequestDetailScreen.js:      await updateDoc(requestRef, {
+screens/ApprovalRequestDetailScreen.js:        await updateDoc(requestRef, {
+screens/AdminTransferScreen.js:      await updateDoc(doc(db, "members", req.memberId), {
+screens/AdminTransferScreen.js:      await updateDoc(doc(db, "transfer_requests", req.id), {
+screens/AdminTransferScreen.js:      await updateDoc(doc(db, "transfer_requests", req.id), {
+screens/HomeScreen.js:    await updateDoc(
+screens/HomeScreen.js:    await updateDoc(
+screens/HomeScreen.js:    await updateDoc(
+screens/MembersScreen.js:        await updateDoc(doc(db, "members", editingId), payload);
+screens/MembersScreen.js:      await updateDoc(memberRef, {
+screens/MembersScreen.js:    await updateDoc(
+screens/SettingsScreen.js:    await updateDoc(
+screens/SettingsScreen.js:    await updateDoc(
+screens/AddMemberScreen.js:  await updateDoc(
+screens/AddMemberScreen.js:  await updateDoc(
+screens/MemberMobilityScreen.js:      await updateDoc(
+screens/MemberMobilityScreen.js:    await updateDoc(
+screens/EventsScreen.js:      await updateDoc(
+screens/EventsScreen.js:    await updateDoc(
+screens/ApproveDonationsScreen.js:      await updateDoc(
+screens/ApproveDonationsScreen.js:    await updateDoc(
+screens/GovernanceBodySetupScreen.js:  await updateDoc(
+screens/TransferManagementScreen.js:      await updateDoc(memberRef, {
+screens/TransferManagementScreen.js:      await updateDoc(
+screens/TransferManagementScreen.js:      await updateDoc(
+screens/TransferManagementScreen.js:  await updateDoc(
+screens/RolesScreen.js:      await updateDoc(doc(db, "organizations", organizationId, "roles", roleId), {
+screens/GovernanceBodyScreen.js:    await updateDoc(
+screens/ConcurrentSessionsScreen.js:          await updateDoc(
+screens/VisitorAssignmentScreen.js:    await updateDoc(
+screens/PastoralTeamManagementScreen.js:      await updateDoc(
+screens/ManageCarouselScreen.js:        await updateDoc(
+screens/ManageCarouselScreen.js:        await updateDoc(
+screens/AssignMemberRolesScreen.js:      await updateDoc(
+screens/NotificationScreen.js:    await updateDoc(
+screens/AddVisitorScreen.js:  await updateDoc(
+screens/MemberProfileScreen.js:      await updateDoc(memberRef(), { profileImage: url });
+screens/MemberProfileScreen.js:      await updateDoc(memberRef(), { [editField]: editInput });
+screens/MemberProfileScreen.js:      await updateDoc(memberRef(), { status: "deceased", dateOfDeath: dateOfDeath.trim() });
+screens/MemberProfileScreen.js:      await updateDoc(refDoc, { pendingApprovals: newPending });
+screens/MemberProfileScreen.js:      await updateDoc(memberRef(), {
+screens/MemberProfileScreen.js:      await updateDoc(memberRef(), {
+screens/MemberProfileScreen.js:      await updateDoc(
+screens/AttendanceScreen.js:      await updateDoc(
+screens/AttendanceScreen.js:      await updateDoc(
+screens/AttendanceScreen.js:        await updateDoc(
+screens/AttendanceScreen.js:      await updateDoc(
+screens/SuperAdminScreen.js:    await updateDoc(
+screens/HistoryScreen.js:          await updateDoc(
+screens/HistoryScreen.js:          await updateDoc(
+screens/MinistryLeadershipScreen.js:      await updateDoc(
+screens/MinistryLeadershipScreen.js:          await updateDoc(
+screens/CompleteProfileScreen.js:      await updateDoc(doc(db, "users", uid), {
+utils/memberIntakeCloud.js:  await updateDoc(ref, { ...fill, updatedAt: serverTimestamp() });
+utils/memberIntake.js:  await updateDoc(ref, { ...fill, updatedAt: serverTimestamp() });

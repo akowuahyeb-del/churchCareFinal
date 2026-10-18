@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -24,6 +25,14 @@ import {
   DEFAULT_ROLES,
   mergePermissions,
 } from "../constants/permissions";
+
+import { useSubscription } from "../utils/subscription";
+
+import {
+  FEATURES,
+} from "../constants/subscriptionPlans";
+
+
 const MORE_ITEMS = [
   {
     key: "Departments",
@@ -112,10 +121,30 @@ const MORE_ITEMS = [
 
 export default function MoreScreen() {
   const navigation = useNavigation();
+  const showUpgradePrompt = () => {
+  Alert.alert(
+    "Premium Feature",
+    "This is a premium feature. Upgrade your subscription to unlock access.",
+    [
+      {
+        text: "View Plans",
+        onPress: () =>
+          navigation.navigate(
+            "Subscription"
+          ),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+};
   const [role, setRole] = useState("");
 const [roles, setRoles] = useState([]);
 const [permissions, setPermissions] = useState([]);
-
+const [activeEntity, setActiveEntity] =
+  useState(null);
 const canDo = (permission) =>
   hasPermission(
     {
@@ -124,6 +153,32 @@ const canDo = (permission) =>
     },
     permission
   );
+
+
+useEffect(() => {
+  const loadEntity = async () => {
+    const stored =
+      await AsyncStorage.getItem(
+        "activeEntity"
+      );
+
+    if (stored) {
+      setActiveEntity(
+        JSON.parse(stored)
+      );
+    }
+  };
+
+  loadEntity();
+}, []);
+
+const {
+  hasFeature,
+  isTrialExpired,
+} = useSubscription(
+  activeEntity?.organizationId,
+  activeEntity?.entityId
+);
 
 
   useEffect(() => {
@@ -277,10 +332,10 @@ console.log("MORE PERMISSIONS:", permissions);
   switch (item.key) {
 
     case "Finance":
-      return (
-        canDo("manage_finance") ||
-        canDo("view_finance_reports")
-      );
+  return (
+    canDo("manage_finance") ||
+    canDo("view_finance_reports")
+  );
 
     case "PastoralDashboard":
   return (
@@ -311,6 +366,12 @@ case "ApprovalCenter":
 })
 
 .map((item) => {
+
+  let locked =
+  isTrialExpired &&
+  item.key !== "Settings";
+
+
          const routes = {
   Settings: "Settings",
   Finance: "Finance",
@@ -335,21 +396,62 @@ case "ApprovalCenter":
                 key={item.key}
                 style={styles.card}
                 onPress={() => {
-                  if (routes[item.key]) {
-                    navigation.navigate(routes[item.key]);
-                  } else {
-                    alert(`${item.key} screen not built yet`);
-                  }
-                }}
+
+  if (locked) {
+    showUpgradePrompt();
+    return;
+  }
+
+  if (routes[item.key]) {
+    navigation.navigate(
+      routes[item.key]
+    );
+  } else {
+    alert(
+      `${item.key} screen not built yet`
+    );
+  }
+}}
               >
                 <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
                   <Ionicons name={item.icon} size={26} color={item.color} />
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>
-  {item.label || item.key}
-</Text>
+        <View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+  }}
+>
+
+  <Text style={styles.cardTitle}>
+    {item.label || item.key}
+  </Text>
+
+  {locked && (
+    <View
+      style={{
+        marginLeft: 8,
+        backgroundColor: "#F59E0B",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+      }}
+    >
+      <Text
+        style={{
+          color: "#fff",
+          fontSize: 10,
+          fontWeight: "700",
+        }}
+      >
+        PREMIUM
+      </Text>
+    </View>
+  )}
+
+</View>
 
                   <Text style={styles.cardDesc}>{item.desc}</Text>
                 </View>

@@ -844,6 +844,28 @@ const subRef = doc(
   );
 
 }
+if (
+  request.requestType ===
+  "cancelSubscription"
+) {
+
+  await setDoc(
+    subRef,
+    {
+      status: "canceled",
+
+      cancelAtPeriodEnd: true,
+
+      cancellationApprovedAt:
+        new Date().toISOString(),
+    },
+    {
+      merge: true,
+    }
+  );
+
+}
+
 
 await setDoc(
   doc(
@@ -886,12 +908,17 @@ await setDoc(
     title:
       "Subscription Request Approved",
 
-    message:
-      request.requestType === "memberAddon"
-        ? `${request.quantity} additional member slots approved`
-        : request.requestType === "adminAddon"
-        ? `${request.quantity} additional admin slots approved`
-        : `Your plan upgrade to ${request.requestedPlan} was approved`,
+   message:
+  request.requestType === "memberAddon"
+    ? `${request.quantity} additional member slots approved`
+
+    : request.requestType === "adminAddon"
+    ? `${request.quantity} additional admin slots approved`
+
+    : request.requestType === "cancelSubscription"
+    ? "Your subscription cancellation has been approved. Premium access remains active until the current billing period ends."
+
+    : `Your plan upgrade to ${request.requestedPlan} was approved`,
 
     type:
       "subscription_approved",
@@ -998,11 +1025,15 @@ await deleteDoc(
         )
     );
 
-   Alert.alert(
+  Alert.alert(
   "Approved",
 
   request.requestType === "planUpgrade"
     ? `Plan upgraded to ${request.requestedPlan}`
+
+    : request.requestType === "cancelSubscription"
+    ? "Subscription scheduled for cancellation at period end."
+
     : "Add-on applied successfully."
 );
 

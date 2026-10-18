@@ -76,6 +76,26 @@ const fmtDT = (iso) => {
 
 export default function HomeScreen({ route }) {
   const navigation = useNavigation(); 
+
+  const showUpgradePrompt = () => {
+  Alert.alert(
+    "Premium Feature",
+    "Upgrade your subscription to unlock this feature.",
+    [
+      {
+        text: "View Plans",
+        onPress: () =>
+          navigation.navigate(
+            "Subscription"
+          ),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]
+  );
+};
   
 
   /* ── data state ── */
@@ -1392,31 +1412,30 @@ hasFeature(
 {
   icon: "medkit-outline",
   label: "Pastoral",
-  onPress: () => navigation.navigate("PastoralRequest")
+  locked: isTrialExpired,
+  onPress: () =>
+    navigation.navigate("PastoralRequest")
 },
 
-can("view_reports") &&
-hasFeature(
-  FEATURES.ADVANCED_REPORTS
-) && {
+can("view_reports") && {
   icon: "bar-chart-outline",
   label: "Reports",
+  locked: isTrialExpired,
   onPress: () => navigation.navigate("AdminDashboard")
 },
 
-     (hasRole("admin") ||
- hasRole("media")) &&
-hasFeature(
-  FEATURES.CUSTOM_BRANDING
-) && {
+   (hasRole("admin") ||
+ hasRole("media")) && {
   icon: "cloud-upload-outline",
   label: "Upload",
+  locked: isTrialExpired,
   onPress: () => setShowUpload(true)
 },
 
 hasRole("admin") && {
   icon: "images-outline",
   label: "Carousel",
+  locked: isTrialExpired,
   onPress: () =>
     navigation.navigate(
       "ManageCarousel"
@@ -1428,6 +1447,7 @@ hasRole("admin") && {
       {
   icon: "heart-outline",
   label: "Donate",
+  locked: isTrialExpired,
   onPress: () =>
   navigation.navigate("Donate", {
   viewerUid:
@@ -1455,15 +1475,16 @@ hasRole("admin") && {
       {
         icon: "help-circle-outline",
         label: "Help",
+        locked: isTrialExpired,
         onPress: () => navigation.navigate("Help")
       },
 
-      {
-        icon: "qr-code-outline",
-        label: "QR Code",
-        onPress: () => setQrModal(true)
-      }
-
+     {
+  icon: "qr-code-outline",
+  label: "QR Code",
+  locked: isTrialExpired,
+  onPress: () => setQrModal(true)
+}
 
 
     ]
@@ -1472,7 +1493,15 @@ hasRole("admin") && {
       <TouchableOpacity
         key={`${a.label}-${index}`}
         style={styles.qaItem}
-        onPress={a.onPress}
+        onPress={() => {
+
+  if (a.locked) {
+    showUpgradePrompt();
+    return;
+  }
+
+  a.onPress();
+}}
       >
         <View style={styles.qaCircle}>
           <Ionicons name={a.icon} size={22} color="#fff" />
@@ -1483,6 +1512,18 @@ hasRole("admin") && {
 >
   {a.label}
 </AppText>
+{a.locked && (
+  <Text
+    style={{
+      fontSize: 9,
+      color: "#F59E0B",
+      fontWeight: "700",
+      marginTop: 2,
+    }}
+  >
+    PREMIUM
+  </Text>
+)}
       </TouchableOpacity>
     ))}
 
