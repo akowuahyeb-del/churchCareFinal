@@ -24,6 +24,8 @@ export const FEATURES = {
 
   CUSTOM_BRANDING: "custom_branding",
 
+  NOTIFICATIONS: "notifications",
+
   // NEW
   GEO_ATTENDANCE: "geo_attendance",
 
@@ -64,11 +66,12 @@ export const PLANS = {
   [LIMITS.MAX_ADMINS]: 5,
 },
     features: [
-      FEATURES.QR_GENERATOR,
-      FEATURES.DONATION_RECEIPTS,
-      FEATURES.DATA_EXPORT,
-      FEATURES.MULTI_BRANCH,
-    ],
+  FEATURES.QR_GENERATOR,
+  FEATURES.DONATION_RECEIPTS,
+  FEATURES.DATA_EXPORT,
+  FEATURES.MULTI_BRANCH,
+  FEATURES.NOTIFICATIONS,
+],
   },
  pro: {
   id: "pro",
@@ -102,6 +105,8 @@ export const PLANS = {
 
     // Branding
     FEATURES.CUSTOM_BRANDING,
+
+    FEATURES.NOTIFICATIONS,
 
     // Support
     FEATURES.PRIORITY_SUPPORT,

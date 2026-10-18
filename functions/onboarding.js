@@ -27,6 +27,37 @@ const {
 
 if (!getApps().length) initializeApp();
 const db = getFirestore();
+async function getSubscription(
+  organizationId,
+  entityId
+) {
+  const snap =
+    await db
+      .collection("organizations")
+      .doc(organizationId)
+      .collection("entities")
+      .doc(entityId)
+      .collection("billing")
+      .doc("subscription")
+      .get();
+
+  return snap.exists
+    ? snap.data()
+    : null;
+}
+
+async function getSubscriptionSettings() {
+  const snap =
+    await db
+      .collection("platform")
+      .doc("subscriptionSettings")
+      .get();
+
+  return snap.exists
+    ? snap.data()
+    : null;
+}
+
 
 const MEMBERS_PATH = (orgId, entId) =>
   db.collection("organizations").doc(orgId).collection("entities").doc(entId).collection("members");
@@ -319,9 +350,63 @@ exports.createMemberSafe = onCall(async (request) => {
     }
   }
 
+const memberCountSnap =
+  await MEMBERS_PATH(
+    organizationId,
+    entityId
+  ).count().get();
 
+const currentMembers =
+  memberCountSnap.data().count;
 
- const member =
+console.log(
+  "CURRENT MEMBER COUNT:",
+  currentMembers
+);
+const subscription =
+  await getSubscription(
+    organizationId,
+    entityId
+  );
+console.log(
+  "SUB PLAN:",
+  subscription?.planId
+);
+
+const settings =
+  await getSubscriptionSettings();
+
+const planId =
+  subscription?.planId || "free";
+
+const memberLimit =
+  settings?.plans?.[
+    planId
+  ]?.maxMembers;
+
+const extraMembers =
+  subscription?.addons?.extraMembers || 0;
+
+const effectiveLimit =
+  subscription?.overrides?.maxMembers ??
+  (
+    memberLimit === null
+      ? null
+      : memberLimit + extraMembers
+  );
+
+if (
+  effectiveLimit !== null &&
+  effectiveLimit !== undefined &&
+  currentMembers >= effectiveLimit
+) {
+  throw new HttpsError(
+  "failed-precondition",
+  `Member limit reached (${effectiveLimit}). Upgrade your subscription to add more members.`
+);
+}
+
+const member =
   await createMemberRecord({
     organizationId,
     entityId,

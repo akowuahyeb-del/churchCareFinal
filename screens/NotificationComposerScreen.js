@@ -19,6 +19,11 @@ import { db } from "../firebase";
 import { collection, getDocs, doc, getDoc, query, orderBy, limit } from "firebase/firestore";
 import { hasPermission } from "../constants/permissions";
 import NotificationPermissionChecklist from "../components/NotificationPermissionChecklist";
+import { useSubscription } from "../utils/subscription";
+
+import {
+  FEATURES,
+} from "../constants/subscriptionPlans";
 
 const functions = getFunctions();
 const _sendChurchBroadcast = httpsCallable(functions, "sendChurchBroadcast");
@@ -30,6 +35,12 @@ export default function NotificationComposerScreen({ route, navigation }) {
   const entityId = route?.params?.entityId;
   const viewerMemberId = route?.params?.viewerMemberId || null;
   const isSuperAdminRoute = route?.params?.isSuperAdmin || false;
+  const {
+  hasFeature,
+} = useSubscription(
+  organizationId,
+  entityId
+);
 
   const [viewer, setViewer] = useState({ isSuperAdmin: isSuperAdminRoute, permissions: [] });
   const [loadingViewer, setLoadingViewer] = useState(!isSuperAdminRoute);
@@ -120,9 +131,24 @@ export default function NotificationComposerScreen({ route, navigation }) {
   };
 
   const handleSend = async () => {
-    if (!canSend()) return;
-    setSending(true);
-    try {
+
+  if (!canSend()) return;
+
+  if (
+    !hasFeature(
+      FEATURES.NOTIFICATIONS
+    )
+  ) {
+    Alert.alert(
+      "Upgrade Required",
+      "Notifications are not available on your current plan."
+    );
+    return;
+  }
+
+  setSending(true);
+
+  try {
       let result;
       if (selectedType === "broadcast") {
         result = await _sendChurchBroadcast({ organizationId, entityId, title: title.trim(), message: message.trim() });
@@ -180,8 +206,32 @@ export default function NotificationComposerScreen({ route, navigation }) {
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionTitle}>What can you send?</Text>
           <NotificationPermissionChecklist viewer={viewer} selected={selectedType} onSelect={(key) => { setSelectedType(key); resetComposer(); }} />
+{!hasFeature(
+  FEATURES.NOTIFICATIONS
+) && (
+  <View
+    style={{
+      backgroundColor: "#FEE2E2",
+      padding: 12,
+      borderRadius: 10,
+      marginTop: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#B91C1C",
+        fontWeight: "700",
+      }}
+    >
+      Upgrade your subscription to send notifications.
+    </Text>
+  </View>
+)}
 
-          {selectedType && (
+{selectedType &&
+ hasFeature(
+   FEATURES.NOTIFICATIONS
+ ) && (
             <>
               <Text style={styles.sectionTitle}>Compose</Text>
 

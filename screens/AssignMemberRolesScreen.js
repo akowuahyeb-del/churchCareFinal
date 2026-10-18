@@ -299,9 +299,19 @@ const isAdminLevelUser =
     ADMIN_PERMISSIONS.includes(permission)
   );
 
+const wasAdminLevelUser =
+  user?.permissions?.some(permission =>
+    ADMIN_PERMISSIONS.includes(permission)
+  );
 
+const addingNewAdmin =
+  !wasAdminLevelUser &&
+  isAdminLevelUser;
 
-if (isAdminLevelUser && adminsLimit.isAtLimit) {
+if (
+  addingNewAdmin &&
+  adminsLimit.isAtLimit
+) {
   Alert.alert(
     "Admin Limit Reached",
     `You have reached your admin limit.

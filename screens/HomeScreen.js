@@ -57,7 +57,11 @@ import {
   mergePermissions,
 } from "../constants/permissions";
 
+import { useSubscription } from "../utils/subscription";
 
+import {
+  FEATURES,
+} from "../constants/subscriptionPlans";
 
 const { width: W } = Dimensions.get("window");
 
@@ -83,6 +87,15 @@ export default function HomeScreen({ route }) {
   const [activeEntity, setActiveEntity] = useState(null);
   const [churchName, setChurchName] = useState("");
   const [entities, setEntities] = useState([]);
+const {
+  hasFeature,
+  isTrialExpired,
+  planId,
+} = useSubscription(
+  activeEntity?.organizationId,
+  activeEntity?.entityId
+);
+
   const [scanned, setScanned] = useState(false);
   const [carouselItems, setCarouselItems] = useState([]);
  const [userRoles, setUserRoles] = useState(["member"]);
@@ -531,8 +544,11 @@ useEffect(() => {
     setNotifications(items);
 
     setNotifCount(
-      items.filter(n => !n.read).length
-    );
+  items.filter(
+    n => n.read !== true
+  ).length
+);
+
   });
 
   return unsubscribe;
@@ -1067,39 +1083,71 @@ return (
     <StatusBar barStyle="light-content" backgroundColor="#4B3F72" />
 
     {/* ✅ CLEAN HEADER (NO CUSTOM UI INSIDE) */}
-    <AppHeader
-      title="ChurchCare"
-      subtitle="Welcome back 👋"
-      entity={activeEntity}
-      actions={[
-  {
-  icon: "notifications-outline",
-  onPress: () => {
+   <AppHeader
+  title="ChurchCare"
+  subtitle="Welcome back 👋"
+  entity={activeEntity}
+  notifCount={notifCount}
+  actions={[
+    {
+      icon: "notifications-outline",
+      onPress: () => {
+        setNotifModal(true);
 
-    setNotifModal(true);
+        markNotificationsAsRead().catch(err =>
+          console.log(
+            "❌ Notification read error:",
+            err
+          )
+        );
+      },
+    },
 
-    markNotificationsAsRead().catch(err =>
-      console.log(
-        "❌ Notification read error:",
-        err
-      )
-    );
-
-  },
-},
-
-  ...(hasRole("admin") || hasRole("media")
-    ? [{
+   ...((
+  hasRole("admin") ||
+  hasRole("media")
+) &&
+hasFeature(
+  FEATURES.CUSTOM_BRANDING
+)
+  ? [
+      {
         icon: "cloud-upload-outline",
         onPress: () => setShowUpload(true),
-      }]
-    : []),
-]}
-    />
+      },
+    ]
+  : []),
+  ]}
+/>
 
 
-    {/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
-    <View style={styles.entityBar}>
+  {/* ✅ TRIAL EXPIRED BANNER */}
+{isTrialExpired && (
+  <View
+    style={{
+      backgroundColor: "#FEE2E2",
+      marginHorizontal: 14,
+      marginTop: 10,
+      marginBottom: 6,
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "#FCA5A5",
+    }}
+  >
+    <Text
+      style={{
+        color: "#B91C1C",
+        fontWeight: "700",
+      }}
+    >
+      Trial expired. Upgrade your subscription to restore premium features.
+    </Text>
+  </View>
+)}
+
+{/* ✅ ✅ ✅ CHURCH SELECTOR (MOVED OUTSIDE HEADER) */}
+<View style={styles.entityBar}>
   <TouchableOpacity
     onPress={() => setChurchModalVisible(true)}
     style={styles.entityBtn}
@@ -1347,13 +1395,20 @@ return (
   onPress: () => navigation.navigate("PastoralRequest")
 },
 
-can("view_reports") && {
+can("view_reports") &&
+hasFeature(
+  FEATURES.ADVANCED_REPORTS
+) && {
   icon: "bar-chart-outline",
   label: "Reports",
   onPress: () => navigation.navigate("AdminDashboard")
 },
 
-     (hasRole("admin") || hasRole("media")) && {
+     (hasRole("admin") ||
+ hasRole("media")) &&
+hasFeature(
+  FEATURES.CUSTOM_BRANDING
+) && {
   icon: "cloud-upload-outline",
   label: "Upload",
   onPress: () => setShowUpload(true)

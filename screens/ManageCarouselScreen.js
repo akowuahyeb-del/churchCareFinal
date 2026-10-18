@@ -22,6 +22,11 @@ import {
 import { db } from "../firebase";
 
 import AppHeader from "../components/AppHeader";
+import { useSubscription } from "../utils/subscription";
+
+import {
+  FEATURES,
+} from "../constants/subscriptionPlans";
 
 export default function ManageCarouselScreen(
   { navigation }
@@ -29,6 +34,13 @@ export default function ManageCarouselScreen(
   const [slides, setSlides] = useState([]);
   const [activeEntity, setActiveEntity] =
     useState(null);
+
+    const {
+  hasFeature,
+} = useSubscription(
+  activeEntity?.organizationId,
+  activeEntity?.entityId
+);
 
   useEffect(() => {
     loadActiveEntity();
@@ -73,9 +85,20 @@ export default function ManageCarouselScreen(
         );
       }
     };
+const deactivateCarouselItem =
+  async (carouselId) => {
 
-  const deactivateCarouselItem =
-    async (carouselId) => {
+    if (
+      !hasFeature(
+        FEATURES.CUSTOM_BRANDING
+      )
+    ) {
+      Alert.alert(
+        "Upgrade Required",
+        "Custom Branding is not available on your current plan."
+      );
+      return;
+    }
       try {
         await updateDoc(
           doc(
@@ -100,7 +123,20 @@ export default function ManageCarouselScreen(
     };
 
   const activateCarouselItem =
-    async (carouselId) => {
+  async (carouselId) => {
+
+    if (
+      !hasFeature(
+        FEATURES.CUSTOM_BRANDING
+      )
+    ) {
+      Alert.alert(
+        "Upgrade Required",
+        "Custom Branding is not available on your current plan."
+      );
+      return;
+    }
+
       try {
         await updateDoc(
           doc(
@@ -124,9 +160,23 @@ export default function ManageCarouselScreen(
       }
     };
 
-  const deleteCarouselItem =
-    async (carouselId) => {
+ const deleteCarouselItem =
+  async (carouselId) => {
+
+    if (
+      !hasFeature(
+        FEATURES.CUSTOM_BRANDING
+      )
+    ) {
       Alert.alert(
+        "Upgrade Required",
+        "Custom Branding is not available on your current plan."
+      );
+      return;
+    }
+
+      Alert.alert(
+
         "Delete Slide",
         "This cannot be undone",
         [
@@ -154,6 +204,52 @@ export default function ManageCarouselScreen(
         ]
       );
     };
+
+if (
+  activeEntity &&
+  !hasFeature(
+    FEATURES.CUSTOM_BRANDING
+  )
+) {
+  return (
+    <View style={styles.container}>
+      <AppHeader
+        title="Manage Carousel"
+        onBack={() =>
+          navigation.goBack()
+        }
+      />
+
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 30,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            marginBottom: 10,
+          }}
+        >
+          Upgrade Required
+        </Text>
+
+        <Text
+          style={{
+            textAlign: "center",
+            color: "#666",
+          }}
+        >
+          Carousel management is available on plans that include Custom Branding.
+        </Text>
+      </View>
+    </View>
+  );
+}
 
   return (
     <View style={styles.container}>

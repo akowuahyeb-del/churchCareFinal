@@ -11,10 +11,16 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { bulkAddMembers } from "../utils/memberIntake";
+import { useSubscription } from "../utils/subscription";
 
 export default function ImportMembersScreen({ navigation, route }) {
 
   const { entityId, organizationId } = route.params || {};
+  const { membersLimit } =
+  useSubscription(
+    organizationId,
+    entityId
+  );
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +77,22 @@ export default function ImportMembersScreen({ navigation, route }) {
     Alert.alert("No data", "Upload a file first");
     return;
   }
+  const incomingCount = rows.length;
+
+if (
+  incomingCount >
+  membersLimit.remaining
+) {
+  Alert.alert(
+    "Member Limit Exceeded",
+    `You can only add ${membersLimit.remaining} more member(s) on your current plan.
+
+Current: ${membersLimit.used}/${membersLimit.limit}
+Trying to import: ${incomingCount}`
+  );
+
+  return;
+}
 
   setLoading(true);
 

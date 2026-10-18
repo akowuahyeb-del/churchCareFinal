@@ -18,6 +18,7 @@ export default function AppHeader({
   entity,
   onBack,
   actions = [],
+  notifCount = 0,
 }) {
   const insets = useSafeAreaInsets();
 
@@ -84,20 +85,44 @@ export default function AppHeader({
         {/* ACTIONS */}
         {actions.length > 0 && (
           <View style={styles.actionsRow}>
-            {actions.map((a, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.actionBtn}
-                onPress={a.onPress}
+           {actions.map((a, i) => (
+  <TouchableOpacity
+    key={i}
+    style={styles.actionBtn}
+    onPress={a.onPress}
+  >
+    {a.icon && (
+      <>
+        <Ionicons
+          name={a.icon}
+          size={18}
+          color="#fff"
+        />
+
+        {a.icon === "notifications-outline" &&
+          notifCount > 0 && (
+            <View
+              style={styles.notifBadge}
+            >
+              <Text
+                style={styles.notifBadgeText}
               >
-                {a.icon && (
-                  <Ionicons name={a.icon} size={18} color="#fff" />
-                )}
-                {a.label && (
-                  <Text style={styles.actionText}>{a.label}</Text>
-                )}
-              </TouchableOpacity>
-            ))}
+                {notifCount > 99
+                  ? "99+"
+                  : notifCount}
+              </Text>
+            </View>
+          )}
+      </>
+    )}
+
+    {a.label && (
+      <Text style={styles.actionText}>
+        {a.label}
+      </Text>
+    )}
+  </TouchableOpacity>
+))}
           </View>
         )}
 
@@ -176,5 +201,28 @@ logoPlaceholder: {
   backgroundColor: "rgba(255,255,255,0.25)",
   alignItems: "center",
   justifyContent: "center",
+},
+notifBadge: {
+  position: "absolute",
+  top: -6,
+  right: -8,
+
+  minWidth: 18,
+  height: 18,
+
+  borderRadius: 9,
+
+  backgroundColor: "#E11D48",
+
+  justifyContent: "center",
+  alignItems: "center",
+
+  paddingHorizontal: 4,
+},
+
+notifBadgeText: {
+  color: "#fff",
+  fontSize: 10,
+  fontWeight: "700",
 },
 });
