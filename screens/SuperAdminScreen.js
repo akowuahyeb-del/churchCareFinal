@@ -865,8 +865,6 @@ if (
   );
 
 }
-
-
 await setDoc(
   doc(
     collection(
@@ -908,14 +906,15 @@ await setDoc(
     title:
       "Subscription Request Approved",
 
-   message:
+  message:
   request.requestType === "memberAddon"
     ? `${request.quantity} additional member slots approved`
 
     : request.requestType === "adminAddon"
     ? `${request.quantity} additional admin slots approved`
 
-    : request.requestType === "cancelSubscription"
+    : request.requestType ===
+      "cancelSubscription"
     ? "Your subscription cancellation has been approved. Premium access remains active until the current billing period ends."
 
     : `Your plan upgrade to ${request.requestedPlan} was approved`,
@@ -1031,7 +1030,8 @@ await deleteDoc(
   request.requestType === "planUpgrade"
     ? `Plan upgraded to ${request.requestedPlan}`
 
-    : request.requestType === "cancelSubscription"
+    : request.requestType ===
+      "cancelSubscription"
     ? "Subscription scheduled for cancellation at period end."
 
     : "Add-on applied successfully."

@@ -231,13 +231,29 @@ const plan = override
   // ✅ A trial that's run out behaves like Free until they actually pay —
   // no feature silently stays unlocked forever just because trialing
   // was the status at signup.
-  const isTrialExpired =
-    subscription?.status === "trialing" &&
-    subscription?.trialEndsAt &&
-    new Date(subscription.trialEndsAt) < new Date();
+const isTrialExpired =
+  subscription?.status === "trialing" &&
+  subscription?.trialEndsAt &&
+  new Date(subscription.trialEndsAt) < new Date();
 
-  const effectivePlanId = isTrialExpired ? "free" : planId;
-  const isActive = subscription?.status === "active" || subscription?.status === "trialing";
+const isCanceledAndExpired =
+  subscription?.cancelAtPeriodEnd === true &&
+  subscription?.currentPeriodEnd &&
+  new Date(subscription.currentPeriodEnd) <
+    new Date();
+
+const effectivePlanId =
+  isTrialExpired ||
+  isCanceledAndExpired
+    ? "free"
+    : planId;
+  const isActive =
+  (
+    subscription?.status === "active" ||
+    subscription?.status === "trialing" ||
+    subscription?.status === "canceled"
+  ) &&
+  !isCanceledAndExpired;
 
   const daysLeftInTrial = subscription?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(subscription.trialEndsAt) - new Date()) / 86400000))
@@ -318,7 +334,11 @@ const plan = override
   subscription,
   plan,
   planId: effectivePlanId,
-  status: subscription?.status || "free",
+
+  status:
+    isCanceledAndExpired
+      ? "free"
+      : subscription?.status || "free",
   isActive,
   isTrialExpired,
   daysLeftInTrial,
