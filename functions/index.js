@@ -201,3 +201,10 @@ exports.smsDispatcher =
 
 exports.whatsAppDispatcher =
   notificationDispatchers.whatsAppDispatcher;
+
+const subscriptionLifecycle =
+  require("./subscriptionLifecycle");
+
+exports.processExpiredCancellations =
+  subscriptionLifecycle
+    .processExpiredCancellations;
