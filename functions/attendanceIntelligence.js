@@ -278,6 +278,35 @@ exports.onAttendanceSessionEnded = onDocumentUpdated(
     if (before.status === "ended" || after.status !== "ended") return;
 
     const { organizationId, entityId, sessionId } = event.params;
+    const subscriptionSnap = await db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("entities")
+  .doc(entityId)
+  .collection("billing")
+  .doc("subscription")
+  .get();
+
+const planId =
+  subscriptionSnap.exists
+    ? subscriptionSnap.data()?.planId
+    : "free";
+
+    const attendanceIntelligencePlans = [
+  "pro",
+  "enterprise",
+];
+
+if (
+  !attendanceIntelligencePlans.includes(planId)
+) {
+  console.log(
+    "Attendance intelligence skipped:",
+    planId
+  );
+
+  return;
+}
 
     const membersSnap = await db
       .collection("organizations").doc(organizationId)

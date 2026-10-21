@@ -10,13 +10,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { db } from "../firebase";
 import {
-  collection, addDoc, getDocs, query,
-  orderBy, where, serverTimestamp, Timestamp
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "../firebase"; 
 import FeatureGate from "../components/FeatureGate";
-import { FEATURES } from "../constants/subscriptionPlans";
+import {
+  FEATURES,
+} from "../constants/subscriptionPlans";
+
+import {
+  useSubscription,
+} from "../utils/subscription";
 
 
 
@@ -81,7 +91,38 @@ const TABS = [
 
 export default function AdminFinanceScreen() {
   const navigation = useNavigation();
-  const [churchId, setChurchId] = useState(null);
+  const [activeEntity, setActiveEntity] =
+  useState(null);
+  const [currentUser, setCurrentUser] =
+  useState(null);
+
+  useEffect(() => {
+
+  AsyncStorage
+    .getItem("currentUser")
+    .then(data => {
+
+      if (data) {
+
+        try {
+
+          setCurrentUser(
+            JSON.parse(data)
+          );
+
+        } catch (_) {}
+
+      }
+
+    });
+
+}, []);
+
+const organizationId =
+  activeEntity?.organizationId;
+
+const entityId =
+  activeEntity?.entityId;
   const [tab,           setTab]           = useState("dashboard");
   const [transactions,  setTransactions]  = useState([]);
   const [loading,       setLoading]       = useState(false);
@@ -101,22 +142,35 @@ export default function AdminFinanceScreen() {
   const [ledgerAccount, setLedgerAccount] = useState("Cash");
 const functions = getFunctions(app); // or just getFunctions()
 const generateInsightFn = httpsCallable(functions, "generateFinanceInsight");
-const planId = "free";
+
+const {
+  planId,
+  loading: subscriptionLoading,
+} = useSubscription(
+  organizationId,
+  entityId
+);
 
 
-  /* ── Load transactions ── */
+
+
   useEffect(() => {
-  if (churchId) {
+
+  if (
+    organizationId &&
+    entityId
+  ) {
+
     loadTransactions();
-  }
-}, [churchId]);
 
-  useEffect(() => {
-  AsyncStorage.getItem("churchId").then(id => {
-    console.log("Finance churchId:", id);
-    setChurchId(id);
-  });
-}, []);
+  }
+
+}, [
+  organizationId,
+  entityId,
+]);
+
+ 
 
 
 useEffect(() => {
@@ -129,28 +183,69 @@ useEffect(() => {
   });
 }, []);
 
-  const loadTransactions = async () => {
-    setLoading(true);
-    try {
-      const snap = await getDocs(
-        query(collection(db, "transactions"),
-         where("churchId", "==", churchId),
-         orderBy("date", "desc")
-    )
-      );
+ const loadTransactions = async () => {
 
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) {
-      // fallback demo data
-      setTransactions(DEMO_TRANSACTIONS);
-    } finally { setLoading(false); }
-  };
+  if (!organizationId || !entityId) {
+
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+
+    const snap = await getDocs(
+      query(
+        collection(
+          db,
+          "organizations",
+          organizationId,
+          "entities",
+          entityId,
+          "transactions"
+        ),
+        orderBy("date", "desc")
+      )
+    );
+
+    setTransactions(
+      snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      }))
+    );
+
+  } catch (e) {
+
+    console.log(
+      "Finance load error:",
+      e
+    );
+
+    setTransactions([]);
+
+  } finally {
+
+    setLoading(false);
+  
+
+  }
+};
 
 
 
 
   /* ── Save journal entry ── */
   const saveJournal = async () => {
+    if (!organizationId || !entityId) {
+
+  Alert.alert(
+    "Error",
+    "No active entity selected."
+  );
+
+  return;
+}
     const debits  = jEntries.filter(e => e.type === "debit");
     const credits = jEntries.filter(e => e.type === "credit");
     const totalD  = debits.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -164,9 +259,19 @@ useEffect(() => {
     }
 
     try {
-      await addDoc(collection(db, "transactions"), {
-        churchId, 
-        date: jDate,
+      await addDoc(
+  collection(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "transactions"
+  ),
+  {
+    organizationId,
+    entityId,
+    date: jDate,
           description: jDesc,
          entries: jEntries.map(e => ({ ...e, amount: Number(e.amount) })),
           totalAmount: totalD,
@@ -239,38 +344,80 @@ useEffect(() => {
 
   /* ── AI Insight (calls Anthropic API) ── */
   const generateAiInsight = async () => {
-    setAiLoading(true);
-    try {
-      const summary = `
-        Total Income: GH₵${totalIncome.toLocaleString()}
-        Total Expenses: GH₵${totalExpenses.toLocaleString()}
-        Net Profit: GH₵${netProfit.toLocaleString()}
-        Total Assets: GH₵${totalAssets.toLocaleString()}
-        Total Liabilities: GH₵${totalLiab.toLocaleString()}
-        Total Equity: GH₵${totalEquity.toLocaleString()}
-        Number of Transactions: ${transactions.length}
-        Top Income: ${topAccounts("Income").map(a => `${a.name}: GH₵${a.balance.toLocaleString()}`).join(", ")}
-        Top Expenses: ${topAccounts("Expenses").map(a => `${a.name}: GH₵${a.balance.toLocaleString()}`).join(", ")}
-      `;
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `You are a church financial advisor. Analyze this financial summary and provide 4-5 concise insights, trends, and recommendations in plain English. Be specific with numbers. Include budget forecasting and anomaly detection if relevant.\n\n${summary}`
-          }]
-        })
+
+ if (!organizationId || !entityId) {
+
+  Alert.alert(
+    "Error",
+    "No active entity selected."
+  );
+
+  return;
+}
+
+if (!transactions.length) {
+
+  Alert.alert(
+    "No Data",
+    "Add finance transactions first."
+  );
+
+  return;
+}
+
+  setAiLoading(true);
+
+  try {
+
+    const summary = {
+      totalIncome,
+      totalExpenses,
+      netProfit,
+      totalAssets,
+      totalLiab,
+      totalEquity,
+      transactionCount:
+        transactions.length,
+
+      topIncome:
+        topAccounts("Income"),
+
+      topExpenses:
+        topAccounts("Expenses"),
+    };
+
+    const result =
+      await generateInsightFn({
+        organizationId,
+        entityId,
+        summary,
       });
-      const data = await res.json();
-      const text = data.content?.map(c => c.text || "").join("\n") || "No insight generated.";
-      setAiInsight(text);
-    } catch (e) {
-      setAiInsight("Could not generate insight. Please check your connection and try again.");
-    } finally { setAiLoading(false); }
-  };
+
+    setAiInsight(
+      result?.data?.insight ||
+      "No insight generated."
+    );
+
+  } catch (error) {
+
+    console.log(
+      "Finance AI Error:",
+      error
+    );
+
+    Alert.alert(
+      "AI Error",
+      error?.message ||
+      "Failed to generate AI insight."
+    );
+
+  } finally {
+
+    setAiLoading(false);
+
+  }
+
+};
 
   const topAccounts = (category) =>
     (COA[category]?.accounts || [])
@@ -301,7 +448,60 @@ useEffect(() => {
     }, 0)
   );
 
+if (
+  currentUser !== null &&
+  ![
+    "admin",
+    "finance",
+    "treasurer"
+  ].includes(
+    currentUser?.role
+  )
+)
+ {
 
+  return (
+    <SafeAreaView
+      style={styles.safe}
+    >
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 24,
+        }}
+      >
+        <Ionicons
+          name="lock-closed"
+          size={64}
+          color="#D63031"
+        />
+
+        <Text
+          style={{
+            fontWeight: "700",
+            fontSize: 16,
+            marginTop: 16,
+          }}
+        >
+          Access Denied
+        </Text>
+
+        <Text
+          style={{
+            marginTop: 8,
+            textAlign: "center",
+          }}
+        >
+          You do not have
+          permission to access
+          finance reports.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
 
   /* ════════════════════ RENDER ════════════════════ */
   return (
@@ -724,7 +924,10 @@ useEffect(() => {
       <View style={styles.aiHeader}>
         <Ionicons name="sparkles" size={28} color="#6C5CE7" />
         <Text style={styles.aiTitle}>AI Financial Insights</Text>
-        <Text style={styles.aiSub}>Powered by Claude AI</Text>
+        <Text style={styles.aiSub}>
+  Powered by ChurchCare Finance Intelligence
+</Text>
+
       </View>
 
       <View style={styles.aiSummaryRow}>
@@ -849,27 +1052,6 @@ useEffect(() => {
         </View>
       </Modal>
 
-<View style={styles.aiContainer}>
-  
-  {/* Generate Button */}
-  <TouchableOpacity
-    style={styles.aiButton}
-    onPress={generateAiInsight}
-    disabled={aiLoading}
-  >
-    <Text style={styles.aiButtonText}>
-      {aiLoading ? "Generating..." : "Generate AI Insight"}
-    </Text>
-  </TouchableOpacity>
-
-  {/* Result Box */}
-  {aiInsight ? (
-    <View style={styles.aiResult}>
-      <Text style={styles.aiText}>{aiInsight}</Text>
-    </View>
-  ) : null}
-
-</View>
 
 
     </SafeAreaView>
@@ -973,19 +1155,7 @@ const fmt = (n) => {
   return num.toLocaleString();
 };
 
-/* Demo data for when Firebase is empty */
-const DEMO_TRANSACTIONS = [
-  { id:"d1", date:"2024-06-01", description:"Sunday Offering", totalAmount:2500,
-    entries:[{account:"Cash",type:"debit",amount:2500},{account:"Offerings",type:"credit",amount:2500}] },
-  { id:"d2", date:"2024-06-01", description:"Tithes Collection", totalAmount:5000,
-    entries:[{account:"Bank Account",type:"debit",amount:5000},{account:"Tithes",type:"credit",amount:5000}] },
-  { id:"d3", date:"2024-06-03", description:"Electricity Bill", totalAmount:800,
-    entries:[{account:"Utilities",type:"debit",amount:800},{account:"Cash",type:"credit",amount:800}] },
-  { id:"d4", date:"2024-06-05", description:"Staff Salaries", totalAmount:3000,
-    entries:[{account:"Salaries",type:"debit",amount:3000},{account:"Bank Account",type:"credit",amount:3000}] },
-  { id:"d5", date:"2024-06-07", description:"Building Fund Donation", totalAmount:1500,
-    entries:[{account:"Bank Account",type:"debit",amount:1500},{account:"Building Fund",type:"credit",amount:1500}] },
-];
+
 
 /* ─── Styles ──────────────────────────────────────────────── */
 const styles = StyleSheet.create({

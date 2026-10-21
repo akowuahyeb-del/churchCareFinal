@@ -28,12 +28,58 @@ async function resolveSender(request, organizationId, entityId) {
   return { isSuperAdmin: false, memberId: memberSnap.docs[0].id, permissions: memberSnap.docs[0].data().permissions || [] };
 }
 
+async function getPlanId(
+  organizationId,
+  entityId
+) {
+  const snap = await db
+    .collection("organizations")
+    .doc(organizationId)
+    .collection("entities")
+    .doc(entityId)
+    .collection("billing")
+    .doc("subscription")
+    .get();
+
+  return snap.exists
+    ? snap.data()?.planId || "free"
+    : "free";
+}
+
+function notificationsEnabled(
+  planId
+) {
+  return [
+    "basic",
+    "pro",
+    "enterprise",
+  ].includes(planId);
+}
+
+
+
+
 // ── 1. CHURCH BROADCAST ──
 exports.sendChurchBroadcast = onCall(async (request) => {
   const { organizationId, entityId, title, message } = request.data || {};
   if (!organizationId || !entityId || !title?.trim() || !message?.trim()) {
     throw new HttpsError("invalid-argument", "Missing organizationId/entityId/title/message");
   }
+const planId =
+  await getPlanId(
+    organizationId,
+    entityId
+  );
+
+if (
+  !notificationsEnabled(planId)
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "Notifications require a paid subscription."
+  );
+}
+
   const sender = await resolveSender(request, organizationId, entityId);
   if (!sender.isSuperAdmin && !hasPermission(sender, "manage_members")) {
     throw new HttpsError("permission-denied", "Requires manage_members permission");
@@ -62,6 +108,20 @@ exports.sendIndividualNotification = onCall(async (request) => {
   if (!organizationId || !entityId || !memberId || !title?.trim() || !message?.trim()) {
     throw new HttpsError("invalid-argument", "Missing required fields");
   }
+ const planId =
+  await getPlanId(
+    organizationId,
+    entityId
+  );
+
+if (
+  !notificationsEnabled(planId)
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "Notifications require a paid subscription."
+  );
+}
   const sender = await resolveSender(request, organizationId, entityId);
   if (!sender.isSuperAdmin) {
     if (category === "disciplinary" && !hasPermission(sender, "elder_approval")) {
@@ -88,6 +148,20 @@ exports.sendGroupNotification = onCall(async (request) => {
   if (!organizationId || !entityId || !groupId || !title?.trim() || !message?.trim()) {
     throw new HttpsError("invalid-argument", "Missing required fields");
   }
+ const planId =
+  await getPlanId(
+    organizationId,
+    entityId
+  );
+
+if (
+  !notificationsEnabled(planId)
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "Notifications require a paid subscription."
+  );
+}
   const sender = await resolveSender(request, organizationId, entityId);
   const canSendAny = sender.isSuperAdmin || hasPermission(sender, "manage_members");
   const isGroupLeader = hasPermission(sender, `lead_group:${groupId}`);

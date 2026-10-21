@@ -14,31 +14,96 @@ exports.generateFinanceInsight = onCall(
       throw new HttpsError("unauthenticated", "Must be signed in.");
     }
 
-    const { summary, churchId } = request.data;
+   const {
+  summary = {},
+  organizationId,
+  entityId,
+} = request.data || {};
+
+if (!organizationId || !entityId) {
+  throw new HttpsError(
+    "invalid-argument",
+    "Organization and entity are required."
+  );
+}
 
     const db = getFirestore();
     const uid = request.auth.uid;
+    const subscriptionSnap = await db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("entities")
+  .doc(entityId)
+  .collection("billing")
+  .doc("subscription")
+  .get();
+
+const subscription =
+  subscriptionSnap.exists
+    ? subscriptionSnap.data()
+    : null;
+
+const planId =
+  subscription?.planId || "free";
+  const aiEnabledPlans = [
+  "pro",
+  "enterprise",
+];
+
+if (
+  !aiEnabledPlans.includes(planId)
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "AI Insights requires a Pro or Enterprise plan."
+  );
+}
 
     // ✅ Admin check
-    const memberDoc = await db
-      .collection("churches")
-      .doc(churchId)
-      .collection("members")
-      .doc(uid)
-      .get();
+  const memberSnap = await db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("entities")
+  .doc(entityId)
+  .collection("members")
+  .where("uid", "==", uid)
+  .limit(1)
+  .get();
 
-    if (!memberDoc.exists || memberDoc.data().role !== "admin") {
-      throw new HttpsError("permission-denied", "Not authorized.");
-    }
+if (memberSnap.empty) {
+  throw new HttpsError(
+    "permission-denied",
+    "Member not found."
+  );
+}
+
+const memberDoc =
+  memberSnap.docs[0];
+
+const permissions =
+  memberDoc.data()?.permissions || [];
+
+if (
+  !permissions.includes(
+    "manage_finance"
+  )
+) {
+  throw new HttpsError(
+    "permission-denied",
+    "Finance permission required."
+  );
+}
 
     // ✅ Cache key
     const todayKey = new Date().toISOString().split("T")[0];
 
-    const insightRef = db
-      .collection("churches")
-      .doc(churchId)
-      .collection("aiInsights")
-      .doc(todayKey);
+   const insightRef = db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("entities")
+  .doc(entityId)
+  .collection("aiInsights")
+  .doc(todayKey);
 
     // ✅ Check cache
     const existing = await insightRef.get();
@@ -62,10 +127,11 @@ exports.generateFinanceInsight = onCall(
 `;
 
     // ✅ Save to Firestore
-    await insightRef.set({
-      insight: text,
-      createdAt: Date.now(),
-    });
+   await insightRef.set({
+  insight: text,
+  createdAt: admin.firestore.FieldValue.serverTimestamp(),
+});
+
 
     console.log("✅ Insight saved (mock)");
 
