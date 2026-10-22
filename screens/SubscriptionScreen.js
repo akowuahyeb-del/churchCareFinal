@@ -157,7 +157,7 @@ useEffect(() => {
 }, []);
 
   const {
-    subscription, plan, planId, status, isActive, isTrialExpired,
+    subscription, plan, planOverrides,planId, status, isActive, isTrialExpired,
     daysLeftInTrial, usage, loading,
     membersLimit, adminsLimit,
   } = useSubscription(organizationId, entityId);
@@ -626,6 +626,62 @@ if (!existing.empty) {
           <Text style={styles.planPrice}>
             {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `GH₵ ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
           </Text>
+          {subscription?.currentPeriodStart && (
+  <DetailRow
+    label="Subscription Started"
+    value={
+      new Date(
+        subscription.currentPeriodStart
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
+{subscription?.currentPeriodEnd && (
+  <DetailRow
+    label="Expires"
+    value={
+      new Date(
+        subscription.currentPeriodEnd
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
+{subscription?.currentPeriodEnd && (
+  <DetailRow
+    label="Days Remaining"
+    value={
+      Math.max(
+        0,
+        Math.ceil(
+          (
+            new Date(
+              subscription.currentPeriodEnd
+            ) - new Date()
+          ) / 86400000
+        )
+      )
+    }
+  />
+)}
+{subscription?.cancelAtPeriodEnd && (
+  <DetailRow
+    label="Cancellation Status"
+    value="Scheduled"
+  />
+)}
+
+{subscription?.cancellationApprovedAt && (
+  <DetailRow
+    label="Cancellation Approved"
+    value={
+      new Date(
+        subscription.cancellationApprovedAt
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
 
         </View>
 {/* ── UNLOCKED FEATURES ── */}
@@ -828,7 +884,18 @@ if (!existing.empty) {
         {/* ── PLANS COMPARISON ── */}
         <Text style={styles.sectionTitle}>Plans</Text>
         {PLAN_ORDER.map(pid => {
-          const p = PLANS[pid];
+          const basePlan =
+  getPlan(pid);
+
+const override =
+  planOverrides?.[pid];
+
+const p = override
+  ? {
+      ...basePlan,
+      price: override.price,
+    }
+  : basePlan;
           const isCurrent = pid === planId;
           const isUpgrade =
   PLAN_ORDER.indexOf(pid) >

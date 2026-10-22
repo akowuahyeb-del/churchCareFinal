@@ -333,7 +333,9 @@ const effectivePlanId =
   return {
   subscription,
   plan,
+  planOverrides,
   planId: effectivePlanId,
+
 
   status:
     isCanceledAndExpired

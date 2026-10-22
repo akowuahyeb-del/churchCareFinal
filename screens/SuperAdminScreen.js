@@ -274,20 +274,12 @@ const loadGovernanceNodes = async () => {
       collection(db, "governanceNodes")
     );
 
-    console.log(
-      "✅ governanceNodes found:",
-      snap.size
-    );
 
     const nodes = snap.docs.map(d => ({
       id: d.id,
       ...d.data(),
     }));
 
-    console.log(
-      "✅ governanceNodes data:",
-      nodes
-    );
 
     setGovernanceNodes(nodes);
 
@@ -646,10 +638,6 @@ const loadSubscriptionRequests = async () => {
         ...d.data(),
       }));
 
-    console.log(
-      "✅ Requests loaded:",
-      requests
-    );
 
     setSubscriptionRequests(
       requests
@@ -733,7 +721,10 @@ const savePlanSettings =
   };
 
 
+
 const approveSubscriptionRequest = async (request) => {
+
+
   try {
 
     const entitySnap = await getDocs(
@@ -744,6 +735,7 @@ const approveSubscriptionRequest = async (request) => {
     "entities"
   )
 );
+
 
 const entityDoc =
   entitySnap.docs.find(
@@ -944,6 +936,32 @@ await setDoc(
       new Date().toISOString(),
   }
 );
+const outboundPayload = {
+  type: "subscriptionApproved",
+
+  organizationId:
+    request.organizationId,
+
+  entityId:
+    request.entityId,
+
+  recipientUid:
+    request.requestedBy,
+
+  currentPlan:
+    request.currentPlan || null,
+
+  status: "pending",
+
+  createdAt:
+    new Date().toISOString(),
+};
+
+if (request.requestedPlan) {
+  outboundPayload.requestedPlan =
+    request.requestedPlan;
+}
+
 await setDoc(
   doc(
     collection(
@@ -951,29 +969,7 @@ await setDoc(
       "outboundMail"
     )
   ),
-  {
-    type: "subscriptionApproved",
-
-    organizationId:
-      request.organizationId,
-
-    entityId:
-      request.entityId,
-
-    recipientUid:
-      request.requestedBy,
-
-    currentPlan:
-      request.currentPlan,
-
-    requestedPlan:
-      request.requestedPlan,
-
-    status: "pending",
-
-    createdAt:
-      new Date().toISOString(),
-  }
+  outboundPayload
 );
 
 await setDoc(
@@ -983,31 +979,8 @@ await setDoc(
       "outboundWhatsApp"
     )
   ),
-  {
-    type: "subscriptionApproved",
-
-    organizationId:
-      request.organizationId,
-
-    entityId:
-      request.entityId,
-
-    recipientUid:
-      request.requestedBy,
-
-    currentPlan:
-      request.currentPlan,
-
-    requestedPlan:
-      request.requestedPlan,
-
-    status: "pending",
-
-    createdAt:
-      new Date().toISOString(),
-  }
+  outboundPayload
 );
-
 
 await deleteDoc(
   doc(
@@ -1038,14 +1011,19 @@ await deleteDoc(
 );
 
 
-  } catch (e) {
+ } catch (e) {
 
-    console.log(
-      "❌ approveSubscriptionRequest:",
-      e
-    );
+  console.log(
+    "❌ approveSubscriptionRequest:",
+    e
+  );
 
-  }
+  Alert.alert(
+    "Approval Failed",
+    e?.message || JSON.stringify(e)
+  );
+
+}
 };
 
 const rejectSubscriptionRequest = async (request) => {
@@ -1076,9 +1054,11 @@ await setDoc(
 await setDoc(
   doc(
     collection(
-      db,
-      "notifications"
-    )
+  db,
+  "users",
+  request.requestedBy,
+  "notifications"
+)
   ),
   {
     organizationId:
@@ -1130,12 +1110,17 @@ await deleteDoc(
 
   } catch (e) {
 
-    console.log(
-      "❌ rejectSubscriptionRequest:",
-      e
-    );
+  console.log(
+    "❌ approveSubscriptionRequest:",
+    e
+  );
 
-  }
+  Alert.alert(
+    "Approval Failed",
+    e?.message || JSON.stringify(e)
+  );
+
+}
 };
 
 
@@ -1286,30 +1271,44 @@ const reinstateChurch = async (org) => {
       return;
     }
 
-    await setDoc(
-      doc(
-        db,
-        "organizations",
-        planTarget.id,
-        "entities",
-        entityId,
-        "billing",
-        "subscription"
-      ),
-      {
-        planId: selectedPlan,
-        status: "active",
-        currentPeriodEnd:
-          new Date(
-            Date.now() +
-            30 * 86400000
-          ).toISOString(),
-        overriddenByDeveloper: true,
-        overriddenAt:
-          new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const now = new Date();
+
+const periodEnd = new Date();
+periodEnd.setDate(
+  periodEnd.getDate() + 30
+);
+
+await setDoc(
+  doc(
+    db,
+    "organizations",
+    planTarget.id,
+    "entities",
+    entityId,
+    "billing",
+    "subscription"
+  ),
+  {
+    planId: selectedPlan,
+    status: "active",
+
+    currentPeriodStart:
+      now.toISOString(),
+
+    currentPeriodEnd:
+      periodEnd.toISOString(),
+
+    cancelAtPeriodEnd: false,
+
+    cancellationApprovedAt: null,
+
+    overriddenByDeveloper: true,
+
+    overriddenAt:
+      now.toISOString(),
+  },
+  { merge: true }
+);
 
     await logActivity({
       type: "plan_override",
@@ -2473,9 +2472,10 @@ const filteredArchive =
 
         <TouchableOpacity
           style={styles.modalSaveBtn}
-          onPress={() =>
-            approveSubscriptionRequest(req)
-          }
+         onPress={() => {
+
+  approveSubscriptionRequest(req);
+}}
         >
           <Text style={styles.white}>
             Approve
@@ -2642,6 +2642,64 @@ const filteredArchive =
         value={req.status}
       />
 
+{orgDetailData.sub?.currentPeriodStart && (
+  <InfoPair
+    label="Started"
+    value={
+      new Date(
+        orgDetailData.sub.currentPeriodStart
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
+{orgDetailData.sub?.currentPeriodEnd && (
+  <InfoPair
+    label="Expires"
+    value={
+      new Date(
+        orgDetailData.sub.currentPeriodEnd
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
+{orgDetailData.sub?.currentPeriodEnd && (
+  <InfoPair
+    label="Days Remaining"
+    value={
+      Math.max(
+        0,
+        Math.ceil(
+          (
+            new Date(
+              orgDetailData.sub.currentPeriodEnd
+            ) - new Date()
+          ) / 86400000
+        )
+      ).toString()
+    }
+  />
+)}
+{orgDetailData.sub?.cancelAtPeriodEnd && (
+  <InfoPair
+    label="Cancellation"
+    value="Scheduled"
+  />
+)}
+
+{orgDetailData.sub?.cancellationApprovedAt && (
+  <InfoPair
+    label="Cancellation Approved"
+    value={
+      new Date(
+        orgDetailData.sub
+          .cancellationApprovedAt
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
       <InfoPair
         label="Archived"
         value={
@@ -2799,13 +2857,11 @@ const filteredArchive =
   style={styles.input}
   keyboardType="numeric"
   value={String(
-    planSettings?.[pid]?.price ??
-    (pid === "free"
-      ? 0
-      : pid === "basic"
-      ? 30
-      : 80)
-  )}
+  planSettings?.[pid]?.price ??
+  getPlan(pid).price ??
+  0
+)}
+
   onChangeText={(v) =>
     setPlanSettings(prev => ({
       ...prev,
@@ -2824,14 +2880,11 @@ const filteredArchive =
 <TextInput
   style={styles.input}
   keyboardType="numeric"
-  value={String(
-    planSettings?.[pid]?.maxMembers ??
-    (pid === "free"
-      ? 50
-      : pid === "basic"
-      ? 200
-      : 1000)
-  )}
+ value={String(
+  planSettings?.[pid]?.maxMembers ??
+  getPlan(pid).limits?.maxMembers ??
+  0
+)}
   onChangeText={(v) =>
     setPlanSettings(prev => ({
       ...prev,
@@ -2851,13 +2904,10 @@ const filteredArchive =
   style={styles.input}
   keyboardType="numeric"
   value={String(
-    planSettings?.[pid]?.maxAdmins ??
-    (pid === "free"
-      ? 1
-      : pid === "basic"
-      ? 3
-      : 10)
-  )}
+  planSettings?.[pid]?.maxAdmins ??
+  getPlan(pid).limits?.maxAdmins ??
+  0
+)}
   onChangeText={(v) =>
     setPlanSettings(prev => ({
       ...prev,
