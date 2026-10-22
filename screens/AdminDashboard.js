@@ -7,8 +7,15 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { collection, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  getDoc
+} from "firebase/firestore";
 import { db } from "../firebase";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Optional: install with: npx expo install react-native-chart-kit react-native-svg
 // If not installed yet, charts fall back to bar-style UI components
@@ -46,18 +53,133 @@ const TABS = [
 export default function AdminDashboard() {
   const navigation = useNavigation();
 
-  const [members,    setMembers]    = useState([]);
-  const [attendance, setAttendance] = useState([]);
+  const [members, setMembers] = useState([]);
+const [attendance, setAttendance] = useState([]);
+const [sessions, setSessions] = useState([]);
+const [contributions, setContributions] = useState([]);
+const [events, setEvents] = useState([]);
+const [currencySymbol, setCurrencySymbol] =
+  useState("₵");
   const [activeTab,  setActiveTab]  = useState("Activities");
   const [expanded,   setExpanded]   = useState({});  // which chart sections are expanded
 
-  useEffect(() => {
-    const unsubMem = onSnapshot(collection(db, "members"),
-      snap => setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubAtt = onSnapshot(collection(db, "attendance"),
-      snap => setAttendance(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    return () => { unsubMem(); unsubAtt(); };
-  }, []);
+useEffect(() => {
+
+  const unsubMem = onSnapshot(
+    collection(db, "members"),
+    snap =>
+      setMembers(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      )
+  );
+
+  const unsubAtt = onSnapshot(
+    collection(db, "attendance"),
+    snap =>
+      setAttendance(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      )
+  );
+
+  const unsubSessions = onSnapshot(
+    collection(db, "sessions"),
+    snap =>
+      setSessions(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      )
+  );
+
+  const unsubContributions = onSnapshot(
+    collection(db, "contributions"),
+    snap =>
+      setContributions(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      )
+  );
+
+  const unsubEvents = onSnapshot(
+    collection(db, "events"),
+    snap =>
+      setEvents(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      )
+  );
+const loadCurrency = async () => {
+  try {
+
+    const stored =
+      await AsyncStorage.getItem(
+        "currentUser"
+      );
+
+    if (!stored) return;
+
+    const user =
+      JSON.parse(stored);
+
+    if (!user?.organizationId) return;
+
+    const orgSnap =
+      await getDoc(
+        doc(
+          db,
+          "organizations",
+          user.organizationId
+        )
+      );
+
+    if (!orgSnap.exists()) return;
+
+    const org =
+      orgSnap.data();
+
+    setCurrencySymbol(
+      org.currencySymbol || "₵"
+    );
+console.log(
+  "ORG CURRENCY:",
+  org.currencySymbol,
+  org.currencyCode,
+  org.country
+);
+
+
+  } catch (e) {
+
+    console.log(
+      "Currency load failed:",
+      e
+    );
+
+  }
+};
+
+loadCurrency();
+
+  return () => {
+    unsubMem();
+    unsubAtt();
+    unsubSessions();
+    unsubContributions();
+    unsubEvents();
+  };
+
+}, []);
 
   /* ── Metrics ── */
   const totalMembers  = members.length;
@@ -68,6 +190,94 @@ export default function AdminDashboard() {
   const newConverts   = members.filter(m => m.status === "New Convert").length;
   const communicants  = members.filter(m => m.communicant === "yes").length;
   const attendanceRate = totalMembers > 0 ? Math.round((present / (present + absent || 1)) * 100) : 0;
+
+
+  const totalEvents =
+  events.length;
+
+const completedEvents =
+  events.filter(
+    e => e.status === "completed"
+  ).length;
+
+const upcomingEvents =
+  events.filter(
+    e => e.status === "upcoming"
+  ).length;
+
+const totalSessions =
+  sessions.length;
+
+const totalIncome =
+  contributions.reduce(
+    (sum, item) =>
+      sum + (Number(item.amount) || 0),
+    0
+  );
+
+const titheTotal =
+  contributions
+    .filter(
+      c => c.type === "Tithe"
+    )
+    .reduce(
+      (sum, c) =>
+        sum + (Number(c.amount) || 0),
+      0
+    );
+
+const offeringTotal =
+
+  contributions
+    .filter(
+      c => c.type === "Offering"
+    )
+    .reduce(
+      (sum, c) =>
+        sum + (Number(c.amount) || 0),
+      0
+    );
+const formatCurrency =
+  value =>
+    `${currencySymbol}${Number(
+      value || 0
+    ).toLocaleString()}`;
+
+
+const buildingTotal =
+  contributions
+    .filter(
+      c => c.type === "Building Fund"
+    )
+    .reduce(
+      (sum, c) =>
+        sum + (Number(c.amount) || 0),
+      0
+    );
+
+const missionsTotal =
+  contributions
+    .filter(
+      c => c.type === "Missions"
+    )
+    .reduce(
+      (sum, c) =>
+        sum + (Number(c.amount) || 0),
+      0
+    );
+
+const welfareTotal =
+  contributions
+    .filter(
+      c => c.type === "Welfare"
+    )
+    .reduce(
+      (sum, c) =>
+        sum + (Number(c.amount) || 0),
+      0
+    );
+
+
 
   /* ── Toggle section expand ── */
   const toggleSection = (key) => setExpanded(p => ({ ...p, [key]: !p[key] }));
@@ -94,7 +304,15 @@ export default function AdminDashboard() {
   /* ── Financial bar data mock ── */
   const financialBar = {
     labels: ["Tithe", "Offering", "Building", "Missions", "Welfare"],
-    datasets: [{ data: [5000, 3200, 1500, 800, 400] }],
+    datasets: [{
+  data: [
+    titheTotal,
+    offeringTotal,
+    buildingTotal,
+    missionsTotal,
+    welfareTotal,
+  ]
+}]
   };
 
   /* ── Render a stat card ── */
@@ -165,10 +383,10 @@ export default function AdminDashboard() {
       case "Activities": return (
         <View>
           <View style={styles.cardGrid}>
-            <StatCard title="Total Events"    value={12} icon="calendar"      color="#6C5CE7" bg="#F0EEFF" />
-            <StatCard title="Services This Month" value={8} icon="time"       color="#00B894" bg="#E8FBF5" />
-            <StatCard title="Upcoming Events" value={4}  icon="notifications" color="#0984E3" bg="#E8F4FD" />
-            <StatCard title="Completed"       value={8}  icon="checkmark-done" color="#FDCB6E" bg="#FFFBEE" />
+            <StatCard title="Total Events"    value={totalEvents} icon="calendar"      color="#6C5CE7" bg="#F0EEFF" />
+            <StatCard title="Services This Month" value={totalSessions} icon="time"       color="#00B894" bg="#E8FBF5" />
+            <StatCard title="Upcoming Events" value={upcomingEvents}  icon="notifications" color="#0984E3" bg="#E8F4FD" />
+            <StatCard title="Completed"       value={completedEvents}  icon="checkmark-done" color="#FDCB6E" bg="#FFFBEE" />
           </View>
 
           <Section sectionKey="act_trend" title="Activity Trend" icon="trending-up-outline" color="#6C5CE7">
@@ -245,7 +463,7 @@ export default function AdminDashboard() {
             <StatCard title="Present Today"   value={present}  icon="checkmark-circle" color="#00B894" bg="#E8FBF5" />
             <StatCard title="Absent Today"    value={absent}   icon="close-circle"     color="#D63031" bg="#FDECEA" />
             <StatCard title="Attendance Rate" value={`${attendanceRate}%`} icon="analytics" color="#6C5CE7" bg="#F0EEFF" />
-            <StatCard title="Total Sessions"  value={24}       icon="calendar"         color="#0984E3" bg="#E8F4FD" />
+            <StatCard title="Total Sessions"  value={totalSessions}      icon="calendar"         color="#0984E3" bg="#E8F4FD" />
           </View>
 
           <Section sectionKey="att_trend" title="Attendance Trend (7 Days)" icon="trending-up-outline" color="#00B894">
@@ -281,18 +499,30 @@ export default function AdminDashboard() {
       case "Financial": return (
         <View>
           <View style={styles.kpiRow}>
-            <KpiCard label="Tithes"    value="₵5,000"  total={0} color="#FDCB6E" />
-            <KpiCard label="Offerings" value="₵3,200"  total={0} color="#E17055" />
-            <KpiCard label="Total"     value="₵9,900"  total={0} color="#00B894" />
+            <KpiCard label="Tithes"    value={formatCurrency(
+  titheTotal
+)} total={0} color="#FDCB6E" />
+            <KpiCard label="Offerings" value={formatCurrency(
+  offeringTotal
+)} total={0} color="#E17055" />
+            <KpiCard label="Total"     value={formatCurrency(
+  totalIncome
+)} total={0} color="#00B894" />
           </View>
 
           <View style={styles.cardGrid}>
-            <StatCard title="Tithes"    value="₵5,000" icon="cash"            color="#FDCB6E" bg="#FFFBEE" />
-            <StatCard title="Offerings" value="₵3,200" icon="wallet"          color="#E17055" bg="#FEF0EE" />
-            <StatCard title="Building Fund" value="₵1,500" icon="business"    color="#0984E3" bg="#E8F4FD" />
-            <StatCard title="Missions"  value="₵800"   icon="earth"           color="#00CEC9" bg="#E8FFFE" />
-            <StatCard title="Welfare"   value="₵400"   icon="heart"           color="#D63031" bg="#FDECEA" />
-            <StatCard title="Total"     value="₵9,900" icon="trending-up"     color="#00B894" bg="#E8FBF5" />
+            <StatCard title="Tithes"    value={formatCurrency(
+  titheTotal
+)}           color="#FDCB6E" bg="#FFFBEE" />
+            <StatCard title="Offerings" value={formatCurrency(
+  offeringTotal
+)} icon="wallet"          color="#E17055" bg="#FEF0EE" />
+            <StatCard title="Building Fund" value={formatCurrency(
+  totalIncome
+)} icon="business"    color="#0984E3" bg="#E8F4FD" />
+            <StatCard title="Missions"  value={formatCurrency(missionsTotal)}  icon="earth"           color="#00CEC9" bg="#E8FFFE" />
+            <StatCard title="Welfare"   value={formatCurrency(welfareTotal)}   icon="heart"           color="#D63031" bg="#FDECEA" />
+            <StatCard title="Total"     value={formatCurrency(totalIncome)} icon="trending-up"     color="#00B894" bg="#E8FBF5" />
           </View>
 
           <Section sectionKey="fin_bar" title="Income by Category" icon="bar-chart-outline" color="#FDCB6E">

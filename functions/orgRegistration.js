@@ -49,8 +49,15 @@ exports.checkDuplicateOrganization =
 
 const db = getFirestore();
 
-
-
+const COUNTRY_CURRENCY = {
+  GHANA: { code: "GHS", symbol: "₵", region: "ghana" },
+  NIGERIA: { code: "NGN", symbol: "₦", region: "nigeria" },
+  KENYA: { code: "KES", symbol: "KSh", region: "kenya" },
+  UGANDA: { code: "UGX", symbol: "USh", region: "uganda" },
+  SOUTH_AFRICA: { code: "ZAR", symbol: "R", region: "south_africa" },
+  UNITED_STATES: { code: "USD", symbol: "$", region: "usa" },
+  UNITED_KINGDOM: { code: "GBP", symbol: "£", region: "uk" },
+};
 
 exports.submitOrganizationRegistration =
   onCall(async (request) => {
@@ -62,12 +69,13 @@ exports.submitOrganizationRegistration =
       );
     }
 
-    const {
-      name,
-      location,
-      denomination,
-      templateId,
-      levelId,
+   const {
+  name,
+  location,
+  country,
+  denomination,
+  templateId,
+  levelId,
       parentNodeId,
 
       organizationAbbreviation,
@@ -121,6 +129,18 @@ exports.submitOrganizationRegistration =
           m.confidence < 0.85
       );
 
+      const currencyInfo =
+  COUNTRY_CURRENCY[
+    String(country || "")
+  .trim()
+  .toUpperCase()
+  .replace(/\s+/g, "_")
+  ] || {
+    code: "USD",
+    symbol: "$",
+    region: "global",
+  };
+
     const dedupeKey =
       `${templateId}__${levelId}__${normalize(name)}__${normalize(location || "")}`;
 
@@ -169,6 +189,17 @@ locationAbbreviation:
 
 denomination:
   denomination?.trim() || null,
+  country:
+  country?.trim() || null,
+
+currencyCode:
+  currencyInfo.code,
+
+currencySymbol:
+  currencyInfo.symbol,
+
+pricingRegion:
+  currencyInfo.region,
 
 location:
   location?.trim() || null,

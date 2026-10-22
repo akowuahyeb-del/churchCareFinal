@@ -16,6 +16,8 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "../firebase"; 
@@ -95,6 +97,57 @@ export default function AdminFinanceScreen() {
   useState(null);
   const [currentUser, setCurrentUser] =
   useState(null);
+  const [currencySymbol, setCurrencySymbol] =
+  useState("GH₵");
+
+  useEffect(() => {
+
+  const loadCurrency = async () => {
+
+    try {
+
+      const stored =
+        await AsyncStorage.getItem(
+          "currentUser"
+        );
+
+      if (!stored) return;
+
+      const user =
+        JSON.parse(stored);
+
+      if (!user?.organizationId) return;
+
+      const orgSnap = await getDoc(
+        doc(
+          db,
+          "organizations",
+          user.organizationId
+        )
+      );
+
+      if (!orgSnap.exists()) return;
+
+      const org =
+        orgSnap.data();
+
+      setCurrencySymbol(
+        org.currencySymbol || "GH₵"
+      );
+
+    } catch (e) {
+
+      console.log(
+        "Finance currency load failed",
+        e
+      );
+
+    }
+  };
+
+  loadCurrency();
+
+}, []);
 
   useEffect(() => {
 
@@ -579,23 +632,23 @@ if (
             <View>
               {/* KPI Row */}
               <View style={styles.kpiRow}>
-                <KpiCard label="Income"   value={`₵${fmt(totalIncome)}`}   color="#00B894" icon="trending-up" />
-                <KpiCard label="Expenses" value={`₵${fmt(totalExpenses)}`} color="#E17055" icon="trending-down" />
-                <KpiCard label="Net"      value={`₵${fmt(netProfit)}`}     color={netProfit >= 0 ? "#00B894" : "#D63031"} icon="analytics" />
+                <KpiCard label="Income" value={`${currencySymbol}${fmt(totalIncome)}`}  color="#00B894" icon="trending-up" />
+                <KpiCard label="Expenses" value={`${currencySymbol}${fmt(totalExpenses)}`}color="#E17055" icon="trending-down" />
+               <KpiCard label="Net" value={`${currencySymbol}${fmt(netProfit)}`}     color={netProfit >= 0 ? "#00B894" : "#D63031"} icon="analytics" />
               </View>
 
               {/* Balance sheet summary */}
               <View style={styles.bsRow}>
                 <View style={[styles.bsCard, { borderColor: "#0984E3" }]}>
-                  <Text style={[styles.bsValue, { color: "#0984E3" }]}>₵{fmt(totalAssets)}</Text>
+                  <Text style={[styles.bsValue, { color: "#0984E3" }]}>{currencySymbol}{fmt(totalAssets)}</Text>
                   <Text style={styles.bsLabel}>Total Assets</Text>
                 </View>
                 <View style={[styles.bsCard, { borderColor: "#D63031" }]}>
-                  <Text style={[styles.bsValue, { color: "#D63031" }]}>₵{fmt(totalLiab)}</Text>
+                  <Text style={[styles.bsValue, { color: "#D63031" }]}>{currencySymbol}{fmt(totalLiab)}</Text>
                   <Text style={styles.bsLabel}>Liabilities</Text>
                 </View>
                 <View style={[styles.bsCard, { borderColor: "#6C5CE7" }]}>
-                  <Text style={[styles.bsValue, { color: "#6C5CE7" }]}>₵{fmt(totalEquity)}</Text>
+                  <Text style={[styles.bsValue, { color: "#6C5CE7" }]}>{currencySymbol}{fmt(totalEquity)}</Text>
                   <Text style={styles.bsLabel}>Equity</Text>
                 </View>
               </View>
@@ -634,7 +687,7 @@ if (
                   {topAccounts("Income").map(a => (
                     <View key={a.name} style={styles.topRow}>
                       <Text style={styles.topName} numberOfLines={1}>{a.name}</Text>
-                      <Text style={[styles.topVal, { color: "#00B894" }]}>₵{fmt(a.balance)}</Text>
+                      <Text style={[styles.topVal, { color: "#00B894" }]}>{currencySymbol}{fmt(a.balance)}</Text>
                     </View>
                   ))}
                 </View>
@@ -643,7 +696,7 @@ if (
                   {topAccounts("Expenses").map(a => (
                     <View key={a.name} style={styles.topRow}>
                       <Text style={styles.topName} numberOfLines={1}>{a.name}</Text>
-                      <Text style={[styles.topVal, { color: "#E17055" }]}>₵{fmt(a.balance)}</Text>
+                      <Text style={[styles.topVal, { color: "#E17055" }]}>{currencySymbol}{fmt(a.balance)}</Text>
                     </View>
                   ))}
                 </View>
@@ -666,7 +719,10 @@ if (
                 <View key={tx.id} style={styles.txCard}>
                   <View style={styles.txHeader}>
                     <Text style={styles.txDate}>{tx.date}</Text>
-                    <Text style={styles.txAmt}>₵{fmt(tx.totalAmount)}</Text>
+                    <Text style={styles.txAmt}>
+  {currencySymbol}{fmt(tx.totalAmount)}
+</Text>
+
                   </View>
                   <Text style={styles.txDesc}>{tx.description}</Text>
                   <View style={styles.txTable}>
@@ -706,7 +762,7 @@ if (
               <View style={styles.ledgerCard}>
                 <Text style={styles.ledgerTitle}>{ledgerAccount}</Text>
                 <Text style={[styles.ledgerBalance, { color: accountBalance(ledgerAccount) >= 0 ? "#00B894" : "#D63031" }]}>
-                  Balance: ₵{fmt(accountBalance(ledgerAccount))}
+                  Balance: {currencySymbol}{fmt(accountBalance(ledgerAccount))}
                 </Text>
                 <View style={styles.txTableHeader}>
                   <Text style={[styles.txCol, { flex:1.5 }]}>Date</Text>
@@ -767,8 +823,8 @@ if (
                 return (
                   <View style={[styles.txTableRow, styles.trialTotal]}>
                     <Text style={[styles.txCell, { flex:2, fontWeight:"800" }]}>TOTALS</Text>
-                    <Text style={[styles.txCell, { color:"#0984E3", fontWeight:"800" }]}>₵{fmt(tD)}</Text>
-                    <Text style={[styles.txCell, { color:"#00B894", fontWeight:"800" }]}>₵{fmt(tC)}</Text>
+                    <Text style={[styles.txCell, { color:"#0984E3", fontWeight:"800" }]}>{currencySymbol}{fmt(tD)}</Text>
+                    <Text style={[styles.txCell, { color:"#00B894", fontWeight:"800" }]}>{currencySymbol}{fmt(tC)}</Text>
                   </View>
                 );
               })()}
@@ -783,7 +839,7 @@ if (
                 ) : (
                   <View style={[styles.balancedBadge, { backgroundColor: "#fdecea" }]}>
                     <Ionicons name="alert-circle" size={16} color="#D63031" />
-                    <Text style={[styles.balancedText, { color: "#D63031" }]}>Out of balance by ₵{fmt(Math.abs(tD - tC))}</Text>
+                    <Text style={[styles.balancedText, { color: "#D63031" }]}>Out of balance by {currencySymbol}{fmt(Math.abs(tD - tC))}</Text>
                   </View>
                 );
               })()}
@@ -806,7 +862,7 @@ if (
               <View style={[styles.netRow, { backgroundColor: netProfit >= 0 ? "#e8fbf5" : "#fdecea" }]}>
                 <Text style={styles.netLabel}>NET {netProfit >= 0 ? "PROFIT" : "LOSS"}</Text>
                 <Text style={[styles.netValue, { color: netProfit >= 0 ? "#00B894" : "#D63031" }]}>
-                  ₵{fmt(Math.abs(netProfit))}
+                  {currencySymbol}{fmt(Math.abs(netProfit))}
                 </Text>
               </View>
 
@@ -871,14 +927,14 @@ if (
                     {flows.map(f => (
                       <View key={f.account} style={styles.cfRow}>
                         <Text style={styles.cfAccount}>{f.account}</Text>
-                        {f.inflow > 0  && <Text style={[styles.cfAmt, { color:"#00B894" }]}>+₵{fmt(f.inflow)}</Text>}
-                        {f.outflow > 0 && <Text style={[styles.cfAmt, { color:"#D63031" }]}>-₵{fmt(f.outflow)}</Text>}
+                        {f.inflow > 0  && <Text style={[styles.cfAmt, { color:"#00B894" }]}>+{currencySymbol}{fmt(f.inflow)}</Text>}
+                        {f.outflow > 0 && <Text style={[styles.cfAmt, { color:"#D63031" }]}>-{currencySymbol}{fmt(f.outflow)}</Text>}
                       </View>
                     ))}
                     <View style={[styles.cfNet, { backgroundColor: net >= 0 ? "#e8fbf5" : "#fdecea" }]}>
                       <Text style={styles.cfNetLabel}>Net {section.title.split(" ")[0]}</Text>
                       <Text style={[styles.cfNetValue, { color: net >= 0 ? "#00B894" : "#D63031" }]}>
-                        {net >= 0 ? "+" : ""}₵{fmt(net)}
+                        {net >= 0 ? "+" : ""}{currencySymbol}{fmt(net)}
                       </Text>
                     </View>
                   </View>
@@ -897,14 +953,14 @@ if (
                       <Ionicons name={icon} size={16} color={color} />
                     </View>
                     <Text style={[styles.coaTitle, { color }]}>{cat}</Text>
-                    <Text style={[styles.coaTotal, { color }]}>₵{fmt(categoryTotal(cat))}</Text>
+                    <Text style={[styles.coaTotal, { color }]}>{currencySymbol}{fmt(categoryTotal(cat))}</Text>
                   </View>
                   {accounts.map(a => (
                     <View key={a} style={styles.coaRow}>
                       <View style={styles.coaDot} />
                       <Text style={styles.coaAccount}>{a}</Text>
                       <Text style={[styles.coaBal, { color: accountBalance(a) > 0 ? color : "#bbb" }]}>
-                        {accountBalance(a) > 0 ? `₵${fmt(accountBalance(a))}` : "—"}
+                        {accountBalance(a) > 0 ? `{currencySymbol}${fmt(accountBalance(a))}` : "—"}
                       </Text>
                     </View>
                   ))}
@@ -931,9 +987,9 @@ if (
       </View>
 
       <View style={styles.aiSummaryRow}>
-        <AiMetric label="Income" value={`₵${fmt(totalIncome)}`} color="#00B894" />
-        <AiMetric label="Expenses" value={`₵${fmt(totalExpenses)}`} color="#E17055" />
-        <AiMetric label="Profit" value={`₵${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
+        <AiMetric label="Income" value={`{currencySymbol}${fmt(totalIncome)}`} color="#00B894" />
+        <AiMetric label="Expenses" value={`{currencySymbol}${fmt(totalExpenses)}`} color="#E17055" />
+        <AiMetric label="Profit" value={`{currencySymbol}${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
       </View>
 
       <TouchableOpacity style={styles.aiBtn} onPress={generateAiInsight} disabled={aiLoading}>
@@ -1035,7 +1091,7 @@ if (
                 return (
                   <View style={[styles.balanceCheck, { backgroundColor: td===tc ? "#e8fbf5":"#fdecea" }]}>
                     <Text style={{ color: td===tc?"#00B894":"#D63031", fontWeight:"700", fontSize:13 }}>
-                      Debits: ₵{fmt(td)}  |  Credits: ₵{fmt(tc)}  {td===tc?"✓ Balanced":"⚠ Not balanced"}
+                      Debits: {currencySymbol}{fmt(td)}  |  Credits: {currencySymbol}{fmt(tc)}  {td===tc?"✓ Balanced":"⚠ Not balanced"}
                     </Text>
                   </View>
                 );
@@ -1084,12 +1140,12 @@ const ReportSection = ({ title, color, accounts, getBalance, total }) => (
     {accounts.filter(a => getBalance(a) > 0).map(a => (
       <View key={a} style={styles.reportRow}>
         <Text style={styles.reportAccount}>{a}</Text>
-        <Text style={styles.reportAmt}>₵{fmt(getBalance(a))}</Text>
+        <Text style={styles.reportAmt}>{currencySymbol}{fmt(getBalance(a))}</Text>
       </View>
     ))}
     <View style={[styles.reportTotal, { borderTopColor: color }]}>
       <Text style={[styles.reportTotalLabel, { color }]}>Total {title}</Text>
-      <Text style={[styles.reportTotalVal, { color }]}>₵{fmt(total)}</Text>
+      <Text style={[styles.reportTotalVal, { color }]}>{currencySymbol}{fmt(total)}</Text>
     </View>
   </View>
 );
@@ -1147,6 +1203,12 @@ const EmptyState = ({ icon, text }) => (
     <Text style={styles.emptyText}>{text}</Text>
   </View>
 );
+
+const money = (
+  value,
+  symbol
+) =>
+  `${symbol}${fmt(value)}`;
 
 const fmt = (n) => {
   const num = Number(n) || 0;

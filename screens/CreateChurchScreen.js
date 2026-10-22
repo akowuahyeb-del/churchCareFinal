@@ -4,6 +4,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { ORGANIZATION_TEMPLATES, getTemplate } from "../constants/organizationTemplates";
@@ -50,7 +51,8 @@ const _searchOrganizationNetworks =
   const [churchName, setChurchName] = useState("");
 const [denomination, setDenomination] = useState("");
 const [location, setLocation] = useState("");
-
+const [country, setCountry] =
+  useState("Ghana");
 
  const [contactName, setContactName] = useState("");
 const [contactPhone, setContactPhone] = useState("");
@@ -303,9 +305,10 @@ useEffect(() => {
   const canNext = () => {
   if (step === 0)
   return (
-    churchName.trim() &&
-    denomination.trim() &&
-    location.trim() &&
+   churchName.trim() &&
+denomination.trim() &&
+location.trim() &&
+country.trim() &&
 
     adminName.trim() &&
     isValidPhone(adminPhone) &&
@@ -427,6 +430,8 @@ const handleSubmit = async () => {
     denomination,
 
     location,
+
+    country,
 
     organizationAbbreviation,
 
@@ -557,6 +562,57 @@ const handleSubmit = async () => {
             <Text style={styles.label}>Location *</Text>
             <TextInput style={styles.input} value={location} onChangeText={setLocation}
               placeholder="e.g. Tema, Greater Accra" />
+     <Text style={styles.label}>
+  Country *
+</Text>
+
+<View style={styles.pickerContainer}>
+  <Picker
+  selectedValue={country}
+  onValueChange={(value) => setCountry(value)}
+  dropdownIconColor="#222"
+  style={{
+    color: "#222",
+    backgroundColor: "#fff",
+  }}
+>
+
+    <Picker.Item
+      label="Ghana"
+      value="Ghana"
+    />
+
+    <Picker.Item
+      label="Nigeria"
+      value="Nigeria"
+    />
+
+    <Picker.Item
+      label="Kenya"
+      value="Kenya"
+    />
+
+    <Picker.Item
+      label="Uganda"
+      value="Uganda"
+    />
+
+    <Picker.Item
+      label="South Africa"
+      value="South Africa"
+    />
+
+    <Picker.Item
+      label="United Kingdom"
+      value="United Kingdom"
+    />
+
+    <Picker.Item
+      label="United States"
+      value="United States"
+    />
+  </Picker>
+</View>
 
               {checkingDup && (
   <ActivityIndicator
@@ -1331,6 +1387,10 @@ PCG-TC-BM-C367
 )}
 
               <SummaryRow label="Location" value={location} />
+              <SummaryRow
+  label="Country"
+  value={country}
+/>
               
 
 
@@ -1475,5 +1535,13 @@ errorText: {
   color: "#e74c3c",
   fontSize: 11,
   marginBottom: 8,
+},
+pickerContainer: {
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "#e8e8e8",
+  marginBottom: 4,
+  overflow: "hidden",
 },
 });

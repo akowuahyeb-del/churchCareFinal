@@ -4097,15 +4097,15 @@ const styles = StyleSheet.create({
   infoBoxText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
 
   infoPairRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" },
-  infoPairLabel: {
+ infoPairLabel: {
   fontSize: 11,
-  color: "#ddd",
+  color: "#666",
   fontWeight: "600",
 },
   infoPairValue: {
   fontSize: 11,
-  color: "#FFFFFF",
-  fontWeight: "600",
+  color: "#222",
+  fontWeight: "700",
   flex: 1,
   textAlign: "right",
   marginLeft: 10,
@@ -4139,7 +4139,14 @@ const styles = StyleSheet.create({
   radioActive: { borderColor: "#4B3F72" },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#4B3F72" },
 
-  fieldLabel: { fontSize: 11, fontWeight: "700", color: "#888", textTransform: "uppercase", marginBottom: 6, marginTop: 10 },
+  fieldLabel: {
+  fontSize: 13,
+  fontWeight: "800",
+  color: "#555",
+  textTransform: "uppercase",
+  marginBottom: 8,
+  marginTop: 12,
+},
   input: {
   borderWidth: 1,
   borderColor: "#e0e0e0",

@@ -27,6 +27,7 @@ import {
   getDocs,
   query,
   where,
+  getDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -91,6 +92,11 @@ const ADMIN_ADDON_PACKAGES = [
 export default function SubscriptionScreen({ route }) {
   const navigation = useNavigation();
   const [activeEntity, setActiveEntity] = useState(null);
+  const [currencySymbol, setCurrencySymbol] =
+  useState("GH₵");
+
+const [currencyCode, setCurrencyCode] =
+  useState("GHS");
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
 
@@ -133,6 +139,34 @@ useEffect(() => {
         setActiveEntity(
           JSON.parse(entityRaw)
         );
+        const entity =
+  JSON.parse(entityRaw);
+
+if (entity?.organizationId) {
+
+  const orgSnap =
+    await getDoc(
+      doc(
+        db,
+        "organizations",
+        entity.organizationId
+      )
+    );
+
+  if (orgSnap.exists()) {
+
+    const org =
+      orgSnap.data();
+
+    setCurrencySymbol(
+      org.currencySymbol || "GH₵"
+    );
+
+    setCurrencyCode(
+      org.currencyCode || "GHS"
+    );
+  }
+}
       } catch (_) {}
     }
 
@@ -429,9 +463,11 @@ const requestedCapacity =
 
         requestedPrice: pkg.price,
 
-        currency: "GHS",
+       currency: currencyCode,
 
-        region: "ghana",
+region:
+  subscription?.pricingRegion ||
+  null,
 
         status: "pending",
 
@@ -624,7 +660,7 @@ if (!existing.empty) {
           )}
 
           <Text style={styles.planPrice}>
-            {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `GH₵ ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
+            {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `${currencySymbol} ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
           </Text>
           {subscription?.currentPeriodStart && (
   <DetailRow
@@ -840,7 +876,8 @@ if (!existing.empty) {
         </Text>
 
         <Text style={styles.addonPrice}>
-          GH₵ {pkg.price}
+          {currencySymbol} {pkg.price}
+
         </Text>
       </TouchableOpacity>
     ))}
@@ -872,8 +909,8 @@ if (!existing.empty) {
         </Text>
 
         <Text style={styles.addonPrice}>
-          GH₵ {pkg.price}
-        </Text>
+  {currencySymbol} {pkg.price}
+</Text>
       </TouchableOpacity>
     ))}
 
@@ -915,10 +952,20 @@ const p = override
                   <Text style={styles.planRowTagline}>{p.tagline}</Text>
                 </View>
 
-                <Text style={styles.planRowPrice}>
-                  {p.price === null ? "Custom" : p.price === 0 ? "Free" : `GH₵${p.price}`}
-                  {p.price ? <Text style={styles.planRowCycle}>/{p.billingCycle === "monthly" ? "mo" : "yr"}</Text> : null}
-                </Text>
+               <Text style={styles.planRowPrice}>
+  {p.price === null
+    ? "Custom"
+    : p.price === 0
+    ? "Free"
+    : `${currencySymbol}${p.price}`}
+
+  {p.price ? (
+    <Text style={styles.planRowCycle}>
+      /{p.billingCycle === "monthly" ? "mo" : "yr"}
+    </Text>
+  ) : null}
+</Text>
+
               </View>
 
               <View style={styles.planFeatureList}>

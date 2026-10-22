@@ -133,21 +133,29 @@ async function validateRegistration(org) {
 
   if (rank === 1) {
 
-    const existing = await governanceRef
-      .where("status", "==", "active")
-      .where("templateId", "==", templateId)
-      .where("levelId", "==", levelId)
-      .get();
+  // Independent churches may have
+  // multiple Head Offices because each
+  // church represents its own network.
 
-    if (!existing.empty) {
-      throw new HttpsError(
-        "already-exists",
-        `Top-level organization already exists`
-      );
-    }
-
+  if (templateId === "independent") {
     return;
   }
+
+  const existing = await governanceRef
+    .where("status", "==", "active")
+    .where("templateId", "==", templateId)
+    .where("levelId", "==", levelId)
+    .get();
+
+  if (!existing.empty) {
+    throw new HttpsError(
+      "already-exists",
+      "Top-level organization already exists"
+    );
+  }
+
+  return;
+}
 
   // --------------------------------------------------
   // Rank 2 & Rank 3
