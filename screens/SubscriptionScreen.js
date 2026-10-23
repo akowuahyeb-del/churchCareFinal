@@ -951,8 +951,7 @@ const p = override
                   <Text style={styles.planRowName}>{p.label}</Text>
                   <Text style={styles.planRowTagline}>{p.tagline}</Text>
                 </View>
-
-               <Text style={styles.planRowPrice}>
+<Text style={styles.planRowPrice}>
   {p.price === null
     ? "Custom"
     : p.price === 0
