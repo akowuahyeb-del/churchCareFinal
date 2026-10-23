@@ -39,6 +39,8 @@ import { formatDate } from "../utils/dateUtils";
 import {
   mergeMembers,
 } from "../utils/memberMerge";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
@@ -124,6 +126,10 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = passedOrganizationId || activeEntity?.organizationId;
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
+
   const entityId = passedEntityId || activeEntity?.entityId;
 
   const [member, setMember] = useState(null);
@@ -1726,8 +1732,8 @@ const handleMergeDuplicate =
 
   <View style={styles.summaryItem}>
     <Text style={styles.summaryValue}>
-      ₵{totalGiven.toLocaleString()}
-    </Text>
+  {currencySymbol}{totalGiven.toLocaleString()}
+</Text>
     <Text style={styles.summaryLabel}>
       Given
     </Text>
@@ -2184,9 +2190,10 @@ onChangeText={setProfileSearch}
             <View style={styles.summaryRow}>
 
   <View style={styles.summaryItem}>
-    <Text style={styles.summaryValue}>
-      ₵{totalGiven.toLocaleString()}
-    </Text>
+   <Text style={styles.summaryValue}>
+  {currencySymbol}{totalGiven.toLocaleString()}
+</Text>
+
     <Text style={styles.summaryLabel}>
       Total Given
     </Text>
@@ -2223,9 +2230,9 @@ onChangeText={setProfileSearch}
     Total Contributions
   </Text>
 
-  <Text style={styles.totalAmount}>
-    GH₵ {totalGiven.toLocaleString()}
-  </Text>
+ <Text style={styles.totalAmount}>
+  {currencySymbol} {totalGiven.toLocaleString()}
+</Text>
 </View>
 
 {filteredContributions.map(c => (
@@ -2270,7 +2277,7 @@ onChangeText={setProfileSearch}
     <Text style={styles.contribAmount}>
       {c.donationType === "inkind"
         ? `${c.quantity || 0} ${c.unit || ""}`
-        : `GH₵ ${(c.amount || 0).toLocaleString()}`}
+        : `${currencySymbol} ${(c.amount || 0).toLocaleString()}`}
     </Text>
 
   </View>

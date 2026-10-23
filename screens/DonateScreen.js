@@ -22,7 +22,8 @@ import {
   todayDisplayDate,
 } from "../utils/dateUtils";
 
-
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 const AMOUNTS = ["10", "20", "50", "100", "200", "500"];
 
@@ -38,7 +39,9 @@ const CATEGORIES = [
 export default function DonateScreen({ route, navigation }) {
   const memberId   = route?.params?.memberId   || null;
 const memberName = route?.params?.memberName || null;
-
+const {
+  currencySymbol,
+} = useOrganizationCurrency();
 const viewerUid = route?.params?.viewerUid || memberId;
 const viewerName = route?.params?.viewerName || memberName || "Staff";
 
@@ -336,10 +339,11 @@ if (
   planHasFeature(planId, FEATURES.DONATION_RECEIPTS)
 ) {
   try {
-  await generateDonationReceipt(
+ await generateDonationReceipt(
   savedData,
   churchName,
-  activeEntity?.logo || null
+  activeEntity?.logo || null,
+  currencySymbol
 );
 
 
@@ -350,8 +354,8 @@ if (
       Alert.alert(
         acknowledged ? "Thank You! 🙏" : "Recorded — Awaiting Acknowledgment",
         acknowledged
-          ? `GH₵ ${finalAmount} ${selectedCategory} recorded and acknowledged.`
-          : `GH₵ ${finalAmount} ${selectedCategory} has been recorded. It will appear in giving history once acknowledged by an authorized officer.`
+         ? `${currencySymbol} ${finalAmount} ${selectedCategory} recorded and acknowledged.`
+: `${currencySymbol} ${finalAmount} ${selectedCategory} has been recorded.`
       );
 
       setSelectedAmount(""); setCustomAmount(""); setNote("");
@@ -443,7 +447,7 @@ if (
 
     Alert.alert(
       "✅ Acknowledged",
-      `Donation of GH₵ ${item.amount} confirmed.`
+      `Donation of ${currencySymbol} ${item.amount} confirmed.`
     );
 
     loadHistory();
@@ -455,10 +459,16 @@ if (
   }
 };
 
-  const handleReceipt = async (item) => {
-    setGeneratingReceiptId(item.id);
-    try {
-      await generateDonationReceipt(item, churchName);
+ const handleReceipt = async (item) => {
+  setGeneratingReceiptId(item.id);
+
+  try {
+    await generateDonationReceipt(
+      item,
+      churchName,
+      activeEntity?.logo || null,
+      currencySymbol
+    );
     } catch (e) {
       Alert.alert("Error", "Could not generate receipt.");
     } finally {
@@ -582,7 +592,8 @@ navigation.navigate("ApproveDonations", {
                 Pending
               </Text>
               <Text style={styles.pendingAmountStrong}>
-                GH₵ {pendingTotal.toLocaleString()}
+                {currencySymbol} {pendingTotal.toLocaleString()}
+
               </Text>
             </View>
           </>
@@ -715,7 +726,9 @@ console.log("memberName =", memberName);
           </View>
 
           {/* AMOUNT PRESETS */}
-          <Text style={styles.label}>Amount (GH₵)</Text>
+          <Text style={styles.label}>
+  Amount ({currencySymbol})
+</Text>
           <View style={styles.amountGrid}>
             {AMOUNTS.map(amt => (
               <TouchableOpacity
@@ -859,7 +872,7 @@ console.log("memberName =", memberName);
           {finalAmount ? (
             <View style={styles.summaryBox}>
               <Text style={styles.summaryText}>
-                GH₵ <Text style={styles.summaryAmt}>{finalAmount}</Text>  ·  {selectedCategory}
+                {currencySymbol} <Text style={styles.summaryAmt}>{finalAmount}</Text>  ·  {selectedCategory}
                 {memberName ? `  ·  ${memberName}` : ""}
               </Text>
             </View>
@@ -926,7 +939,8 @@ console.log("memberName =", memberName);
               { color: cat.color }
             ]}
           >
-            GH₵ {total.toLocaleString()}
+            {currencySymbol} {total.toLocaleString()}
+
           </Text>
         </View>
       );
@@ -941,7 +955,7 @@ console.log("memberName =", memberName);
     </Text>
 
     <Text style={styles.summaryAmt}>
-      GH₵ {totalGiven.toLocaleString()}
+      {currencySymbol} {totalGiven.toLocaleString()}
     </Text>
   </View>
 )}
@@ -993,7 +1007,7 @@ console.log("memberName =", memberName);
       
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 6 }}>
-                      <Text style={[styles.historyAmt, { color: cat.color }]}>GH₵ {item.amount?.toLocaleString()}</Text>
+                      <Text style={[styles.historyAmt, { color: cat.color }]}>{currencySymbol} {item.amount?.toLocaleString()}</Text>
                       <FeatureGate
   feature={FEATURES.DONATION_RECEIPTS}
   planId={planId}
@@ -1057,11 +1071,11 @@ console.log("memberName =", memberName);
             style={styles.pendingCard}
           >
             <View style={styles.pendingCardHeader}>
-              <Text style={styles.pendingAmt}>
-                {item.donationKind === "inkind"
-                  ? `${item.quantity || 0} ${item.unit || ""}`
-                  : `GH₵ ${item.amount?.toLocaleString()}`}
-              </Text>
+             <Text style={styles.pendingAmt}>
+  {item.donationKind === "inkind"
+    ? `${item.quantity || 0} ${item.unit || ""}`
+    : `${currencySymbol} ${item.amount?.toLocaleString()}`}
+</Text>
 
               <View style={styles.pendingBadge}>
                 <Text style={styles.pendingBadgeText}>

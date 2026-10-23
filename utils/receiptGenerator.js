@@ -1,7 +1,12 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
-const buildReceiptHtml = (donation, churchName, logoUrl) => {
+const buildReceiptHtml = (
+  donation,
+  churchName,
+  logoUrl,
+  currencySymbol = "GH₵"
+) => {
   const {
     id,
     memberName,
@@ -125,10 +130,11 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${e
           <div class="title">Donation Receipt</div>
         </div>
 
-        <div class="amount-box">
-          <div class="amount">GH₵ ${Number(amount || 0).toLocaleString()}</div>
-        </div>
-
+     <div class="amount-box">
+  <div class="amount">
+    ${currencySymbol} ${Number(amount || 0).toLocaleString()}
+  </div>
+</div>
         <div class="row">
           <span class="label">Receipt ID</span>
           <span class="value">${id || "—"}</span>
@@ -211,9 +217,19 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${e
   `;
 };
 
-export const generateDonationReceipt = async (donation, churchName, logoUrl) => {
+export const generateDonationReceipt = async (
+  donation,
+  churchName,
+  logoUrl,
+  currencySymbol = "GH₵"
+) => {
   try {
-    const html = buildReceiptHtml(donation, churchName, logoUrl);
+    const html = buildReceiptHtml(
+  donation,
+  churchName,
+  logoUrl,
+  currencySymbol
+);
 
     const { uri } = await Print.printToFileAsync({ html });
 
@@ -234,11 +250,13 @@ export const generateDonationReceipt = async (donation, churchName, logoUrl) => 
 export const generateInKindReceipt = async (
   donation,
   churchName,
-  logoUrl
+  logoUrl,
+  currencySymbol = "GH₵"
 ) => {
   return generateDonationReceipt(
     donation,
     churchName,
-    logoUrl
+    logoUrl,
+    currencySymbol
   );
 };

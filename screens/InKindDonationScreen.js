@@ -23,6 +23,8 @@ import {
   formatDate,
   todayDisplayDate,
 } from "../utils/dateUtils";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 export default function InKindDonationScreen({ route }) {
   const navigation = useNavigation();
@@ -45,6 +47,10 @@ export default function InKindDonationScreen({ route }) {
   const organizationId = activeEntity?.organizationId;
   const entityId       = activeEntity?.entityId;
   const churchName     = activeEntity?.name || "Church";
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
+
 
   // ── ITEM DETAILS ──
   const [category,    setCategory]    = useState(null);
@@ -198,10 +204,7 @@ const [dateReceived, setDateReceived] = useState(
       Alert.alert("Required", "Enter a valid quantity.");
       return;
     }
-    // FIX: estimatedValue went through the same Number() conversion as
-    // quantity but had no validation — a stray non-numeric paste stored
-    // NaN, which then poisoned totalEstimated ("GH₵NaN") for every
-    // subsequent acknowledged item.
+   
     if (estimatedValue && (isNaN(Number(estimatedValue)) || Number(estimatedValue) < 0)) {
       Alert.alert("Invalid Value", "Estimated value must be a valid number.");
       return;
@@ -367,10 +370,12 @@ try {
   try {
     console.log("RECORD:", record);
 
-    await generateInKindReceipt(
-      record,
-      churchName
-    );
+   await generateInKindReceipt(
+  record,
+  churchName,
+  activeEntity?.logo || null,
+  currencySymbol
+);
 
   } catch (e) {
     console.log("PDF ERROR:", e);
@@ -444,7 +449,9 @@ try {
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: "#27ae60", fontSize: 13 }]}>
-            {totalEstimated > 0 ? `GH₵${totalEstimated.toLocaleString()}` : "—"}
+            {totalEstimated > 0
+  ? `${currencySymbol}${totalEstimated.toLocaleString()}`
+  : "—"}
           </Text>
           <Text style={styles.summaryLabel}>Est. Value</Text>
         </View>
@@ -580,7 +587,9 @@ try {
           </View>
 
           {/* ESTIMATED VALUE */}
-          <Text style={styles.sectionLabel}>Estimated Value (GH₵, optional)</Text>
+          <Text style={styles.sectionLabel}>
+  Estimated Value ({currencySymbol}, optional)
+</Text>
           <TextInput
             style={styles.input}
             placeholder="Market value estimate — for records only"
@@ -814,7 +823,9 @@ try {
                 <Text style={styles.previewTitle}>{quantity} {unit} of {itemName}</Text>
                 <Text style={styles.previewSub}>
                   {CONDITION_OPTIONS.find(c => c.key === condition)?.label}
-                  {estimatedValue ? `  ·  Est. GH₵${Number(estimatedValue).toLocaleString()}` : ""}
+                  {estimatedValue
+  ? `  ·  Est. ${currencySymbol}${Number(estimatedValue).toLocaleString()}`
+  : ""}
                 </Text>
         {donors.length > 0 && (
   <Text style={styles.previewDonors}>
@@ -854,11 +865,12 @@ try {
           ) : (
             acknowledgedItems.map(item => (
               <InKindCard
-                key={item.id}
-                item={item}
-                onReceipt={() => handlePDF(item)}
-                generatingPDF={generatingPDF}
-              />
+  key={item.id}
+  item={item}
+  onReceipt={() => handlePDF(item)}
+  generatingPDF={generatingPDF}
+  currencySymbol={currencySymbol}
+/>
             ))
           )}
         </ScrollView>
@@ -875,14 +887,15 @@ try {
             </View>
           ) : (
             pendingItems.map(item => (
-              <InKindCard
-                key={item.id}
-                item={item}
-                onAcknowledge={() => acknowledge(item)}
-                onReceipt={() => handlePDF(item)}
-                generatingPDF={generatingPDF}
-                showAcknowledge
-              />
+             <InKindCard
+  key={item.id}
+  item={item}
+  onAcknowledge={() => acknowledge(item)}
+  onReceipt={() => handlePDF(item)}
+  generatingPDF={generatingPDF}
+  showAcknowledge
+  currencySymbol={currencySymbol}
+/>
             ))
           )}
         </ScrollView>
@@ -996,7 +1009,14 @@ try {
 // ─────────────────────────────────────────────────────────────────
 // IN-KIND CARD
 // ─────────────────────────────────────────────────────────────────
-function InKindCard({ item, onAcknowledge, onReceipt, generatingPDF, showAcknowledge }) {
+function InKindCard({
+  item,
+  onAcknowledge,
+  onReceipt,
+  generatingPDF,
+  showAcknowledge,
+  currencySymbol,
+}) {
   const cat = findCategory(item.categoryKey);
   const cond = CONDITION_OPTIONS.find(c => c.key === item.condition);
 
@@ -1015,8 +1035,8 @@ function InKindCard({ item, onAcknowledge, onReceipt, generatingPDF, showAcknowl
           <View style={styles.ikRightCol}>
             {item.estimatedValue ? (
               <Text style={[styles.ikValue, { color: "#27ae60" }]}>
-                GH₵{Number(item.estimatedValue).toLocaleString()}
-              </Text>
+  {`${currencySymbol}${Number(item.estimatedValue).toLocaleString()}`}
+</Text>
             ) : <Text style={styles.ikValueEmpty}>No est.</Text>}
             {cond && (
               <View style={[styles.ikCondBadge, { backgroundColor: cond.color + "20" }]}>

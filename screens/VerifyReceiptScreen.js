@@ -13,12 +13,17 @@ import {
 } from "firebase/firestore";
 
 import { findMethod } from "../constants/donationMethods";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 export default function VerifyReceiptScreen({ navigation }) {
 
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
 
   // ✅ FIXED: was useState for hasPermission + the old, removed
   // Camera.requestCameraPermissionsAsync() API. useCameraPermissions is
@@ -144,7 +149,9 @@ export default function VerifyReceiptScreen({ navigation }) {
 
       <View style={styles.totalBanner}>
         <Text style={styles.totalLabel}>Total Received</Text>
-        <Text style={styles.totalAmt}>GH₵ {totalReceived.toLocaleString()}</Text>
+        <Text style={styles.totalAmt}>
+  {currencySymbol} {totalReceived.toLocaleString()}
+</Text>
         <Text style={styles.totalCount}>{donations.length} acknowledged donation{donations.length !== 1 ? "s" : ""}</Text>
       </View>
 
@@ -176,7 +183,9 @@ export default function VerifyReceiptScreen({ navigation }) {
                     </Text>
                   )}
                 </View>
-                <Text style={styles.donationAmt}>GH₵ {item.amount?.toLocaleString()}</Text>
+                <Text style={styles.donationAmt}>
+  {currencySymbol} {item.amount?.toLocaleString()}
+</Text>
               </View>
             );
           })}
@@ -231,7 +240,9 @@ export default function VerifyReceiptScreen({ navigation }) {
                   {result.valid && (
                     <>
                       <Text style={styles.resultRow}>Member: {result.data.memberName}</Text>
-                      <Text style={styles.resultRow}>Amount: GH₵ {result.data.amount}</Text>
+                      <Text style={styles.resultRow}>
+  Amount: {currencySymbol} {result.data.amount}
+</Text>
                       <Text style={styles.resultRow}>Type: {result.data.type}</Text>
                       <Text style={styles.resultRow}>Date: {result.data.date}</Text>
                       <Text style={styles.resultRow}>

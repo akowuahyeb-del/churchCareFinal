@@ -9,6 +9,8 @@ import {
   collection, query, where, onSnapshot,
   doc, updateDoc
 } from "firebase/firestore";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 export default function ApproveDonationsScreen({ route, navigation }) {
   const {
@@ -23,6 +25,10 @@ export default function ApproveDonationsScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState([]);
   const [pendingInKind, setPendingInKind] = useState([]);
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
+
 
 useEffect(() => {
   if (!organizationId || !entityId) return;
@@ -207,8 +213,8 @@ const approveInKindDonation = async (item) => {
 
               <View style={styles.row}>
                 <Text style={styles.amount}>
-                  GH₵ {item.amount}
-                </Text>
+  {currencySymbol} {item.amount}
+</Text>
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>Pending</Text>
                 </View>

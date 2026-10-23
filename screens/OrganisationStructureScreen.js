@@ -10,12 +10,18 @@ import { useNavigation } from "@react-navigation/native";
 import AppHeader from "../components/AppHeader";
 import { useOrganizationHierarchy } from "../hooks/useOrganizationHierarchy";
 import { getTemplate, getLevelById } from "../constants/organizationTemplates";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
+``
 
 export default function OrganisationStructureScreen() {
   const navigation = useNavigation();
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
 
   useEffect(() => {
     AsyncStorage.getItem("activeEntity").then(data => {
@@ -109,12 +115,13 @@ export default function OrganisationStructureScreen() {
 
         {/* ── INTELLIGENCE: AGGREGATED STATS ── */}
         {isConfigured && aggregates && (
-          <AggregatesCard
-            aggregates={aggregates}
-            currentLevel={currentLevel}
-            isTopLevel={isTopLevel}
-            isBottomLevel={isBottomLevel}
-          />
+         <AggregatesCard
+  aggregates={aggregates}
+  currentLevel={currentLevel}
+  isTopLevel={isTopLevel}
+  isBottomLevel={isBottomLevel}
+  currencySymbol={currencySymbol}
+/>
         )}
 
         {/* ── SIBLINGS ── */}
@@ -296,7 +303,13 @@ function CurrentNodeCard({ currentNode, currentLevel, parentLevel, childLevel, a
    A District sees the combined members/attendance/finance of
    ALL its Congregations, not just its own entity.
 ────────────────────────────────────────────────────────────── */
-function AggregatesCard({ aggregates, currentLevel, isTopLevel, isBottomLevel }) {
+function AggregatesCard({
+  aggregates,
+  currentLevel,
+  isTopLevel,
+  isBottomLevel,
+  currencySymbol,
+}) {
   const scope = isBottomLevel ? "This congregation" : `All ${aggregates.entityCount} entities below`;
 
   return (
@@ -325,7 +338,7 @@ function AggregatesCard({ aggregates, currentLevel, isTopLevel, isBottomLevel })
         <StatPill icon="people-outline"   color="#4B3F72" label="Members"   value={aggregates.totalMembers.toLocaleString()} />
         <StatPill icon="calendar-outline" color="#0984E3" label="Sessions"  value={aggregates.totalSessions.toLocaleString()} />
         <StatPill icon="trending-up-outline" color="#27ae60" label="Avg Rate" value={aggregates.avgAttendanceRate !== null ? `${aggregates.avgAttendanceRate}%` : "—"} />
-        <StatPill icon="wallet-outline"   color="#E17055" label="Total Given" value={`GH₵${aggregates.totalGiven.toLocaleString()}`} />
+        <StatPill icon="wallet-outline"   color="#E17055" label="Total Given" value={`${currencySymbol}${aggregates.totalGiven.toLocaleString()}`} />
       </View>
     </View>
   );
