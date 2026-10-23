@@ -16,7 +16,6 @@ import {
   query,
   orderBy,
   serverTimestamp,
-  getDoc,
   doc,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -29,6 +28,8 @@ import {
 import {
   useSubscription,
 } from "../utils/subscription";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
 
 
 
@@ -93,61 +94,17 @@ const TABS = [
 
 export default function AdminFinanceScreen() {
   const navigation = useNavigation();
+  
+  const {
+  currencySymbol,
+} = useOrganizationCurrency();
+
   const [activeEntity, setActiveEntity] =
   useState(null);
   const [currentUser, setCurrentUser] =
   useState(null);
-  const [currencySymbol, setCurrencySymbol] =
-  useState("GH₵");
+  
 
-  useEffect(() => {
-
-  const loadCurrency = async () => {
-
-    try {
-
-      const stored =
-        await AsyncStorage.getItem(
-          "currentUser"
-        );
-
-      if (!stored) return;
-
-      const user =
-        JSON.parse(stored);
-
-      if (!user?.organizationId) return;
-
-      const orgSnap = await getDoc(
-        doc(
-          db,
-          "organizations",
-          user.organizationId
-        )
-      );
-
-      if (!orgSnap.exists()) return;
-
-      const org =
-        orgSnap.data();
-
-      setCurrencySymbol(
-        org.currencySymbol || "GH₵"
-      );
-
-    } catch (e) {
-
-      console.log(
-        "Finance currency load failed",
-        e
-      );
-
-    }
-  };
-
-  loadCurrency();
-
-}, []);
 
   useEffect(() => {
 
@@ -854,10 +811,17 @@ if (
                 <Text style={styles.reportSub}>{TODAY.toLocaleString("default",{month:"long"})} {TODAY.getFullYear()}</Text>
               </View>
 
-              <ReportSection title="INCOME" color="#00B894" accounts={COA.Income.accounts}
-                balances={balances} getBalance={accountBalance} total={totalIncome} />
+             <ReportSection
+  title="INCOME"
+  color="#00B894"
+  accounts={COA.Income.accounts}
+  balances={balances}
+  getBalance={accountBalance}
+  total={totalIncome}
+  currencySymbol={currencySymbol}
+/>
               <ReportSection title="EXPENSES" color="#E17055" accounts={COA.Expenses.accounts}
-                balances={balances} getBalance={accountBalance} total={totalExpenses} />
+                balances={balances} getBalance={accountBalance} total={totalExpenses}   currencySymbol={currencySymbol} />
 
               <View style={[styles.netRow, { backgroundColor: netProfit >= 0 ? "#e8fbf5" : "#fdecea" }]}>
                 <Text style={styles.netLabel}>NET {netProfit >= 0 ? "PROFIT" : "LOSS"}</Text>
@@ -885,11 +849,11 @@ if (
               </View>
 
               <ReportSection title="ASSETS" color="#0984E3" accounts={COA.Assets.accounts}
-                balances={balances} getBalance={accountBalance} total={totalAssets} />
+                balances={balances} getBalance={accountBalance} total={totalAssets}   currencySymbol={currencySymbol} />
               <ReportSection title="LIABILITIES" color="#D63031" accounts={COA.Liabilities.accounts}
-                balances={balances} getBalance={accountBalance} total={totalLiab} />
+                balances={balances} getBalance={accountBalance} total={totalLiab}   currencySymbol={currencySymbol}/>
               <ReportSection title="EQUITY" color="#6C5CE7" accounts={COA.Equity.accounts}
-                balances={balances} getBalance={accountBalance} total={totalEquity} />
+                balances={balances} getBalance={accountBalance} total={totalEquity}  currencySymbol={currencySymbol} />
 
               <View style={[styles.netRow, { backgroundColor: Math.abs(totalAssets - (totalLiab + totalEquity)) < 1 ? "#e8fbf5" : "#fdecea" }]}>
                 <Text style={styles.netLabel}>Assets = Liabilities + Equity</Text>
@@ -960,7 +924,7 @@ if (
                       <View style={styles.coaDot} />
                       <Text style={styles.coaAccount}>{a}</Text>
                       <Text style={[styles.coaBal, { color: accountBalance(a) > 0 ? color : "#bbb" }]}>
-                        {accountBalance(a) > 0 ? `{currencySymbol}${fmt(accountBalance(a))}` : "—"}
+                        {accountBalance(a) > 0? `${currencySymbol}${fmt(accountBalance(a))}`:"—"}
                       </Text>
                     </View>
                   ))}
@@ -987,9 +951,9 @@ if (
       </View>
 
       <View style={styles.aiSummaryRow}>
-        <AiMetric label="Income" value={`{currencySymbol}${fmt(totalIncome)}`} color="#00B894" />
-        <AiMetric label="Expenses" value={`{currencySymbol}${fmt(totalExpenses)}`} color="#E17055" />
-        <AiMetric label="Profit" value={`{currencySymbol}${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
+        <AiMetric label="Income" value={`${currencySymbol}${fmt(totalIncome)}`} color="#00B894" />
+        <AiMetric label="Expenses" value={`${currencySymbol}${fmt(totalExpenses)}`} color="#E17055" />
+        <AiMetric label="Profit" value={`${currencySymbol}${fmt(netProfit)}`} color={netProfit>=0?"#00B894":"#D63031"} />
       </View>
 
       <TouchableOpacity style={styles.aiBtn} onPress={generateAiInsight} disabled={aiLoading}>
@@ -1133,8 +1097,14 @@ const SectionCard = ({ title, icon, color, children }) => (
     {children}
   </View>
 );
-
-const ReportSection = ({ title, color, accounts, getBalance, total }) => (
+const ReportSection = ({
+  title,
+  color,
+  accounts,
+  getBalance,
+  total,
+  currencySymbol,
+}) => (
   <View style={[styles.reportSection, { borderLeftColor: color }]}>
     <Text style={[styles.reportSectionTitle, { color }]}>{title}</Text>
     {accounts.filter(a => getBalance(a) > 0).map(a => (
