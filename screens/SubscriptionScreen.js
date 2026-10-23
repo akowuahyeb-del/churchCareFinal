@@ -32,7 +32,9 @@ import {
 import { db } from "../firebase";
 import useOrganizationCurrency
   from "../hooks/useOrganizationCurrency";
-
+import {
+  formatConvertedAmount,
+} from "../utils/currencyConversion";
 
 const STATUS_COLOR = {
   trialing: "#0984E3",
@@ -97,6 +99,7 @@ export default function SubscriptionScreen({ route }) {
   currencySymbol,
   currencyCode,
   pricingRegion,
+  exchangeRates,
 } = useOrganizationCurrency();
   
   const [activeEntity, setActiveEntity] = useState(null);
@@ -634,10 +637,18 @@ if (!existing.empty) {
               </Text>
             </View>
           )}
-
-          <Text style={styles.planPrice}>
-            {plan.price === null ? "Custom pricing" : plan.price === 0 ? "Free" : `${currencySymbol} ${plan.price}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
-          </Text>
+<Text style={styles.planPrice}>
+  {plan.price === null
+    ? "Custom pricing"
+    : plan.price === 0
+    ? "Free"
+    : `${formatConvertedAmount(
+        plan.price,
+        currencyCode,
+        currencySymbol,
+        exchangeRates
+      )}/${plan.billingCycle === "monthly" ? "mo" : "yr"}`}
+</Text>
           {subscription?.currentPeriodStart && (
   <DetailRow
     label="Subscription Started"
@@ -852,9 +863,13 @@ if (!existing.empty) {
         </Text>
 
         <Text style={styles.addonPrice}>
-          {currencySymbol} {pkg.price}
-
-        </Text>
+  {formatConvertedAmount(
+    pkg.price,
+    currencyCode,
+    currencySymbol,
+    exchangeRates
+  )}
+</Text>
       </TouchableOpacity>
     ))}
 
@@ -884,8 +899,13 @@ if (!existing.empty) {
           +{pkg.qty} Admins
         </Text>
 
-        <Text style={styles.addonPrice}>
-  {currencySymbol} {pkg.price}
+       <Text style={styles.addonPrice}>
+  {formatConvertedAmount(
+    pkg.price,
+    currencyCode,
+    currencySymbol,
+    exchangeRates
+  )}
 </Text>
       </TouchableOpacity>
     ))}
@@ -932,7 +952,12 @@ const p = override
     ? "Custom"
     : p.price === 0
     ? "Free"
-    : `${currencySymbol}${p.price}`}
+    : formatConvertedAmount(
+        p.price,
+        currencyCode,
+        currencySymbol,
+        exchangeRates
+      )}
 
   {p.price ? (
     <Text style={styles.planRowCycle}>
