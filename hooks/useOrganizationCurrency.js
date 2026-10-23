@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 export default function useOrganizationCurrency() {
@@ -61,10 +65,45 @@ export default function useOrganizationCurrency() {
   );
 
 if (settingsSnap.exists()) {
-  setExchangeRates(
-    settingsSnap.data()
-      .exchangeRates || {}
-  );
+
+  const settings =
+    settingsSnap.data();
+
+  if (!settings.exchangeRates) {
+
+    const defaults = {
+      GHS: 1,
+      NGN: 115,
+      KES: 14.2,
+      USD: 0.083,
+      GBP: 0.067,
+      EUR: 0.078,
+    };
+
+    await setDoc(
+      doc(
+        db,
+        "platform",
+        "subscriptionSettings"
+      ),
+      {
+        exchangeRates: defaults,
+        baseCurrency: "GHS",
+      },
+      {
+        merge: true,
+      }
+    );
+
+    setExchangeRates(defaults);
+
+  } else {
+
+    setExchangeRates(
+      settings.exchangeRates
+    );
+
+  }
 }
 
         setCurrencySymbol(

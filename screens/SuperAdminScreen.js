@@ -116,6 +116,12 @@ const reinstateOrganization =
   const [subscriptionRequests, setSubscriptionRequests] =
   useState([]);
 
+  const [memberAddons, setMemberAddons] =
+  useState([]);
+
+const [adminAddons, setAdminAddons] =
+  useState([]);
+
   const [archivedRequests, setArchivedRequests] =
   useState([]);
 
@@ -605,11 +611,50 @@ const loadSubscriptionSettings = async () => {
     }
 
    const data = snap.data();
+   let updated = false;
+
+if (!data.exchangeRates) {
+
+  data.exchangeRates = {
+    GHS: 1,
+    NGN: 115,
+    KES: 14.2,
+    USD: 0.083,
+    GBP: 0.067,
+    EUR: 0.078,
+  };
+
+  updated = true;
+}
+
+if (!data.baseCurrency) {
+
+  data.baseCurrency = "GHS";
+
+  updated = true;
+}
+
+if (updated) {
+
+  await setDoc(
+    ref,
+    data,
+    { merge: true }
+  );
+}
 
 setSubscriptionSettings(data);
 
 setPlanSettings(
   data.plans || {}
+);
+
+setMemberAddons(
+  data.memberAddons || []
+);
+
+setAdminAddons(
+  data.adminAddons || []
 );
 
   } catch (e) {
@@ -731,6 +776,41 @@ const savePlanSettings =
     }
   };
 
+
+const saveAddonSettings =
+  async () => {
+
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "platform",
+          "subscriptionSettings"
+        ),
+        {
+          memberAddons,
+          adminAddons,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        "Add-on settings updated."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not save add-ons."
+      );
+
+    }
+  };
 
 
 const approveSubscriptionRequest = async (request) => {
@@ -2753,98 +2833,169 @@ const filteredArchive =
       <>
         <View style={styles.card}>
 
-          <InfoPair
-            label="Pricing Regions"
-            value={
-              Object.keys(
-                subscriptionSettings?.pricingRegions || {}
-              ).length
-            }
-          />
+         <InfoPair
+  label="Pricing Regions"
+  value={`${
+    Object.keys(
+      subscriptionSettings?.pricingRegions || {}
+    ).length
+  } Region${
+    Object.keys(
+      subscriptionSettings?.pricingRegions || {}
+    ).length !== 1
+      ? "s"
+      : ""
+  }`}
+/>
 
-          <InfoPair
-            label="Member Packages"
-            value={
-              subscriptionSettings?.memberAddons
-                ?.length || 0
-            }
-          />
+<InfoPair
+  label="Member Packages"
+  value={`${
+    subscriptionSettings?.memberAddons
+      ?.length || 0
+  } Package${
+    (subscriptionSettings?.memberAddons
+      ?.length || 0) !== 1
+      ? "s"
+      : ""
+  }`}
+/>
 
-          <InfoPair
-            label="Admin Packages"
-            value={
-              subscriptionSettings?.adminAddons
-                ?.length || 0
-            }
-          />
+<InfoPair
+  label="Admin Packages"
+  value={`${
+    subscriptionSettings?.adminAddons
+      ?.length || 0
+  } Package${
+    (subscriptionSettings?.adminAddons
+      ?.length || 0) !== 1
+      ? "s"
+      : ""
+  }`}
+/>
 
         </View>
 
-        <Text style={styles.sectionTitle}>
-          Member Add-ons
-        </Text>
-
-        {(subscriptionSettings?.memberAddons || [])
-          .map(pkg => (
-
-          <View
-            key={pkg.id}
-            style={styles.orgCard}
-          >
-            <InfoPair
-              label="Quantity"
-              value={pkg.qty}
-            />
-
-            <InfoPair
-              label="Price"
-              value={pkg.price}
-            />
-
-            <InfoPair
-              label="Active"
-              value={
-                pkg.active
-                  ? "Yes"
-                  : "No"
-              }
-            />
-          </View>
-
-        ))}
-
        <Text style={styles.sectionTitle}>
-  Admin Add-ons
+  Member Add-ons
 </Text>
 
-{(subscriptionSettings?.adminAddons || [])
-  .map(pkg => (
+{memberAddons.map((pkg, index) => (
 
   <View
     key={pkg.id}
     style={styles.orgCard}
   >
-    <InfoPair
-      label="Quantity"
-      value={pkg.qty}
+
+    <Text style={styles.fieldLabel}>
+      Quantity
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(pkg.qty)}
+      onChangeText={(v) => {
+
+        const copy = [...memberAddons];
+
+        copy[index].qty =
+          Number(v) || 0;
+
+        setMemberAddons(copy);
+
+      }}
     />
 
-    <InfoPair
-      label="Price"
-      value={pkg.price}
+    <Text style={styles.fieldLabel}>
+      Price
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(pkg.price)}
+      onChangeText={(v) => {
+
+        const copy = [...memberAddons];
+
+        copy[index].price =
+          Number(v) || 0;
+
+        setMemberAddons(copy);
+
+      }}
     />
 
-    <InfoPair
-      label="Active"
-      value={
-        pkg.active
-          ? "Yes"
-          : "No"
-      }
-    />
   </View>
 
 ))}
+
+<Text style={styles.sectionTitle}>
+  Admin Add-ons
+</Text>
+
+{adminAddons.map((pkg, index) => (
+
+  <View
+    key={pkg.id}
+    style={styles.orgCard}
+  >
+
+    <Text style={styles.fieldLabel}>
+      Quantity
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(pkg.qty)}
+      onChangeText={(v) => {
+
+        const copy = [...adminAddons];
+
+        copy[index].qty =
+          Number(v) || 0;
+
+        setAdminAddons(copy);
+
+      }}
+    />
+
+    <Text style={styles.fieldLabel}>
+      Price
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(pkg.price)}
+      onChangeText={(v) => {
+
+        const copy = [...adminAddons];
+
+        copy[index].price =
+          Number(v) || 0;
+
+        setAdminAddons(copy);
+
+      }}
+    />
+
+  </View>
+
+))}
+
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={saveAddonSettings}
+>
+  <Text style={styles.white}>
+    Save Add-on Settings
+  </Text>
+</TouchableOpacity>
+
+
 
 <Text style={styles.sectionTitle}>
   Plan Limits & Pricing
@@ -4107,20 +4258,27 @@ const styles = StyleSheet.create({
   infoBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10, marginBottom: 12 },
   infoBoxText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
 
-  infoPairRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" },
+  infoPairRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 8,
+  paddingHorizontal: 4,
+  borderBottomWidth: 1,
+  borderBottomColor: "rgba(255,255,255,0.08)",
+},
  infoPairLabel: {
   fontSize: 11,
   color: "#666",
   fontWeight: "600",
 },
   infoPairValue: {
-  fontSize: 11,
-  color: "#222",
+  fontSize: 12,
+  color: "#FFF",
   fontWeight: "700",
-  flex: 1,
-  textAlign: "right",
-  marginLeft: 10,
 },
+
+
 
   miniStat: { flex: 1, alignItems: "center" },
   miniStatValue: {

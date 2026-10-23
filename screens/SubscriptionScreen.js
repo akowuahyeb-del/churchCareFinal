@@ -24,6 +24,7 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -56,42 +57,6 @@ const FEATURE_LABELS = {
   priority_support: "Priority Support",
 };
 
-const MEMBER_ADDON_PACKAGES = [
-  {
-    id: "member50",
-    qty: 50,
-    price: 10,
-  },
-  {
-    id: "member100",
-    qty: 100,
-    price: 18,
-  },
-  {
-    id: "member500",
-    qty: 500,
-    price: 75,
-  },
-];
-
-const ADMIN_ADDON_PACKAGES = [
-  {
-    id: "admin1",
-    qty: 1,
-    price: 5,
-  },
-  {
-    id: "admin2",
-    qty: 2,
-    price: 9,
-  },
-  {
-    id: "admin5",
-    qty: 5,
-    price: 20,
-  },
-];
-
 
 export default function SubscriptionScreen({ route }) {
   const navigation = useNavigation();
@@ -101,7 +66,10 @@ export default function SubscriptionScreen({ route }) {
   pricingRegion,
   exchangeRates,
 } = useOrganizationCurrency();
-  
+
+
+
+
   const [activeEntity, setActiveEntity] = useState(null);
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
@@ -118,17 +86,12 @@ const canManageBilling =
     "manage_church_settings"
   );
 
-console.log(
-  "viewerPermissions",
-  viewerPermissions
-);
+  const [upgrading, setUpgrading] = useState(null); 
+  const [memberAddons, setMemberAddons] =
+  useState([]);
 
-console.log(
-  "canManageBilling",
-  canManageBilling
-);
-
-  const [upgrading, setUpgrading] = useState(null); // planId currently checking out
+const [adminAddons, setAdminAddons] =
+  useState([]);
   
 
 useEffect(() => {
@@ -163,11 +126,35 @@ useEffect(() => {
 
       } catch (_) {}
     }
+    const settingsSnap =
+  await getDoc(
+    doc(
+      db,
+      "platform",
+      "subscriptionSettings"
+    )
+  );
+
+if (settingsSnap.exists()) {
+
+  const settings =
+    settingsSnap.data();
+
+  setMemberAddons(
+    settings.memberAddons || []
+  );
+
+  setAdminAddons(
+    settings.adminAddons || []
+  );
+}
   };
 
   loadData();
 
 }, []);
+
+
 
   const {
     subscription, plan, planOverrides,planId, status, isActive, isTrialExpired,
@@ -847,7 +834,7 @@ if (!existing.empty) {
       Member Add-ons
     </Text>
 
-    {MEMBER_ADDON_PACKAGES.map(pkg => (
+    {memberAddons.map(pkg => (
       <TouchableOpacity
         key={pkg.id}
         style={styles.addonBtn}
@@ -884,7 +871,7 @@ if (!existing.empty) {
       Admin Add-ons
     </Text>
 
-    {ADMIN_ADDON_PACKAGES.map(pkg => (
+    {adminAddons.map(pkg => (
       <TouchableOpacity
         key={pkg.id}
         style={styles.addonBtn}
