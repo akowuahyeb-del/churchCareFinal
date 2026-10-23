@@ -27,10 +27,12 @@ import {
   getDocs,
   query,
   where,
-  getDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+import useOrganizationCurrency
+  from "../hooks/useOrganizationCurrency";
+
 
 const STATUS_COLOR = {
   trialing: "#0984E3",
@@ -91,12 +93,13 @@ const ADMIN_ADDON_PACKAGES = [
 
 export default function SubscriptionScreen({ route }) {
   const navigation = useNavigation();
+  const {
+  currencySymbol,
+  currencyCode,
+  pricingRegion,
+} = useOrganizationCurrency();
+  
   const [activeEntity, setActiveEntity] = useState(null);
-  const [currencySymbol, setCurrencySymbol] =
-  useState("GH₵");
-
-const [currencyCode, setCurrencyCode] =
-  useState("GHS");
   const organizationId = activeEntity?.organizationId;
   const entityId = activeEntity?.entityId;
 
@@ -139,34 +142,7 @@ useEffect(() => {
         setActiveEntity(
           JSON.parse(entityRaw)
         );
-        const entity =
-  JSON.parse(entityRaw);
-
-if (entity?.organizationId) {
-
-  const orgSnap =
-    await getDoc(
-      doc(
-        db,
-        "organizations",
-        entity.organizationId
-      )
-    );
-
-  if (orgSnap.exists()) {
-
-    const org =
-      orgSnap.data();
-
-    setCurrencySymbol(
-      org.currencySymbol || "GH₵"
-    );
-
-    setCurrencyCode(
-      org.currencyCode || "GHS"
-    );
-  }
-}
+   
       } catch (_) {}
     }
 
