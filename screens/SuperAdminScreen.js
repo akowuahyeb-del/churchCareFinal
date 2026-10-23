@@ -537,11 +537,22 @@ const loadSubscriptionSettings = async () => {
     if (!snap.exists()) {
 
       const defaults = {
-        pricingRegions: {
-          ghana: {
-            currency: "GHS",
-          },
-        },
+  baseCurrency: "GHS",
+
+  exchangeRates: {
+    GHS: 1,
+    NGN: 115,
+    KES: 14.2,
+    USD: 0.083,
+    GBP: 0.067,
+    EUR: 0.078,
+  },
+
+  pricingRegions: {
+    ghana: {
+      currency: "GHS",
+    },
+  },
 
         memberAddons: [
           {

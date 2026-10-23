@@ -14,6 +14,9 @@ export default function useOrganizationCurrency() {
   const [pricingRegion, setPricingRegion] =
     useState("ghana");
 
+    const [exchangeRates, setExchangeRates] =
+  useState({});
+
   useEffect(() => {
 
     const load = async () => {
@@ -48,6 +51,22 @@ export default function useOrganizationCurrency() {
         const org =
           snap.data();
 
+          const settingsSnap =
+  await getDoc(
+    doc(
+      db,
+      "platform",
+      "subscriptionSettings"
+    )
+  );
+
+if (settingsSnap.exists()) {
+  setExchangeRates(
+    settingsSnap.data()
+      .exchangeRates || {}
+  );
+}
+
         setCurrencySymbol(
           org.currencySymbol ||
           "GH₵"
@@ -77,9 +96,10 @@ export default function useOrganizationCurrency() {
 
   }, []);
 
-  return {
-    currencySymbol,
-    currencyCode,
-    pricingRegion,
-  };
+ return {
+  currencySymbol,
+  currencyCode,
+  pricingRegion,
+  exchangeRates,
+};
 }
