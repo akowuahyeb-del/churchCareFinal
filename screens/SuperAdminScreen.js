@@ -113,6 +113,8 @@ const reinstateOrganization =
   useState(null);
   const [planSettings, setPlanSettings] =
   useState({});
+  const [exchangeRates, setExchangeRates] =
+  useState({});
   const [subscriptionRequests, setSubscriptionRequests] =
   useState([]);
 
@@ -656,6 +658,9 @@ setMemberAddons(
 setAdminAddons(
   data.adminAddons || []
 );
+setExchangeRates(
+  data.exchangeRates || {}
+);
 
   } catch (e) {
 
@@ -811,6 +816,40 @@ const saveAddonSettings =
 
     }
   };
+const saveExchangeRates =
+  async () => {
+
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "platform",
+          "subscriptionSettings"
+        ),
+        {
+          exchangeRates,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        "Exchange rates updated."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not save exchange rates."
+      );
+
+    }
+  };
+
 
 
 const approveSubscriptionRequest = async (request) => {
@@ -2873,10 +2912,54 @@ const filteredArchive =
       : ""
   }`}
 />
+</View>
 
-        </View>
+<Text style={styles.sectionTitle}>
+  Exchange Rates
+</Text>
 
-       <Text style={styles.sectionTitle}>
+{Object.entries(
+  exchangeRates || {}
+).map(([currency, rate]) => (
+
+  <View
+    key={currency}
+    style={styles.orgCard}
+  >
+
+    <Text style={styles.fieldLabel}>
+      {currency}
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(rate)}
+      onChangeText={(v) => {
+
+        setExchangeRates(prev => ({
+          ...prev,
+          [currency]:
+            Number(v) || 0,
+        }));
+
+      }}
+    />
+
+  </View>
+
+))}
+
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={saveExchangeRates}
+>
+  <Text style={styles.white}>
+    Save Exchange Rates
+  </Text>
+</TouchableOpacity>
+
+<Text style={styles.sectionTitle}>
   Member Add-ons
 </Text>
 
