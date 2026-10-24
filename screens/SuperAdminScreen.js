@@ -113,6 +113,8 @@ const reinstateOrganization =
   useState(null);
   const [planSettings, setPlanSettings] =
   useState({});
+  const [exchangeRates, setExchangeRates] =
+  useState({});
   const [subscriptionRequests, setSubscriptionRequests] =
   useState([]);
 
@@ -610,6 +612,16 @@ setSubscriptionSettings(data);
 
 setPlanSettings(
   data.plans || {}
+);
+setExchangeRates(
+  data.exchangeRates || {}
+);
+setMemberAddons(
+  data.memberAddons || []
+);
+
+setAdminAddons(
+  data.adminAddons || []
 );
 
   } catch (e) {
@@ -1133,7 +1145,39 @@ await deleteDoc(
 
 }
 };
+const saveExchangeRates =
+  async () => {
 
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "platform",
+          "subscriptionSettings"
+        ),
+        {
+          exchangeRates,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        "Exchange rates updated."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not save exchange rates."
+      );
+
+    }
+  };
 
   // ─────────────────────────────────────────────────────────────────
   // APPROVE CHURCH — same logic as ApprovalScreen, centralized here
@@ -2779,6 +2823,50 @@ const filteredArchive =
           />
 
         </View>
+
+        <Text style={styles.sectionTitle}>
+  Exchange Rates
+</Text>
+
+{Object.entries(
+  exchangeRates || {}
+).map(([currency, rate]) => (
+
+  <View
+    key={currency}
+    style={styles.orgCard}
+  >
+
+    <Text style={styles.fieldLabel}>
+      {currency}
+    </Text>
+
+    <TextInput
+      style={styles.input}
+      keyboardType="numeric"
+      value={String(rate)}
+      onChangeText={(v) => {
+
+        setExchangeRates(prev => ({
+          ...prev,
+          [currency]:
+            Number(v) || 0,
+        }));
+
+      }}
+    />
+
+  </View>
+
+))}
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={saveExchangeRates}
+>
+  <Text style={styles.white}>
+    Save Exchange Rates
+  </Text>
+</TouchableOpacity>
 
         <Text style={styles.sectionTitle}>
           Member Add-ons
