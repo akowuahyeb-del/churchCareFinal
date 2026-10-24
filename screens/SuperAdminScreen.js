@@ -238,7 +238,7 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
     };
   }, []);
 
- useEffect(() => {
+useEffect(() => {
 
   const unsub = onSnapshot(
     query(
@@ -256,7 +256,8 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
         "desc"
       )
     ),
-    snap => {
+
+    (snap) => {
 
       const requests =
         snap.docs.map(d => ({
@@ -266,6 +267,15 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
 
       setSubscriptionRequests(
         requests
+      );
+
+    },
+
+    (error) => {
+
+      console.log(
+        "❌ subscriptionRequests listener:",
+        error
       );
 
     }
@@ -3047,24 +3057,30 @@ const filteredArchive =
     marginBottom: 12,
   }}
 >
-  <Text
-    style={{
-      color: "#ddd",
-      fontWeight: "700",
-    }}
-  >
-    Active
-  </Text>
+ <Text
+  style={{
+    color: pkg.active
+      ? "#27ae60"
+      : "#e74c3c",
+    fontWeight: "700",
+  }}
+>
+  {pkg.active
+    ? "Active"
+    : "Inactive"}
+</Text>
 
   <Switch
     value={pkg.active}
     onValueChange={(v) => {
 
-      const copy = [...memberAddons];
-
-      copy[index].active = v;
-
-      setMemberAddons(copy);
+     setMemberAddons(prev =>
+  prev.map((item, i) =>
+    i === index
+      ? { ...item, active: v }
+      : item
+  )
+);
 
     }}
   />
@@ -3097,11 +3113,10 @@ const filteredArchive =
   style={styles.rejectBtn}
   onPress={() => {
 
-    setMemberAddons(
-      memberAddons.filter(
-        (_, i) => i !== index
-      )
-    );
+    setMemberAddons(prev =>
+  prev.filter((_, i) => i !== index)
+);
+
 
   }}
 >
@@ -3155,14 +3170,15 @@ const filteredArchive =
       value={String(pkg.qty)}
       onChangeText={(v) => {
 
-        const copy = [...adminAddons];
+  const copy = [...adminAddons];
 
-        copy[index].qty =
-          Number(v) || 0;
+  copy[index].qty =
+    Number(v) || 0;
 
-        setAdminAddons(copy);
+  setAdminAddons(copy);
 
-      }}
+}}
+
     />
 
     <Text style={styles.fieldLabel}>
@@ -3196,22 +3212,28 @@ const filteredArchive =
 >
   <Text
     style={{
-      color: "#ddd",
+      color: pkg.active
+        ? "#27ae60"
+        : "#e74c3c",
       fontWeight: "700",
     }}
   >
-    Active
+    {pkg.active
+      ? "Active"
+      : "Inactive"}
   </Text>
 
   <Switch
     value={pkg.active}
     onValueChange={(v) => {
 
-      const copy = [...adminAddons];
-
-      copy[index].active = v;
-
-      setAdminAddons(copy);
+      setAdminAddons(prev =>
+        prev.map((item, i) =>
+          i === index
+            ? { ...item, active: v }
+            : item
+        )
+      );
 
     }}
   />
@@ -3221,11 +3243,9 @@ const filteredArchive =
   style={styles.rejectBtn}
   onPress={() => {
 
-    setAdminAddons(
-      adminAddons.filter(
-        (_, i) => i !== index
-      )
-    );
+    setAdminAddons(prev =>
+  prev.filter((_, i) => i !== index)
+);
 
   }}
 >

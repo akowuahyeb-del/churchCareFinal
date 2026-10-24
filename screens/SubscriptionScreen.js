@@ -864,7 +864,9 @@ if (!existing.empty) {
       Member Add-ons
     </Text>
 
-    {memberAddons.map(pkg => (
+    {memberAddons
+  .filter(pkg => pkg.active)
+  .map(pkg => (
       <TouchableOpacity
         key={pkg.id}
         style={styles.addonBtn}
@@ -901,7 +903,9 @@ if (!existing.empty) {
       Admin Add-ons
     </Text>
 
-    {adminAddons.map(pkg => (
+    {adminAddons
+  .filter(pkg => pkg.active)
+  .map(pkg => (
       <TouchableOpacity
         key={pkg.id}
         style={styles.addonBtn}
