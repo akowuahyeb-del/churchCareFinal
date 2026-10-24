@@ -398,17 +398,32 @@ await deliverToMember({
   title:
     "Church Registration Approved ✅",
 
-  message:
-    `Congratulations ${org.adminName || ""}.
+message:
+  `Congratulations ${org.adminName || ""}.
 
 ${org.name} has been approved.
 
-Organisation Code: ${organizationCode}`,
+Organisation Code: ${organizationCode}
 
-  data: {
-    organizationName: org.name,
-    organizationCode,
-  },
+✅ ACTION REQUIRED
+
+Open ChurchCare and sign in using the email and password used during registration.
+
+You will be taken directly to Church Setup to complete onboarding.`,
+
+ data: {
+  organizationName: org.name,
+  organizationCode,
+
+  action: "claim_account",
+
+  memberCode:
+    adminMember.memberCode,
+
+  organizationId,
+  entityId,
+},
+
 });
 
 
@@ -453,10 +468,18 @@ try {
       subject:
         "Church Registration Approved ✅",
 
-      body:
-        `The registration for ${org.name} has been approved and activated.\n\n` +
-        `Organisation Code: ${organizationCode}\n\n` +
-        `The church administrator may now continue onboarding and church setup.`,
+     body:
+  `Congratulations.
+
+The registration for ${org.name} has been approved and activated.
+
+Organisation Code: ${organizationCode}
+
+ACTION REQUIRED
+
+Open ChurchCare and sign in using the registered administrator email and password.
+
+The administrator will automatically be taken to Church Setup to complete onboarding and church configuration.`,
 
       type:
         "organization_contact_approval",

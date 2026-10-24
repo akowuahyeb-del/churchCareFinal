@@ -19,7 +19,9 @@ import {
   doc,
 } from "firebase/firestore";
 
-export default function NotificationScreen() {
+export default function NotificationScreen({
+  navigation,
+}) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,23 +51,51 @@ export default function NotificationScreen() {
     return unsubscribe;
   }, []);
 
-  const markAsRead = async (notificationId) => {
-    const uid = auth.currentUser?.uid;
+ const markAsRead = async (
+  notificationId
+) => {
 
-    if (!uid) return;
+  const uid = auth.currentUser?.uid;
 
-    await updateDoc(
-      doc(
-        db,
-        "users",
-        uid,
-        "notifications",
-        notificationId
-      ),
-      {
-        read: true,
-      }
-    );
+  if (!uid) return;
+
+  await updateDoc(
+    doc(
+      db,
+      "users",
+      uid,
+      "notifications",
+      notificationId
+    ),
+    {
+      read: true,
+    }
+  );
+};
+
+const handleNotificationPress =
+  async (item) => {
+
+    await markAsRead(item.id);
+
+  if (
+  item.type ===
+  "church_approval"
+) {
+
+  navigation.navigate(
+    "ClaimAccount",
+    {
+      existingUser: true,
+
+      memberCode:
+        item?.data?.memberCode || "",
+    }
+  );
+
+  return;
+}
+
   };
 
   const renderItem = ({ item }) => (
@@ -74,7 +104,9 @@ export default function NotificationScreen() {
         styles.card,
         !item.read && styles.unreadCard
       ]}
-      onPress={() => markAsRead(item.id)}
+    onPress={() =>
+  handleNotificationPress(item)
+}
     >
       <Text style={styles.title}>
         {item.title}

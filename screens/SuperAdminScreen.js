@@ -4545,7 +4545,7 @@ const styles = StyleSheet.create({
 },
   infoPairValue: {
   fontSize: 12,
-  color: "#FFF",
+  color: "#222",
   fontWeight: "700",
 },
 
