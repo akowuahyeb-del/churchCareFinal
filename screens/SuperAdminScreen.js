@@ -786,6 +786,34 @@ const saveAddonSettings =
   async () => {
 
     try {
+      const invalidMemberPackage =
+  memberAddons.some(
+    p =>
+      !p.qty ||
+      p.qty <= 0 ||
+      !p.price ||
+      p.price <= 0
+  );
+
+const invalidAdminPackage =
+  adminAddons.some(
+    p =>
+      !p.qty ||
+      p.qty <= 0 ||
+      !p.price ||
+      p.price <= 0
+  );
+
+if (
+  invalidMemberPackage ||
+  invalidAdminPackage
+) {
+  Alert.alert(
+    "Invalid Package",
+    "All packages must have a quantity and price greater than zero."
+  );
+  return;
+}
 
       await setDoc(
         doc(
@@ -2963,6 +2991,27 @@ const filteredArchive =
   Member Add-ons
 </Text>
 
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={() => {
+
+    setMemberAddons(prev => [
+      ...prev,
+      {
+        id: `member${Date.now()}`,
+        qty: 0,
+        price: 0,
+        active: true,
+      },
+    ]);
+
+  }}
+>
+  <Text style={styles.white}>
+    + Add Member Package
+  </Text>
+</TouchableOpacity>
+
 {memberAddons.map((pkg, index) => (
 
   <View
@@ -2989,6 +3038,38 @@ const filteredArchive =
 
       }}
     />
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 12,
+  }}
+>
+  <Text
+    style={{
+      color: "#ddd",
+      fontWeight: "700",
+    }}
+  >
+    Active
+  </Text>
+
+  <Switch
+    value={pkg.active}
+    onValueChange={(v) => {
+
+      const copy = [...memberAddons];
+
+      copy[index].active = v;
+
+      setMemberAddons(copy);
+
+    }}
+  />
+</View>
+
 
     <Text style={styles.fieldLabel}>
       Price
@@ -3010,6 +3091,25 @@ const filteredArchive =
       }}
     />
 
+
+
+<TouchableOpacity
+  style={styles.rejectBtn}
+  onPress={() => {
+
+    setMemberAddons(
+      memberAddons.filter(
+        (_, i) => i !== index
+      )
+    );
+
+  }}
+>
+  <Text style={styles.white}>
+    Delete Package
+  </Text>
+</TouchableOpacity>
+
   </View>
 
 ))}
@@ -3017,6 +3117,26 @@ const filteredArchive =
 <Text style={styles.sectionTitle}>
   Admin Add-ons
 </Text>
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={() => {
+
+    setAdminAddons(prev => [
+      ...prev,
+      {
+        id: `admin${Date.now()}`,
+        qty: 0,
+        price: 0,
+        active: true,
+      },
+    ]);
+
+  }}
+>
+  <Text style={styles.white}>
+    + Add Admin Package
+  </Text>
+</TouchableOpacity>
 
 {adminAddons.map((pkg, index) => (
 
@@ -3065,6 +3185,54 @@ const filteredArchive =
       }}
     />
 
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    marginBottom: 12,
+  }}
+>
+  <Text
+    style={{
+      color: "#ddd",
+      fontWeight: "700",
+    }}
+  >
+    Active
+  </Text>
+
+  <Switch
+    value={pkg.active}
+    onValueChange={(v) => {
+
+      const copy = [...adminAddons];
+
+      copy[index].active = v;
+
+      setAdminAddons(copy);
+
+    }}
+  />
+</View>
+
+<TouchableOpacity
+  style={styles.rejectBtn}
+  onPress={() => {
+
+    setAdminAddons(
+      adminAddons.filter(
+        (_, i) => i !== index
+      )
+    );
+
+  }}
+>
+  <Text style={styles.white}>
+    Delete Package
+  </Text>
+</TouchableOpacity>
   </View>
 
 ))}
