@@ -14,25 +14,39 @@ exports.createMarketplaceItem = onCall(async (request) => {
   }
   // TODO: gate to super_admin once custom claims exist.
 
-  const { name, tokenCost, type, stock, fulfillment } = request.data || {};
+  const {
+  name,
+  tokenCost,
+  type,
+  stock,
+  fulfillment,
+  category,
+} = request.data || {};
   const VALID_TYPES = ["entitlement", "donation", "beta_access"];
 
   if (!name || !VALID_TYPES.includes(type) || !tokenCost) {
     throw new HttpsError("invalid-argument", "Missing name, type, or tokenCost");
   }
 
-  const ref = db.collection("marketplaceItems").doc();
-  await ref.set({
-    name,
-    type,
-    tokenCost: Number(tokenCost),
-    stock: stock ?? null, // null = unlimited
-    fulfillment: fulfillment || null, // e.g. { entitlementType: "extra_members", value: 25 }
-    active: true,
-    createdAt: new Date().toISOString(),
-  });
+ const ref = db.collection("marketplaceItems").doc();
 
-  return { success: true, itemId: ref.id };
+await ref.set({
+  name,
+  type,
+  category: category || "general",
+  tokenCost: Number(tokenCost),
+  stock: stock ?? null,
+  fulfillment: fulfillment || null,
+  redemptionCount: 0,
+  active: true,
+  createdAt: new Date().toISOString(),
+});
+
+return {
+  success: true,
+  itemId: ref.id,
+};
+
 });
 
 exports.redeemMarketplaceItem = onCall(async (request) => {
@@ -72,9 +86,20 @@ exports.redeemMarketplaceItem = onCall(async (request) => {
       createdAt: new Date().toISOString(),
     });
 
-    if (itemData.stock !== null) {
-      tx.update(itemRef, { stock: FieldValue.increment(-1) });
-    }
+    const updatePayload = {
+  redemptionCount:
+    FieldValue.increment(1),
+};
+
+if (itemData.stock !== null) {
+  updatePayload.stock =
+    FieldValue.increment(-1);
+}
+
+tx.update(
+  itemRef,
+  updatePayload
+);
 
     return { item: itemData, newBalance: balance - itemData.tokenCost };
   });
