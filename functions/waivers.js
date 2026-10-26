@@ -73,16 +73,21 @@ exports.decideWaiver = onCall(async (request) => {
       expiresAt = expiry.toISOString();
     }
 
-    entitlementId = await grantEntitlement({
-      organizationId: waiver.organizationId,
-      type: "free_months",
-      value: grantedMonths || 1,
-      source: "waiver",
-      sourceId: waiverId,
-      grantedBy: request.auth.uid,
-      expiresAt,
-      note: `Waiver approved: ${waiver.type} — ${waiver.reason}`,
-    });
+   const entitlementType =
+  waiver.type === "downgrade_protection"
+    ? "subscription_protection"
+    : "free_months";
+
+entitlementId = await grantEntitlement({
+  organizationId: waiver.organizationId,
+  type: entitlementType,
+  value: grantedMonths || 1,
+  source: "waiver",
+  sourceId: waiverId,
+  grantedBy: request.auth.uid,
+  expiresAt,
+  note: `Waiver approved: ${waiver.type} — ${waiver.reason}`,
+});
 
     await ref.update({ entitlementId });
   }
