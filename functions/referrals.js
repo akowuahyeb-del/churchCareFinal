@@ -70,6 +70,23 @@ exports.trackReferral = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Cannot refer your own organization");
   }
 
+const existingReferral =
+  await db.collection("referrals")
+    .where(
+      "refereeOrgId",
+      "==",
+      refereeOrgId
+    )
+    .limit(1)
+    .get();
+
+if (!existingReferral.empty) {
+  throw new HttpsError(
+    "already-exists",
+    "A referral already exists for this organization"
+  );
+}
+
   const ref = db.collection("referrals").doc();
   await ref.set({
     referrerOrgId,
@@ -154,5 +171,18 @@ async function markReferralQualified(refereeOrgId) {
     });
 }
 
-module.exports.awardTokens = awardTokens;
-module.exports.markReferralQualified = markReferralQualified;
+
+module.exports.ensureReferralCode =
+  exports.ensureReferralCode;
+
+module.exports.trackReferral =
+  exports.trackReferral;
+
+module.exports.onSubscriptionActivated =
+  exports.onSubscriptionActivated;
+
+module.exports.awardTokens =
+  awardTokens;
+
+module.exports.markReferralQualified =
+  markReferralQualified;
