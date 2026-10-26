@@ -274,3 +274,9 @@ const subscriptionLifecycle =
 exports.processExpiredCancellations =
   subscriptionLifecycle
     .processExpiredCancellations;
+Object.assign(exports, require("./entitlements"));
+Object.assign(exports, require("./promotions"));
+Object.assign(exports, require("./waivers"));
+Object.assign(exports, require("./referrals"));
+Object.assign(exports, require("./marketplace"));
+Object.assign(exports, require("./subscriptionNotifications"));
