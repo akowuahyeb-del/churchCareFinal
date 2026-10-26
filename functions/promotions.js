@@ -111,39 +111,55 @@ exports.redeemPromoCode = onCall(async (request) => {
   }
 
   if (result.type === "percent_off") {
-    entitlementId = await grantEntitlement({
-      organizationId,
-      type: "discount_percent",
-      value: result.value,
-      source: "promo",
-      sourceId: normalizedCode,
-      grantedBy: request.auth.uid,
-      note: `Promo: ${result.label}`,
-    });
-  } else if (result.type === "free_trial_days") {
-    entitlementId = await grantEntitlement({
-      organizationId,
-      type: "free_months",
-      value: 0, // informational; expiresAt carries the real effect
-      source: "promo",
-      sourceId: normalizedCode,
-      grantedBy: request.auth.uid,
-      expiresAt,
-      note: `Promo: ${result.label} — ${result.value} free trial days`,
-    });
-  } else if (result.type === "free_addon") {
-    entitlementId = await grantEntitlement({
-      organizationId,
-      type: result.value.type, // e.g. "extra_members"
-      value: result.value.amount,
-      source: "promo",
-      sourceId: normalizedCode,
-      grantedBy: request.auth.uid,
-      note: `Promo: ${result.label}`,
-    });
-  }
-  // "fixed_off" is applied at checkout time by initPaystackCheckout
-  // reading active discount entitlements — not handled here.
+
+  entitlementId = await grantEntitlement({
+    organizationId,
+    type: "discount_percent",
+    value: result.value,
+    source: "promo",
+    sourceId: normalizedCode,
+    grantedBy: request.auth.uid,
+    note: `Promo: ${result.label}`,
+  });
+
+} else if (result.type === "fixed_off") {
+
+  entitlementId = await grantEntitlement({
+    organizationId,
+    type: "fixed_discount",
+    value: result.value,
+    source: "promo",
+    sourceId: normalizedCode,
+    grantedBy: request.auth.uid,
+    note: `Promo: ${result.label}`,
+  });
+
+} else if (result.type === "free_trial_days") {
+
+  entitlementId = await grantEntitlement({
+    organizationId,
+    type: "free_months",
+    value: 0,
+    source: "promo",
+    sourceId: normalizedCode,
+    grantedBy: request.auth.uid,
+    expiresAt,
+    note: `Promo: ${result.label} — ${result.value} free trial days`,
+  });
+
+} else if (result.type === "free_addon") {
+
+  entitlementId = await grantEntitlement({
+    organizationId,
+    type: result.value.type,
+    value: result.value.amount,
+    source: "promo",
+    sourceId: normalizedCode,
+    grantedBy: request.auth.uid,
+    note: `Promo: ${result.label}`,
+  });
+
+}
 
   return { success: true, promoType: result.type, entitlementId };
 });
