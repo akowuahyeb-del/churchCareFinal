@@ -20,7 +20,9 @@ const ENTITLEMENT_TYPES = [
   "extra_admins",
   "feature_unlock",
   "discount_percent",
+  "fixed_discount",
   "free_months",
+  "subscription_protection",
 ];
 
 async function grantEntitlement({
@@ -109,9 +111,13 @@ async function getEffectiveLimits(organizationId) {
       case "feature_unlock":
         unlockedFeatures.add(e.value);
         break;
-      case "discount_percent":
-        discountPercent = Math.min(100, discountPercent + (Number(e.value) || 0));
-        break;
+     case "discount_percent":
+  discountPercent =
+    Math.max(
+      discountPercent,
+      Number(e.value) || 0
+    );
+  break;
       case "free_months":
         freeMonths += Number(e.value) || 0;
         break;
