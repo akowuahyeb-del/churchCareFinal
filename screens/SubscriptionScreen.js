@@ -615,6 +615,117 @@ if (!existing.empty) {
     ]
   );
 };
+
+
+const requestWaiver = async () => {
+
+  if (!canManageBilling) {
+  Alert.alert(
+    "Not Authorized",
+    "Only an admin can request a waiver."
+  );
+  return;
+}
+
+
+  console.log({
+    organizationId,
+    entityId,
+    activeEntity,
+  });
+
+  try {
+
+const existing = await getDocs(
+  query(
+    collection(
+      db,
+      "waiverRequests"
+    ),
+    where(
+      "organizationId",
+      "==",
+      organizationId
+    ),
+    where(
+      "entityId",
+      "==",
+      entityId
+    ),
+    where(
+      "status",
+      "==",
+      "pending"
+    )
+  )
+);
+
+if (!existing.empty) {
+
+  Alert.alert(
+    "Request Already Submitted",
+    "A waiver request is already awaiting review."
+  );
+
+  return;
+}
+
+    await setDoc(
+      doc(
+        collection(
+          db,
+          "waiverRequests"
+        )
+      ),
+      {
+        organizationId,
+        entityId,
+
+        organizationName:
+          activeEntity?.name || "",
+
+        requestedBy:
+          activeEntity?.uid || "",
+
+        requestedByName:
+          activeEntity?.memberName || "",
+
+        type:
+          "financial_hardship",
+
+        requestedDays: 30,
+
+        reason:
+          "Subscription hardship assistance requested.",
+
+        status:
+          "pending",
+
+        requestedAt:
+          new Date().toISOString(),
+      }
+    );
+
+
+    Alert.alert(
+      "Waiver Requested",
+      "Your waiver request has been submitted for review."
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ requestWaiver error",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      JSON.stringify(e)
+    );
+  }
+};
+
   return (
     <View style={styles.container}>
       <AppHeader title="Subscription & Billing" showBack onBack={() => navigation.goBack()} />
@@ -1036,6 +1147,31 @@ canManageBilling && (
             </Text>
           </View>
         )}
+
+{canManageBilling && (
+
+  <TouchableOpacity
+    style={{
+      backgroundColor: "#F39C12",
+      padding: 14,
+      borderRadius: 10,
+      marginTop: 20,
+      alignItems: "center",
+    }}
+    onPress={requestWaiver}
+  >
+    <Text
+      style={{
+        color: "#fff",
+        fontWeight: "800",
+      }}
+    >
+      Request Waiver
+    </Text>
+  </TouchableOpacity>
+
+)}
+
 {canManageBilling &&
  status !== "canceled" && (
   <TouchableOpacity

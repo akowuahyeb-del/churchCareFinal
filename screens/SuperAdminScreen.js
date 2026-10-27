@@ -60,6 +60,10 @@ const STATUS_ICON = {
 // ─────────────────────────────────────────────────────────────────
 export default function SuperAdminScreen({ navigation }) {
   const [tab, setTab] = useState("overview");
+  const [growthTab, setGrowthTab] =
+  useState("promotions");
+  const [operationsTab, setOperationsTab] =
+  useState("alerts");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [governanceNodes, setGovernanceNodes] = useState([]);
@@ -132,6 +136,12 @@ const [archiveSearch, setArchiveSearch] =
 
 const [archiveFilter, setArchiveFilter] =
   useState("all");
+  // ── WAIVERS ──
+const [waiverRequests, setWaiverRequests] =
+  useState([]);
+
+const [waiverArchive, setWaiverArchive] =
+  useState([]);
 
 const [archiveSort, setArchiveSort] =
   useState("newest");
@@ -156,7 +166,6 @@ const [archiveSort, setArchiveSort] =
   const [orgDetailModal, setOrgDetailModal] = useState(false);
   const [orgDetail, setOrgDetail] = useState(null);
   const [orgDetailData, setOrgDetailData] = useState(null);
-  const [flagModal, setFlagModal] = useState(false);
   const [announcementModal, setAnnouncementModal] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [announcementType, setAnnouncementType] = useState("info");
@@ -203,7 +212,7 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
 
   try {
 
-  await Promise.all([
+await Promise.all([
   loadOrganizations(),
   loadGovernanceNodes(),
   loadFeatureFlags(),
@@ -211,6 +220,8 @@ const [adminAddonQty, setAdminAddonQty] = useState("");
   loadSubscriptionSettings(),
   loadSubscriptionRequests(),
   loadSubscriptionArchive(),
+  loadWaiverRequests(),
+  loadWaiverArchive(),
 ]);
 
     startLiveActivityListener();
@@ -757,6 +768,69 @@ const loadSubscriptionArchive = async () => {
   }
 };
 
+const loadWaiverRequests =
+  async () => {
+    try {
+
+      const snap = await getDocs(
+      collection(
+  db,
+  "waiverRequests"
+)
+      );
+
+      setWaiverRequests(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ loadWaiverRequests:",
+        e
+      );
+
+    }
+  };
+
+const loadWaiverArchive =
+  async () => {
+    try {
+
+      const snap = await getDocs(
+        query(
+          collection(
+            db,
+            "waiverRequestArchive"
+          ),
+          orderBy(
+            "archivedAt",
+            "desc"
+          )
+        )
+      );
+
+      setWaiverArchive(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ loadWaiverArchive:",
+        e
+      );
+
+    }
+  };
+
+
 const savePlanSettings =
   async () => {
 
@@ -1292,6 +1366,124 @@ await deleteDoc(
 };
 
 
+const approveWaiverRequest =
+  async (request) => {
+
+    try {
+
+      const entitySnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            request.organizationId,
+            "entities"
+          )
+        );
+
+      const entityDoc =
+        entitySnap.docs.find(
+          d =>
+            d.id === request.entityId ||
+            d.data().entityId ===
+              request.entityId
+        );
+
+      if (!entityDoc) {
+        throw new Error(
+          "Entity not found"
+        );
+      }
+
+      const subRef = doc(
+        db,
+        "organizations",
+        request.organizationId,
+        "entities",
+        entityDoc.id,
+        "billing",
+        "subscription"
+      );
+
+      const graceEnds =
+        new Date(
+          Date.now() +
+          (
+            request.requestedDays ||
+            30
+          ) *
+            86400000
+        );
+
+      await setDoc(
+        subRef,
+        {
+          waiverApproved: true,
+
+          gracePeriodEndsAt:
+            graceEnds.toISOString(),
+
+          waiverApprovedAt:
+            new Date().toISOString(),
+        },
+        {
+          merge: true,
+        }
+      );
+
+      await setDoc(
+        doc(
+          db,
+          "waiverRequestArchive",
+          request.id
+        ),
+        {
+          ...request,
+          status: "approved",
+          reviewedAt:
+            new Date().toISOString(),
+          archivedAt:
+            new Date().toISOString(),
+        }
+      );
+
+      await deleteDoc(
+        doc(
+          db,
+          "waiverRequests",
+          request.id
+        )
+      );
+
+      setWaiverRequests(
+        prev =>
+          prev.filter(
+            r => r.id !== request.id
+          )
+      );
+
+      Alert.alert(
+        "Approved",
+        "Waiver approved successfully."
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ approveWaiverRequest:",
+        e
+      );
+
+      Alert.alert(
+        "Approval Failed",
+        e?.message
+      );
+
+    }
+  };
+
+
+
   // ─────────────────────────────────────────────────────────────────
   // APPROVE CHURCH — same logic as ApprovalScreen, centralized here
   // ─────────────────────────────────────────────────────────────────
@@ -1790,21 +1982,17 @@ const TABS = [
     icon: "business-outline",
   },
   {
-    key: "governance",
-    label: "Governance",
-    icon: "git-branch-outline",
+    key: "growth",
+    label: "Growth",
+    icon: "megaphone-outline",
   },
   {
-    key: "platform",
-    label: "Platform",
+    key: "operations",
+    label: "Operations",
     icon: "settings-outline",
   },
-  {
-    key: "subscriptionArchive",
-    label: "Archive",
-    icon: "archive-outline",
-  },
 ];
+
 
 const emailAlerts =
   alerts.filter(
@@ -1932,6 +2120,144 @@ const filteredArchive =
           showsVerticalScrollIndicator={false}
         >
 
+
+{tab === "operations" && (
+
+  <>
+    <Text style={styles.sectionTitle}>
+      Platform Management
+    </Text>
+<View style={styles.filterRow}>
+
+  {[
+    "governance",
+    "alerts",
+    "notifications",
+    "activity",
+    "flags",
+    "subscriptions",
+    "requests",
+    "archive",
+  ].map(item => (
+
+    <TouchableOpacity
+      key={item}
+      style={[
+        styles.filterChip,
+        operationsTab === item &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setOperationsTab(item)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          operationsTab === item &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {item}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+
+    <View style={styles.actionGrid}>
+
+      <ActionCard
+        icon="warning-outline"
+        color="#e74c3c"
+        label="Alerts"
+        sub={`${alerts.length} alerts`}
+        onPress={() =>
+  setOperationsTab("alerts")
+}
+      />
+
+      <ActionCard
+        icon="mail-outline"
+        color="#0984E3"
+        label="Notifications"
+        sub="Email & WhatsApp"
+        onPress={() =>
+          setOperationsTab("notifications")
+        }
+      />
+
+      <ActionCard
+        icon="pulse-outline"
+        color="#27ae60"
+        label="Activity"
+        sub="Live platform feed"
+        onPress={() =>
+          setOperationsTab("activity")
+        }
+      />
+
+      <ActionCard
+  icon="flag-outline"
+  color="#6C5CE7"
+  label="Feature Flags"
+  sub="Platform controls"
+  onPress={() =>
+    setOperationsTab("flags")
+  }
+/>
+
+      <ActionCard
+  icon="document-text-outline"
+  color="#F39C12"
+  label="Subscription Requests"
+  sub="Pending approvals"
+  onPress={async () => {
+
+  await loadSubscriptionRequests();
+
+ setOperationsTab(
+  "requests"
+);
+
+}}
+/>
+
+<ActionCard
+  icon="archive-outline"
+  color="#6C5CE7"
+  label="Archive"
+  sub="Approved / Rejected"
+  onPress={async () => {
+
+    await loadSubscriptionArchive();
+
+   setOperationsTab(
+  "archive"
+);
+
+  }}
+/>
+
+
+      <ActionCard
+        icon="card-outline"
+        color="#4B3F72"
+        label="Subscriptions"
+        sub="Pricing & plans"
+        onPress={() =>
+          setOperationsTab("subscriptions")
+        }
+      />
+
+    </View>
+  </>
+)}
+
+
+
           {/* ════════════════════ OVERVIEW TAB ════════════════════ */}
          
               {tab === "overview" && (
@@ -1996,35 +2322,38 @@ const filteredArchive =
           ).length
         }
         onPress={() => {
-          setTab("alerts");
+          setTab("operations");
+setOperationsTab("alerts");
           setAlertFilter("open");
         }}
       />
 
-      <KPICard
-        icon="alert-circle-outline"
-        color="#F39C12"
-        label="Critical"
-        value={
-          alerts.filter(
-            a => a.severity === "CRITICAL"
-          ).length
-        }
-        onPress={() => {
-          setTab("alerts");
-          setAlertFilter("all");
-        }}
-      />
+     <KPICard
+  icon="alert-circle-outline"
+  color="#F39C12"
+  label="Critical"
+  value={
+    alerts.filter(
+      a => a.severity === "CRITICAL"
+    ).length
+  }
+  onPress={() => {
+    setTab("operations");
+    setOperationsTab("alerts");
+    setAlertFilter("all");
+  }}
+/>
 
-      <KPICard
-        icon="git-branch-outline"
-        color="#0984E3"
-        label="Pending Links"
-        value={pendingLinks.length}
-        onPress={() => {
-          setTab("governance");
-        }}
-      />
+    <KPICard
+  icon="git-branch-outline"
+  color="#0984E3"
+  label="Pending Links"
+  value={pendingLinks.length}
+  onPress={() => {
+    setTab("operations");
+    setOperationsTab("governance");
+  }}
+/>
 
       <KPICard
         icon="checkmark-done-outline"
@@ -2088,12 +2417,28 @@ const filteredArchive =
                 <ActionCard icon="megaphone-outline" color="#4B3F72" label="Announcement"
                   sub="Broadcast to all users"
                   onPress={() => setAnnouncementModal(true)} />
-                <ActionCard icon="flag-outline" color="#6C5CE7" label="Feature Flags"
-                  sub="Toggle platform features"
-                  onPress={() => setTab("flags")} />
-                <ActionCard icon="pulse-outline" color="#27ae60" label="Live Activity"
-                  sub="What's happening now"
-                  onPress={() => setTab("activity")} />
+              
+<ActionCard
+  icon="flag-outline"
+  color="#6C5CE7"
+  label="Feature Flags"
+  sub="Toggle platform features"
+  onPress={() => {
+    setTab("operations");
+    setOperationsTab("flags");
+  }}
+/>
+
+                <ActionCard
+  icon="pulse-outline"
+  color="#27ae60"
+  label="Live Activity"
+  sub="What's happening now"
+  onPress={() => {
+    setTab("operations");
+    setOperationsTab("activity");
+  }}
+/>
               </View>
             </>
           )}
@@ -2173,7 +2518,8 @@ const filteredArchive =
           )}
 
 
-  {tab === "governance" && (
+  {tab === "operations" &&
+ operationsTab === "governance" && (
   <>
     <Text style={styles.sectionTitle}>
       Governance Registry
@@ -2231,7 +2577,8 @@ const filteredArchive =
 )}
 
 
-{tab === "alerts" && (
+{tab === "operations" &&
+ operationsTab === "alerts" && (
   <>
     <Text style={styles.sectionTitle}>
       System Alerts
@@ -2435,7 +2782,8 @@ const filteredArchive =
 )}
 
 {/* ════════════════════ NOTIFICATIONS TAB ════════════════════ */}
-{tab === "notifications" && (
+{tab === "operations" &&
+ operationsTab === "notifications" && (
   <>
     <Text style={styles.sectionTitle}>
       Notification Health
@@ -2504,7 +2852,9 @@ const filteredArchive =
 
 
           {/* ════════════════════ ACTIVITY TAB ════════════════════ */}
-          {tab === "activity" && (
+          {tab === "operations" &&
+ operationsTab === "activity" && (
+
             <>
               <Text style={styles.sectionTitle}>Live Platform Activity</Text>
               {liveActivity.length === 0 ? (
@@ -2526,7 +2876,8 @@ const filteredArchive =
           )}
 
 
-         {tab === "subscriptionRequests" && (
+         {tab === "operations" &&
+ operationsTab === "requests" && (
   <>
     <Text style={styles.sectionTitle}>
       Subscription Requests
@@ -2593,15 +2944,13 @@ const filteredArchive =
     }}
   >
     <Text
-      style={{
-        color: "#fff",
-        fontWeight: "700",
-      }}
-    >
-      {req.currentPlan?.toUpperCase()}
-      {" → "}
-      {req.requestedPlan?.toUpperCase()}
-    </Text>
+  style={{
+    color: "#fff",
+    fontWeight: "700",
+  }}
+>
+  {req.currentPlan?.toUpperCase()} → {req.requestedPlan?.toUpperCase()}
+</Text>
   </View>
 )}
 
@@ -2672,7 +3021,8 @@ const filteredArchive =
   </>
 )}
 
-{tab === "subscriptionArchive" && (
+{tab === "operations" &&
+ operationsTab === "archive" && (
 <>
   <Text style={styles.sectionTitle}>
     Subscription Archive
@@ -2810,61 +3160,11 @@ const filteredArchive =
         value={req.status}
       />
 
-{orgDetailData.sub?.currentPeriodStart && (
+{req.reviewedAt && (
   <InfoPair
-    label="Started"
-    value={
-      new Date(
-        orgDetailData.sub.currentPeriodStart
-      ).toLocaleDateString("en-GB")
-    }
-  />
-)}
-
-{orgDetailData.sub?.currentPeriodEnd && (
-  <InfoPair
-    label="Expires"
-    value={
-      new Date(
-        orgDetailData.sub.currentPeriodEnd
-      ).toLocaleDateString("en-GB")
-    }
-  />
-)}
-
-{orgDetailData.sub?.currentPeriodEnd && (
-  <InfoPair
-    label="Days Remaining"
-    value={
-      Math.max(
-        0,
-        Math.ceil(
-          (
-            new Date(
-              orgDetailData.sub.currentPeriodEnd
-            ) - new Date()
-          ) / 86400000
-        )
-      ).toString()
-    }
-  />
-)}
-{orgDetailData.sub?.cancelAtPeriodEnd && (
-  <InfoPair
-    label="Cancellation"
-    value="Scheduled"
-  />
-)}
-
-{orgDetailData.sub?.cancellationApprovedAt && (
-  <InfoPair
-    label="Cancellation Approved"
-    value={
-      new Date(
-        orgDetailData.sub
-          .cancellationApprovedAt
-      ).toLocaleDateString("en-GB")
-    }
+    label="Reviewed"
+    value={new Date(req.reviewedAt)
+      .toLocaleDateString("en-GB")}
   />
 )}
 
@@ -2885,7 +3185,8 @@ const filteredArchive =
 </>
 )}
 
-{tab === "subscriptions" && (
+{tab === "operations" &&
+ operationsTab === "subscriptions" && (
   <>
     <Text style={styles.sectionTitle}>
       Subscription Settings
@@ -3370,102 +3671,297 @@ const filteredArchive =
   </>
 )}
 
-
-{tab === "platform" && (
+{tab === "growth" && (
   <>
     <Text style={styles.sectionTitle}>
-      Platform Management
+      Marketing & Growth
     </Text>
+<View style={styles.filterRow}>
+
+  {[
+    "promotions",
+    "waivers",
+    "referrals",
+    "marketplace",
+    "campaigns",
+    "retention",
+  ].map(item => (
+
+    <TouchableOpacity
+      key={item}
+      style={[
+        styles.filterChip,
+        growthTab === item &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setGrowthTab(item)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          growthTab === item &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {item}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+{growthTab === "promotions" && (
+  <View style={styles.card}>
+    <Text style={styles.orgName}>
+      Promotions
+    </Text>
+    <Text style={styles.orgSub}>
+      Create and manage promo codes.
+    </Text>
+  </View>
+)}
+
+{growthTab === "referrals" && (
+  <View style={styles.card}>
+    <Text style={styles.orgName}>
+      Referrals
+    </Text>
+    <Text style={styles.orgSub}>
+      Manage referral programmes and rewards.
+    </Text>
+  </View>
+)}
+
+{growthTab === "marketplace" && (
+  <View style={styles.card}>
+    <Text style={styles.orgName}>
+      Marketplace
+    </Text>
+    <Text style={styles.orgSub}>
+      Manage token marketplace items.
+    </Text>
+  </View>
+)}
+
+
+{growthTab === "waivers" && (
+  <>
+    <Text style={styles.sectionTitle}>
+      Waiver Requests
+    </Text>
+
+    <View style={styles.card}>
+      <InfoPair
+        label="Pending Requests"
+        value={waiverRequests.length}
+      />
+
+      <InfoPair
+        label="Archived"
+        value={waiverArchive.length}
+      />
+    </View>
+
+    {waiverRequests.length === 0 ? (
+
+  <View style={styles.emptyState}>
+    <Ionicons
+      name="shield-checkmark-outline"
+      size={40}
+      color="#ddd"
+    />
+
+    <Text style={styles.emptyText}>
+      No waiver requests
+    </Text>
+  </View>
+
+) : (
+
+  waiverRequests.map(req => (
+
+  <View
+    key={req.id}
+    style={styles.orgCard}
+  >
+
+    <Text style={styles.orgName}>
+      {req.organizationName}
+    </Text>
+
+    <Text style={styles.orgSub}>
+      Requested by {req.requestedByName}
+    </Text>
+
+    <InfoPair
+      label="Type"
+      value={req.type}
+    />
+
+    <InfoPair
+      label="Days Requested"
+      value={req.requestedDays}
+    />
+
+   <Text
+  style={{
+    color: "#666",
+    marginTop: 10,
+    fontWeight: "700",
+  }}
+>
+  Reason
+</Text>
+
+<Text
+  style={{
+    color: "#ddd",
+    marginTop: 4,
+    lineHeight: 20,
+  }}
+>
+  {req.reason}
+</Text>
+
+    <View
+      style={[
+        styles.statusPill,
+        {
+          backgroundColor:
+            "#F39C1222",
+          alignSelf: "flex-start",
+          marginTop: 10,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          color: "#F39C12",
+          fontWeight: "700",
+        }}
+      >
+        PENDING
+      </Text>
+    </View>
+
+<View style={styles.modalBtnRow}>
+
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      approveWaiverRequest(req)
+    }
+  >
+    <Text style={styles.white}>
+      Approve
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+  </View>
+
+))
+)}
+</>
+)}
+
+{growthTab === "campaigns" && (
+  <View style={styles.card}>
+    <Text style={styles.orgName}>
+      Campaigns
+    </Text>
+    <Text style={styles.orgSub}>
+      Email, WhatsApp and marketing campaigns.
+    </Text>
+  </View>
+)}
+
+{growthTab === "retention" && (
+  <View style={styles.card}>
+    <Text style={styles.orgName}>
+      Retention
+    </Text>
+    <Text style={styles.orgSub}>
+      Trial expiry and win-back programmes.
+    </Text>
+  </View>
+)}
 
     <View style={styles.actionGrid}>
 
-      <ActionCard
-        icon="warning-outline"
-        color="#e74c3c"
-        label="Alerts"
-        sub={`${alerts.length} alerts`}
-        onPress={() => setTab("alerts")}
-      />
+    <ActionCard
+  icon="pricetag-outline"
+  color="#27ae60"
+  label="Promotions"
+  sub="Promo codes & discounts"
+  onPress={() =>
+    setGrowthTab("promotions")
+  }
+/>
 
-      <ActionCard
-        icon="mail-outline"
-        color="#0984E3"
-        label="Notifications"
-        sub="Email & WhatsApp"
-        onPress={() =>
-          setTab("notifications")
-        }
-      />
-
-      <ActionCard
-        icon="pulse-outline"
-        color="#27ae60"
-        label="Activity"
-        sub="Live platform feed"
-        onPress={() =>
-          setTab("activity")
-        }
-      />
-
-      <ActionCard
-        icon="flag-outline"
-        color="#6C5CE7"
-        label="Feature Flags"
-        sub="Platform controls"
-        onPress={() =>
-          setTab("flags")
-        }
-      />
-
-      <ActionCard
-  icon="document-text-outline"
-  color="#F39C12"
-  label="Subscription Requests"
-  sub="Pending approvals"
-  onPress={async () => {
-
-  await loadSubscriptionRequests();
-
-  setTab(
-    "subscriptionRequests"
-  );
-
-}}
+    <ActionCard
+  icon="gift-outline"
+  color="#4B3F72"
+  label="Referrals"
+  sub="Referral rewards"
+  onPress={() =>
+    setGrowthTab("referrals")
+  }
 />
 
 <ActionCard
-  icon="archive-outline"
-  color="#6C5CE7"
-  label="Archive"
-  sub="Approved / Rejected"
-  onPress={async () => {
-
-    await loadSubscriptionArchive();
-
-    setTab(
-      "subscriptionArchive"
-    );
-
-  }}
+  icon="cube-outline"
+  color="#0984E3"
+  label="Marketplace"
+  sub="Token rewards"
+  onPress={() =>
+    setGrowthTab("marketplace")
+  }
 />
 
+<ActionCard
+  icon="shield-checkmark-outline"
+  color="#F39C12"
+  label="Waivers"
+  sub="Grace periods"
+  onPress={() =>
+    setGrowthTab("waivers")
+  }
+/>
 
-      <ActionCard
-        icon="card-outline"
-        color="#4B3F72"
-        label="Subscriptions"
-        sub="Pricing & plans"
-        onPress={() =>
-          setTab("subscriptions")
-        }
-      />
+<ActionCard
+  icon="mail-outline"
+  color="#6C5CE7"
+  label="Campaigns"
+  sub="Email & WhatsApp"
+  onPress={() =>
+    setGrowthTab("campaigns")
+  }
+/>
+
+<ActionCard
+  icon="trending-up-outline"
+  color="#e74c3c"
+  label="Retention"
+  sub="Trials & win-back"
+  onPress={() =>
+    setGrowthTab("retention")
+  }
+/>
+
 
     </View>
   </>
 )}
 
+
           {/* ════════════════════ FLAGS TAB ════════════════════ */}
-          {tab === "flags" && (
+          {tab === "operations" &&
+ operationsTab === "flags" && (
             <>
               <Text style={styles.sectionTitle}>Feature Flags</Text>
               <Text style={styles.sectionSubtitle}>
@@ -4469,7 +4965,12 @@ const styles = StyleSheet.create({
   searchBar: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#1a1a2e", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 8 },
   searchInput: { flex: 1, fontSize: 13, color: "#ddd" },
 
-  filterRow: { flexDirection: "row", gap: 6, marginBottom: 10 },
+  filterRow: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 6,
+  marginBottom: 10,
+},
   filterChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: "#1a1a2e", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
   filterChipActive: { backgroundColor: "#4B3F72", borderColor: "#4B3F72" },
   filterChipText: { fontSize: 11, color: "#666", fontWeight: "600" },
@@ -4529,25 +5030,30 @@ const styles = StyleSheet.create({
   infoBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#EEF0FA", borderRadius: 10, padding: 10, marginBottom: 12 },
   infoBoxText: { flex: 1, fontSize: 11, color: "#4B3F72", lineHeight: 16 },
 
-  infoPairRow: {
+infoPairRow: {
   flexDirection: "row",
   justifyContent: "space-between",
-  alignItems: "center",
+  alignItems: "flex-start",
   paddingVertical: 8,
   paddingHorizontal: 4,
-  borderBottomWidth: 1,
-  borderBottomColor: "rgba(255,255,255,0.08)",
 },
- infoPairLabel: {
+
+infoPairLabel: {
+  flex: 1,
   fontSize: 11,
   color: "#666",
   fontWeight: "600",
 },
-  infoPairValue: {
+
+infoPairValue: {
+  flex: 2,
+  textAlign: "right",
+  flexWrap: "wrap",
   fontSize: 12,
-  color: "#222",
+  color: "#ddd",
   fontWeight: "700",
 },
+
 
 
 
