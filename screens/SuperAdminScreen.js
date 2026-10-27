@@ -1405,32 +1405,93 @@ const approveWaiverRequest =
         "subscription"
       );
 
-      const graceEnds =
-        new Date(
-          Date.now() +
-          (
-            request.requestedDays ||
-            30
-          ) *
-            86400000
-        );
+      const subSnap =
+  await getDoc(subRef);
 
-      await setDoc(
-        subRef,
-        {
-          waiverApproved: true,
+const sub =
+  subSnap.exists()
+    ? subSnap.data()
+    : {};
 
-          gracePeriodEndsAt:
-            graceEnds.toISOString(),
+const graceStarts =
+  sub.currentPeriodEnd
+    ? new Date(
+        sub.currentPeriodEnd
+      )
+    : new Date();
 
-          waiverApprovedAt:
-            new Date().toISOString(),
-        },
-        {
-          merge: true,
-        }
-      );
+const graceEnds =
+  new Date(graceStarts);
 
+graceEnds.setDate(
+  graceEnds.getDate() +
+  (
+    request.requestedDays ||
+    30
+  )
+);
+
+
+
+     await setDoc(
+  subRef,
+  {
+    waiverApproved: true,
+
+    waiverApprovedAt:
+      new Date().toISOString(),
+
+   gracePeriodStartsAt:
+  graceStarts.toISOString(),
+
+    gracePeriodEndsAt:
+      graceEnds.toISOString(),
+
+    waiverDays:
+      request.requestedDays || 30,
+
+    waiverType:
+      request.type || null,
+
+    waiverReason:
+      request.reason || null,
+  },
+  {
+    merge: true,
+  }
+);
+
+await setDoc(
+  doc(
+    collection(
+      db,
+      "users",
+      request.requestedBy,
+      "notifications"
+    )
+  ),
+  {
+    organizationId:
+      request.organizationId,
+
+    entityId:
+      request.entityId,
+
+    title:
+      "Waiver Request Approved",
+
+    message:
+      "Your waiver request has been approved.",
+
+    type:
+      "waiver_approved",
+
+    read: false,
+
+    createdAt:
+      new Date().toISOString(),
+  }
+);
       await setDoc(
         doc(
           db,
@@ -1482,6 +1543,114 @@ const approveWaiverRequest =
     }
   };
 
+const rejectWaiverRequest =
+  async (request) => {
+
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "waiverRequestArchive",
+          request.id
+        ),
+        {
+          ...request,
+          status: "rejected",
+          reviewedAt:
+            new Date().toISOString(),
+          archivedAt:
+            new Date().toISOString(),
+        }
+      );
+
+      await deleteDoc(
+        doc(
+          db,
+          "waiverRequests",
+          request.id
+        )
+      );
+
+      await setDoc(
+  doc(
+    collection(
+      db,
+      "users",
+      request.requestedBy,
+      "notifications"
+    )
+  ),
+  {
+    organizationId:
+      request.organizationId,
+
+    entityId:
+      request.entityId,
+
+    title:
+      "Waiver Request Rejected",
+
+    message:
+      "Your waiver request was not approved.",
+
+    type:
+      "waiver_rejected",
+
+    read: false,
+
+    createdAt:
+      new Date().toISOString(),
+  }
+);
+
+      await setDoc(
+        doc(
+          collection(
+            db,
+            "platformActivity"
+          )
+        ),
+        {
+          type: "waiver_rejected",
+          organizationId:
+            request.organizationId,
+          entityId:
+            request.entityId,
+          message:
+            `${request.organizationName} waiver request rejected`,
+          createdAt:
+            new Date().toISOString(),
+        }
+      );
+
+      setWaiverRequests(
+        prev =>
+          prev.filter(
+            r => r.id !== request.id
+          )
+      );
+
+      Alert.alert(
+        "Rejected",
+        "Waiver request rejected."
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ rejectWaiverRequest:",
+        e
+      );
+
+      Alert.alert(
+        "Rejection Failed",
+        e?.message
+      );
+
+    }
+};
+
 
 
   // ─────────────────────────────────────────────────────────────────
@@ -1526,6 +1695,72 @@ const approveWaiverRequest =
     setProcessingOrgId(null);
   }
 };
+
+const rejectChurch = async (org) => {
+
+  if (!rejectReason.trim()) {
+    Alert.alert(
+      "Reason Required",
+      "Please provide a rejection reason."
+    );
+    return;
+  }
+
+  setProcessingOrgId(org.id);
+
+  try {
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        org.id
+      ),
+      {
+        status: "rejected",
+        rejectionReason: rejectReason,
+        rejectedAt:
+          new Date().toISOString(),
+      }
+    );
+
+    await logActivity({
+      type: "org_rejected",
+      orgId: org.id,
+      orgName: org.name,
+      message:
+        `${org.name} registration rejected`,
+    });
+
+    await loadOrganizations();
+
+    setApprovalModal(false);
+    setRejectReason("");
+
+    Alert.alert(
+      "Registration Rejected",
+      `${org.name} has been rejected.`
+    );
+
+  } catch (e) {
+
+    console.log(
+      "❌ rejectChurch:",
+      e
+    );
+
+    Alert.alert(
+      "Rejection Failed",
+      e.message
+    );
+
+  } finally {
+
+    setProcessingOrgId(null);
+
+  }
+};
+
 const deactivateChurch = async (org) => {
   if (!deactivationReason.trim()) {
     Alert.alert(
@@ -1779,26 +2014,27 @@ const extendTrial = async (
   days = 30
 ) => {
   try {
+
     const entityId =
-  orgDetailData?.entities?.[0]?.id;
+      orgDetailData?.entities?.[0]?.id;
 
-if (!entityId) {
-  Alert.alert(
-    "Error",
-    "Entity not found."
-  );
-  return;
-}
+    if (!entityId) {
+      Alert.alert(
+        "Error",
+        "Entity not found."
+      );
+      return;
+    }
 
-const ref = doc(
-  db,
-  "organizations",
-  organizationId,
-  "entities",
-  entityId,
-  "billing",
-  "subscription"
-);
+    const ref = doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "billing",
+      "subscription"
+    );
 
     const snap = await getDoc(ref);
 
@@ -1814,25 +2050,139 @@ const ref = doc(
       trialEnds.getDate() + days
     );
 
-    await setDoc(
-      ref,
-      {
-        trialEndsAt:
-          trialEnds.toISOString(),
-      },
-      { merge: true }
-    );
+ await setDoc(
+  ref,
+  {
+    trialEndsAt:
+      trialEnds.toISOString(),
+
+    currentPeriodEnd:
+      trialEnds.toISOString(),
+
+    originalTrialEndsAt:
+      sub.originalTrialEndsAt ||
+      sub.trialEndsAt,
+
+    trialExtended: true,
+
+    trialExtensionDays:
+      (sub.trialExtensionDays || 0) +
+      days,
+
+    trialExtendedAt:
+      new Date().toISOString(),
+
+    trialExtendedBy:
+      "platform_admin",
+  },
+  { merge: true }
+);
+
 
     await openOrgDetail({
-  ...orgDetail
-});
+      ...orgDetail,
+    });
+
     await loadOrganizations();
 
+    Alert.alert(
+      "Success",
+      `Trial extended by ${days} days`
+    );
+
   } catch (e) {
+
     Alert.alert(
       "Error",
       "Could not extend trial."
     );
+
+  }
+};
+
+const removeTrialExtension = async (
+  organizationId
+) => {
+
+  try {
+
+    const entityId =
+      orgDetailData?.entities?.[0]?.id;
+
+    if (!entityId) {
+      Alert.alert(
+        "Error",
+        "Entity not found."
+      );
+      return;
+    }
+
+    const ref = doc(
+      db,
+      "organizations",
+      organizationId,
+      "entities",
+      entityId,
+      "billing",
+      "subscription"
+    );
+
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) return;
+
+    const sub = snap.data();
+
+    if (!sub.originalTrialEndsAt) {
+
+      Alert.alert(
+        "Nothing To Remove",
+        "No trial extension found."
+      );
+
+      return;
+    }
+
+  await setDoc(
+  ref,
+  {
+    trialEndsAt:
+      sub.originalTrialEndsAt,
+
+    currentPeriodEnd:
+      sub.originalTrialEndsAt,
+
+    trialExtended: false,
+
+    trialExtensionDays: 0,
+
+    trialExtendedAt: null,
+
+    trialExtendedBy: null,
+
+    originalTrialEndsAt: null,
+  },
+  { merge: true }
+);
+
+    await openOrgDetail({
+      ...orgDetail,
+    });
+
+    await loadOrganizations();
+
+    Alert.alert(
+      "Success",
+      "Trial extension removed."
+    );
+
+  } catch (e) {
+
+    Alert.alert(
+      "Error",
+      "Could not remove extension."
+    );
+
   }
 };
 
@@ -3155,10 +3505,17 @@ setOperationsTab("alerts");
         value={`GH₵${req.requestedPrice}`}
       />
 
-      <InfoPair
-        label="Status"
-        value={req.status}
-      />
+    <InfoPair
+  label="Status"
+  value={req.status}
+/>
+
+{req.reason && (
+  <InfoPair
+    label="Reason"
+    value={req.reason}
+  />
+)}
 
 {req.reviewedAt && (
   <InfoPair
@@ -3749,6 +4106,7 @@ setOperationsTab("alerts");
 
 {growthTab === "waivers" && (
   <>
+ 
     <Text style={styles.sectionTitle}>
       Waiver Requests
     </Text>
@@ -3860,12 +4218,81 @@ setOperationsTab("alerts");
     </Text>
   </TouchableOpacity>
 
+  <TouchableOpacity
+    style={styles.rejectBtn}
+    onPress={() =>
+      rejectWaiverRequest(req)
+    }
+  >
+    <Text style={styles.white}>
+      Reject
+    </Text>
+  </TouchableOpacity>
+
 </View>
 
   </View>
 
 ))
+
 )}
+ <Text style={styles.sectionTitle}>
+  Waiver History
+</Text>
+
+{waiverArchive.length === 0 && (
+  <View style={styles.emptyState}>
+    <Ionicons
+      name="archive-outline"
+      size={40}
+      color="#ddd"
+    />
+    <Text style={styles.emptyText}>
+      No waiver history
+    </Text>
+  </View>
+)}
+
+{waiverArchive.map(req => (
+
+  <View
+    key={req.id}
+    style={styles.orgCard}
+  >
+
+    <Text style={styles.orgName}>
+      {req.organizationName}
+    </Text>
+
+    <InfoPair
+      label="Type"
+      value={req.type}
+    />
+
+    <InfoPair
+      label="Days"
+      value={req.requestedDays}
+    />
+
+    <InfoPair
+      label="Status"
+      value={req.status}
+    />
+
+    <InfoPair
+      label="Reviewed"
+      value={
+        req.reviewedAt
+          ? new Date(
+              req.reviewedAt
+            ).toLocaleDateString("en-GB")
+          : "—"
+      }
+    />
+
+  </View>
+
+))}
 </>
 )}
 
@@ -4448,80 +4875,198 @@ setOperationsTab("alerts");
   }
 />
                         )}
+                        {orgDetailData.sub?.trialExtended && (
+  <>
+    <InfoPair
+      label="Trial Extension"
+      value={`+${orgDetailData.sub.trialExtensionDays || 0} Days`}
+    />
+
+   <InfoPair
+  label="Support Note"
+  value="Trial extension approved by ChurchCare."
+/>
+  </>
+)}
                         {orgDetailData.sub?.overriddenByDeveloper && (
                           <InfoPair label="Note" value="⚠️ Plan manually overridden by developer" />
                         )}
-                      </View>
+  
+   {orgDetailData.sub?.waiverApproved && (
+  <>
+    <InfoPair
+      label="Waiver Status"
+      value="Approved"
+    />
+{orgDetailData.sub?.gracePeriodStartsAt && (
+  <InfoPair
+    label="Grace Starts"
+    value={
+      new Date(
+        orgDetailData.sub.gracePeriodStartsAt
+      ).toLocaleDateString("en-GB")
+    }
+  />
+)}
+
+
+   <InfoPair
+  label="Grace Ends"
+  value={
+    orgDetailData.sub?.gracePeriodEndsAt
+      ? new Date(
+          orgDetailData.sub.gracePeriodEndsAt
+        ).toLocaleDateString("en-GB")
+      : "Not Recorded"
+  }
+/>
+
+   
+{orgDetailData.sub?.waiverDays && (
+  <InfoPair
+    label="Waiver Days"
+    value={orgDetailData.sub.waiverDays}
+  />
+)}
+
+{orgDetailData.sub?.waiverType && (
+  <InfoPair
+    label="Waiver Type"
+    value={orgDetailData.sub.waiverType}
+  />
+)}
+
+{orgDetailData.sub?.waiverReason && (
+  <InfoPair
+    label="Waiver Reason"
+    value={orgDetailData.sub.waiverReason}
+  />
+)}
+  </>
+)}
+</View>
 
 <Text style={styles.fieldLabel}>
   Subscription Controls
 </Text>
 
+<Text style={styles.fieldLabel}>
+  Member Add-on
+</Text>
+
 <TextInput
   style={styles.input}
   placeholder="Members to add (e.g. 50)"
+  placeholderTextColor="#666"
   keyboardType="numeric"
   value={memberAddonQty}
   onChangeText={setMemberAddonQty}
 />
 
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={() =>
+    updateSubscriptionAddon(
+      orgDetail.id,
+      "extraMembers",
+      Number(memberAddonQty)
+    )
+  }
+>
+  <Text style={styles.white}>
+    Add Members
+  </Text>
+</TouchableOpacity>
+
+<Text style={styles.fieldLabel}>
+  Admin Add-on
+</Text>
+
 <TextInput
   style={styles.input}
   placeholder="Admins to add (e.g. 2)"
+  placeholderTextColor="#666"
   keyboardType="numeric"
   value={adminAddonQty}
   onChangeText={setAdminAddonQty}
 />
 
-<View style={styles.modalBtnRow}>
-  <TouchableOpacity
-    style={styles.modalSaveBtn}
-    onPress={() =>
-      updateSubscriptionAddon(
-        orgDetail.id,
-        "extraMembers",
-        Number(memberAddonQty)
-      )
-    }
-  >
-    <Text style={styles.white}>
-      Add Members
-    </Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={styles.modalSaveBtn}
-    onPress={() =>
-      updateSubscriptionAddon(
-        orgDetail.id,
-        "extraAdmins",
-        Number(adminAddonQty)
-      )
-    }
-  >
-    <Text style={styles.white}>
-      Add Admins
-    </Text>
-  </TouchableOpacity>
-</View>
-
-
 <TouchableOpacity
-  style={[
-    styles.modalSaveBtn,
-    { marginTop: 10 }
-  ]}
+  style={styles.modalSaveBtn}
   onPress={() =>
-    extendTrial(
+    updateSubscriptionAddon(
       orgDetail.id,
-      30
+      "extraAdmins",
+      Number(adminAddonQty)
     )
   }
 >
   <Text style={styles.white}>
-    Extend Trial
+    Add Admins
   </Text>
 </TouchableOpacity>
+
+<Text style={styles.fieldLabel}>
+  Trial Management
+</Text>
+
+<View style={styles.modalBtnRow}>
+
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      extendTrial(orgDetail.id, 7)
+    }
+  >
+    <Text style={styles.white}>
+      +7 Days
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      extendTrial(orgDetail.id, 14)
+    }
+  >
+    <Text style={styles.white}>
+      +14 Days
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+<TouchableOpacity
+  style={[
+    styles.modalSaveBtn,
+    { marginTop: 8 }
+  ]}
+  onPress={() =>
+    extendTrial(orgDetail.id, 30)
+  }
+>
+  <Text style={styles.white}>
+    +30 Days
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.rejectBtn,
+    { marginTop: 8 }
+  ]}
+  onPress={() =>
+    removeTrialExtension(
+      orgDetail.id
+    )
+  }
+>
+  <Text style={styles.white}>
+    Remove Extension
+  </Text>
+</TouchableOpacity>
+
+
 
 
                       <Text style={styles.fieldLabel}>Nodes ({orgDetailData.nodes.length})</Text>
@@ -5041,8 +5586,8 @@ infoPairRow: {
 infoPairLabel: {
   flex: 1,
   fontSize: 11,
-  color: "#666",
-  fontWeight: "600",
+  color: "#444",
+  fontWeight: "700",
 },
 
 infoPairValue: {
@@ -5050,7 +5595,7 @@ infoPairValue: {
   textAlign: "right",
   flexWrap: "wrap",
   fontSize: 12,
-  color: "#ddd",
+  color: "#222",
   fontWeight: "700",
 },
 
@@ -5095,15 +5640,14 @@ infoPairValue: {
 },
   input: {
   borderWidth: 1,
-  borderColor: "#e0e0e0",
+  borderColor: "#D0D7DE",
+  backgroundColor: "#FFFFFF",
+  color: "#222",
   borderRadius: 10,
   padding: 11,
   fontSize: 13,
-  marginBottom: 4,
-
-  color: "#FFFFFF",
-  backgroundColor: "#15172B",
 },
+
 
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f0f0f0" },

@@ -833,6 +833,51 @@ if (!existing.empty) {
     }
   />
 )}
+{subscription?.waiverApproved && (
+  <View
+    style={{
+      backgroundColor: "#FFF7E6",
+      borderRadius: 10,
+      padding: 12,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: "#F39C12",
+    }}
+  >
+    <Text
+      style={{
+        fontWeight: "800",
+        color: "#D97706",
+        marginBottom: 8,
+      }}
+    >
+      Waiver Approved
+    </Text>
+
+    <DetailRow
+      label="Approved On"
+      value={
+        subscription?.waiverApprovedAt
+          ? new Date(
+              subscription.waiverApprovedAt
+            ).toLocaleDateString("en-GB")
+          : "N/A"
+      }
+    />
+
+    <DetailRow
+      label="Grace Ends"
+      value={
+        subscription?.gracePeriodEndsAt
+          ? new Date(
+              subscription.gracePeriodEndsAt
+            ).toLocaleDateString("en-GB")
+          : "N/A"
+      }
+    />
+  </View>
+)}
+
 
         </View>
 {/* ── UNLOCKED FEATURES ── */}
