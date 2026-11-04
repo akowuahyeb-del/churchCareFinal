@@ -69,14 +69,15 @@ exports.submitOrganizationRegistration =
       );
     }
 
-   const {
+  const {
   name,
   location,
   country,
+  referralCode,
   denomination,
   templateId,
   levelId,
-      parentNodeId,
+  parentNodeId,
 
       organizationAbbreviation,
         locationAbbreviation,
@@ -191,6 +192,8 @@ denomination:
   denomination?.trim() || null,
   country:
   country?.trim() || null,
+  referralCode:
+  referralCode?.trim() || null,
 
 currencyCode:
   currencyInfo.code,
@@ -292,6 +295,29 @@ location:
     );
 
 
+
+    if (referralCode?.trim()) {
+
+  await db.collection(
+    "pendingReferralLinks"
+  ).add({
+
+    referralCode:
+      referralCode
+        .trim()
+        .toUpperCase(),
+
+    refereeOrgId:
+      orgRef.id,
+
+    createdAt:
+      new Date().toISOString(),
+
+    status:
+      "pending",
+  });
+
+}
     
     return {
       organizationId:

@@ -41,7 +41,8 @@ import {
 } from "../utils/memberMerge";
 import useOrganizationCurrency
   from "../hooks/useOrganizationCurrency";
-
+import * as Clipboard from "expo-clipboard";
+import { Share } from "react-native";
 // ─────────────────────────────────────────────────
 // Disciplinary actions — field names match MembersScreen.js exactly
 // (disciplinaryStatus / disciplinaryNote / disciplinaryDate) so both
@@ -184,6 +185,19 @@ const [profileSearch, setProfileSearch] = useState("");
   const [previousRoles, setPreviousRoles] = useState([]);
 
   const [badgeModalVisible, setBadgeModalVisible] = useState(false);
+  const [referralCode,
+  setReferralCode] =
+  useState(null);
+
+  const [rewardPoints, setRewardPoints] =
+  useState(0);
+
+const [rewardHistory, setRewardHistory] =
+  useState([]);
+
+const [generatingReferral,
+  setGeneratingReferral] =
+  useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [transferHistory, setTransferHistory] = useState([]);
   const [assignedVisitors, setAssignedVisitors] = useState([]);
@@ -516,11 +530,132 @@ console.log(
 
   const functions = getFunctions();
 
+ const _ensureMemberReferralCode =
+  httpsCallable(
+    functions,
+    "ensureMemberReferralCode"
+  );
+
   const _sendApprovalRequestNotifications =
     httpsCallable(functions, "sendApprovalRequestNotifications");
 
   const _sendIndividualNotification =
     httpsCallable(functions, "sendIndividualNotification");
+
+    const loadReferralCode =
+  async () => {
+
+    if (!organizationId) {
+      return;
+    }
+
+    try {
+
+      setGeneratingReferral(
+        true
+      );
+
+     const { data } =
+  await _ensureMemberReferralCode({
+    organizationId,
+    entityId,
+    memberId,
+  });
+
+      setReferralCode(
+        data?.referralCode ||
+        null
+      );
+
+    } catch (e) {
+
+      console.log(
+        "Referral code",
+        e
+      );
+
+    } finally {
+
+      setGeneratingReferral(
+        false
+      );
+
+    }
+  };
+
+const loadMemberRewards =
+  async () => {
+
+    if (
+      !organizationId ||
+      !entityId ||
+      !memberId
+    ) {
+      return;
+    }
+
+    try {
+
+      const memberSnap =
+        await getDoc(
+          doc(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "members",
+            memberId
+          )
+        );
+
+      setRewardPoints(
+        memberSnap.data()
+          ?.rewardPoints || 0
+      );
+
+      const ledgerSnap =
+        await getDocs(
+          collection(
+            db,
+            "organizations",
+            organizationId,
+            "entities",
+            entityId,
+            "members",
+            memberId,
+            "rewardLedger"
+          )
+        );
+
+      const rewards =
+        ledgerSnap.docs
+          .map(d => ({
+            id: d.id,
+            ...d.data(),
+          }))
+          .sort(
+            (a, b) =>
+              (b.createdAt || "")
+                .localeCompare(
+                  a.createdAt || ""
+                )
+          );
+
+      setRewardHistory(
+        rewards
+      );
+
+    } catch (e) {
+
+      console.log(
+        "loadMemberRewards",
+        e
+      );
+
+    }
+};
+
 
   const loadContributions = async () => {
     if (!organizationId || !entityId || !member?.name) return;
@@ -812,6 +947,34 @@ console.log(
     });
   };
 
+  const copyReferralCode = async () => {
+
+  if (!referralCode) {
+    return;
+  }
+
+  await Clipboard.setStringAsync(
+    referralCode
+  );
+
+  Alert.alert(
+    "Copied",
+    "Referral code copied successfully."
+  );
+};
+
+const shareReferralCode = async () => {
+
+  if (!referralCode) {
+    return;
+  }
+
+  await Share.share({
+    message:
+      `Register your church on ChurchCare using referral code: ${referralCode}`,
+  });
+};
+
  useEffect(() => {
 
   if (
@@ -868,6 +1031,24 @@ console.log(
 }, [
   member,
   contributionPeriod,
+]);
+
+useEffect(() => {
+
+  if (
+    member?.id &&
+    organizationId
+  ) {
+
+    loadReferralCode();
+
+    loadMemberRewards();
+
+  }
+
+}, [
+  member,
+  organizationId,
 ]);
 
   useEffect(() => {
@@ -1806,6 +1987,60 @@ onChangeText={setProfileSearch}
   />
 </View>
 
+<View style={styles.infoRow}>
+
+  <View style={{ flex: 1 }}>
+
+    <Text style={styles.infoLabel}>
+      MY REFERRAL CODE
+    </Text>
+
+    <Text style={styles.infoValue}>
+      {generatingReferral
+        ? "Generating..."
+        : referralCode || "Not Available"}
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#777",
+        marginTop: 4,
+      }}
+    >
+      Share this code with churches
+      registering on ChurchCare.
+    </Text>
+
+    <View
+      style={{
+        flexDirection: "row",
+        marginTop: 10,
+      }}
+    >
+
+      <TouchableOpacity
+        style={styles.referralActionBtn}
+        onPress={copyReferralCode}
+      >
+        <Text>Copy</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.referralActionBtn}
+        onPress={shareReferralCode}
+      >
+        <Text>Share</Text>
+      </TouchableOpacity>
+
+    </View>
+
+  </View>
+
+</View>
+
+<View style={styles.infoRow}> <View style={{ flex: 1 }}> <Text style={styles.infoLabel}> REWARD POINTS </Text> <Text style={styles.infoValue}> {rewardPoints} </Text> <Text style={{ fontSize: 11, color: "#777", marginTop: 4, }} > Earn points when churches register using your referral code and become active. </Text> </View> <View style={{ backgroundColor: "#EEF2FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, }} > <Ionicons name="gift-outline" size={20} color="#4B3F72" /> </View> </View>
+
 
             {/* FIX: removed the "INVITE DEBUG" console.log that sat
                 inside this map — it fired once per field on every
@@ -1880,6 +2115,7 @@ onChangeText={setProfileSearch}
               activeRoles={activeRoles}
               previousRoles={previousRoles}
             />
+          
           </View>
         )}
 
@@ -3550,5 +3786,14 @@ filterLabel: {
   color: "#6B7280",
   marginTop: 6,
   marginBottom: 4,
+},
+referralActionBtn: {
+  backgroundColor: "#EEF2FF",
+  borderWidth: 1,
+  borderColor: "#4B3F72",
+  borderRadius: 8,
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  marginRight: 8,
 },
 });

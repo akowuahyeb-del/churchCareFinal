@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, ActivityIndicator, Linking
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Linking,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -36,6 +43,10 @@ import useOrganizationCurrency
 import {
   formatConvertedAmount,
 } from "../utils/currencyConversion";
+import {
+  validatePromotion,
+  calculateDiscount,
+} from "../utils/promotions";
 
 const STATUS_COLOR = {
   trialing: "#0984E3",
@@ -103,6 +114,11 @@ console.log(
 
 const [adminAddons, setAdminAddons] =
   useState([]);
+  const [promoCode, setPromoCode] =
+  useState("");
+
+const [promoValidation, setPromoValidation] =
+  useState(null);
 
 useEffect(() => {
 
@@ -222,6 +238,12 @@ if (!organizationId || !entityId) {
 
   const targetPlan =
     getPlan(targetPlanId);
+    let discountedPrice =
+  targetPlan.price || 0;
+
+let discountAmount = 0;
+
+let appliedPromotion = null;
 
   if (targetPlan.price === null) {
     Alert.alert(
@@ -230,10 +252,46 @@ if (!organizationId || !entityId) {
     );
     return;
   }
-
   setUpgrading(targetPlanId);
 
   try {
+
+    if (promoCode.trim()) {
+
+      const result =
+       await validatePromotion(
+  promoCode,
+  targetPlanId,
+  organizationId
+);
+
+      if (!result.valid) {
+
+        Alert.alert(
+          "Promo Code",
+          result.message
+        );
+
+        setUpgrading(null);
+
+        return;
+      }
+
+      const pricing =
+        calculateDiscount(
+          result.promo,
+          targetPlan.price
+        );
+
+      discountedPrice =
+        pricing.finalAmount;
+
+      discountAmount =
+        pricing.discount;
+
+      appliedPromotion =
+        result.promo;
+    }
 
     await setDoc(
       doc(
@@ -270,8 +328,17 @@ if (!organizationId || !entityId) {
         currentPrice:
           plan?.price || 0,
 
-        requestedPrice:
+        originalPrice:
           targetPlan?.price || 0,
+
+        discountAmount,
+
+        promotionCode:
+          appliedPromotion?.code ||
+          null,
+
+        requestedPrice:
+          discountedPrice,
 
         paymentStatus:
           "pending",
@@ -283,7 +350,6 @@ if (!organizationId || !entityId) {
           new Date().toISOString(),
       }
     );
-
     Alert.alert(
       "Request Submitted",
       `${targetPlan.label} upgrade request submitted for review.`
@@ -1093,6 +1159,38 @@ if (!existing.empty) {
 
         {/* ── PLANS COMPARISON ── */}
         <Text style={styles.sectionTitle}>Plans</Text>
+        <View style={styles.usageCard}>
+
+  <Text
+    style={{
+      fontWeight: "700",
+      marginBottom: 10,
+      color: "#4B3F72",
+    }}
+  >
+    Promotion Code
+  </Text>
+
+  <TextInput
+    style={styles.promoInput}
+    placeholder="WELCOME50"
+    value={promoCode}
+    onChangeText={setPromoCode}
+    autoCapitalize="characters"
+  />
+
+  <Text
+    style={{
+      fontSize: 12,
+      color: "#666",
+      marginTop: 8,
+    }}
+  >
+    Enter a valid promotion code before upgrading.
+  </Text>
+
+</View>
+
         {PLAN_ORDER.map(pid => {
           const basePlan =
   getPlan(pid);
@@ -1398,5 +1496,13 @@ addonPrice: {
   fontSize: 13,
   fontWeight: "800",
   color: "#4B3F72",
+},
+promoInput: {
+  borderWidth: 1,
+  borderColor: "#D0D7DE",
+  backgroundColor: "#FFFFFF",
+  borderRadius: 10,
+  padding: 12,
+  fontSize: 14,
 },
 });

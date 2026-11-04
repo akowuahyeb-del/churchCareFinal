@@ -454,6 +454,68 @@ You will be taken directly to Church Setup to complete onboarding.`,
   },
 });
 
+// --------------------------------------------------
+// Referral Tracking
+// --------------------------------------------------
+if (org.referralCode) {
+
+  const pendingReferral =
+    await db
+      .collection(
+        "pendingReferralLinks"
+      )
+      .where(
+        "referralCode",
+        "==",
+        org.referralCode
+      )
+      .limit(1)
+      .get();
+
+  if (!pendingReferral.empty) {
+
+    const pending =
+      pendingReferral.docs[0].data();
+
+    await db
+      .collection("referrals")
+      .add({
+
+        referralCode:
+          org.referralCode,
+
+        referrerOrgId:
+          pending.referrerOrgId || null,
+
+        referrerMemberId:
+          pending.referrerMemberId || null,
+
+        referrerType:
+          pending.referrerType ||
+          "organization",
+
+        referredOrganizationId:
+          organizationId,
+
+        referredEntityId:
+          entityId,
+
+        referredOrganizationName:
+          org.name,
+
+        status:
+          "pending_reward",
+
+        approvedAt:
+          now,
+
+        createdAt:
+          now,
+      });
+
+  }
+}
+
    // --------------------------------------------------
 // Contact Person Approval Notification
 // --------------------------------------------------

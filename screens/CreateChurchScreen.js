@@ -53,6 +53,9 @@ const [denomination, setDenomination] = useState("");
 const [location, setLocation] = useState("");
 const [country, setCountry] =
   useState("Ghana");
+  const [referralCode,
+  setReferralCode] =
+  useState("");
 
  const [contactName, setContactName] = useState("");
 const [contactPhone, setContactPhone] = useState("");
@@ -432,6 +435,8 @@ const handleSubmit = async () => {
     location,
 
     country,
+    referralCode:
+  referralCode.trim() || null,
 
     organizationAbbreviation,
 
@@ -566,6 +571,8 @@ const handleSubmit = async () => {
   Country *
 </Text>
 
+
+
 <View style={styles.pickerContainer}>
   <Picker
   selectedValue={country}
@@ -613,6 +620,33 @@ const handleSubmit = async () => {
     />
   </Picker>
 </View>
+
+<Text style={styles.label}>
+  Referral Code (Optional)
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={referralCode}
+  onChangeText={(text) =>
+    setReferralCode(
+      text.toUpperCase()
+    )
+  }
+  placeholder="REF-ABC123"
+/>
+
+<Text
+  style={{
+    fontSize: 11,
+    color: "#888",
+    marginBottom: 8,
+  }}
+>
+  If another church member or church
+  referred you to ChurchCare, enter
+  their referral code.
+</Text>
 
               {checkingDup && (
   <ActivityIndicator

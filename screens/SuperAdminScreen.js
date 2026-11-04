@@ -142,6 +142,23 @@ const [waiverRequests, setWaiverRequests] =
 
 const [waiverArchive, setWaiverArchive] =
   useState([]);
+  const [promotions, setPromotions] =
+  useState([]);
+
+const [promoCode, setPromoCode] =
+  useState("");
+
+const [promoValue, setPromoValue] =
+  useState("");
+
+const [promoType, setPromoType] =
+  useState("percentage");
+  const [promoExpiry, setPromoExpiry] =
+  useState("");
+const [promoMaxUses, setPromoMaxUses] =
+  useState("");
+const [promoPlans, setPromoPlans] =
+  useState([]);
 
 const [archiveSort, setArchiveSort] =
   useState("newest");
@@ -222,6 +239,7 @@ await Promise.all([
   loadSubscriptionArchive(),
   loadWaiverRequests(),
   loadWaiverArchive(),
+  loadPromotions(),
 ]);
 
     startLiveActivityListener();
@@ -830,6 +848,172 @@ const loadWaiverArchive =
     }
   };
 
+const loadPromotions =
+  async () => {
+
+    try {
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "promotions"
+          )
+        );
+
+      setPromotions(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ loadPromotions:",
+        e
+      );
+
+    }
+
+  };
+
+
+
+  const createPromotion =
+  async () => {
+
+    if (!promoCode.trim()) {
+
+      Alert.alert(
+        "Code Required"
+      );
+
+      return;
+    }
+
+    try {
+
+     await setDoc(
+  doc(
+    collection(
+      db,
+      "promotions"
+    )
+  ),
+  {
+    code:
+      promoCode
+        .trim()
+        .toUpperCase(),
+
+    type:
+      promoType,
+
+    value:
+      Number(
+        promoValue
+      ) || 0,
+
+    active: true,
+
+    usageCount: 0,
+
+    plans:
+      promoPlans,
+
+    createdAt:
+      new Date()
+        .toISOString(),
+
+    validUntil:
+      promoExpiry || null,
+
+    maxUses:
+      Number(
+        promoMaxUses
+      ) || null,
+  }
+);
+
+      setPromoCode("");
+      setPromoValue("");
+      setPromoExpiry("");
+setPromoMaxUses("");
+      await loadPromotions();
+
+      Alert.alert(
+        "Success",
+        "Promotion created."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not create promotion."
+      );
+
+    }
+
+  };
+
+const togglePromotion =
+  async (promo) => {
+
+    try {
+
+      await updateDoc(
+        doc(
+          db,
+          "promotions",
+          promo.id
+        ),
+        {
+          active: !promo.active,
+        }
+      );
+
+      await loadPromotions();
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not update promotion."
+      );
+
+    }
+
+  };
+
+  const deletePromotion =
+  async (promoId) => {
+
+    try {
+
+      await deleteDoc(
+        doc(
+          db,
+          "promotions",
+          promoId
+        )
+      );
+
+      await loadPromotions();
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not delete promotion."
+      );
+
+    }
+
+  };
+
 
 const savePlanSettings =
   async () => {
@@ -1047,7 +1231,7 @@ const subRef = doc(
       );
 
     }
-    if (
+ if (
   request.requestType === "planUpgrade"
 ) {
 
@@ -1077,7 +1261,69 @@ const subRef = doc(
     }
   );
 
+  // Increment promotion usage
+if (request.promotionCode) {
+
+  const promoSnap =
+    await getDocs(
+      query(
+        collection(
+          db,
+          "promotions"
+        ),
+        where(
+          "code",
+          "==",
+          request.promotionCode
+        )
+      )
+    );
+
+  if (!promoSnap.empty) {
+
+    const promoDoc =
+      promoSnap.docs[0];
+
+    const promoData =
+      promoDoc.data();
+
+    await updateDoc(
+      promoDoc.ref,
+      {
+        usageCount:
+          (promoData.usageCount || 0) + 1,
+      }
+    );
+
+    await setDoc(
+      doc(
+        db,
+        "promotionRedemptions",
+        `${request.promotionCode}_${request.organizationId}`
+      ),
+      {
+        promotionCode:
+          request.promotionCode,
+
+        organizationId:
+          request.organizationId,
+
+        entityId:
+          request.entityId,
+
+        requestId:
+          request.id,
+
+        redeemedAt:
+          new Date().toISOString(),
+      }
+    );
+  }
 }
+
+}
+
+
 if (
   request.requestType ===
   "cancelSubscription"
@@ -3281,6 +3527,13 @@ setOperationsTab("alerts");
     value={`GH₵${req.requestedPrice}`}
   />
 
+{req.promotionCode && (
+  <MiniStat
+    label="Promo"
+    value={req.promotionCode}
+  />
+)}
+
 </View>
 
 {req.requestType === "planUpgrade" && (
@@ -3293,6 +3546,24 @@ setOperationsTab("alerts");
       marginBottom: 10,
     }}
   >
+    {req.discountAmount > 0 && (
+  <>
+    <InfoPair
+      label="Original Price"
+      value={`GH₵${req.originalPrice}`}
+    />
+
+    <InfoPair
+      label="Discount"
+      value={`GH₵${req.discountAmount}`}
+    />
+
+    <InfoPair
+      label="Final Price"
+      value={`GH₵${req.requestedPrice}`}
+    />
+  </>
+)}
     <Text
   style={{
     color: "#fff",
@@ -3305,10 +3576,38 @@ setOperationsTab("alerts");
 )}
 
 {req.requestType === "planUpgrade" && (
-  <InfoPair
-    label="Requested Plan"
-    value={req.requestedPlan}
-  />
+  <>
+    <InfoPair
+      label="Requested Plan"
+      value={req.requestedPlan}
+    />
+
+    {req.promotionCode && (
+      <InfoPair
+        label="Promotion"
+        value={req.promotionCode}
+      />
+    )}
+
+    {req.discountAmount > 0 && (
+      <>
+        <InfoPair
+          label="Original Price"
+          value={`GH₵${req.originalPrice}`}
+        />
+
+        <InfoPair
+          label="Discount"
+          value={`GH₵${req.discountAmount}`}
+        />
+
+        <InfoPair
+          label="Final Price"
+          value={`GH₵${req.requestedPrice}`}
+        />
+      </>
+    )}
+  </>
 )}
 
 <View
@@ -4071,14 +4370,271 @@ setOperationsTab("alerts");
 </View>
 
 {growthTab === "promotions" && (
-  <View style={styles.card}>
-    <Text style={styles.orgName}>
+  <>
+    <Text style={styles.sectionTitle}>
       Promotions
     </Text>
-    <Text style={styles.orgSub}>
-      Create and manage promo codes.
+
+    <View style={styles.orgCard}>
+
+      <Text style={styles.fieldLabel}>
+        Promo Code
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="WELCOME50"
+        value={promoCode}
+        onChangeText={setPromoCode}
+      />
+
+      <Text style={styles.fieldLabel}>
+        Discount Type
+      </Text>
+
+      <View style={styles.filterRow}>
+
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            promoType === "percentage" &&
+              styles.filterChipActive,
+          ]}
+          onPress={() =>
+            setPromoType("percentage")
+          }
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              promoType === "percentage" &&
+                styles.filterChipTextActive,
+            ]}
+          >
+            Percentage
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            promoType === "fixed" &&
+              styles.filterChipActive,
+          ]}
+          onPress={() =>
+            setPromoType("fixed")
+          }
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              promoType === "fixed" &&
+                styles.filterChipTextActive,
+            ]}
+          >
+            Fixed Amount
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+     <Text style={styles.fieldLabel}>
+  Discount Value
+</Text>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  value={promoValue}
+  onChangeText={setPromoValue}
+  placeholder="50"
+/>
+
+<Text style={styles.fieldLabel}>
+  Expiry Date
+</Text>
+
+<TextInput
+  style={styles.input}
+  placeholder="2026-12-31"
+  value={promoExpiry}
+  onChangeText={setPromoExpiry}
+/>
+
+<Text style={styles.fieldLabel}>
+  Maximum Uses
+</Text>
+
+<Text style={styles.fieldLabel}>
+  Eligible Plans
+</Text>
+
+<View style={styles.filterRow}>
+
+  {["free", "basic", "pro"].map(plan => (
+
+    <TouchableOpacity
+      key={plan}
+      style={[
+        styles.filterChip,
+        promoPlans.includes(plan) &&
+          styles.filterChipActive,
+      ]}
+      onPress={() => {
+
+        if (
+          promoPlans.includes(plan)
+        ) {
+          setPromoPlans(prev =>
+            prev.filter(
+              p => p !== plan
+            )
+          );
+        } else {
+          setPromoPlans(prev => [
+            ...prev,
+            plan,
+          ]);
+        }
+
+      }}
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          promoPlans.includes(plan) &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {plan.toUpperCase()}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+<TextInput
+  style={styles.input}
+  keyboardType="numeric"
+  placeholder="100"
+  value={promoMaxUses}
+  onChangeText={setPromoMaxUses}
+/>
+
+
+<TouchableOpacity
+  style={styles.modalSaveBtn}
+  onPress={createPromotion}
+>
+  <Text style={styles.white}>
+    Create Promotion
+  </Text>
+</TouchableOpacity>
+    </View>
+
+    <Text style={styles.sectionTitle}>
+      Existing Promotions
     </Text>
-  </View>
+
+    {promotions.length === 0 ? (
+      <View style={styles.emptyState}>
+        <Ionicons
+          name="pricetag-outline"
+          size={40}
+          color="#ddd"
+        />
+        <Text style={styles.emptyText}>
+          No promotions created
+        </Text>
+      </View>
+    ) : (
+      promotions.map(promo => (
+        <View
+          key={promo.id}
+          style={styles.orgCard}
+        >
+          <Text style={styles.orgName}>
+            {promo.code}
+          </Text>
+
+          <InfoPair
+            label="Type"
+            value={promo.type}
+          />
+
+          <InfoPair
+            label="Value"
+            value={promo.value}
+          />
+
+          <InfoPair
+            label="Uses"
+            value={promo.usageCount || 0}
+          />
+          <InfoPair
+  label="Max Uses"
+  value={
+    promo.maxUses || "Unlimited"
+  }
+/>
+
+<InfoPair
+  label="Expiry"
+  value={
+    promo.validUntil || "None"
+  }
+/>
+<InfoPair
+  label="Plans"
+  value={
+    promo.plans?.length
+      ? promo.plans.join(", ")
+      : "All"
+  }
+/>
+
+
+          <InfoPair
+            label="Status"
+            value={
+              promo.active
+                ? "Active"
+                : "Inactive"
+            }
+          />
+
+          <View style={styles.modalBtnRow}>
+
+  <TouchableOpacity
+    style={styles.modalSaveBtn}
+    onPress={() =>
+      togglePromotion(promo)
+    }
+  >
+    <Text style={styles.white}>
+      {promo.active
+        ? "Deactivate"
+        : "Activate"}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.rejectBtn}
+    onPress={() =>
+      deletePromotion(promo.id)
+    }
+  >
+    <Text style={styles.white}>
+      Delete
+    </Text>
+  </TouchableOpacity>
+
+</View>
+        </View>
+      ))
+    )}
+  </>
 )}
 
 {growthTab === "referrals" && (
