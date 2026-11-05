@@ -1,12 +1,3 @@
-// screens/SuperAdminScreen.js
-//
-// ✅ Developer console — reads across ALL organizations in the platform.
-// This screen is the only place in the codebase that queries the root
-// `organizations` collection directly rather than scoping everything
-// under a single organizationId. Protect this route with a developer-
-// only auth check (custom claims, a separate login, or a hardcoded
-// dev UID allowlist) — it should never appear in the main nav for a
-// church admin.
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
@@ -89,6 +80,17 @@ export default function SuperAdminScreen({ navigation }) {
   const [orgFilter, setOrgFilter] = useState("all");
   const [orgSearch, setOrgSearch] = useState("");
   const functions = getFunctions();
+  const createMarketplaceItem =
+  httpsCallable(
+    functions,
+    "createMarketplaceItem"
+  );
+
+const redeemMarketplaceItem =
+  httpsCallable(
+    functions,
+    "redeemMarketplaceItem"
+  );
 
 const approveOrganization =
   httpsCallable(
@@ -162,6 +164,23 @@ const [promoMaxUses, setPromoMaxUses] =
   useState("");
 const [promoPlans, setPromoPlans] =
   useState([]);
+  const [marketplaceItems, setMarketplaceItems] =
+  useState([]);
+
+const [itemName, setItemName] =
+  useState("");
+
+const [itemCost, setItemCost] =
+  useState("");
+
+const [itemType, setItemType] =
+  useState("entitlement");
+
+const [itemStock, setItemStock] =
+  useState("");
+
+const [itemCategory, setItemCategory] =
+  useState("general");
 
 const [archiveSort, setArchiveSort] =
   useState("newest");
@@ -243,6 +262,7 @@ await Promise.all([
   loadWaiverRequests(),
   loadWaiverArchive(),
   loadPromotions(),
+  loadMarketplaceItems(),
 ]);
 
     startLiveActivityListener();
@@ -905,6 +925,37 @@ const loadPromotions =
     }
 
   };
+
+
+const loadMarketplaceItems =
+  async () => {
+
+    try {
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "marketplaceItems"
+          )
+        );
+
+      setMarketplaceItems(
+        snap.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+        }))
+      );
+
+    } catch (e) {
+
+      console.log(
+        "❌ loadMarketplaceItems:",
+        e
+      );
+
+    }
+};
 
 
 
@@ -4831,15 +4882,133 @@ setOperationsTab("alerts");
     </View>
   </>
 )}
-
 {growthTab === "marketplace" && (
   <View style={styles.card}>
     <Text style={styles.orgName}>
       Marketplace
     </Text>
+
     <Text style={styles.orgSub}>
-      Manage token marketplace items.
+      Create and manage rewards that members can redeem using referral points.
     </Text>
+
+    <TextInput
+      style={styles.input}
+      placeholder="Reward Name"
+      value={itemName}
+      onChangeText={setItemName}
+    />
+
+    <TextInput
+      style={styles.input}
+      placeholder="Points Cost"
+      value={itemCost}
+      onChangeText={setItemCost}
+      keyboardType="numeric"
+    />
+
+    <TextInput
+      style={styles.input}
+      placeholder="Category"
+      value={itemCategory}
+      onChangeText={setItemCategory}
+    />
+
+    <TextInput
+      style={styles.input}
+      placeholder="Stock (optional)"
+      value={itemStock}
+      onChangeText={setItemStock}
+      keyboardType="numeric"
+    />
+
+    <TouchableOpacity
+      style={styles.primaryButton}
+      onPress={async () => {
+        try {
+          await createMarketplaceItem({
+            name: itemName,
+            tokenCost: Number(itemCost),
+            type: itemType,
+            category: itemCategory,
+            stock: itemStock
+              ? Number(itemStock)
+              : null,
+          });
+
+          Alert.alert(
+            "Success",
+            "Marketplace item created."
+          );
+
+          setItemName("");
+          setItemCost("");
+          setItemStock("");
+          setItemCategory("general");
+
+        } catch (e) {
+          Alert.alert(
+            "Error",
+            e.message
+          );
+        }
+      }}
+    >
+      <Text style={styles.primaryButtonText}>
+        Create Marketplace Item
+      </Text>
+    </TouchableOpacity>
+
+    <View style={{ marginTop: 20 }}>
+      <Text
+        style={{
+          fontSize: 14,
+          fontWeight: "700",
+          color: "#4B3F72",
+        }}
+      >
+        Current Marketplace Items
+      </Text>
+
+      {marketplaceItems.length === 0 ? (
+        <Text
+          style={{
+            marginTop: 10,
+            color: "#666",
+          }}
+        >
+          No marketplace items yet.
+        </Text>
+      ) : (
+        marketplaceItems.map(item => (
+          <View
+            key={item.id}
+            style={{
+              backgroundColor: "#F9FAFB",
+              padding: 12,
+              borderRadius: 10,
+              marginTop: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontWeight: "700",
+              }}
+            >
+              {item.name}
+            </Text>
+
+            <Text>
+              Cost: {item.tokenCost} points
+            </Text>
+
+            <Text>
+              Redeemed: {item.redemptionCount || 0}
+            </Text>
+          </View>
+        ))
+      )}
+    </View>
   </View>
 )}
 
@@ -6392,4 +6561,18 @@ infoPairValue: {
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f0f0f0" },
   chipText: { fontSize: 12, color: "#555", fontWeight: "600" },
+  primaryButton: {
+  backgroundColor: "#4B3F72",
+  paddingVertical: 12,
+  borderRadius: 10,
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 15,
+},
+
+primaryButtonText: {
+  color: "#FFFFFF",
+  fontWeight: "700",
+  fontSize: 14,
+},
 });

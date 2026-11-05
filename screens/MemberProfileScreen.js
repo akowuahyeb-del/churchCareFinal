@@ -1658,29 +1658,29 @@ const submitRewardClaim = async () => {
 
   try {
 
-    await updateDoc(
-      doc(
-        db,
-        "organizations",
-        organizationId,
-        "entities",
-        entityId,
-        "members",
-        memberId,
-        "rewardLedger",
-        selectedReward.id
-      ),
-      {
-        claimStatus: "pending",
-        claimRequestedAt:
-          new Date().toISOString(),
-      }
-    );
+   await updateDoc(
+  doc(
+    db,
+    "organizations",
+    organizationId,
+    "entities",
+    entityId,
+    "members",
+    memberId,
+    "rewardLedger",
+    selectedReward.id
+  ),
+  {
+    redemptionStatus: "pending",
+    redemptionRequestedAt:
+      new Date().toISOString(),
+  }
+);
 
-    Alert.alert(
-      "Submitted",
-      "Reward claim submitted for approval."
-    );
+   Alert.alert(
+  "Submitted",
+  "Reward redemption request submitted successfully."
+);
 
     setClaimModalVisible(false);
 
@@ -2147,6 +2147,44 @@ onChangeText={setProfileSearch}
   </TouchableOpacity>
 </View>
 
+<View style={styles.infoRow}>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.infoLabel}>
+      MARKETPLACE
+    </Text>
+
+    <Text style={styles.infoValue}>
+      Redeem Your Reward Points
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#777",
+        marginTop: 4,
+      }}
+    >
+      Use your referral points for discounts,
+      subscriptions and future rewards.
+    </Text>
+  </View>
+
+  <TouchableOpacity
+    style={styles.referralActionBtn}
+    onPress={() =>
+      navigation.navigate(
+        "Marketplace",
+        {
+          organizationId,
+          entityId,
+          memberId,
+        }
+      )
+    }
+  >
+    <Text>Open</Text>
+  </TouchableOpacity>
+</View>
 
             {/* FIX: removed the "INVITE DEBUG" console.log that sat
                 inside this map — it fired once per field on every
@@ -3059,8 +3097,9 @@ onChangeText={setProfileSearch}
                   fontWeight: "700",
                 }}
               >
-                {reward.claimStatus ||
-                  "available"}
+               {reward.redemptionStatus ||
+  "available"}
+
               </Text>
 
             </TouchableOpacity>
@@ -3098,10 +3137,9 @@ onChangeText={setProfileSearch}
 >
   <View style={styles.modalOverlay}>
     <View style={styles.modalBox}>
-
-      <Text style={styles.modalTitle}>
-        Claim Reward
-      </Text>
+<Text style={styles.modalTitle}>
+  Redeem Reward
+</Text>
 
       <Text
         style={{
@@ -3110,7 +3148,7 @@ onChangeText={setProfileSearch}
           marginBottom: 15,
         }}
       >
-        Review reward details before submitting your claim.
+        Review reward details before redeeming this reward.
       </Text>
 
       {selectedReward && (
@@ -3137,16 +3175,16 @@ onChangeText={setProfileSearch}
             </Text>
 
             <Text>
-              Points:
-              {" "}
-              {selectedReward.points || 0}
-            </Text>
+  Points:
+  {" "}
+  {selectedReward.amount || 0}
+</Text>
 
             <Text>
               Status:
               {" "}
-              {selectedReward.claimStatus ||
-               "available"}
+              {selectedReward.redemptionStatus ||
+ "available"}
             </Text>
 
             <Text>
@@ -3159,7 +3197,7 @@ onChangeText={setProfileSearch}
 
           </View>
 
-          {selectedReward.claimStatus ===
+          {selectedReward.redemptionStatus ===
             "pending" && (
             <View
               style={{
@@ -3181,7 +3219,7 @@ onChangeText={setProfileSearch}
             </View>
           )}
 
-          {selectedReward.claimStatus ===
+          {selectedReward.redemptionStatus ===
             "approved" && (
             <View
               style={{
@@ -3203,7 +3241,7 @@ onChangeText={setProfileSearch}
             </View>
           )}
 
-          {!selectedReward.claimStatus && (
+          {!selectedReward.redemptionStatus && (
             <TouchableOpacity
               style={[
                 styles.actionExecBtn,
@@ -3217,9 +3255,9 @@ onChangeText={setProfileSearch}
                 submitRewardClaim
               }
             >
-              <Text style={styles.white}>
-                Submit Claim
-              </Text>
+             <Text style={styles.white}>
+  Redeem Reward
+</Text>
             </TouchableOpacity>
           )}
 

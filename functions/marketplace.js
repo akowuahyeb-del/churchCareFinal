@@ -54,16 +54,48 @@ exports.redeemMarketplaceItem = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
 
-  const { organizationId, itemId } = request.data || {};
-  if (!organizationId || !itemId) {
-    throw new HttpsError("invalid-argument", "Missing organizationId or itemId");
-  }
+  const {
+  organizationId,
+  entityId,
+  memberId,
+  itemId,
+} = request.data || {};
+  if (
+  !organizationId ||
+  !entityId ||
+  !memberId ||
+  !itemId
+) {
+  throw new HttpsError(
+    "invalid-argument",
+    "Missing organizationId, entityId, memberId or itemId"
+  );
+}
+const itemRef =
+  db.collection("marketplaceItems")
+    .doc(itemId);
 
-  const itemRef = db.collection("marketplaceItems").doc(itemId);
-  const orgRef = db.collection("organizations").doc(organizationId);
+const memberRef =
+  db.collection("organizations")
+    .doc(organizationId)
+    .collection("entities")
+    .doc(entityId)
+    .collection("members")
+    .doc(memberId);
+const { item, newBalance } =
+  await db.runTransaction(async (tx) => {
 
-  const { item, newBalance } = await db.runTransaction(async (tx) => {
-    const [itemSnap, orgSnap] = await Promise.all([tx.get(itemRef), tx.get(orgRef)]);
+    const [itemSnap, memberSnap] =
+      await Promise.all([
+        tx.get(itemRef),
+        tx.get(memberRef),
+      ]);
+      if (!memberSnap.exists) {
+  throw new HttpsError(
+    "not-found",
+    "Member not found"
+  );
+}
 
     if (!itemSnap.exists) throw new HttpsError("not-found", "Marketplace item not found");
     const itemData = itemSnap.data();
@@ -73,18 +105,52 @@ exports.redeemMarketplaceItem = onCall(async (request) => {
       throw new HttpsError("resource-exhausted", "This item is out of stock");
     }
 
-    const balance = orgSnap.data()?.tokenBalance || 0;
-    if (balance < itemData.tokenCost) {
-      throw new HttpsError("failed-precondition", "Not enough tokens for this item");
-    }
+   const balance =
+  memberSnap.data()?.rewardPoints || 0;
+   if (balance < itemData.tokenCost) {
+  throw new HttpsError(
+    "failed-precondition",
+    "Not enough reward points for this item"
+  );
+}
 
-    tx.update(orgRef, { tokenBalance: FieldValue.increment(-itemData.tokenCost) });
-    tx.set(orgRef.collection("tokenLedger").doc(), {
-      amount: -itemData.tokenCost,
-      reason: "redeemed",
-      relatedId: itemId,
-      createdAt: new Date().toISOString(),
-    });
+   tx.update(
+  memberRef,
+  {
+    rewardPoints:
+      FieldValue.increment(
+        -itemData.tokenCost
+      ),
+  }
+);
+
+tx.set(
+  memberRef
+    .collection("rewardLedger")
+    .doc(),
+  {
+    amount:
+      -itemData.tokenCost,
+
+    rewardType:
+      "marketplace",
+
+    reason:
+      "marketplace_redemption",
+
+    relatedId:
+      itemId,
+
+    redemptionStatus:
+      "approved",
+
+    redemptionRequestedAt:
+      new Date().toISOString(),
+
+    createdAt:
+      new Date().toISOString(),
+  }
+);
 
     const updatePayload = {
   redemptionCount:
@@ -118,15 +184,28 @@ tx.update(
     });
   }
 
-  await db.collection("organizations").doc(organizationId)
-    .collection("marketplaceRedemptions").add({
-      itemId,
-      itemName: item.name,
-      tokenCost: item.tokenCost,
-      entitlementId,
-      redeemedBy: request.auth.uid,
-      redeemedAt: new Date().toISOString(),
-    });
+ await db
+  .collection("organizations")
+  .doc(organizationId)
+  .collection("marketplaceRedemptions")
+  .add({
+    itemId,
+    itemName: item.name,
+
+    pointsCost:
+      item.tokenCost,
+
+    memberId,
+    entityId,
+
+    entitlementId,
+
+    redeemedBy:
+      request.auth.uid,
+
+    redeemedAt:
+      new Date().toISOString(),
+  });
 
   return { success: true, newBalance, entitlementId };
 });

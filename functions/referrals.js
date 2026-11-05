@@ -496,14 +496,19 @@ async function awardMemberPoints({
       memberRef
         .collection("rewardLedger")
         .doc(),
-      {
-        amount,
-        reason,
-        relatedId:
-          relatedId || null,
-        createdAt:
-          new Date().toISOString(),
-      }
+     {
+  amount,
+  rewardType: "points",
+  reason,
+  relatedId:
+    relatedId || null,
+
+  redemptionStatus: null,
+  redemptionRequestedAt: null,
+
+  createdAt:
+    new Date().toISOString(),
+}
     );
 
   });

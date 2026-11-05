@@ -94,6 +94,7 @@ import MyProfileScreen from "./screens/MyProfileScreen";
 import { hasPermission } from "./constants/permissions";
 import ApprovalRequestDetailScreen from "./screens/ApprovalRequestDetailScreen";
 import SecuritySettingsScreen from "./screens/SecuritySettingsScreen";
+import MarketplaceScreen from "./screens/MarketplaceScreen";
 
 
 
@@ -441,6 +442,7 @@ function RootStack() {
        <Stack.Screen name="ApprovalRequestDetail"component={ApprovalRequestDetailScreen}/>
        <Stack.Screen name="MemberProfile"component={MemberProfileScreen}/>
        <Stack.Screen name="SecuritySettings"component={SecuritySettingsScreen}/>
+       <Stack.Screen name="Marketplace"component={MarketplaceScreen}options={{ headerShown: false }}/>
 
 
 
