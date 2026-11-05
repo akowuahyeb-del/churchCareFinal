@@ -119,6 +119,9 @@ const reinstateOrganization =
   useState({});
   const [exchangeRates, setExchangeRates] =
   useState({});
+
+  const [referralRewards, setReferralRewards] =
+  useState({});
   const [subscriptionRequests, setSubscriptionRequests] =
   useState([]);
 
@@ -618,6 +621,14 @@ const loadSubscriptionSettings = async () => {
             active: true,
           },
         ],
+
+        referralRewards: {
+  churchReferralDiscountPercent: 10,
+  memberReferralPoints: 100,
+  pointsPerCurrencyUnit: 10,
+  minimumQualifiedMonths: 1,
+  active: true,
+},
         plans: {
   free: {
     price: 0,
@@ -675,6 +686,19 @@ if (!data.baseCurrency) {
   updated = true;
 }
 
+if (!data.referralRewards) {
+
+  data.referralRewards = {
+    churchReferralDiscountPercent: 10,
+    memberReferralPoints: 100,
+    pointsPerCurrencyUnit: 10,
+    minimumQualifiedMonths: 1,
+    active: true,
+  };
+
+  updated = true;
+}
+
 if (updated) {
 
   await setDoc(
@@ -699,6 +723,9 @@ setAdminAddons(
 );
 setExchangeRates(
   data.exchangeRates || {}
+);
+setReferralRewards(
+  data.referralRewards || {}
 );
 
   } catch (e) {
@@ -1147,6 +1174,39 @@ const saveExchangeRates =
   };
 
 
+  const saveReferralRewards =
+  async () => {
+
+    try {
+
+      await setDoc(
+        doc(
+          db,
+          "platform",
+          "subscriptionSettings"
+        ),
+        {
+          referralRewards,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      Alert.alert(
+        "Success",
+        "Referral rewards updated."
+      );
+
+    } catch (e) {
+
+      Alert.alert(
+        "Error",
+        "Could not save referral rewards."
+      );
+
+    }
+  };
 
 const approveSubscriptionRequest = async (request) => {
 
@@ -4638,14 +4698,138 @@ setOperationsTab("alerts");
 )}
 
 {growthTab === "referrals" && (
-  <View style={styles.card}>
-    <Text style={styles.orgName}>
-      Referrals
+  <>
+    <Text style={styles.sectionTitle}>
+      Referral Reward Settings
     </Text>
-    <Text style={styles.orgSub}>
-      Manage referral programmes and rewards.
-    </Text>
-  </View>
+
+    <View style={styles.orgCard}>
+
+      <Text style={styles.fieldLabel}>
+        Church Referral Discount (%)
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        value={String(
+          referralRewards.churchReferralDiscountPercent || 0
+        )}
+        onChangeText={(v) =>
+          setReferralRewards(prev => ({
+            ...prev,
+            churchReferralDiscountPercent:
+              Number(v) || 0,
+          }))
+        }
+      />
+
+      <Text style={styles.fieldLabel}>
+        Member Referral Points
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        value={String(
+          referralRewards.memberReferralPoints || 0
+        )}
+        onChangeText={(v) =>
+          setReferralRewards(prev => ({
+            ...prev,
+            memberReferralPoints:
+              Number(v) || 0,
+          }))
+        }
+      />
+
+      <Text style={styles.fieldLabel}>
+        Points Per Currency Unit
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        value={String(
+          referralRewards.pointsPerCurrencyUnit || 0
+        )}
+        onChangeText={(v) =>
+          setReferralRewards(prev => ({
+            ...prev,
+            pointsPerCurrencyUnit:
+              Number(v) || 0,
+          }))
+        }
+      />
+
+      <Text style={styles.fieldLabel}>
+        Minimum Qualified Months
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        keyboardType="numeric"
+        value={String(
+          referralRewards.minimumQualifiedMonths || 1
+        )}
+        onChangeText={(v) =>
+          setReferralRewards(prev => ({
+            ...prev,
+            minimumQualifiedMonths:
+              Number(v) || 1,
+          }))
+        }
+      />
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 15,
+        }}
+      >
+        <Text
+          style={{
+            color:
+              referralRewards.active
+                ? "#27ae60"
+                : "#e74c3c",
+            fontWeight: "700",
+          }}
+        >
+          {referralRewards.active
+            ? "Enabled"
+            : "Disabled"}
+        </Text>
+
+        <Switch
+          value={
+            referralRewards.active ?? true
+          }
+          onValueChange={(v) =>
+            setReferralRewards(prev => ({
+              ...prev,
+              active: v,
+            }))
+          }
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.modalSaveBtn,
+          { marginTop: 20 }
+        ]}
+        onPress={saveReferralRewards}
+      >
+        <Text style={styles.white}>
+          Save Referral Settings
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </>
 )}
 
 {growthTab === "marketplace" && (

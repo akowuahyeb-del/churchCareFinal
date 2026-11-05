@@ -195,6 +195,22 @@ const [profileSearch, setProfileSearch] = useState("");
 const [rewardHistory, setRewardHistory] =
   useState([]);
 
+  const [
+  rewardsModalVisible,
+  setRewardsModalVisible,
+] = useState(false);
+
+const [
+  selectedReward,
+  setSelectedReward,
+] = useState(null);
+
+const [
+  claimModalVisible,
+  setClaimModalVisible,
+] = useState(false);
+
+
 const [generatingReferral,
   setGeneratingReferral] =
   useState(false);
@@ -1634,6 +1650,65 @@ setMergeModalVisible(
     }
   };
 
+const submitRewardClaim = async () => {
+
+  if (!selectedReward) {
+    return;
+  }
+
+  try {
+
+    await updateDoc(
+      doc(
+        db,
+        "organizations",
+        organizationId,
+        "entities",
+        entityId,
+        "members",
+        memberId,
+        "rewardLedger",
+        selectedReward.id
+      ),
+      {
+        claimStatus: "pending",
+        claimRequestedAt:
+          new Date().toISOString(),
+      }
+    );
+
+    Alert.alert(
+      "Submitted",
+      "Reward claim submitted for approval."
+    );
+
+    setClaimModalVisible(false);
+
+    loadMemberRewards();
+
+  } catch (e) {
+
+    console.log(
+      "submitRewardClaim",
+      e
+    );
+
+    Alert.alert(
+      "Error",
+      "Unable to submit claim."
+    );
+  }
+};
+
+const openReward = reward => {
+
+  setSelectedReward(reward);
+
+  setRewardsModalVisible(false);
+
+  setClaimModalVisible(true);
+};
+
 const handleMergeDuplicate =
   async () => {
 
@@ -2040,6 +2115,37 @@ onChangeText={setProfileSearch}
 </View>
 
 <View style={styles.infoRow}> <View style={{ flex: 1 }}> <Text style={styles.infoLabel}> REWARD POINTS </Text> <Text style={styles.infoValue}> {rewardPoints} </Text> <Text style={{ fontSize: 11, color: "#777", marginTop: 4, }} > Earn points when churches register using your referral code and become active. </Text> </View> <View style={{ backgroundColor: "#EEF2FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, }} > <Ionicons name="gift-outline" size={20} color="#4B3F72" /> </View> </View>
+
+<View style={styles.infoRow}>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.infoLabel}>
+      PROMOTION REWARDS
+    </Text>
+
+    <Text style={styles.infoValue}>
+      {rewardHistory.length} earned reward(s)
+    </Text>
+
+    <Text
+      style={{
+        fontSize: 11,
+        color: "#777",
+        marginTop: 4,
+      }}
+    >
+      Rewards earned through church referrals.
+    </Text>
+  </View>
+
+  <TouchableOpacity
+    style={styles.referralActionBtn}
+    onPress={() =>
+      setRewardsModalVisible(true)
+    }
+  >
+    <Text>View</Text>
+  </TouchableOpacity>
+</View>
 
 
             {/* FIX: removed the "INVITE DEBUG" console.log that sat
@@ -2891,6 +2997,251 @@ onChangeText={setProfileSearch}
         </View>
       </Modal>
 
+{/* ══════════ REWARDS MODAL ══════════ */}
+<Modal
+  visible={rewardsModalVisible}
+  transparent
+  animationType="slide"
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Referral Rewards
+      </Text>
+
+      <ScrollView
+        style={{
+          maxHeight: 400,
+        }}
+      >
+        {rewardHistory.length === 0 ? (
+
+          <Text
+            style={{
+              textAlign: "center",
+              color: "#666",
+            }}
+          >
+            No rewards earned yet.
+          </Text>
+
+        ) : (
+
+          rewardHistory.map(reward => (
+
+            <TouchableOpacity
+              key={reward.id}
+              style={styles.recordRow}
+              onPress={() =>
+                openReward(reward)
+              }
+            >
+
+              <View>
+
+                <Text style={styles.recordTitle}>
+                  {reward.reason ||
+                   reward.rewardType ||
+                   "Referral Reward"}
+                </Text>
+
+                <Text style={styles.recordSub}>
+                  {formatDate(
+                    reward.createdAt
+                  )}
+                </Text>
+
+              </View>
+
+              <Text
+                style={{
+                  fontWeight: "700",
+                }}
+              >
+                {reward.claimStatus ||
+                  "available"}
+              </Text>
+
+            </TouchableOpacity>
+
+          ))
+
+        )}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[
+          styles.modalCancelBtn,
+          {
+            marginTop: 12,
+          },
+        ]}
+        onPress={() =>
+          setRewardsModalVisible(false)
+        }
+      >
+        <Text style={styles.white}>
+          Close
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+{/* ══════════ CLAIM REWARD MODAL ══════════ */}
+<Modal
+  visible={claimModalVisible}
+  transparent
+  animationType="fade"
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Claim Reward
+      </Text>
+
+      <Text
+        style={{
+          textAlign: "center",
+          color: "#666",
+          marginBottom: 15,
+        }}
+      >
+        Review reward details before submitting your claim.
+      </Text>
+
+      {selectedReward && (
+        <>
+
+          <View
+            style={{
+              backgroundColor: "#F9FAFB",
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 15,
+            }}
+          >
+
+            <Text
+              style={{
+                fontWeight: "700",
+                marginBottom: 8,
+              }}
+            >
+              {selectedReward.reason ||
+               selectedReward.rewardType ||
+               "Referral Reward"}
+            </Text>
+
+            <Text>
+              Points:
+              {" "}
+              {selectedReward.points || 0}
+            </Text>
+
+            <Text>
+              Status:
+              {" "}
+              {selectedReward.claimStatus ||
+               "available"}
+            </Text>
+
+            <Text>
+              Date:
+              {" "}
+              {formatDate(
+                selectedReward.createdAt
+              )}
+            </Text>
+
+          </View>
+
+          {selectedReward.claimStatus ===
+            "pending" && (
+            <View
+              style={{
+                backgroundColor: "#FEF3C7",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#92400E",
+                  textAlign: "center",
+                  fontWeight: "700",
+                }}
+              >
+                Claim Already Submitted
+              </Text>
+            </View>
+          )}
+
+          {selectedReward.claimStatus ===
+            "approved" && (
+            <View
+              style={{
+                backgroundColor: "#DCFCE7",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#166534",
+                  textAlign: "center",
+                  fontWeight: "700",
+                }}
+              >
+                Reward Approved
+              </Text>
+            </View>
+          )}
+
+          {!selectedReward.claimStatus && (
+            <TouchableOpacity
+              style={[
+                styles.actionExecBtn,
+                {
+                  backgroundColor:
+                    "#16A34A",
+                  marginBottom: 10,
+                },
+              ]}
+              onPress={
+                submitRewardClaim
+              }
+            >
+              <Text style={styles.white}>
+                Submit Claim
+              </Text>
+            </TouchableOpacity>
+          )}
+
+        </>
+      )}
+
+      <TouchableOpacity
+        style={styles.modalCancelBtn}
+        onPress={() =>
+          setClaimModalVisible(false)
+        }
+      >
+        <Text style={styles.white}>
+          Close
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+
 {/* ══════════ MERGE PICKER MODAL ══════════ */}
 <Modal
   visible={mergeModalVisible}
@@ -3308,41 +3659,61 @@ setMergePinVisible(
   placeholderTextColor="#6B7280"
 />
 
+<TouchableOpacity
+  style={[
+    styles.actionExecBtn,
+    {
+      backgroundColor: "#E67E22",
+      marginTop: 10,
+    },
+  ]}
+  onPress={async () => {
+    try {
+      const adminSnap = await getDoc(
+        doc(
+          db,
+          "organizations",
+          organizationId,
+          "settings",
+          "security"
+        )
+      );
 
-      <TouchableOpacity
-        style={[
-          styles.actionExecBtn,
-          {
-            backgroundColor: "#E67E22",
-            marginTop: 10,
-          },
-        ]}
-        onPress={() => {
+      const configuredPin =
+        adminSnap.data()?.mergePin;
 
-          if (
-            mergePin !== "1234"
-          ) {
+      if (
+        !configuredPin ||
+        mergePin !== configuredPin
+      ) {
+        Alert.alert(
+          "Invalid PIN",
+          "Administrative PIN incorrect."
+        );
+        return;
+      }
 
-            Alert.alert(
-              "Invalid PIN",
-              "Administrative PIN incorrect."
-            );
+      setMergePinVisible(false);
 
-            return;
-          }
+      await handleMergeDuplicate();
 
-          setMergePinVisible(
-            false
-          );
+    } catch (e) {
+      console.log(
+        "PIN verification error",
+        e
+      );
 
-          handleMergeDuplicate();
-
-        }}
-      >
-        <Text style={styles.white}>
-          Confirm Merge
-        </Text>
-      </TouchableOpacity>
+      Alert.alert(
+        "Error",
+        "Unable to verify PIN."
+      );
+    }
+  }}
+>
+  <Text style={styles.white}>
+    Confirm Merge
+  </Text>
+</TouchableOpacity>
 
       <TouchableOpacity
         style={[

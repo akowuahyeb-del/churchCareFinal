@@ -509,15 +509,29 @@ async function awardMemberPoints({
   });
 }
 
+async function getReferralRewardsConfig() {
 
-const REFERRAL_REWARD_TOKENS = 100;
-const MEMBER_REFERRAL_POINTS = 25;
+  const snap = await db
+    .collection("platform")
+    .doc("subscriptionSettings")
+    .get();
 
-// ASSUMPTION: subscription doc at organizations/{orgId}/subscription/current
-// transitions to status "active" once a referred church's first paid
-// billing cycle completes. If your activation event lives elsewhere
-// (e.g. a Paystack webhook function), call markReferralQualified()
-// (exported below) from there instead of relying on this trigger.
+  const data = snap.exists
+    ? snap.data()
+    : {};
+
+  return (
+    data.referralRewards || {
+      churchReferralDiscountPercent: 10,
+      memberReferralPoints: 100,
+      pointsPerCurrencyUnit: 10,
+      minimumQualifiedMonths: 1,
+      active: true,
+    }
+  );
+}
+
+
 exports.onSubscriptionActivated = onDocumentUpdated(
   "organizations/{organizationId}/subscription/current",
   async (event) => {
@@ -560,13 +574,63 @@ await referralDoc.ref.update({
   qualifiedAt: now,
 });
 
+const subscriptionSnap =
+  await db
+    .collection("organizations")
+    .doc(refereeOrgId)
+    .collection("subscription")
+    .doc("current")
+    .get();
 
-  await awardTokens({
-    organizationId: referral.referrerOrgId,
-    amount: REFERRAL_REWARD_TOKENS,
-    reason: "referral",
-    relatedId: referralDoc.id,
+const subscription =
+  subscriptionSnap.data() || {};
+
+const rewardsConfig =
+  await getReferralRewardsConfig();
+
+if (!rewardsConfig.active) {
+
+  await referralDoc.ref.update({
+    status: "qualified",
+    rewardsDisabled: true,
   });
+
+  return;
+}
+
+const churchDiscountPercent =
+  rewardsConfig.churchReferralDiscountPercent || 0;
+
+const memberPoints =
+  rewardsConfig.memberReferralPoints || 0;
+
+
+ if (churchDiscountPercent > 0) {
+
+  await grantEntitlement({
+    organizationId:
+      referral.referrerOrgId,
+
+    type:
+      "discount_percent",
+
+    value:
+      churchDiscountPercent,
+
+    source:
+      "referral",
+
+    sourceId:
+      referralDoc.id,
+
+    grantedBy:
+      "system",
+
+    note:
+      "Referral reward",
+  });
+
+}
 
 if (
   referral.referrerType === "member" &&
@@ -585,7 +649,7 @@ if (
       referral.referrerMemberId,
 
     amount:
-      MEMBER_REFERRAL_POINTS,
+  memberPoints,
 
     reason:
       "referral",
@@ -598,14 +662,15 @@ if (
 
   await referralDoc.ref.update({ status: "rewarded", rewardedAt: now });
 
-  await db.collection("organizations").doc(referral.referrerOrgId)
-    .collection("notifications").add({
-      type: "referral_rewarded",
-      title: "🎉 Referral reward earned!",
-      message: `A church you referred is now active — you've earned ${REFERRAL_REWARD_TOKENS} tokens.`,
-      read: false,
-      createdAt: now,
-    });
+await db.collection("organizations").doc(referral.referrerOrgId)
+  .collection("notifications").add({
+    type: "referral_rewarded",
+    title: "🎉 Referral reward earned!",
+    message:
+      `A church you referred is now active. Referral rewards have been applied successfully.`,
+    read: false,
+    createdAt: now,
+  });
 }
 
 exports.processPendingRewards = onCall(
@@ -634,7 +699,7 @@ if (referral.rewardedAt) {
           referral.referrerOrgId,
 
         amount:
-          REFERRAL_REWARD_TOKENS,
+        0,
 
         reason:
           "referral",

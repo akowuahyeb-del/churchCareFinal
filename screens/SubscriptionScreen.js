@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   TextInput,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -119,6 +120,19 @@ const [adminAddons, setAdminAddons] =
 
 const [promoValidation, setPromoValidation] =
   useState(null);
+  const [rewardHistory, setRewardHistory] =
+  useState([]);
+
+const [rewardsLoading, setRewardsLoading] =
+  useState(false);
+
+const [selectedReward, setSelectedReward] =
+  useState(null);
+
+const [
+  rewardsModalVisible,
+  setRewardsModalVisible,
+] = useState(false);
 
 useEffect(() => {
 
@@ -164,6 +178,13 @@ useEffect(() => {
   loadSubscriptionSettings();
 
 }, []);
+useEffect(() => {
+
+  if (organizationId) {
+    loadChurchRewards();
+  }
+
+}, [organizationId]);
 
 const loadSubscriptionSettings =
   async () => {
@@ -198,6 +219,57 @@ const loadSubscriptionSettings =
         "❌ loadSubscriptionSettings:",
         e
       );
+
+    }
+  };
+
+  const loadChurchRewards =
+  async () => {
+
+    if (!organizationId) {
+      return;
+    }
+
+    try {
+
+      setRewardsLoading(true);
+
+      const rewardsSnap =
+        await getDocs(
+          collection(
+  db,
+  "organizations",
+  organizationId,
+  "tokenLedger"
+)
+        );
+
+      const rewards =
+        rewardsSnap.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .sort(
+            (a, b) =>
+              (b.createdAt || "")
+                .localeCompare(
+                  a.createdAt || ""
+                )
+          );
+
+      setRewardHistory(rewards);
+
+    } catch (e) {
+
+      console.log(
+        "loadChurchRewards",
+        e
+      );
+
+    } finally {
+
+      setRewardsLoading(false);
 
     }
   };
@@ -814,6 +886,8 @@ if (!existing.empty) {
             </View>
           </View>
 
+
+
           {status === "trialing" && !isTrialExpired && (
             <View style={styles.trialBanner}>
               <Ionicons name="time-outline" size={14} color="#0984E3" />
@@ -946,6 +1020,37 @@ if (!existing.empty) {
 
 
         </View>
+
+<Text style={styles.sectionTitle}>
+  Referral Rewards
+</Text>
+
+<View style={styles.usageCard}>
+
+  <DetailRow
+    label="Available Rewards"
+    value={
+      rewardsLoading
+        ? "Loading..."
+        : rewardHistory.length
+    }
+  />
+
+  <TouchableOpacity
+    style={styles.upgradeBtn}
+    onPress={() =>
+      setRewardsModalVisible(true)
+    }
+  >
+    <Text style={styles.upgradeBtnText}>
+      View Rewards
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
+
+
 {/* ── UNLOCKED FEATURES ── */}
 <Text style={styles.sectionTitle}>
   Unlocked Features
@@ -1337,6 +1442,119 @@ canManageBilling && (
     </Text>
   </TouchableOpacity>
 )}
+
+<Modal
+  visible={rewardsModalVisible}
+  animationType="slide"
+  transparent
+  onRequestClose={() =>
+    setRewardsModalVisible(false)
+  }
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "center",
+      padding: 20,
+    }}
+  >
+    <View
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        maxHeight: "80%",
+        padding: 16,
+      }}
+    >
+
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "800",
+          marginBottom: 12,
+        }}
+      >
+        Referral Rewards
+      </Text>
+
+      <ScrollView>
+
+        {rewardHistory.length === 0 ? (
+
+          <Text
+            style={{
+              color: "#666",
+            }}
+          >
+            No rewards available.
+          </Text>
+
+        ) : (
+
+          rewardHistory.map(reward => (
+
+            <TouchableOpacity
+              key={reward.id}
+              style={{
+                borderWidth: 1,
+                borderColor: "#eee",
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 10,
+              }}
+              onPress={() =>
+                setSelectedReward(reward)
+              }
+            >
+
+              <Text
+                style={{
+                  fontWeight: "700",
+                }}
+              >
+                {reward.rewardType ||
+                  "Referral Reward"}
+              </Text>
+
+              <Text>
+                Status:
+                {" "}
+                {reward.status ||
+                  "available"}
+              </Text>
+
+            </TouchableOpacity>
+
+          ))
+
+        )}
+
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[
+          styles.upgradeBtn,
+          {
+            marginTop: 12,
+          },
+        ]}
+        onPress={() =>
+          setRewardsModalVisible(false)
+        }
+      >
+        <Text
+          style={styles.upgradeBtnText}
+        >
+          Close
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+
       </ScrollView>
     </View>
   );
