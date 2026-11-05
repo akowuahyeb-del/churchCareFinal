@@ -22,8 +22,31 @@ import {
   httpsCallable,
 } from "firebase/functions";
 import { db } from "../firebase";
+const formatRewardType = (type) => {
+  switch (type) {
+
+    case "discount_percent":
+      return "Subscription Discount";
+
+    case "free_months":
+      return "Free Subscription Month";
+
+    case "extra_members":
+      return "Extra Member Capacity";
+
+    case "extra_admins":
+      return "Extra Admin Capacity";
+
+    case "feature_unlock":
+      return "Feature Unlock";
+
+    default:
+      return type || "Reward";
+  }
+};
 
 export default function MarketplaceScreen({
+
   route,
   navigation,
 }) {
@@ -225,24 +248,72 @@ export default function MarketplaceScreen({
             {item.name}
           </Text>
 
-          <Text
-            style={styles.itemCost}
-          >
-            Cost: {item.tokenCost}
-            {" "}points
-          </Text>
+         <Text style={styles.itemCost}>
+  Cost: {item.tokenCost} points
+</Text>
 
-          <TouchableOpacity
-            style={styles.redeemBtn}
+{item.fulfillment && (
+  <View
+    style={{
+      backgroundColor: "#312E81",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      alignSelf: "flex-start",
+      marginTop: 8,
+    }}
+  >
+    <Text
+      style={{
+        color: "#C7D2FE",
+        fontWeight: "700",
+        fontSize: 12,
+      }}
+    >
+      {formatRewardType(
+        item.fulfillment.entitlementType
+      )}
+      {" • "}
+      {item.fulfillment.value}
+    </Text>
+  </View>
+)}
+{item.stock !== null && (
+  <Text
+    style={{
+      color: "#999",
+      marginTop: 4,
+    }}
+  >
+    Remaining: {item.stock}
+  </Text>
+)}
+
+         <TouchableOpacity
+  disabled={
+    (member?.rewardPoints || 0) <
+    item.tokenCost
+  }
+  style={[
+    styles.redeemBtn,
+
+    (member?.rewardPoints || 0) <
+      item.tokenCost && {
+      backgroundColor: "#555",
+    },
+  ]}
+
             onPress={() =>
               redeemItem(item)
             }
           >
-            <Text
-              style={styles.btnText}
-            >
-              Redeem
-            </Text>
+           <Text style={styles.btnText}>
+  {(member?.rewardPoints || 0) <
+  item.tokenCost
+    ? "Not Enough Points"
+    : "Redeem"}
+</Text>
+
           </TouchableOpacity>
         </View>
       ))}
@@ -290,11 +361,30 @@ export default function MarketplaceScreen({
             </Text>
           </View>
 
-          <Text
-            style={styles.historyReason}
-          >
-            {entry.reason}
-          </Text>
+         <Text style={styles.historyReason}>
+  {entry.itemName ||
+    entry.reason ||
+    entry.rewardType ||
+    "Reward Activity"}
+</Text>
+{entry.redemptionStatus && (
+  <Text
+    style={{
+      color:
+        entry.redemptionStatus === "approved"
+          ? "#27ae60"
+          : entry.redemptionStatus === "pending"
+          ? "#F39C12"
+          : "#aaa",
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "700",
+    }}
+  >
+    {entry.redemptionStatus.toUpperCase()}
+  </Text>
+)}
+
         </View>
       ))}
     </ScrollView>

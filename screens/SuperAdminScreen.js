@@ -166,6 +166,10 @@ const [promoPlans, setPromoPlans] =
   useState([]);
   const [marketplaceItems, setMarketplaceItems] =
   useState([]);
+const [
+  marketplaceModal,
+  setMarketplaceModal
+] = useState(false);
 
 const [itemName, setItemName] =
   useState("");
@@ -181,6 +185,11 @@ const [itemStock, setItemStock] =
 
 const [itemCategory, setItemCategory] =
   useState("general");
+  const [rewardValue, setRewardValue] =
+  useState("");
+
+const [rewardKind, setRewardKind] =
+  useState("discount_percent");
 
 const [archiveSort, setArchiveSort] =
   useState("newest");
@@ -4882,135 +4891,342 @@ setOperationsTab("alerts");
     </View>
   </>
 )}
+
 {growthTab === "marketplace" && (
-  <View style={styles.card}>
-    <Text style={styles.orgName}>
-      Marketplace
-    </Text>
+  <>
+    <View style={styles.card}>
 
-    <Text style={styles.orgSub}>
-      Create and manage rewards that members can redeem using referral points.
-    </Text>
-
-    <TextInput
-      style={styles.input}
-      placeholder="Reward Name"
-      value={itemName}
-      onChangeText={setItemName}
-    />
-
-    <TextInput
-      style={styles.input}
-      placeholder="Points Cost"
-      value={itemCost}
-      onChangeText={setItemCost}
-      keyboardType="numeric"
-    />
-
-    <TextInput
-      style={styles.input}
-      placeholder="Category"
-      value={itemCategory}
-      onChangeText={setItemCategory}
-    />
-
-    <TextInput
-      style={styles.input}
-      placeholder="Stock (optional)"
-      value={itemStock}
-      onChangeText={setItemStock}
-      keyboardType="numeric"
-    />
-
-    <TouchableOpacity
-      style={styles.primaryButton}
-      onPress={async () => {
-        try {
-          await createMarketplaceItem({
-            name: itemName,
-            tokenCost: Number(itemCost),
-            type: itemType,
-            category: itemCategory,
-            stock: itemStock
-              ? Number(itemStock)
-              : null,
-          });
-
-          Alert.alert(
-            "Success",
-            "Marketplace item created."
-          );
-
-          setItemName("");
-          setItemCost("");
-          setItemStock("");
-          setItemCategory("general");
-
-        } catch (e) {
-          Alert.alert(
-            "Error",
-            e.message
-          );
-        }
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    }}
+  >
+    <View
+      style={{
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: "#4B3F7220",
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
-      <Text style={styles.primaryButtonText}>
-        Create Marketplace Item
-      </Text>
-    </TouchableOpacity>
+      <Ionicons
+        name="gift-outline"
+        size={24}
+        color="#8B7CF6"
+      />
+    </View>
 
-    <View style={{ marginTop: 20 }}>
-      <Text
-        style={{
-          fontSize: 14,
-          fontWeight: "700",
-          color: "#4B3F72",
-        }}
+    <View
+      style={{
+        marginLeft: 12,
+        flex: 1,
+      }}
+    >
+      <Text style={styles.orgName}>
+        Marketplace Rewards
+      </Text>
+
+      <Text style={styles.orgSub}>
+        Redeemable referral rewards
+      </Text>
+    </View>
+  </View>
+
+  
+
+     <View
+  style={{
+    flexDirection: "row",
+    marginTop: 10,
+    marginBottom: 15,
+  }}
+>
+
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#15172B",
+      borderRadius: 10,
+      padding: 12,
+      marginRight: 6,
+    }}
+  >
+    <Text
+      style={{
+        color: "#888",
+        fontSize: 11,
+      }}
+    >
+      ACTIVE REWARDS
+    </Text>
+
+    <Text
+      style={{
+        color: "#FFFFFF",
+        fontSize: 22,
+        fontWeight: "800",
+      }}
+    >
+      {marketplaceItems.length}
+    </Text>
+  </View>
+
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "#15172B",
+      borderRadius: 10,
+      padding: 12,
+      marginLeft: 6,
+    }}
+  >
+    <Text
+      style={{
+        color: "#888",
+        fontSize: 11,
+      }}
+    >
+      CATEGORIES
+    </Text>
+
+    <Text
+      style={{
+        color: "#FFFFFF",
+        fontSize: 22,
+        fontWeight: "800",
+      }}
+    >
+      {
+        new Set(
+          marketplaceItems.map(
+            item => item.category || "general"
+          )
+        ).size
+      }
+    </Text>
+  </View>
+
+</View>
+
+      <TouchableOpacity
+        style={styles.modalSaveBtn}
+        onPress={() =>
+          setMarketplaceModal(true)
+        }
       >
-        Current Marketplace Items
-      </Text>
-
-      {marketplaceItems.length === 0 ? (
-        <Text
-          style={{
-            marginTop: 10,
-            color: "#666",
-          }}
-        >
-          No marketplace items yet.
+        <Text style={styles.white}>
+          + Create Reward
         </Text>
-      ) : (
-        marketplaceItems.map(item => (
+      </TouchableOpacity>
+    </View>
+
+    {marketplaceItems.length === 0 ? (
+     <View style={styles.card}>
+
+  <View
+    style={{
+      alignItems: "center",
+      paddingVertical: 20,
+    }}
+  >
+    <Ionicons
+      name="gift-outline"
+      size={40}
+      color="#666"
+    />
+
+    <Text
+      style={{
+        color: "#ddd",
+        fontWeight: "700",
+        marginTop: 10,
+      }}
+    >
+      No Rewards Yet
+    </Text>
+
+    <Text
+      style={{
+        color: "#777",
+        textAlign: "center",
+        marginTop: 6,
+      }}
+    >
+      Create your first marketplace reward
+      for referrals and member incentives.
+    </Text>
+  </View>
+
+</View>
+    ) : (
+      marketplaceItems.map(item => (
+        <View
+          key={item.id}
+          style={styles.orgCard}
+        >
+          <Text style={styles.orgName}>
+            {item.name}
+          </Text>
+
+          <Text style={styles.orgSub}>
+            {item.tokenCost} points
+          </Text>
+
           <View
-            key={item.id}
-            style={{
-              backgroundColor: "#F9FAFB",
-              padding: 12,
-              borderRadius: 10,
-              marginTop: 10,
-            }}
+            style={[
+              styles.statusPill,
+              {
+                backgroundColor:
+                  item.active
+                    ? "#27ae6022"
+                    : "#e74c3c22",
+                marginTop: 10,
+                alignSelf: "flex-start",
+              },
+            ]}
           >
             <Text
               style={{
+                color: item.active
+                  ? "#27ae60"
+                  : "#e74c3c",
                 fontWeight: "700",
               }}
             >
-              {item.name}
-            </Text>
-
-            <Text>
-              Cost: {item.tokenCost} points
-            </Text>
-
-            <Text>
-              Redeemed: {item.redemptionCount || 0}
+              {item.active
+                ? "ACTIVE"
+                : "INACTIVE"}
             </Text>
           </View>
-        ))
-      )}
-    </View>
-  </View>
+          <View
+  style={{
+    flexDirection: "row",
+    marginTop: 12,
+  }}
+>
+
+  <TouchableOpacity
+    style={{
+      flex: 1,
+      backgroundColor:
+        item.active
+          ? "#F39C12"
+          : "#27AE60",
+      padding: 10,
+      borderRadius: 8,
+      alignItems: "center",
+      marginRight: 6,
+    }}
+    onPress={async () => {
+
+      try {
+
+        await updateDoc(
+          doc(
+            db,
+            "marketplaceItems",
+            item.id
+          ),
+          {
+            active: !item.active,
+          }
+        );
+
+        await loadMarketplaceItems();
+
+      } catch (e) {
+
+        Alert.alert(
+          "Error",
+          "Unable to update reward."
+        );
+
+      }
+    }}
+  >
+    <Text
+      style={{
+        color: "#fff",
+        fontWeight: "700",
+      }}
+    >
+      {item.active
+        ? "Deactivate"
+        : "Activate"}
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={{
+      backgroundColor: "#e74c3c",
+      padding: 10,
+      borderRadius: 8,
+      alignItems: "center",
+      paddingHorizontal: 18,
+    }}
+    onPress={() => {
+
+      Alert.alert(
+        "Delete Reward",
+        "Delete this reward permanently?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+
+              try {
+
+                await deleteDoc(
+                  doc(
+                    db,
+                    "marketplaceItems",
+                    item.id
+                  )
+                );
+
+                await loadMarketplaceItems();
+
+              } catch (e) {
+
+                Alert.alert(
+                  "Error",
+                  "Unable to delete reward."
+                );
+
+              }
+            },
+          },
+        ]
+      );
+
+    }}
+  >
+    <Ionicons
+      name="trash-outline"
+      size={16}
+      color="#fff"
+    />
+  </TouchableOpacity>
+
+</View>
+
+        </View>
+
+        
+      ))
+    )}
+  </>
 )}
+
 
 
 {growthTab === "waivers" && (
@@ -6109,6 +6325,179 @@ setOperationsTab("alerts");
           </View>
         </View>
       </Modal>
+
+<Modal
+  visible={marketplaceModal}
+  transparent
+  animationType="slide"
+>
+  <View style={styles.overlay}>
+    <View style={styles.modalBox}>
+
+      <Text style={styles.modalTitle}>
+        Create Marketplace Reward
+      </Text>
+
+      <Text style={styles.modalSub}>
+        Create a reward redeemable with referral points.
+      </Text>
+
+      <Text style={styles.fieldLabel}>
+        Reward Name
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        value={itemName}
+        onChangeText={setItemName}
+        placeholder="5% Subscription Discount"
+      />
+
+      <Text style={styles.fieldLabel}>
+        Points Cost
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        value={itemCost}
+        onChangeText={setItemCost}
+        keyboardType="numeric"
+        placeholder="500"
+      />
+
+     <Text style={styles.fieldLabel}>
+  Reward Type
+</Text>
+
+<View style={styles.filterRow}>
+
+  {[
+  "discount_percent",
+  "free_months",
+  "extra_members",
+  "extra_admins",
+].map(type => (
+
+    <TouchableOpacity
+      key={type}
+      style={[
+        styles.filterChip,
+        rewardKind === type &&
+          styles.filterChipActive,
+      ]}
+      onPress={() =>
+        setRewardKind(type)
+      }
+    >
+      <Text
+        style={[
+          styles.filterChipText,
+          rewardKind === type &&
+            styles.filterChipTextActive,
+        ]}
+      >
+        {type}
+      </Text>
+    </TouchableOpacity>
+
+  ))}
+
+</View>
+
+<Text style={styles.fieldLabel}>
+  Reward Value
+</Text>
+
+<TextInput
+  style={styles.input}
+  value={rewardValue}
+  onChangeText={setRewardValue}
+  keyboardType="numeric"
+  placeholder="5"
+/>
+
+      <Text style={styles.fieldLabel}>
+        Stock (Optional)
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        value={itemStock}
+        onChangeText={setItemStock}
+        keyboardType="numeric"
+        placeholder="100"
+      />
+
+      <View style={styles.modalBtnRow}>
+
+        <TouchableOpacity
+          style={styles.modalSaveBtn}
+          onPress={async () => {
+
+            try {
+
+    await createMarketplaceItem({
+  name: itemName,
+  type: "entitlement",
+  category: rewardKind,
+  tokenCost: Number(itemCost),
+
+  fulfillment: {
+    entitlementType: rewardKind,
+    value: Number(rewardValue),
+  },
+
+  stock: itemStock
+    ? Number(itemStock)
+    : null,
+});
+
+              await loadMarketplaceItems();
+
+              setMarketplaceModal(false);
+
+              setItemName("");
+              setItemCost("");
+              setItemCategory("general");
+              setItemStock("");
+
+              Alert.alert(
+                "Success",
+                "Marketplace reward created."
+              );
+
+            } catch (e) {
+
+              Alert.alert(
+                "Error",
+                e.message
+              );
+
+            }
+          }}
+        >
+          <Text style={styles.white}>
+            Create
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.modalCancelBtn}
+          onPress={() =>
+            setMarketplaceModal(false)
+          }
+        >
+          <Text style={styles.white}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+
+    </View>
+  </View>
+</Modal>
+
 
     </View>
   );
